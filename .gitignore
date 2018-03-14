@@ -1,0 +1,10 @@
+*.dcu
+.svn/
+imagens/
+Terceiros/
+*.txt
+ACBrBoleto/*.txt
+ACBrComum/*.txt
+*.exe
+Pacotes/
+ACBrInstall_trunk2.ini
