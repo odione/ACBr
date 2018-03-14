@@ -881,7 +881,7 @@ begin
       if (ValorMoraJuros > 0) then
        begin
          if (DataMoraJuros <> Null) and (DataMoraJuros >= 30/12/2000) then
-            ADataMoraJuros := FormatDateTime('ddmmyy', DataMoraJuros)
+            ADataMoraJuros := FormatDateTime('ddmmyy',IncDay(DataMoraJuros))
          else
             ADataMoraJuros := PadLeft('', 6, '0');
        end
