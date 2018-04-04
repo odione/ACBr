@@ -389,7 +389,7 @@ begin
     end;
   end
   else
-    raise EACBrBoletoFCFR.Create('Caminho do arquivo de impressão do boleto não assinalado.');
+    raise EACBrBoletoFCFR.Create('Caminho ou o arquivo de impressão do boleto não assinalado.');
 end;
 
 function TACBrBoletoFCFR.PreparaRelatorio: Boolean;

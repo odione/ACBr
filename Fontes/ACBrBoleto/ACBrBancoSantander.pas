@@ -141,8 +141,8 @@ end;
 function TACBrBancoSantander.MontarCampoCodigoCedente (
    const ACBrTitulo: TACBrTitulo ) : String;
 begin
-   Result := ACBrTitulo.ACBrBoleto.Cedente.Agencia+'-'+
-             ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito+'/'+
+   Result := {ACBrTitulo.ACBrBoleto.Cedente.Agencia+'-'+
+             ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito+'/'+}
              ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente
 end;
 
