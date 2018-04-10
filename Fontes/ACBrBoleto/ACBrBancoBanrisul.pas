@@ -248,22 +248,24 @@ end;
 
 function TACBrBanrisul.MontarCampoCodigoCedente(const ACBrTitulo: TACBrTitulo): string;
 begin
-  // Código da Agência
-  Result := copy(ACBrTitulo.ACBrBoleto.Cedente.Agencia, 1, 4);
-  // Prosseguir somente se a Agência tiver dígito
-  if ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito <> '' then
-    begin
-      // Separador do dígito da Agência
-      Result := Result + '-';
-      // Dígito da Agência
-      Result := Result + ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito;
-    end;
-  // Separador entre a Agência e o Código Cedente
-  Result := Result + '/';
+//   Código da Agência
+//  Result := copy(ACBrTitulo.ACBrBoleto.Cedente.Agencia, 1, 4);
+//   Prosseguir somente se a Agência tiver dígito
+//  if ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito <> '' then
+//    begin
+//       Separador do dígito da Agência
+//      Result := Result + '-';
+//       Dígito da Agência
+//      Result := Result + ACBrTitulo.ACBrBoleto.Cedente.AgenciaDigito;
+//    end;
+//   Separador entre a Agência e o Código Cedente
+//  Result := Result + '/';
+
   // Código do cedente
-  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,1,6) + '.';
-  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,7,1) + '.';
-  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,8,2);
+//  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,1,6) + '.';
+//  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,7,1) + '.';
+//  Result := Result + Copy(ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente,8,2);
+  Result := (ACBrTitulo.ACBrBoleto.Cedente.Agencia + ACBrTitulo.ACBrBoleto.Cedente.CodigoCedente);
 end;
 
 procedure TACBrBanrisul.GerarRegistroHeader400(NumeroRemessa: Integer; aRemessa: TStringList);
