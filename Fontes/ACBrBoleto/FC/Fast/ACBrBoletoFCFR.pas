@@ -263,6 +263,7 @@ begin
     FieldDefs.Add('Sacado_CEP', ftString, 8);
     FieldDefs.Add('Sacado_Avalista', ftString, 100);
     FieldDefs.Add('Sacado_Avalista_CNPJCPF', ftString, 18);
+    FieldDefs.Add('Sacado_Fone', ftString, 100);
     CreateDataSet;
   end;
 end;
@@ -488,6 +489,7 @@ var
   Field_Sacado_CEP: TField;
   Field_Sacado_Avalista: TField;
   Field_Sacado_Avalista_CNPJCPF : TField;
+  Field_Sacado_Fone: TField;
 begin
   with ACBrBoleto do
   begin
@@ -577,6 +579,7 @@ begin
       Field_Sacado_CEP := FieldByName('Sacado_CEP');
       Field_Sacado_Avalista := FieldByName('Sacado_Avalista');
       Field_Sacado_Avalista_CNPJCPF := FieldByName('Sacado_Avalista_CNPJCPF');
+      Field_Sacado_Fone := FieldByName('Sacado_Fone');
     end;
 
     for iFor := 0 to ListadeBoletos.Count - 1 do
@@ -643,6 +646,7 @@ begin
         Field_Sacado_CEP.AsString := ListadeBoletos[iFor].Sacado.CEP;
         Field_Sacado_Avalista.AsString := ListadeBoletos[iFor].Sacado.Avalista;
         Field_Sacado_Avalista_CNPJCPF.asString := ListadeBoletos[iFor].Sacado.SacadoAvalista.CNPJCPF;
+        Field_Sacado_Fone.AsString := ListadeBoletos[iFor].Sacado.Fone;
 
         Post;
       end;

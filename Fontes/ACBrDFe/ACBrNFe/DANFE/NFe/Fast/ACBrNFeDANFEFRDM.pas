@@ -440,10 +440,10 @@ begin
           FieldByName('ChaveNFe').AsString          := FNFe.infNFe.ID;
           FieldByName('cProd').AsString             := FDANFEClassOwner.ManterCodigo( Prod.cEAN,Prod.cProd);
           FieldByName('cEAN').AsString              := Prod.cEAN;
-          FieldByName('XProd').AsString             :=   StringReplace( Prod.xProd, ';', #13, [rfReplaceAll]);
-          FieldByName('VProd').AsString             :=     ManterVprod( Prod.VProd , Prod.vDesc );
+          FieldByName('XProd').AsString             := StringReplace( Prod.xProd, ';', #13, [rfReplaceAll]);
+          FieldByName('VProd').AsString             := ManterVprod( Prod.VProd , Prod.vDesc );
           FieldByName('vTotTrib').AsString          := ManterdvTotTrib( Imposto.vTotTrib );
-          FieldByName('infAdProd').AsString         :=  ManterInfAProd( inItem, infAdProd );
+          FieldByName('infAdProd').AsString         := ManterInfAProd( inItem, infAdProd );
           FieldByName('DescricaoProduto').AsString  := ManterDescricaoProduto( FieldByName('XProd').AsString , FieldByName('infAdProd').AsString );
           FieldByName('NCM').AsString               := Prod.NCM;
           FieldByName('EXTIPI').AsString            := Prod.EXTIPI;
@@ -460,8 +460,8 @@ begin
           FieldByName('vSeg').AsString              := FormatFloatBr( Prod.vSeg   ,'###,###,##0.00');
           FieldByName('vOutro').AsString            := FormatFloatBr( Prod.vOutro ,'###,###,##0.00');
           FieldByName('vDesc').AsString             := FormatFloatBr( ManterVDesc( Prod.vDesc , Prod.VUnCom , Prod.QCom),'###,###,##0.00');
-          FieldByName('ORIGEM').AsString            :=     OrigToStr( Imposto.ICMS.orig);
-          FieldByName('CST').AsString               :=     ManterCst( FNFe.Emit.CRT , Imposto.ICMS.CSOSN , Imposto.ICMS.CST );
+          FieldByName('ORIGEM').AsString            := OrigToStr( Imposto.ICMS.orig);
+          FieldByName('CST').AsString               := ManterCst( FNFe.Emit.CRT , Imposto.ICMS.CSOSN , Imposto.ICMS.CST );
           FieldByName('VBC').AsString               := FormatFloatBr( Imposto.ICMS.vBC        ,'###,###,##0.00');
           FieldByName('PICMS').AsString             := FormatFloatBr( Imposto.ICMS.pICMS      ,'###,###,##0.00');
           FieldByName('VICMS').AsString             := FormatFloatBr( Imposto.ICMS.vICMS      ,'###,###,##0.00');
@@ -564,7 +564,7 @@ var
 begin
   cdsDuplicatas.Close;
   cdsDuplicatas.CreateDataSet;
-  if Not ( fExibeCampoFatura and (FNFe.Ide.indPag = ipVista) ) then
+  if Not ( fExibeCampoFatura and (FNFe.Ide.indPag = ipVista) and (FNFe.infNFe.Versao <= 3.10) ) then
   Begin
 
     with cdsDuplicatas do
@@ -661,10 +661,15 @@ begin
 
       FieldByName('iForma').asInteger := Integer( FNFe.Ide.indPag);
 
-      case FNFe.Ide.indPag of
-        ipVista : FieldByName('Pagamento').AsString := ACBrStr('PAGAMENTO À VISTA');
-        ipPrazo : FieldByName('Pagamento').AsString := ACBrStr('PAGAMENTO À PRAZO');
-        ipOutras: FieldByName('Pagamento').AsString := ACBrStr('OUTROS');
+      if FNFe.infNFe.Versao >= 4 then
+        FieldByName('Pagamento').AsString := ACBrStr('DADOS DA FATURA')
+      else
+      begin
+        case FNFe.Ide.indPag of
+          ipVista : FieldByName('Pagamento').AsString := ACBrStr('PAGAMENTO À VISTA');
+          ipPrazo : FieldByName('Pagamento').AsString := ACBrStr('PAGAMENTO A PRAZO');
+          ipOutras: FieldByName('Pagamento').AsString := ACBrStr('OUTROS');
+        end;
       end;
 
       if NaoEstaVazio(FNFe.Cobr.Fat.nFat) then
@@ -677,7 +682,12 @@ begin
           FieldByName('vLiq').AsFloat   := vLiq;
         end;
       end;
-      Post;
+
+      if ((FNFe.infNFe.Versao >= 4) or (FNFe.Ide.indPag = ipOutras)) and EstaVazio(FNFe.Cobr.Fat.nFat) then
+        Cancel
+      else
+        Post;
+
     end;
   end;
 end;
@@ -757,7 +767,7 @@ begin
       else
       begin
         if FNFe.Ide.tpEmis <> teNormal then
-          FieldByName('MensagemFiscal').AsString := ACBrStr('EMITIDA EM CONTINGÊNCIA')
+          FieldByName('MensagemFiscal').AsString := ACBrStr('EMITIDA EM CONTINGÊNCIA'+LineBreak+'Pendente de autorização')
         else
           FieldByName('MensagemFiscal').AsString := ACBrStr('ÁREA DE MENSAGEM FISCAL');
       end;
@@ -1433,7 +1443,7 @@ begin
         FieldDefs.Add('CPais', ftString, 4);
         FieldDefs.Add('XPais', ftString, 60);
         FieldDefs.Add('Fone', ftString, 15);
-        FieldDefs.Add('IE', ftString, 14);
+        FieldDefs.Add('IE', ftString, 15);
         FieldDefs.Add('IM', ftString, 15);
         FieldDefs.Add('IEST', ftString, 15);
         FieldDefs.Add('CRT', ftString, 1);
@@ -1452,7 +1462,7 @@ begin
      begin
         DataSet := cdsDestinatario;
         OpenDataSource := False;
-        Enabled := False; 
+        Enabled := False;
         UserName := 'Destinatario';
      end;
      with cdsDestinatario do
@@ -1529,7 +1539,7 @@ begin
         FieldDefs.Add('dFab'      , ftDateTime);
         FieldDefs.Add('dVal'      , ftDateTime);
         FieldDefs.Add('DescricaoProduto', ftString, 2000);
-        FieldDefs.Add('Unidade'   , ftString, 6);
+        FieldDefs.Add('Unidade'   , ftString, 14);
         FieldDefs.Add('Quantidade', ftString, 18);
         FieldDefs.Add('ValorUnitario'   , ftString, 18);
         FieldDefs.Add('Valorliquido'    , ftString, 18);
@@ -1547,7 +1557,7 @@ begin
      begin
         DataSet         := cdsParametros;
         OpenDataSource  := False;
-        Enabled := False; 
+        Enabled := False;
         UserName        := 'Parametros';
      end;
      with cdsParametros do
@@ -1583,6 +1593,8 @@ begin
         FieldDefs.Add('QtdeItens', ftInteger);
         FieldDefs.Add('ExpandirDadosAdicionaisAuto', ftString, 1);
         FieldDefs.Add('ImprimeDescAcrescItem', ftInteger);
+        FieldDefs.Add('nProt', ftString, 30);
+        FieldDefs.Add('dhRecbto', ftDateTime);
         CreateDataSet;
      end;
    end;
@@ -1596,7 +1608,7 @@ begin
      begin
         DataSet := cdsDuplicatas;
         OpenDataSource := False;
-        Enabled := False; 
+        Enabled := False;
         UserName := 'Duplicatas';
      end;
      with cdsDuplicatas do
@@ -1664,7 +1676,7 @@ begin
         FieldDefs.Add('ModFrete', ftString, 14);
         FieldDefs.Add('CNPJCPF', ftString, 18);
         FieldDefs.Add('XNome', ftString, 60);
-        FieldDefs.Add('IE', ftString, 14);
+        FieldDefs.Add('IE', ftString, 15);
         FieldDefs.Add('XEnder', ftString, 60);
         FieldDefs.Add('XMun', ftString, 60);
         FieldDefs.Add('UF', ftString, 2);
@@ -1748,6 +1760,7 @@ begin
          FieldDefs.Add('vSERV', ftFloat);
          FieldDefs.Add('vBC', ftFloat);
          FieldDefs.Add('vISS', ftFloat);
+         FieldDefs.Add('vDescIncond', ftFloat);
          CreateDataSet;
       end;
    end;
@@ -1864,6 +1877,7 @@ begin
       begin
          FieldDefs.Add('tPag', ftString, 50);
          FieldDefs.Add('vPag', ftFloat);
+         FieldDefs.Add('vTroco', ftFloat);
          FieldDefs.Add('CNPJ', ftString, 50);
          FieldDefs.Add('tBand', ftString, 50);
          FieldDefs.Add('cAut', ftString, 20);
@@ -1982,7 +1996,7 @@ begin
                 begin
                   CpTituloReport := frxReport.FindObject('PageHeader1');
                   if Assigned(CpTituloReport) then
-                    CpTituloReport.Visible  := ( cdsParametros.FieldByName('Imagem').AsString = '' );
+                    CpTituloReport.Visible  := ( cdsParametros.FieldByName('Imagem').AsString <> '' );
 
                   CpLogomarca := frxReport.FindObject('ImgLogo');
                   if Assigned(CpLogomarca) and Assigned(CpTituloReport) then
