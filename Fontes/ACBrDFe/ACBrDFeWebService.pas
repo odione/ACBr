@@ -51,7 +51,6 @@ type
   { TDFeWebService }
 
   TDFeWebService = class
-  private
   protected
     FPSoapVersion: String;
     FPSoapEnvelopeAtributtes: String;
@@ -73,6 +72,7 @@ type
     FPServico: String;
     FPSoapAction: String;
     FPMimeType: String;
+
   protected
     procedure FazerLog(Msg: String; Exibir: Boolean = False); virtual;
     procedure GerarException(Msg: String; E: Exception = nil); virtual;

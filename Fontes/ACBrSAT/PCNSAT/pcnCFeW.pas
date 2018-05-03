@@ -187,6 +187,8 @@ begin
 end;
 
 procedure TCFeW.GerarEmit;
+var
+  InscEst : String;
 begin
   Gerador.wGrupo('emit', 'C01');
   Gerador.wCampoCNPJCPF('C02', 'C02', CFe.Emit.CNPJ);
@@ -198,7 +200,10 @@ begin
 
   (**)GerarEmitEnderEmit;
 
-  Gerador.wCampo(tcStr, 'C12', 'IE      ', 2, 14, 1, SomenteNumeros(CFe.Emit.IE), DSC_IE);
+  InscEst := Trim(OnlyNumber(CFe.Emit.IE));
+  if Length(InscEst) < 12 then  //Caso a IE possua menos do que 12 dígitos, o AC deve preencher com espaços à direita. ER 2.21.08
+    InscEst := PadRight(InscEst,12,' ');
+  Gerador.wCampo(tcStrOrig, 'C12', 'IE      ', 2, 14, 1, InscEst, DSC_IE);
   if (trim(CFe.Emit.IM) <> '') then
     Gerador.wCampo(tcStr, 'C13', 'IM      ', 01, 15, 1, CFe.Emit.IM, DSC_IM);
 
@@ -299,7 +304,7 @@ begin
   Gerador.wCampo(tcStr, 'I05 ', 'NCM     ', 02, 08, 0, CFe.Det[i].Prod.NCM, DSC_NCM);
   if CFe.infCFe.versaoDadosEnt >= 0.08 then
      Gerador.wCampo(tcStr, 'I05w ', 'CEST    ', 02, 07, 0, CFe.Det[i].Prod.CEST, DSC_CEST);
-  Gerador.wCampo(tcEsp, 'I06 ', 'CFOP    ', 04, 04, 1, somenteNumeros(CFe.Det[i].Prod.CFOP), DSC_CFOP);
+  Gerador.wCampo(tcEsp, 'I06 ', 'CFOP    ', 04, 04, 1, OnlyNumber(CFe.Det[i].Prod.CFOP), DSC_CFOP);
   Gerador.wCampo(tcStr, 'I07 ', 'uCom    ', 01, 06, 1, CFe.Det[i].Prod.uCom, DSC_UCOM);
   Gerador.wCampo(tcDe4, 'I08 ', 'qCom    ', 05, 15, 1, CFe.Det[i].Prod.qCom, DSC_QCOM);
   Gerador.wCampo(DecQtd,'I09 ', 'vUnCom  ', 03, 15, 1, CFe.Det[i].Prod.vUnCom, DSC_VUNCOM);
@@ -401,13 +406,7 @@ end;
 procedure TCFeW.GerarDetImpostoPIS(const i: integer);
 begin
   Gerador.wGrupo('PIS', 'Q01');
-  if CFe.Emit.cRegTrib = RTSimplesNacional then
-  begin
-    Gerador.wGrupo('PISSN', 'Q05');
-    Gerador.wCampo(tcStr, 'Q07', 'CST      ', 02, 02, 1, CSTPISTOStr(CFe.Det[i].Imposto.PIS.CST), DSC_CST);
-    Gerador.wGrupo('/PISSN');
-  end
-  else if CFe.Det[i].Imposto.PIS.CST in [pis01, pis02, pis05] then
+  if CFe.Det[i].Imposto.PIS.CST in [pis01, pis02, pis05] then
   begin
     Gerador.wGrupo('PISAliq', 'Q02');
     Gerador.wCampo(tcStr, 'Q07', 'CST      ', 02, 02, 1, CSTPISTOStr(CFe.Det[i].Imposto.PIS.CST), DSC_CST);
@@ -439,9 +438,8 @@ begin
     Gerador.wCampo(tcStr, 'Q07', 'CST      ', 02, 02, 1, CSTPISTOStr(CFe.Det[i].Imposto.PIS.CST), DSC_CST);
     Gerador.wGrupo('/PISSN');
   end
-  else if CFe.Det[i].Imposto.PIS.CST in [pis50, pis51, pis52, pis53, pis54, pis55, pis56, pis60, pis61, pis62, pis63, pis64, pis65, pis66, pis67, pis70, pis71, pis72, pis73, pis74, pis75, pis98, pis99] then
+  else if CFe.Det[i].Imposto.PIS.CST > pis49 then
   begin
-
     if (CFe.Det[i].Imposto.PIS.vBC + CFe.Det[i].Imposto.PIS.pPIS > 0) and (CFe.Det[i].Imposto.PIS.qBCProd + CFe.Det[i].Imposto.PIS.vAliqProd > 0) then
       Gerador.wAlerta('Q06', 'PISOutr', DSC_PISOUTR, 'As TAG <vBC> e <pPIS> não podem ser informadas em conjunto com as TAG <qBCProd> e <vAliqProd>');
 
@@ -499,13 +497,7 @@ end;
 procedure TCFeW.GerarDetImpostoCOFINS(const i: integer);
 begin
   Gerador.wGrupo('COFINS', 'S01');
-  if CFe.Emit.cRegTrib = RTSimplesNacional then
-  begin
-    Gerador.wGrupo('COFINSSN', 'S05');
-    Gerador.wCampo(tcStr, 'S07', 'CST      ', 02, 02, 1, CSTCOFINSToStr(CFe.Det[i].Imposto.COFINS.CST), DSC_CST);
-    Gerador.wGrupo('/COFINSSN');
-  end
-  else if CFe.Det[i].Imposto.COFINS.CST in [cof01, cof02, cof05] then
+  if CFe.Det[i].Imposto.COFINS.CST in [cof01, cof02, cof05] then
   begin
     Gerador.wGrupo('COFINSAliq', 'S02');
     Gerador.wCampo(tcStr, 'S07', 'CST      ', 02, 02, 1, CSTCOFINSTOStr(CFe.Det[i].Imposto.COFINS.CST), DSC_CST);
@@ -537,7 +529,7 @@ begin
     Gerador.wCampo(tcStr, 'S07', 'CST      ', 02, 02, 1, CSTCOFINSTOStr(CFe.Det[i].Imposto.COFINS.CST), DSC_CST);
     Gerador.wGrupo('/COFINSSN');
   end
-  else if CFe.Det[i].Imposto.COFINS.CST in [cof50, cof51, cof52, cof53, cof54, cof55, cof56, cof60, cof61, cof62, cof63, cof64, cof65, cof66, cof67, cof70, cof71, cof72, cof73, cof74, cof75, cof98, cof99] then
+  else if CFe.Det[i].Imposto.COFINS.CST > cof49 then
   begin
 
     if (CFe.Det[i].Imposto.COFINS.vBC + CFe.Det[i].Imposto.COFINS.pCOFINS > 0) and (CFe.Det[i].Imposto.COFINS.qBCProd + CFe.Det[i].Imposto.COFINS.vAliqProd > 0) then
@@ -612,9 +604,9 @@ begin
     Gerador.wCampo(tcInt, 'U06', 'cMunFG     ', 07, 07, 0, CFe.Det[i].Imposto.ISSQN.cMunFG, DSC_CMUNFG);
     if not ValidarMunicipio(CFe.Det[i].Imposto.ISSQN.cMunFG) then
        Gerador.wAlerta('U06', 'cMunFG', DSC_CMUNFG, ERR_MSG_INVALIDO);
-    Gerador.wCampo(tcInt, 'U07', 'cListServ  ', 05, 05, 0, CFe.Det[i].Imposto.ISSQN.cListServ, DSC_CLISTSERV);
-    if (FOpcoes.ValidarListaServicos) and (CFe.Det[i].Imposto.ISSQN.cListServ <> 0) then
-      if not ValidarCListServ(CFe.Det[i].Imposto.ISSQN.cListServ) then
+    Gerador.wCampo(tcStr, 'U07', 'cListServ  ', 05, 05, 0, CFe.Det[i].Imposto.ISSQN.cListServ, DSC_CLISTSERV);
+    if (FOpcoes.ValidarListaServicos) and (CFe.Det[i].Imposto.ISSQN.cListServ <> '') then
+      if not ValidarCListServ(StrToIntDef(CFe.Det[i].Imposto.ISSQN.cListServ, 0)) then
          Gerador.wAlerta('U07', 'cListServ', DSC_CLISTSERV, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'U08', 'cServTribMun', 20, 20, 0, CFe.Det[i].Imposto.ISSQN.cServTribMun, DSC_CSERVTRIBMUN);
     Gerador.wCampo(tcInt, 'U09', 'cNatOp      ', 02, 02, 1, CFe.Det[i].Imposto.ISSQN.cNatOp, DSC_CNATOP);
@@ -766,15 +758,12 @@ begin
   FApenasTagsAplicacao := ApenasTagsAplicacao;
   Gerador.LayoutArquivoTXT.Clear;
 
-  {$IFDEF UNICODE}
-   Gerador.ArquivoFormatoXML := '<'+ENCODING_UTF8+'>';
-   if Gerador.Opcoes.IdentarXML then
-     Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + #13#10 ;
-  {$ELSE}
-   Gerador.ArquivoFormatoXML := '';
-  {$ENDIF}
-
+  Gerador.ArquivoFormatoXML := '';
   Gerador.ArquivoFormatoTXT := '';
+
+  {$IfDef FPC}
+   Gerador.wGrupo(ENCODING_UTF8, '', False);
+  {$EndIf}
 
   Gerador.wGrupo('CFe');
   Grupo := 'infCFe';
@@ -803,7 +792,7 @@ begin
 
     if Gerar then
     begin
-      FCFe.signature.URI := somenteNumeros(CFe.infCFe.ID);
+      FCFe.signature.URI := OnlyNumber(CFe.infCFe.ID);
       FCFe.signature.Gerador.Opcoes.IdentarXML := Gerador.Opcoes.IdentarXML;
       FCFe.signature.GerarXML;
       Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + FCFe.signature.Gerador.ArquivoFormatoXML;
@@ -816,7 +805,7 @@ end;
 
 function TCFeW.ObterNomeArquivo: string;
 begin
-  Result := SomenteNumeros(CFe.infCFe.ID) + '-cfe.xml';
+  Result := OnlyNumber(CFe.infCFe.ID) + '-cfe.xml';
 end;
 
 end.

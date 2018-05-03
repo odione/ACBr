@@ -42,12 +42,14 @@ interface
 
 uses
   Classes, StrUtils, SysUtils,
-  IniFiles;
+  IniFiles, pcnAuxiliar;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
 function FormatarNumeroDocumentoFiscalNFSe(AValue: String): String;
-function GerarChaveAcesso(AUF:Integer; ADataEmissao:TDateTime; ACNPJ:String; ASerie:Integer;
-                           ANumero,ACodigo: Integer; AModelo:Integer=55): String;
+
+function GerarCodigoNumerico(numero: integer): integer;
+function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; ACNPJ:String;
+                          ASerie, ANumero, AtpEmi, ACodigo: Integer; AModelo: Integer = 55): String;
 function FormatarChaveAcesso(AValue: String): String;
 
 function ValidaUFCidade(const UF, Cidade: integer): Boolean; overload;
@@ -62,6 +64,9 @@ function ValidaNVE(AValue: string): Boolean;
 
 function XmlEstaAssinado(const AXML: String): Boolean;
 function ExtraiURI(const AXML: String): String;
+function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
+                              const APathArqMun: String): String;
+function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String ): Integer;
 
 procedure LerIniArquivoOuString(const IniArquivoOuString: AnsiString; AMemIni: TMemIniFile);
 
@@ -69,7 +74,7 @@ implementation
 
 uses
   Variants, DateUtils,
-  ACBrConsts, ACBrDFeException, ACBrUtil, ACBrValidador ;
+  ACBrDFeException, ACBrConsts, ACBrUtil, ACBrValidador;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
 begin
@@ -94,19 +99,57 @@ begin
     raise EACBrDFeException.Create(AMensagem);
 end;
 
-function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; ACNPJ: String;
-  ASerie: Integer; ANumero, ACodigo: Integer; AModelo: Integer): String;
+function GerarCodigoNumerico(numero: integer): integer;
 var
-  vUF, vDataEmissao, vSerie, vNumero, vCodigo, vModelo: String;
+  s: string;
+  i, j, k: integer;
 begin
+  // Essa função gera um código numerico atravéz de calculos realizados sobre o parametro numero
+  s := intToStr(numero);
+  for i := 1 to 9 do
+    s := s + intToStr(numero);
+  for i := 1 to 9 do
+  begin
+    k := 0;
+    for j := 1 to 9 do
+      k := k + StrToInt(s[j]) * (j + 1);
+    s := IntToStr((k mod 11)) + s;
+  end;
+  Result := StrToInt(copy(s, 1, 8));
+end;
+
+function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; ACNPJ: String;
+                          ASerie, ANumero, AtpEmi, ACodigo: Integer; AModelo: Integer): String;
+var
+  vUF, vDataEmissao, vSerie, vNumero, vCodigo, vModelo, vCNPJ, vtpEmi: String;
+begin
+  // Se o usuario informar um código inferior a -2 a chave não será gerada //
+  if ACodigo < -2 then
+    raise EACBrDFeException.Create('Código Numérico inválido, Chave não Gerada');
+
+  // Se o usuario informar 0 ou -1; o código numerico sera gerado de maneira aleatória //
+  if ACodigo = -1 then
+    ACodigo := 0;
+
+  while ACodigo = 0 do
+  begin
+    ACodigo := Random(99999999);
+  end;
+
+  // Se o usuario informar -2; o código numerico sera ZERO //
+  if ACodigo = -2 then
+    ACodigo := 0;
+
   vUF          := Poem_Zeros(AUF, 2);
   vDataEmissao := FormatDateTime('YYMM', ADataEmissao);
+  vCNPJ        := copy(OnlyNumber(ACNPJ) + '00000000000000', 1, 14);
   vModelo      := Poem_Zeros(AModelo, 2);
   vSerie       := Poem_Zeros(ASerie, 3);
   vNumero      := Poem_Zeros(ANumero, 9);
-  vCodigo      := Poem_Zeros(ACodigo, 9);
+  vtpEmi       := Poem_Zeros(AtpEmi, 1);
+  vCodigo      := Poem_Zeros(ACodigo, 8);
 
-  Result := vUF + vDataEmissao + ACNPJ + vModelo + vSerie + vNumero + vCodigo;
+  Result := vUF + vDataEmissao + vCNPJ + vModelo + vSerie + vNumero + vtpEmi + vCodigo;
   Result := Result + Modulo11(Result);
 end;
 
@@ -155,19 +198,21 @@ end;
 
 function ValidaDIRE(AValue: String): Boolean;
 var
-  ano: integer;
+  AnoData, AnoValue: integer;
 begin
   // AValue = AANNNNNNNNNN
-  // Onde: AA Ano corrente da geração do documento
-  //       NNNNNNNNNN Número sequencial dentro do Ano ( 10 dígitos )
-  AValue := OnlyNumber(AValue);
-  ano := StrToInt(Copy(IntToStr(YearOf(Date)), 3, 2));
+  // Onde: AA AnoData corrente da geração do documento
+  //       NNNNNNNNNN Número sequencial dentro do AnoData ( 10 dígitos )
 
-  if length(AValue) <> 12 then
-    Result := False
-  else
-    Result := (StrToInt(copy(Avalue, 1, 2)) >= ano - 1) and
-      (StrToInt(copy(Avalue, 1, 2)) <= ano + 1);
+  Result := StrIsNumber(AValue) and (Length(AValue) = 12);
+
+  if Result then
+  begin
+    AnoData  := StrToInt(Copy(IntToStr(YearOf(Date)), 3, 2));
+    AnoValue := StrToInt(Copy(AValue, 1, 2));
+
+    Result := (AnoValue >= (AnoData - 1)) and (AnoValue <= (AnoData + 1));
+  end;
 end;
 
 function ValidaRE(AValue: String): Boolean;
@@ -206,8 +251,8 @@ begin
 
   if length(AValue) <> 9 then
     Result := False
-  else if not ((StrToInt(copy(Avalue, 1, 2)) >= ano - 1) and
-    (StrToInt(copy(Avalue, 1, 2)) <= ano + 1)) then
+  else if not ((StrToInt(copy(Avalue, 1, 2)) >= ano - 2) and
+    (StrToInt(copy(Avalue, 1, 2)) <= ano + 2)) then
     Result := False
   else
     Result := copy(AValue, 9, 1) = Modulo11(copy(AValue, 1, 8));
@@ -284,6 +329,80 @@ end;
 function XmlEstaAssinado(const AXML: String): Boolean;
 begin
   Result := (pos('<signature', lowercase(AXML)) > 0);
+end;
+
+
+function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
+  const APathArqMun: String): String;
+var
+  i: Integer;
+  PathArqMun, Codigo: String;
+  List: TStringList;
+begin
+  result := '';
+  if EstaVazio(APathArqMun) then
+    PathArqMun := ApplicationPath + 'MunIBGE'
+  else
+    PathArqMun := APathArqMun;
+
+  PathArqMun := PathWithDelim(PathArqMun) + 'MunIBGE-UF' +
+             InttoStr(UFparaCodigo(AxUF)) + '.txt';
+
+  if FileExists(PathArqMun) then
+  begin
+    List := TStringList.Create;
+    try
+      List.LoadFromFile(PathArqMun);
+      Codigo := IntToStr(AcMun);
+      i := 0;
+      while (i < list.count) and (result = '') do
+      begin
+        if pos(Codigo, List[i]) > 0 then
+          result := Trim(StringReplace(list[i], codigo, '', []));
+        inc(i);
+      end;
+
+    finally
+      List.free;
+    end;
+  end;
+end;
+
+function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String): Integer;
+var
+  i: integer;
+  PathArquivo: string;
+  List: TstringList;
+  UpMun, UpMunList: String;
+begin
+  result := 0;
+  if EstaVazio(APathArqMun) then
+    PathArquivo := ApplicationPath + 'MunIBGE'
+  else
+    PathArquivo := APathArqMun;
+
+  PathArquivo := PathWithDelim(PathArquivo) + 'MunIBGE-UF' +
+               InttoStr(UFparaCodigo(AxUF)) + '.txt';
+
+  if FileExists(PathArquivo) then
+  begin
+    UpMun := UpperCase(TiraAcentos(AxMun));
+    List := TstringList.Create;
+    try
+      List.LoadFromFile(PathArquivo);
+      i := 0;
+      while (i < list.count) and (result = 0) do
+      begin
+        UpMunList := UpperCase(TiraAcentos(List[i]));
+        if pos(UpMun, UpMunList ) = 9 then
+          result := StrToInt(Trim(copy(list[i],1,7)));
+
+        inc(i);
+      end;
+    finally
+      List.free;
+    end;
+  end;
 end;
 
 procedure LerIniArquivoOuString(const IniArquivoOuString: AnsiString;

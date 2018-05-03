@@ -88,6 +88,7 @@ type
     FDet: TDetCollection;
     FNomeArquivo: String;
     FRetirarAcentos: boolean;
+    FRetirarEspacos: boolean;
     FTamanhoIdentacao: integer;
     FTotal: TTotal;
     fPagto: TMPCollection;
@@ -126,6 +127,7 @@ type
     property signature: Tsignature read Fsignature write Fsignature;
 
     property RetirarAcentos: boolean read FRetirarAcentos write FRetirarAcentos;
+    property RetirarEspacos: boolean read FRetirarEspacos write FRetirarEspacos;
     property IdentarXML: boolean read FIdentarXML write FIdentarXML;
     property TamanhoIdentacao: integer read FTamanhoIdentacao write FTamanhoIdentacao;
     property AjustarTagNro: boolean read FAjustarTagNro write FAjustarTagNro;
@@ -511,7 +513,7 @@ type
     FvAliq: currency;
     FvISSQN: currency;
     FcMunFG: integer;
-    FcListServ: integer;
+    FcListServ: String;
     FcServTribMun: string;
     FcNatOp: integer;
     FindIncFisc: TpcnindIncentivo;
@@ -524,7 +526,7 @@ type
     property vAliq: currency read FvAliq write FvAliq;
     property vISSQN: currency read FvISSQN write FvISSQN;
     property cMunFG: integer read FcMunFG write FcMunFG;
-    property cListServ: integer read FcListServ write FcListServ;
+    property cListServ: String read FcListServ write FcListServ;
     property cServTribMun: string read FcServTribMun write FcServTribMun;
     property cNatOp: integer read FcNatOp write FcNatOp;
     property indIncFisc: TpcnindIncentivo read FindIncFisc write FindIncFisc;
@@ -815,7 +817,7 @@ begin
   FvAliq       := 0;
   FvISSQN      := 0;
   FcMunFG      := 0;
-  FcListServ   := 0;
+  FcListServ   := '';
   FcServTribMun:= '';
   FcNatOp      := 0;
   FindIncFisc  := iiNao;
@@ -1268,6 +1270,7 @@ begin
   Fsignature := Tsignature.create;
 
   FRetirarAcentos := True;
+  FRetirarEspacos := True;
   FIdentarXML := False;
   FTamanhoIdentacao := 3;
   FAjustarTagNro := True;
@@ -1356,6 +1359,7 @@ begin
   LocCFeW := TCFeW.Create(Self);
   try
     LocCFeW.Gerador.Opcoes.RetirarAcentos   := FRetirarAcentos;
+    LocCFeW.Gerador.Opcoes.RetirarEspacos   := FRetirarEspacos;
     LocCFeW.Gerador.Opcoes.IdentarXML       := FIdentarXML;
     LocCFeW.Gerador.Opcoes.TamanhoIdentacao := FTamanhoIdentacao;   
     LocCFeW.Opcoes.AjustarTagNro            := FAjustarTagNro;   
@@ -1366,16 +1370,21 @@ begin
     LocCFeW.Free;
   end ;
 
+  FXMLOriginal := ConverteXMLtoUTF8(FXMLOriginal);
   Result := FXMLOriginal;
 end;
 
 procedure TCFe.SetXMLString(AValue : AnsiString) ;
 var
- LocCFeR : TCFeR;
+  LocCFeR : TCFeR;
+  XMLStr: String;
 begin
   LocCFeR := TCFeR.Create(Self);
   try
-    LocCFeR.Leitor.Arquivo := AValue;
+    // Verifica se precisa Converter de UTF8 para a String nativa da IDE //
+    XMLStr := ConverteXMLtoNativeString(AValue);
+
+    LocCFeR.Leitor.Arquivo := XMLStr;
     LocCFeR.LerXml;
   finally
     LocCFeR.Free

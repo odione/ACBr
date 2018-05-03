@@ -145,8 +145,9 @@ type
     procedure GerarforDia;
     procedure GerarDeduc;
 
-    procedure AjustarMunicipioUF(out xUF: String; out xMun: String; out cMun: Integer; cPais: Integer; vxUF, vxMun: String; vcMun: Integer);
-    function ObterNomeMunicipio(const xMun, xUF: String; const cMun: Integer): String;
+    procedure AjustarMunicipioUF(out xUF: String; out xMun: String; out cMun: Integer;
+      cPais: Integer; vxUF, vxMun: String; vcMun: Integer);
+
   public
     constructor Create(AOwner: TNFe);
     destructor Destroy; override;
@@ -169,14 +170,14 @@ type
     FValidarInscricoes: Boolean;
     FValidarListaServicos: Boolean;
   published
-    property AjustarTagNro: Boolean read FAjustarTagNro write FAjustarTagNro;
-    property GerarTagIPIparaNaoTributado: Boolean read FGerarTagIPIparaNaoTributado write FGerarTagIPIparaNaoTributado;
+    property AjustarTagNro: Boolean read FAjustarTagNro;
+    property GerarTagIPIparaNaoTributado: Boolean read FGerarTagIPIparaNaoTributado;
     property GerarTXTSimultaneamente: Boolean read FGerarTXTSimultaneamente write FGerarTXTSimultaneamente;
     property NormatizarMunicipios: Boolean read FNormatizarMunicipios write FNormatizarMunicipios;
-    property GerarTagAssinatura: TpcnTagAssinatura read FGerarTagAssinatura write FGerarTagAssinatura;
+    property GerarTagAssinatura: TpcnTagAssinatura read FGerarTagAssinatura;
     property PathArquivoMunicipios: String read FPathArquivoMunicipios write FPathArquivoMunicipios;
-    property ValidarInscricoes: Boolean read FValidarInscricoes write FValidarInscricoes;
-    property ValidarListaServicos: Boolean read FValidarListaServicos write FValidarListaServicos;
+    property ValidarInscricoes: Boolean read FValidarInscricoes;
+    property ValidarListaServicos: Boolean read FValidarListaServicos;
   end;
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -185,7 +186,7 @@ implementation
 
 Uses
   pcnConversaoNFe, pcnAuxiliar, pcnLayoutTXT,
-  ACBrDFeUtil, pcnConsts, ACBrUtil;
+  ACBrDFeUtil, pcnConsts, ACBrUtil, ACBrValidador;
 
 { TNFeW }
 
@@ -230,28 +231,19 @@ begin
   Usar_tcDe4 := (NFe.infNFe.Versao >= 3.10);
   Versao     := Copy(NFe.infNFe.VersaoStr, 9, 4);
 
-  chave := '';
-  if NFe.infNFe.Versao >= 2 then
-   begin
-     xCNPJCPF := nfe.emit.CNPJCPF;  
-     if not EstaVazio(nfe.Avulsa.CNPJ) then  
-       xCNPJCPF := nfe.Avulsa.CNPJ;    
-   
-     if not GerarChave(Chave, nfe.ide.cUF, nfe.ide.cNF, nfe.ide.modelo, nfe.ide.serie,
-       nfe.ide.nNF, StrToInt(TpEmisToStr(nfe.ide.tpEmis)), nfe.ide.dEmi, xCNPJCPF) then
-       Gerador.wAlerta('A01', 'infNFe', DSC_CHAVE, ERR_MSG_GERAR_CHAVE);
-   end
-  else
-   begin
-     if not GerarChaveCTe(chave, nfe.ide.cUF, nfe.ide.cNF, nfe.ide.modelo, nfe.ide.serie,
-       nfe.ide.nNF, nfe.ide.dEmi, nfe.emit.CNPJCPF) then
-       Gerador.wAlerta('A01', 'infNFe', DSC_CHAVE, ERR_MSG_GERAR_CHAVE);
-   end;
+  xCNPJCPF := nfe.emit.CNPJCPF;
 
-  nfe.infNFe.ID := chave;
+  if not EstaVazio(nfe.Avulsa.CNPJ) then
+    xCNPJCPF := nfe.Avulsa.CNPJ;
 
-  nfe.ide.cDV := RetornarDigito(nfe.infNFe.ID);
-  nfe.Ide.cNF := RetornarCodigoNumerico(nfe.infNFe.ID, NFe.infNFe.Versao);
+  chave := GerarChaveAcesso(nfe.ide.cUF, nfe.ide.dEmi, xCNPJCPF, nfe.ide.serie,
+                            nfe.ide.nNF, StrToInt(TpEmisToStr(nfe.ide.tpEmis)),
+                            nfe.ide.cNF, nfe.ide.modelo);
+  nfe.infNFe.ID := 'NFe' + chave;
+
+  nfe.ide.cDV := ExtrairDigitoChaveAcesso(nfe.infNFe.ID);
+  nfe.Ide.cNF := ExtrairCodigoChaveAcesso(nfe.infNFe.ID);
+
   // Carrega Layout que sera utilizado para gera o txt
   Gerador.LayoutArquivoTXT.Clear;
   if FOpcoes.GerarTXTSimultaneamente then
@@ -359,11 +351,11 @@ procedure TNFeW.GerarIde;
 begin
   Gerador.wGrupo('ide', 'B01');
   Gerador.wCampo(tcInt, 'B02', 'cUF    ', 02, 02, 1, nfe.ide.cUF, DSC_CUF);
-  if not ValidarCodigoUF(nfe.ide.cUF) then Gerador.wAlerta('B02', 'cUF', DSC_CUF, ERR_MSG_INVALIDO);
-  if nfe.infNFe.Versao < 2 then
-     Gerador.wCampo(tcStr, 'B03', 'cNF    ', 09, 09, 1, IntToStrZero(RetornarCodigoNumerico(nfe.infNFe.ID,nfe.infNFe.Versao), 9), DSC_CNF)          
-  else
-     Gerador.wCampo(tcStr, 'B03', 'cNF    ', 08, 08, 1, IntToStrZero(RetornarCodigoNumerico(nfe.infNFe.ID,nfe.infNFe.Versao), 8), DSC_CNF);     
+
+  if not ValidarCodigoUF(nfe.ide.cUF) then
+    Gerador.wAlerta('B02', 'cUF', DSC_CUF, ERR_MSG_INVALIDO);
+
+  Gerador.wCampo(tcStr, 'B03', 'cNF    ', 08, 08, 1, IntToStrZero(ExtrairCodigoChaveAcesso(nfe.infNFe.ID), 8), DSC_CNF);
   Gerador.wCampo(tcStr, 'B04', 'natOp  ', 01, 60, 1, nfe.ide.natOp, DSC_NATOP);
 
   if nfe.infNFe.Versao < 4 then
@@ -482,7 +474,7 @@ begin
   Gerador.wCampo(tcEsp, 'B20c', 'AAMM  ', 04, 04, 1, nfe.Ide.NFref[i].RefNFP.AAMM, DSC_AAMM);
   if not ValidarAAMM(nfe.Ide.NFref[i].RefNFP.AAMM) then  Gerador.wAlerta('B20c', 'AAMM', DSC_AAMM, 'Periodo inválido');
   Gerador.wCampoCNPJCPF('B20d', 'B20e', nfe.Ide.NFref[i].RefNFP.CNPJCPF);
-  Gerador.wCampo(tcStr, 'B20f', 'IE   ', 01, 14, 1, nfe.Ide.NFref[i].RefNFP.IE, DSC_MOD);
+  Gerador.wCampo(tcStr, 'B20f', 'IE   ', 01, 14, 1, nfe.Ide.NFref[i].RefNFP.IE, DSC_IE);
   Gerador.wCampo(tcInt, 'B20f', 'mod   ', 02, 02, 1, nfe.Ide.NFref[i].RefNFP.Modelo, DSC_MOD);
   Gerador.wCampo(tcInt, 'B20g', 'serie ', 01, 03, 1, nfe.ide.NFref[i].RefNFP.serie, DSC_SERIE);
   Gerador.wCampo(tcInt, 'B20h', 'nNF   ', 01, 09, 1, nfe.Ide.NFref[i].RefNFP.nNF, DSC_NNF);
@@ -524,7 +516,7 @@ begin
       Gerador.wAlerta('C17', 'IE', DSC_IE, ERR_MSG_VAZIO)
     else
     begin
-      if not ValidarIE(nfe.Emit.IE, CodigoParaUF(nfe.Ide.cUF)) then
+      if not pcnAuxiliar.ValidarIE(nfe.Emit.IE, CodigoParaUF(nfe.Ide.cUF)) then
         Gerador.wAlerta('C17', 'IE', DSC_IE, ERR_MSG_INVALIDO);
     end;
   end;
@@ -557,7 +549,7 @@ begin
     Gerador.wAlerta('C10', 'cMun', DSC_CMUN, ERR_MSG_INVALIDO);
   Gerador.wCampo(tcStr, 'C11', 'xMun   ', 02, 60, 1, xMun, DSC_XMUN);
   Gerador.wCampo(tcStr, 'C12', 'UF     ', 02, 02, 1, xUF, DSC_UF);
-  if not ValidarUF(xUF) then
+  if not pcnAuxiliar.ValidarUF(xUF) then
     Gerador.wAlerta('C12', 'UF', DSC_UF, ERR_MSG_INVALIDO);
   Gerador.wCampo(tcInt, 'C13', 'CEP    ', 08, 08, 1, nfe.Emit.enderEmit.CEP, DSC_CEP);
   Gerador.wCampo(tcInt, 'C14', 'cPais  ', 04, 04, 0, CODIGO_BRASIL, DSC_CPAIS); // Conforme NT-2009/01
@@ -577,7 +569,7 @@ begin
     Gerador.wCampo(tcStr, 'D05', 'xAgente', 01, 60, 1, nfe.Avulsa.xAgente, DSC_XAGENTE);
     Gerador.wCampo(tcStr, 'D06', 'fone   ', 06, 14, 0, OnlyNumber(nfe.Avulsa.fone), DSC_FONE);
     Gerador.wCampo(tcStr, 'D07', 'UF     ', 02, 02, 1, nfe.Avulsa.UF, DSC_UF);
-    if not ValidarUF(nfe.Avulsa.UF) then
+    if not pcnAuxiliar.ValidarUF(nfe.Avulsa.UF) then
       Gerador.wAlerta('D07', 'UF', DSC_UF, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'D08', 'nDAR   ', 01, 60, 0, nfe.Avulsa.nDAR, DSC_nDAR);
     Gerador.wCampo(tcDat, 'D09', 'dEmi   ', 10, 10, 0, nfe.Avulsa.dEmi, DSC_DEMI);
@@ -643,7 +635,7 @@ begin
         Gerador.wCampo(tcStr, 'E17', 'IE     ', 00, 14, 1, OnlyNumber(nfe.Dest.IE), DSC_IE);
 
         if (FOpcoes.ValidarInscricoes) and (nfe.Dest.IE <> '') and (nfe.Dest.IE <> 'ISENTO') then
-          if not ValidarIE(nfe.Dest.IE, UF) then
+          if not pcnAuxiliar.ValidarIE(nfe.Dest.IE, UF) then
             Gerador.wAlerta('E17', 'IE', DSC_IE, ERR_MSG_INVALIDO);
       end;
    end;
@@ -675,7 +667,7 @@ begin
     Gerador.wAlerta('E10', 'cMun', DSC_CMUN, ERR_MSG_INVALIDO);
   Gerador.wCampo(tcStr, 'E11', 'xMun   ', 02, 60, 1, xMun, DSC_XMUN);
   Gerador.wCampo(tcStr, 'E12', 'UF     ', 02, 02, 1, xUF, DSC_UF);
-  if not ValidarUF(xUF) then
+  if not pcnAuxiliar.ValidarUF(xUF) then
     Gerador.wAlerta('E12', 'UF', DSC_UF, ERR_MSG_INVALIDO);
   Gerador.wCampo(tcInt, 'E13', 'CEP    ', 08, 08, 0, nfe.Dest.enderDest.CEP, DSC_CEP);
   Gerador.wCampo(tcStr, 'E14', 'cPais ', 01, 04, 0, IIf(nfe.Dest.enderDest.cPais <> 0, IntToStrZero(nfe.Dest.enderDest.cPais,4), ''), DSC_CPAIS);
@@ -706,7 +698,7 @@ begin
       Gerador.wAlerta('F07', 'cMun', DSC_CMUN, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'F08', 'xMun   ', 02, 60, 1, xMun, DSC_XMUN);
     Gerador.wCampo(tcStr, 'F09', 'UF     ', 02, 02, 1, xUF, DSC_UF);
-    if not ValidarUF(xUF) then
+    if not pcnAuxiliar.ValidarUF(xUF) then
       Gerador.wAlerta('F09', 'UF', DSC_UF, ERR_MSG_INVALIDO);
     Gerador.wGrupo('/retirada');
   end;
@@ -727,7 +719,7 @@ begin
       Gerador.wAlerta('F07', 'cMun', DSC_CMUN, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'G08', 'xMun   ', 02, 60, 1, nfe.Entrega.xMun, DSC_XMUN);
     Gerador.wCampo(tcStr, 'G09', 'UF     ', 02, 02, 1, nfe.Entrega.UF, DSC_UF);
-    if not ValidarUF(nfe.Entrega.UF) then
+    if not pcnAuxiliar.ValidarUF(nfe.Entrega.UF) then
       Gerador.wAlerta('G09', 'UF', DSC_UF, ERR_MSG_INVALIDO);
     Gerador.wGrupo('/entrega');
   end;
@@ -772,10 +764,26 @@ end;
 procedure TNFeW.GerarDetProd(const i: Integer);
 const
   HOM_XPROD = 'NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
+  SEMGTIN = 'SEM GTIN';
+var
+  ErroValidarGTIN: String;
 begin
   Gerador.wGrupo('prod', 'I01');
   Gerador.wCampo(tcStr, 'I02 ', 'cProd   ', 01, 60, 1, nfe.Det[i].Prod.cProd, DSC_CPROD);
-  Gerador.wCampo(tcStr, 'I03 ', 'cEAN    ', 00, 14, 1, nfe.Det[i].Prod.cEAN, DSC_CEAN);
+
+  // Implementação futura - regra de validação somente em 01/12/2018
+//  if (NFe.infNFe.Versao >= 4) and (trim(nfe.Det[i].Prod.cEAN) = '') then
+//    nfe.Det[i].Prod.cEAN := SEMGTIN;
+
+  Gerador.wCampo(tcStr, 'I03 ', 'cEAN', 00, 14, 1, nfe.Det[i].Prod.cEAN, DSC_CEAN);
+
+  if (nfe.Det[i].Prod.cEAN <> SEMGTIN) and (nfe.Det[i].Prod.cEAN <> '') then
+  begin
+    ErroValidarGTIN := ValidarGTIN(nfe.Det[i].Prod.cEAN);
+    if ErroValidarGTIN <> '' then
+      Gerador.wAlerta('I03', 'cEAN', DSC_CEAN, ErroValidarGTIN);
+  end;
+
   if (NFe.Det[i].Prod.nItem = 1) and (NFe.Ide.tpAmb = taHomologacao) and (NFe.ide.modelo = 65) then
     Gerador.wCampo(tcStr, 'I04 ', 'xProd   ', 1, 120, 1, HOM_XPROD, DSC_XPROD)
   else
@@ -785,7 +793,7 @@ begin
 
   if NFe.infNFe.Versao >= 4 then
   begin
-    if (nfe.Det[i].Prod.CEST <> '') then
+    if OnlyNumber(nfe.Det[i].Prod.CEST) <> '' then
     begin
       Gerador.wCampo(tcStr, 'I05c', 'CEST     ', 07, 07, 1, OnlyNumber(nfe.Det[i].Prod.CEST), DSC_CEST);
       Gerador.wCampo(tcStr, 'I05d', 'indEscala', 01, 01, 0, indEscalaToStr(nfe.Det[i].Prod.indEscala), DSC_INDESCALA);
@@ -803,7 +811,20 @@ begin
   Gerador.wCampo(tcDe4, 'I10 ', 'qCom    ', 00, 15, 1, nfe.Det[i].Prod.qCom, DSC_QCOM);
   Gerador.wCampo(IIf(NFe.infNFe.Versao >= 2,tcDe10,tcDe4),'I10a', 'vUnCom  ', 00, 21, 1, nfe.Det[i].Prod.vUnCom, DSC_VUNCOM);
   Gerador.wCampo(tcDe2, 'I11 ', 'vProd   ', 00, 15, 1, nfe.Det[i].Prod.vProd, DSC_VPROD);
+
+  // Implementação futura - regra de validação somente em 01/12/2018
+//  if (NFe.infNFe.Versao >= 4) and (trim(nfe.Det[i].Prod.cEANTrib) = '') then
+//    nfe.Det[i].Prod.cEANTrib := SEMGTIN;
+
   Gerador.wCampo(tcStr, 'I12 ', 'cEANTrib', 00, 14, 1, nfe.Det[i].Prod.cEANTrib, DSC_CEANTRIB);
+
+  if (nfe.Det[i].Prod.cEANTrib <> SEMGTIN) and (nfe.Det[i].Prod.cEAN <> '') then
+  begin
+    ErroValidarGTIN := ValidarGTIN(nfe.Det[i].Prod.cEANTrib);
+    if ErroValidarGTIN <> '' then
+      Gerador.wAlerta('I12', 'cEANTrib', DSC_CEANTRIB, ErroValidarGTIN);
+  end;
+
   Gerador.wCampo(tcStr, 'I13 ', 'uTrib   ', 01, 06, 1, nfe.Det[i].Prod.uTrib, DSC_UTRIB);
   Gerador.wCampo(tcDe4, 'I14 ', 'qTrib   ', 00, 15, 1, nfe.Det[i].Prod.qTrib, DSC_QTRIB);
   Gerador.wCampo(IIf(NFe.infNFe.Versao >= 2,tcDe10,tcDe4), 'I14a', 'vUnTrib ', 00, 21, 1, nfe.Det[i].Prod.vUnTrib, DSC_VUNTRIB);
@@ -846,7 +867,7 @@ begin
     Gerador.wCampo(tcDat, 'I20', 'dDI        ', 10, 10, 1, nfe.Det[i].Prod.DI[j].dDI, DSC_DDi);
     Gerador.wCampo(tcStr, 'I21', 'xLocDesemb ', 01, 60, 1, nfe.Det[i].Prod.DI[j].xLocDesemb, DSC_XLOCDESEMB);
     Gerador.wCampo(tcStr, 'I22', 'UFDesemb   ', 02, 02, 1, nfe.Det[i].Prod.DI[j].UFDesemb, DSC_UFDESEMB);
-    if not ValidarUF(nfe.Det[i].Prod.DI[j].UFDesemb) then
+    if not pcnAuxiliar.ValidarUF(nfe.Det[i].Prod.DI[j].UFDesemb) then
       Gerador.wAlerta('I22', 'UFDesemb', DSC_UFDESEMB, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcDat, 'I23', 'dDesemb    ', 10, 10, 1, nfe.Det[i].Prod.DI[j].dDesemb, DSC_DDESEMB);
 
@@ -865,7 +886,7 @@ begin
 
       Gerador.wCampo(tcStr, 'I23e', 'UFTerceiro  ', 02, 02, 0, nfe.Det[i].Prod.DI[j].UFTerceiro, DSC_UF);
       if nfe.Det[i].Prod.DI[j].UFTerceiro <> '' then
-        if not ValidarUF(nfe.Det[i].Prod.DI[j].UFTerceiro) then
+        if not pcnAuxiliar.ValidarUF(nfe.Det[i].Prod.DI[j].UFTerceiro) then
           Gerador.wAlerta('I23e', 'UFTerceiro', DSC_UF, ERR_MSG_INVALIDO);
     end;
 
@@ -1108,7 +1129,7 @@ begin
       begin
        //  versao 4.01
         Gerador.wCampo(tcStr, 'L120', 'UFCons       ', 02, 02, 1, nfe.Det[i].Prod.comb.UFcons, DSC_UFCONS);
-        if not ValidarUF(nfe.Det[i].Prod.comb.UFcons) then Gerador.wAlerta('L120', 'UFcons', DSC_UFCONS, ERR_MSG_INVALIDO);
+        if not pcnAuxiliar.ValidarUF(nfe.Det[i].Prod.comb.UFcons) then Gerador.wAlerta('L120', 'UFcons', DSC_UFCONS, ERR_MSG_INVALIDO);
         (**)GerarDetProdCombCIDE(i);
 
         if nfe.Det[i].Prod.comb.encerrante.nBico > 0 then
@@ -1176,7 +1197,7 @@ begin
     Gerador.wCampo(tcDe2, 'L118', 'vBCICMSSTCons', 01, 15, 1, nfe.Det[i].Prod.comb.ICMSCons.vBCICMSSTCons, DSC_VBCICMSSTCONS);
     Gerador.wCampo(tcDe2, 'L119', 'vICMSSTCons  ', 01, 15, 1, nfe.Det[i].Prod.comb.ICMSCons.vICMSSTCons, DSC_VICMSSTCONS);
     Gerador.wCampo(tcStr, 'L120', 'UFCons       ', 02, 02, 1, nfe.Det[i].Prod.comb.ICMSCons.UFcons, DSC_UFCONS);
-    if not ValidarUF(nfe.Det[i].Prod.comb.ICMSCons.UFcons) then
+    if not pcnAuxiliar.ValidarUF(nfe.Det[i].Prod.comb.ICMSCons.UFcons) then
       Gerador.wAlerta('L120', 'UFcons', DSC_UFCONS, ERR_MSG_INVALIDO);
     Gerador.wGrupo('/ICMSCons');
   end;
@@ -1384,17 +1405,20 @@ begin
                cst50 :
                   begin
                      //Esse bloco fica a critério de cada UF a obrigação das informações, conforme o manual
-                     if (NFe.infNFe.Versao >= 3.10) and (nfe.Det[i].Imposto.ICMS.vICMSDeson > 0) then
-                      begin
-                        Gerador.wCampo(tcDe2, 'N13a', 'vICMSDeson', 01, 15, 1, nfe.Det[i].Imposto.ICMS.vICMSDeson, DSC_VICMSDESON);
-                        Gerador.wCampo(tcStr, 'N13b', 'motDesICMS', 01, 02, 1, motDesICMSToStr(nfe.Det[i].Imposto.ICMS.motDesICMS), DSC_MOTDESICMS);
-                      end
+                     if (NFe.infNFe.Versao >= 3.10) then
+                     begin
+                       if (nfe.Det[i].Imposto.ICMS.vICMSDeson > 0) then
+                       begin
+                         Gerador.wCampo(tcDe2, 'N13a', 'vICMSDeson', 01, 15, 1, nfe.Det[i].Imposto.ICMS.vICMSDeson, DSC_VICMSDESON);
+                         Gerador.wCampo(tcStr, 'N13b', 'motDesICMS', 01, 02, 1, motDesICMSToStr(nfe.Det[i].Imposto.ICMS.motDesICMS), DSC_MOTDESICMS);
+                       end;
+                     end
                      else
-                      begin
-                        Gerador.wCampo(tcDe2, 'N17', 'vICMS     ', 01, 15, 0, nfe.Det[i].Imposto.ICMS.vICMS, DSC_VICMS);
-                        if (nfe.Det[i].Imposto.ICMS.vICMS > 0) then
-                           Gerador.wCampo(tcStr, 'N28', 'motDesICMS', 01, 01, 0, motDesICMSToStr(nfe.Det[i].Imposto.ICMS.motDesICMS), DSC_MOTDESICMS);
-                      end;
+                     begin
+                       Gerador.wCampo(tcDe2, 'N17', 'vICMS     ', 01, 15, 0, nfe.Det[i].Imposto.ICMS.vICMS, DSC_VICMS);
+                       if (nfe.Det[i].Imposto.ICMS.vICMS > 0) then
+                         Gerador.wCampo(tcStr, 'N28', 'motDesICMS', 01, 01, 0, motDesICMSToStr(nfe.Det[i].Imposto.ICMS.motDesICMS), DSC_MOTDESICMS);
+                     end;
                   end;
                cst51 :
                   begin
@@ -2032,13 +2056,20 @@ begin
   Gerador.wGrupo('ICMSUFDest', 'NA01');
   Gerador.wCampo(tcDe2, 'NA03', 'vBCUFDest', 01, 15, 1, nfe.Det[i].Imposto.ICMSUFDest.vBCUFDest, DSC_VBCUFDEST);
   if (NFe.infNFe.Versao >= 4) then
+  begin
     Gerador.wCampo(tcDe2, 'NA04', 'vBCFCPUFDest', 01, 15, 0, nfe.Det[i].Imposto.ICMSUFDest.vBCFCPUFDest, DSC_VBCUFDEST);
-  Gerador.wCampo(IIf(Usar_tcDe4,tcDe4,tcDe2), 'NA05', 'pFCPUFDest', 01, IIf(Usar_tcDe4,07,05), 1, nfe.Det[i].Imposto.ICMSUFDest.pFCPUFDest, DSC_PFCPUFDEST);
+    Gerador.wCampo(IIf(Usar_tcDe4,tcDe4,tcDe2), 'NA05', 'pFCPUFDest', 01, IIf(Usar_tcDe4,07,05), 0, nfe.Det[i].Imposto.ICMSUFDest.pFCPUFDest, DSC_PFCPUFDEST);
+  end
+  else
+    Gerador.wCampo(IIf(Usar_tcDe4,tcDe4,tcDe2), 'NA05', 'pFCPUFDest', 01, IIf(Usar_tcDe4,07,05), 1, nfe.Det[i].Imposto.ICMSUFDest.pFCPUFDest, DSC_PFCPUFDEST);
   Gerador.wCampo(IIf(Usar_tcDe4,tcDe4,tcDe2), 'NA07', 'pICMSUFDest', 01, IIf(Usar_tcDe4,07,05), 1, nfe.Det[i].Imposto.ICMSUFDest.pICMSUFDest, DSC_PICMSUFDEST);
   // Alterado para ficar em conformidade com o novo Schema
   Gerador.wCampo(tcDe2, 'NA09', 'pICMSInter ', 01, 05, 1, nfe.Det[i].Imposto.ICMSUFDest.pICMSInter, DSC_PICMSINTER);
   Gerador.wCampo(IIf(Usar_tcDe4,tcDe4,tcDe2), 'NA11', 'pICMSInterPart', 01, IIf(Usar_tcDe4,07,05), 1, nfe.Det[i].Imposto.ICMSUFDest.pICMSInterPart, DSC_PICMSINTERPART);
-  Gerador.wCampo(tcDe2, 'NA13', 'vFCPUFDest ', 01, 15, 1, nfe.Det[i].Imposto.ICMSUFDest.vFCPUFDest, DSC_VFCPUFDEST);
+  if (NFe.infNFe.Versao >= 4) then
+    Gerador.wCampo(tcDe2, 'NA13', 'vFCPUFDest ', 01, 15, 0, nfe.Det[i].Imposto.ICMSUFDest.vFCPUFDest, DSC_VFCPUFDEST)
+  else
+    Gerador.wCampo(tcDe2, 'NA13', 'vFCPUFDest ', 01, 15, 1, nfe.Det[i].Imposto.ICMSUFDest.vFCPUFDest, DSC_VFCPUFDEST);
   Gerador.wCampo(tcDe2, 'NA15', 'vICMSUFDest ', 01, 15, 1, nfe.Det[i].Imposto.ICMSUFDest.vICMSUFDest, DSC_VICMSUFDEST);
   Gerador.wCampo(tcDe2, 'NA17', 'vICMSUFRemet', 01, 15, 1, nfe.Det[i].Imposto.ICMSUFDest.vICMSUFRemet, DSC_VICMSUFREMET);
   Gerador.wGrupo('/ICMSUFDest');
@@ -2182,8 +2213,16 @@ begin
   for i := 0 to nfe.Cobr.Dup.Count - 1 do
   begin
     Gerador.wGrupo('dup', 'Y07');
-    Gerador.wCampo(tcStr, 'Y08', 'nDup ', 01, 60, 0, nfe.Cobr.Dup[i].nDup, DSC_NDUP);
-    Gerador.wCampo(tcDat, 'Y09', 'dVenc', 10, 10, 0, nfe.Cobr.Dup[i].dVenc, DSC_DVENC);
+    if (NFe.infNFe.Versao >= 4) then
+    begin
+      Gerador.wCampo(tcStr, 'Y08', 'nDup ', 01, 60, 1, nfe.Cobr.Dup[i].nDup, DSC_NDUP);
+      Gerador.wCampo(tcDat, 'Y09', 'dVenc', 10, 10, 1, nfe.Cobr.Dup[i].dVenc, DSC_DVENC);
+    end
+    else
+    begin
+      Gerador.wCampo(tcStr, 'Y08', 'nDup ', 01, 60, 0, nfe.Cobr.Dup[i].nDup, DSC_NDUP);
+      Gerador.wCampo(tcDat, 'Y09', 'dVenc', 10, 10, 0, nfe.Cobr.Dup[i].dVenc, DSC_DVENC);
+    end;
     Gerador.wCampo(tcDe2, 'Y10', 'vDup ', 01, 15, 1, nfe.Cobr.Dup[i].vDup, DSC_VDUP);
     Gerador.wGrupo('/dup');
   end;
@@ -2224,7 +2263,7 @@ begin
      begin
        Gerador.wCampo(tcStr, 'X07', 'IE      ', 02, 14, 0, OnlyNumber(nfe.Transp.Transporta.IE), DSC_IE);
        if (FOpcoes.ValidarInscricoes) and (nfe.Transp.Transporta.IE <> '') then
-         if not ValidarIE(nfe.Transp.Transporta.IE, nfe.Transp.Transporta.UF) then
+         if not pcnAuxiliar.ValidarIE(nfe.Transp.Transporta.IE, nfe.Transp.Transporta.UF) then
            Gerador.wAlerta('X07', 'IE', DSC_IE, ERR_MSG_INVALIDO);
      end;
     Gerador.wCampo(tcStr, 'X08', 'xEnder  ', 01, 60, 0, nfe.Transp.Transporta.xEnder, DSC_XENDER);
@@ -2232,7 +2271,7 @@ begin
     if trim(nfe.Transp.Transporta.UF) <> '' then
      begin
        Gerador.wCampo(tcStr, 'X10', 'UF      ', 01, 02, 0, nfe.Transp.Transporta.UF, DSC_UF);
-       if not ValidarUF(nfe.Transp.Transporta.UF) then
+       if not pcnAuxiliar.ValidarUF(nfe.Transp.Transporta.UF) then
          Gerador.wAlerta('X10', 'UF', DSC_UF, ERR_MSG_INVALIDO);
      end;
     Gerador.wGrupo('/transporta');
@@ -2270,7 +2309,7 @@ begin
     Gerador.wGrupo('veicTransp', 'X18');
     Gerador.wCampo(tcStr, 'X19', 'placa   ', 06, 07, 1, nfe.Transp.veicTransp.placa, DSC_PLACA);
     Gerador.wCampo(tcStr, 'X20', 'UF      ', 02, 02, 1, nfe.Transp.veicTransp.UF, DSC_UF);
-    if not ValidarUF(nfe.Transp.veicTransp.UF) then
+    if not pcnAuxiliar.ValidarUF(nfe.Transp.veicTransp.UF) then
       Gerador.wAlerta('X20', 'UF', DSC_UF, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'X21', 'RNTC    ', 01, 20, 0, nfe.Transp.veicTransp.RNTC, DSC_RNTC);
     Gerador.wGrupo('/veicTransp');
@@ -2288,7 +2327,7 @@ begin
     Gerador.wGrupo('reboque', 'X22');
     Gerador.wCampo(tcStr, 'X23', 'placa ', 06, 07, 1, nfe.Transp.Reboque[i].placa, DSC_PLACA);
     Gerador.wCampo(tcStr, 'X24', 'UF    ', 02, 02, 1, nfe.Transp.Reboque[i].UF, DSC_UF);
-    if not ValidarUF(nfe.Transp.Reboque[i].UF) then
+    if not pcnAuxiliar.ValidarUF(nfe.Transp.Reboque[i].UF) then
       Gerador.wAlerta('X24', 'UF', DSC_UF, ERR_MSG_INVALIDO);
     Gerador.wCampo(tcStr, 'X25', 'RNTC  ', 01, 20, 0, nfe.Transp.Reboque[i].RNTC, DSC_RNTC);
     Gerador.wGrupo('/reboque');
@@ -2403,7 +2442,7 @@ begin
     begin
       Gerador.wGrupo('exporta', 'ZA01');
       Gerador.wCampo(tcStr, 'ZA02', 'UFSaidaPais', 02, 02, 1, nfe.exporta.UFSaidaPais, DSC_UFEMBARQ);
-      if not ValidarUF(nfe.exporta.UFSaidaPais) then
+      if not pcnAuxiliar.ValidarUF(nfe.exporta.UFSaidaPais) then
         Gerador.wAlerta('ZA02', 'UFSaidaPais', DSC_UFEMBARQ, ERR_MSG_INVALIDO);
       Gerador.wCampo(tcStr, 'ZA03', 'xLocExporta ', 01, 60, 1, nfe.exporta.xLocExporta, DSC_XLOCEMBARQ);
       Gerador.wCampo(tcStr, 'ZA04', 'xLocDespacho', 01, 60, 0, nfe.exporta.xLocDespacho, DSC_XLOCDESP);
@@ -2416,7 +2455,7 @@ begin
     begin
       Gerador.wGrupo('exporta', 'ZA01');
       Gerador.wCampo(tcStr, 'ZA02', 'UFEmbarq', 02, 02, 1, nfe.exporta.UFembarq, DSC_UFEMBARQ);
-      if not ValidarUF(nfe.exporta.UFembarq) then
+      if not pcnAuxiliar.ValidarUF(nfe.exporta.UFembarq) then
         Gerador.wAlerta('ZA02', 'UFEmbarq', DSC_UFEMBARQ, ERR_MSG_INVALIDO);
       Gerador.wCampo(tcStr, 'ZA03', 'xLocEmbarq', 01, 60, 1, nfe.exporta.xLocEmbarq, DSC_XLOCEMBARQ);
       Gerador.wGrupo('/exporta');
@@ -2495,7 +2534,10 @@ begin
   for i := 0 to nfe.pag.Count - 1 do
   begin
     if (NFe.infNFe.Versao >= 4) then
-      Gerador.wGrupo('detPag', 'YA01a')
+    begin
+      Gerador.wGrupo('detPag', 'YA01a');
+      Gerador.wCampo(tcStr, 'YA01b', 'indPag ', 01, 01, 0, IndpagToStr(nfe.pag[i].indPag), DSC_INDPAG);
+    end
     else
       Gerador.wGrupo('pag', 'YA01');
 
@@ -2540,37 +2582,14 @@ begin
   PaisBrasil := cPais = CODIGO_BRASIL;
   cMun := IIf(PaisBrasil, vcMun, CMUN_EXTERIOR);
   xMun := IIf(PaisBrasil, vxMun, XMUN_EXTERIOR);
-  xUF := IIf(PaisBrasil, vxUF, UF_EXTERIOR);
-  xMun := ObterNomeMunicipio(xMun, xUF, cMun);
-end;
+  xUF :=  IIf(PaisBrasil, vxUF, UF_EXTERIOR);
 
-function TNFeW.ObterNomeMunicipio(const xMun, xUF: String; const cMun: Integer): String;
-var
-  i: Integer;
-  PathArquivo, Codigo: String;
-  List: TStringList;
-begin
-  result := '';
-  if (FOpcoes.NormatizarMunicipios) and (cMun <> CMUN_EXTERIOR) then
-  begin
-    PathArquivo := FOpcoes.FPathArquivoMunicipios + 'MunIBGE-UF' + InttoStr(UFparaCodigo(xUF)) + '.txt';
-    if FileExists(PathArquivo) then
-    begin
-      List := TStringList.Create;
-      List.LoadFromFile(PathArquivo);
-      Codigo := IntToStr(cMun);
-      i := 0;
-      while (i < list.count) and (result = '') do
-      begin
-        if pos(Codigo, List[i]) > 0 then
-          result := Trim(StringReplace(list[i], codigo, '', []));
-        inc(i);
-      end;
-      List.free;
-    end;
-  end;
-  if result = '' then
-    result := xMun;
+  if FOpcoes.NormatizarMunicipios then
+    if ( ( EstaZerado(cMun)) and (xMun <> XMUN_EXTERIOR) ) then
+      cMun := ObterCodigoMunicipio(xMun, xUF, FOpcoes.FPathArquivoMunicipios)
+    else if ( ( EstaVazio(xMun)) and (cMun <> CMUN_EXTERIOR) ) then
+      xMun := ObterNomeMunicipio(xUF, cMun, FOpcoes.FPathArquivoMunicipios);
+
 end;
 
 end.

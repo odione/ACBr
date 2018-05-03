@@ -60,10 +60,6 @@
 ******************************************************************************}
 {$I ACBr.inc}
 
-{$IfNDef FPC}
-  {$UnDef HAS_REGEXPR}   // Todo: Implementar usando "TRegEx"
-{$EndIf}
-
 unit ACBrValidador;
 
 interface
@@ -190,6 +186,7 @@ function ValidarEmail (const Documento : string ) : String;
 function ValidarCEP(const ACEP, AUF: String): String; overload;
 function ValidarCEP(const ACEP: Integer; AUF: String): String; overload;
 function ValidarCNH(const Documento: String) : String ;
+function ValidarUF(const AUF: String): String;
 
 Function FormatarFone( const AValue : String; DDDPadrao: String = '' ): String;
 Function FormatarCPF( const AValue : String )    : String ;
@@ -205,6 +202,7 @@ function FormatarSUFRAMA( const AValue: String ) : String ;
 
 Function FormatarMascaraNumerica(ANumValue, Mascara: String): String;
 
+Function OnlyCNPJorCPF( const Documento : String ) : String ;
 
 function ValidarDocumento( const TipoDocto : TACBrValTipoDocto;
   const Documento : String; const Complemento : String = '') : String ;
@@ -217,9 +215,6 @@ function MascaraIE(AValue : String; UF : String) : String;
 implementation
 uses
  {$IfDef COMPILER6_UP} Variants , Math, StrUtils, {$EndIf}
- {$IfDef HAS_REGEXPR}
-  {$IfDef FPC} RegExpr, {$Else} RegularExpressions,{$EndIf}
- {$EndIf}
   ACBrUtil;
 
 function ValidarCPF(const Documento : String) : String ;
@@ -253,8 +248,32 @@ begin
 end;
 
 function ValidarEmail (const Documento : string ) : String;
+var
+  SL: TStringList;
+  sDelimiter: Char;
+  I: Integer;
 begin
-  Result := ValidarDocumento( docEmail, Documento );
+  Result := '';
+  sDelimiter := FindDelimiterInText(Documento);
+
+  if (sDelimiter = ' ') then
+    Result := ValidarDocumento( docEmail, Documento )
+  else
+  begin
+    SL := TStringList.Create;
+    try
+      AddDelimitedTextToList(Documento, sDelimiter, SL);
+
+      I := 0;
+      while (Result = '') and (I < SL.Count) do
+      begin
+        Result := ValidarDocumento( docEmail, SL[I] );
+        Inc( I );
+      end;
+    finally
+      SL.Free;
+    end;
+  end;
 end;
 
 function ValidarCEP(const ACEP, AUF: String): String;
@@ -272,6 +291,11 @@ begin
   Result := ValidarDocumento( docCNH, Documento );
 end;
 
+function ValidarUF(const AUF: String): String;
+begin
+Result := ValidarDocumento( docUF, AUF );
+end;
+
 function ValidarCNPJouCPF(const Documento : String) : String ;
 Var
   NumDocto : String ;
@@ -281,6 +305,19 @@ begin
       Result := ValidarCPF( Documento )
    else
       Result := ValidarCNPJ( Documento ) ;
+end;
+
+{ Retorna apenas n˙meros, e apenas se o conte˙do for CPF ou CNPJ, caso contr·rio
+    retorna vazio }
+function OnlyCNPJorCPF(const Documento: String): String;
+var
+  NumDocto: String;
+begin
+  NumDocto := OnlyNumber(Documento);
+  if EstaVazio( ValidarCNPJouCPF(NumDocto) ) then
+    Result := NumDocto
+  else
+    Result := '';
 end;
 
 function ValidarDocumento(const TipoDocto : TACBrValTipoDocto ;
@@ -310,15 +347,6 @@ var
   FoneNum, Mascara : string;
   ComecaComZero: Boolean;
   LenFoneNum: Integer;
-
-  function RemoveZerosEsquerda( ANumStr: String): String;
-  begin
-    while LeftStr(ANumStr,1) = '0' do
-      ANumStr := Copy(ANumStr,2,Length(ANumStr));
-
-    Result := ANumStr;
-  end;
-
 begin
   Result := '';
   FoneNum := OnlyNumber(AValue);
@@ -326,7 +354,7 @@ begin
   FoneNum := RemoveZerosEsquerda(FoneNum);
 
   LenFoneNum := length(FoneNum);
-  if LenFoneNum = 0 then
+  if (LenFoneNum = 0) or (FoneNum = '0') then
     exit;
 
   if (LenFoneNum <= 9) and NaoEstaVazio(DDDPadrao) then
@@ -451,7 +479,7 @@ Begin
      exit ;
 
   Mascara := MascaraIE( AValue, UF);
-  Result := FormatarMascaraNumerica( AValue, Mascara);
+  Result := FormatarMascaraNumerica( OnlyAlphaNum( AValue ), Mascara);
 end;
 
 function FormatarCheque(const AValue: String): String;
@@ -810,28 +838,9 @@ begin
   end ;
 end;
 
-{$IfDef HAS_REGEXPR}
-procedure TACBrValidador.ValidarEmail;
-var
-  vRegex: TRegExpr;
-begin
-  vRegex := TRegExpr.Create;
-  try
-    vRegex.Expression := '^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}' +
-                         '\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\' +
-                         '.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$';
-    if not vRegex.Exec(Documento) then
-      fsMsgErro := 'e-mail inv·lido!'
-    else
-      fsMsgErro := '';
-  finally
-    vRegex.Free;
-  end;
-end;
-{$Else}
 procedure TACBrValidador.ValidarEmail;
 const
-  InvalidChar = '‡‚ÍÙ˚„ı·ÈÌÛ˙Á¸Ò˝¿¬ ‘€√’¡…Õ”⁄«‹—›*;:\|#$%&*ß!()][{}<>òà¥™∫+π≤≥';
+  InvalidChar = ' ‡‚ÍÙ˚„ı·ÈÌÛ˙Á¸Ò˝¿¬ ‘€√’¡…Õ”⁄«‹—›*;:\|#$%&*ß!()][{}<>òà¥™∫+π≤≥';
 var
   i: Integer;
 begin
@@ -859,12 +868,20 @@ begin
   if (Pos('.', Documento) = 0) then
     exit;
 
+  // Verificando se h· dois pontos juntos
+  if (Pos('..', Documento) > 0) then
+    exit;
+
   // N„o pode comeÁar ou terminar com @ ou ponto
   if CharInSet(Documento[1], ['@', '.']) or CharInSet(Documento[Length(Documento)], ['@', '.']) then
     exit;
 
   // O @ e o ponto n„o podem estar juntos
   if (Documento[Pos('@', Documento) + 1] = '.') or (Documento[Pos('@', Documento) - 1] = '.') then
+    exit;
+
+  // O ˙ltimo ponto tem que estar depois do @
+  if (PosEx('.', Documento, Pos('@', Documento) + 1) < Pos('@', Documento)) then
     exit;
 
   // Testa se tem algum caracter inv·lido.
@@ -877,7 +894,6 @@ begin
   // Tudo OK
   fsMsgErro := '' ;
 end;
-{$EndIf}
 
 Procedure TACBrValidador.ValidarCEP ;
 begin
@@ -1019,7 +1035,7 @@ Const
   {14}    (0  ,0  ,2  ,3  ,4  ,5  ,6  ,7  ,8  ,3   ,4   ,5   ,6   ,7 ));
 
 Var
-   vDigitos : array of {$IFDEF FPC}Variant{$ELSE} String{$ENDIF} ;
+   vDigitos : array of Variant;
    xROT, yROT :  String ;
    Tamanho, FatorF, FatorG, I, xMD, xTP, yMD, yTP, DV, DVX, DVY : Integer ;
    SOMA, SOMAq, nD, M : Integer ;

@@ -80,20 +80,11 @@ function CodigoParaUF(const codigo: integer): string;
 function DateTimeTodh(DataHora: TDateTime): string;
 function DateTimeToDataHora(DataHora: TDateTime): string;
 function ExecutarAjusteTagNro(Corrigir: boolean; Nro: string): string;
-function FiltrarTextoXML(const RetirarEspacos: boolean; aTexto: AnsiString; RetirarAcentos: boolean = True; SubstituirQuebrasLinha: Boolean = True; QuebraLinha: AnsiString = ';'): AnsiString;
+function FiltrarTextoXML(const RetirarEspacos: boolean; aTexto: String; RetirarAcentos: boolean = True; SubstituirQuebrasLinha: Boolean = True; const QuebraLinha: String = ';'): String;
 function IIf(const condicao: Boolean; const Verdadeiro, Falso: Variant): Variant;
 function IntToStrZero(const Numero: integer; const tamanho: integer): string;
-function GerarCodigoNumerico(numero: integer): integer;
-function GerarChave(out chave: AnsiString; const codigoUF: integer; codigoNumerico: integer; const modelo, serie, numero, tpemi: integer; const emissao: TDateTime; const CNPJ: string): boolean;
-function GerarChaveCTe(out chave: AnsiString; const codigoUF: integer; codigoNumerico: integer; const modelo, serie, numero: integer; const emissao: TDateTime; const CNPJ: string): boolean;
 function GerarDigito(out Digito: integer; chave: string): boolean;
-function SomenteNumeros(const s: string): string;
-function RetornarCodigoNumerico(Chave: string; Versao : real): integer;
-function RetornarCodigoNumericoCTe(Chave: string): integer;
-function RetornarConteudoEntre(const Frase, Inicio, Fim: string): string;
-function RetornarDigito(const chave: string): integer;
-function RetornarModelo(const chave: string): String;
-function ReverterFiltroTextoXML(aTexto: AnsiString): AnsiString;
+function ReverterFiltroTextoXML(aTexto: String): String;
 function UFparaCodigo(const UF: string): integer;
 function ValidarAAMM(const AAMM: string): boolean;
 function ValidarCListServ(const cListServ: integer): boolean;
@@ -109,8 +100,8 @@ function ValidarUF(const UF: string): boolean;
 function ValidarIE(IE, UF: string): boolean;
 function ValidarISUF(const ISUF: string): boolean;
 function SubStrEmSubStr(const SubStr1: string; SubStr2: string): boolean;
-function xml4line(texto: AnsiString): AnsiString;
-function RetornarPosEx(const SubStr, S: AnsiString; Offset: Cardinal = 1): Integer;
+function xml4line(texto: String): String;
+function RetornarPosEx(const SubStr, S: String; Offset: Cardinal = 1): Integer;
 function DateTimeTodhUTC(DataHora: TDateTime; TZD: string): string;
 function GetUTC(UF: string; const dataHora: TDateTime): string;
 function GetUTCSistema: String;
@@ -121,13 +112,14 @@ function GetFimDoHorarioDeVerao(const ano: Integer): TDateTime;
 function GetDataDoCarnaval(const ano: Integer): TDateTime;
 function GetDataDaPascoa(const ano: Integer): TDateTime;
 
-function ExtrairModeloChaveAcesso(AChaveNFE: String): String;
-function ExtrairUFChaveAcesso(AChaveNFE: String): Integer;
-function ExtrairCNPJChaveAcesso(AChaveNFE: String): String;
-function ExtrairSerieChaveAcesso(AChaveNFE: String): Integer;
-function ExtrairNumeroChaveAcesso(AChaveNFE: String): Integer;
-function ExtraircNFChaveAcesso(AChaveNFE: String): Integer;
-function ExtrairTipoEmissaoChaveAcesso(aChaveNFe: String): Integer;
+function ExtrairModeloChaveAcesso(AChave: String): String;
+function ExtrairUFChaveAcesso(AChave: String): Integer;
+function ExtrairCNPJChaveAcesso(AChave: String): String;
+function ExtrairSerieChaveAcesso(AChave: String): Integer;
+function ExtrairNumeroChaveAcesso(AChave: String): Integer;
+function ExtrairCodigoChaveAcesso(AChave: String): Integer;
+function ExtrairTipoEmissaoChaveAcesso(AChave: String): Integer;
+function ExtrairDigitoChaveAcesso(AChave: string): Integer;
 
 function TimeZoneConf: TTimeZoneConf;
 
@@ -193,11 +185,11 @@ begin
     Result := '0' + Nro;
 end;
 
-function FiltrarTextoXML(const RetirarEspacos: boolean; aTexto: AnsiString;
-  RetirarAcentos: boolean; SubstituirQuebrasLinha: Boolean; QuebraLinha: AnsiString): AnsiString;
+function FiltrarTextoXML(const RetirarEspacos: boolean; aTexto: String;
+  RetirarAcentos: boolean; SubstituirQuebrasLinha: Boolean; const QuebraLinha: String): String;
 begin
   if RetirarAcentos then
-     aTexto := AnsiString(TiraAcentos(String(aTexto)));
+     aTexto := TiraAcentos(aTexto);
 
   aTexto := ParseText(aTexto, False );
 
@@ -227,106 +219,6 @@ begin
   result := copy(result, length(result) - tamanho + 1, tamanho);
 end;
 
-function GerarCodigoNumerico(numero: integer): integer;
-var
-  s: string;
-  i, j, k: integer;
-begin
-  // Essa função gera um código numerico atravéz de calculos realizados sobre o parametro numero
-  s := intToStr(numero);
-  for i := 1 to 9 do
-    s := s + intToStr(numero);
-  for i := 1 to 9 do
-  begin
-    k := 0;
-    for j := 1 to 9 do
-      k := k + StrToInt(s[j]) * (j + 1);
-    s := IntToStr((k mod 11)) + s;
-  end;
-  Result := StrToInt(copy(s, 1, 8));
-end;
-
-function GerarChave(out chave: AnsiString; const codigoUF: integer;
-  codigoNumerico: integer; const modelo, serie, numero, tpemi: integer;
-  const emissao: TDateTime; const CNPJ: string): boolean;
-var
-  digito: integer;
-  wAno, wMes, wDia: Word;
-begin
-  result := true;
-  try
-    // Se o usuario informar 0; o código numerico sera gerado de maneira aleatória //
-    while codigoNumerico = 0 do
-    begin
-      Randomize;
-      codigoNumerico := Random(99999999);
-    end;
-    // se o usuario informar -1 o código numerico será gerado atravéz da função
-    // GerarCódigoNumerico baseado no numero do documento fiscal.
-    if codigoNumerico = -1 then
-      codigoNumerico := GerarCodigoNumerico(Numero)
-    else if codigoNumerico = -2 then
-      codigoNumerico := 0;
-    //
-    DecodeDate(emissao, wAno, wMes, wDia);
-    chave := 'NFe' +
-      IntToStrZero(codigoUF, 2) +
-      Copy(FormatFloat('0000', wAno), 3, 2) +
-      FormatFloat('00', wMes) +
-      copy(SomenteNumeros(CNPJ) + '00000000000000', 1, 14) +
-      IntToStrZero(modelo, 2) +
-      IntToStrZero(serie, 3) +
-      IntToStrZero(Numero, 9) +
-      IntToStrZero(TPEmi, 1) +
-      IntToStrZero(codigoNumerico, 8);
-    GerarDigito(digito, chave);
-    chave := chave + IntToStr(digito);
-  except
-    chave := '';
-    result := false;
-    exit;
-  end;
-end;
-
-function GerarChaveCTe(out chave: AnsiString; const codigoUF: integer;
-  codigoNumerico: integer; const modelo, serie, numero: integer;
-  const emissao: TDateTime; const CNPJ: string): boolean;
-var
-  digito: integer;
-  wAno, wMes, wDia: Word;
-begin
-  result := true;
-  try
-    // Se o usuario informar 0; o código numerico sera gerado de maneira aleatória //
-    while codigoNumerico = 0 do
-    begin
-      Randomize;
-      codigoNumerico := Random(999999999);
-    end;
-    // se o usuario informar -1 o código numerico será gerado atravéz da função
-    // GerarCódigoNumerico baseado no numero do documento fiscal.
-    if codigoNumerico = -1 then
-      codigoNumerico := GerarCodigoNumerico(Numero);
-    //
-    DecodeDate(emissao, wAno, wMes, wDia);
-    chave := 'CTe' +
-      IntToStrZero(codigoUF, 2) +
-      Copy(FormatFloat('0000', wAno), 3, 2) +
-      FormatFloat('00', wMes) +
-      copy(SomenteNumeros(CNPJ) + '00000000000000', 1, 14) +
-      IntToStrZero(modelo, 2) +
-      IntToStrZero(serie, 3) +
-      IntToStrZero(Numero, 9) +
-      IntToStrZero(codigoNumerico, 9);
-    GerarDigito(digito, chave);
-    chave := chave + IntToStr(digito);
-  except
-    chave := '';
-    result := false;
-    exit;
-  end;
-end;
-
 function GerarDigito(out Digito: integer; chave: string): boolean;
 var
   i, j: integer;
@@ -334,7 +226,7 @@ const
   PESO = '4329876543298765432987654329876543298765432';
 begin
   // Manual Integracao Contribuinte v2.02a - Página: 70 //
-  chave := somenteNumeros(chave);
+  chave := OnlyNumber(chave);
   j := 0;
   Digito := 0;
   result := True;
@@ -351,36 +243,6 @@ begin
     result := False;
 end;
 
-function SomenteNumeros(const s: string): string;
-var
-  i: integer;
-begin
-  result := '';
-  for i := 1 to length(s) do
-    if pos(s[i], '0123456789') > 0 then
-      result := result + s[i];
-end;
-
-function RetornarCodigoNumerico(Chave: string; Versao: real): integer;
-begin
-  chave := SomenteNumeros(chave);
-
-  if versao < 2 then
-     result := StrToInt(copy(chave, 35, 9))
-  else
-     result := StrToInt(copy(chave, 36, 8));
-end;
-
-function RetornarCodigoNumericoCTe(Chave: string): integer;
-begin
-  result := RetornarCodigoNumerico(chave, 1);
-end;
-
-function RetornarDigito(const chave: string): integer;
-begin
-  result := StrToInt(chave[length(chave)]);
-end;
-
 function HexToAscii(Texto: string): String;
 var i : integer;
    function HexToInt(Hex: string): integer;
@@ -395,12 +257,7 @@ begin
   end;
 end;
 
-function RetornarModelo(const chave: string): String;
-begin
-  Result := copy(OnlyNumber(chave), 21, 2);
-end;
-
-function ReverterFiltroTextoXML(aTexto: AnsiString): AnsiString;
+function ReverterFiltroTextoXML(aTexto: String): String;
 var p1,p2:Integer;
     vHex,vStr:String;
 begin
@@ -424,16 +281,6 @@ begin
   result := Trim(aTexto);
 end;
 
-{function ReverterFiltroTextoXML(aTexto: AnsiString): AnsiString;
-begin
-  aTexto := StringReplace(aTexto, '&amp;', '&', [rfReplaceAll]);
-  aTexto := StringReplace(aTexto, '&lt;', '<', [rfReplaceAll]);
-  aTexto := StringReplace(aTexto, '&gt;', '>', [rfReplaceAll]);
-  aTexto := StringReplace(aTexto, '&quot;', '"', [rfReplaceAll]);
-  aTexto := StringReplace(aTexto, '&#39;', #39, [rfReplaceAll]);
-  result := Trim(aTexto);
-end;}
-
 function UFparaCodigo(const UF: string): integer;
 const
   (**)UFS = '.AC.AL.AP.AM.BA.CE.DF.ES.GO.MA.MT.MS.MG.PA.PB.PR.PE.PI.RJ.RN.RS.RO.RR.SC.SP.SE.TO.';
@@ -455,7 +302,7 @@ var
 begin
   result := false;
 
-  aChave := somenteNumeros(chave);
+  aChave := OnlyNumber(chave);
 
   if length(aChave) <> 44 then
     exit;
@@ -655,7 +502,7 @@ var
   Digito: integer;
 begin
   Result := False;
-  if Length(SomenteNumeros(ISUF)) < 9 then
+  if Length(OnlyNumber(ISUF)) < 9 then
     exit;
   Soma := 0;
   for i := 1 to 9 do
@@ -683,7 +530,7 @@ begin
   result := i > 0;
 end;
 
-function xml4line(texto: AnsiString): AnsiString;
+function xml4line(texto: String): String;
 var
   xml: TStringList;
   i: integer;
@@ -704,7 +551,7 @@ begin
   Xml.Free;
 end;
 
-function RetornarPosEx(const SubStr, S: AnsiString; Offset: Cardinal = 1): Integer;
+function RetornarPosEx(const SubStr, S: String; Offset: Cardinal = 1): Integer;
 var
   I, X: Integer;
   Len, LenSubStr: Integer;
@@ -733,19 +580,6 @@ begin
     end;
     Result := 0;
   end;
-end;
-
-function RetornarConteudoEntre(const Frase, Inicio, Fim: string): string;
-var
-  i: integer;
-  s: string;
-begin
-  result := '';
-  i := pos(Inicio, Frase);
-  if i = 0 then
-    exit;
-  s := Copy(Frase, i + length(Inicio), maxInt);
-  result := Copy(s, 1, pos(Fim, s) - 1);
 end;
 
 function DateTimeTodhUTC(DataHora: TDateTime; TZD: string): string;
@@ -927,62 +761,72 @@ begin
   result :=  EncodeDate(ano, mes, dia);
 end;
 
-{ TTimeZoneConf }
-
-function ExtrairModeloChaveAcesso(AChaveNFE: String): String;
+function ExtrairModeloChaveAcesso(AChave: String): String;
 begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  if ValidarChave(AChaveNFe) then
-    Result := copy(AChaveNFE, 21, 2)
+  AChave := OnlyNumber(AChave);
+  if ValidarChave(AChave) then
+    Result := copy(AChave, 21, 2)
   else
     Result := '';
 end;
 
-function ExtrairUFChaveAcesso(AChaveNFE: String): Integer;
+function ExtrairUFChaveAcesso(AChave: String): Integer;
 begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  Result := StrToIntDef(Copy(AChaveNFE,1,2), 0);
+  AChave := OnlyNumber(AChave);
+  Result := StrToIntDef(Copy(AChave,1,2), 0);
 end;
 
-function ExtrairCNPJChaveAcesso(AChaveNFE: String): String;
+function ExtrairCNPJChaveAcesso(AChave: String): String;
 begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  Result := copy(AChaveNFE,7,14);
+  AChave := OnlyNumber(AChave);
+  Result := copy(AChave,7,14);
 end;
 
-function ExtrairSerieChaveAcesso(AChaveNFE: String): Integer;
+function ExtrairSerieChaveAcesso(AChave: String): Integer;
 begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  Result    := StrToIntDef(Copy(AChaveNFE, 23, 3), 0);
-end;
-
-function ExtrairNumeroChaveAcesso(AChaveNFE: String): Integer;
-begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  if ExtrairModeloChaveAcesso(AChaveNFE) = '59' then  //SAT
-    Result    := StrToIntDef(Copy(AChaveNFE, 32, 6), 0)
+  AChave := OnlyNumber(AChave);
+  if ExtrairModeloChaveAcesso(AChave) = '59' then  //SAT
+    Result := StrToIntDef(Copy(AChave, 23, 9), 0)
   else
-    Result    := StrToIntDef(Copy(AChaveNFE, 26, 9), 0);
+    Result := StrToIntDef(Copy(AChave, 23, 3), 0);
 end;
 
-function ExtraircNFChaveAcesso(AChaveNFE: String): Integer;
+function ExtrairNumeroChaveAcesso(AChave: String): Integer;
 begin
-  AChaveNFE := OnlyNumber(AChaveNFE);
-  if ExtrairModeloChaveAcesso(AChaveNFE) = '59' then  //SAT
-    Result    := StrToIntDef(Copy(AChaveNFE, 38, 6), 0)
+  AChave := OnlyNumber(AChave);
+  if ExtrairModeloChaveAcesso(AChave) = '59' then  //SAT
+    Result := StrToIntDef(Copy(AChave, 32, 6), 0)
   else
-    Result    := StrToIntDef(Copy(AChaveNFE, 36, 8), 0);
+    Result := StrToIntDef(Copy(AChave, 26, 9), 0);
 end;
 
-function ExtrairTipoEmissaoChaveAcesso(aChaveNFe: String): Integer;
+function ExtrairCodigoChaveAcesso(AChave: String): Integer;
 begin
-  aChaveNFe := OnlyNumber(aChaveNFe);
+  AChave := OnlyNumber(AChave);
+  if ExtrairModeloChaveAcesso(AChave) = '59' then  //SAT
+    Result := StrToIntDef(Copy(AChave, 38, 6), 0)
+  else
+    Result := StrToIntDef(Copy(AChave, 36, 8), 0);
+end;
 
-  if (pos(ExtrairModeloChaveAcesso(aChaveNFe), '55,65') = 0) then
+function ExtrairTipoEmissaoChaveAcesso(aChave: String): Integer;
+begin
+  AChave := OnlyNumber(AChave);
+
+  if (pos(ExtrairModeloChaveAcesso(AChave), '55,65') = 0) then
     Result := 0
   else
-    Result := StrToIntDef(Copy(aChaveNFe, 35, 1), 0);
+    Result := StrToIntDef(Copy(AChave, 35, 1), 0);
 end;
+
+function ExtrairDigitoChaveAcesso(AChave: String): Integer;
+begin
+  AChave := OnlyNumber(AChave);
+
+  Result := StrToInt(AChave[length(AChave)]);
+end;
+
+{ TTimeZoneConf }
 
 function TimeZoneConf: TTimeZoneConf;
 begin
