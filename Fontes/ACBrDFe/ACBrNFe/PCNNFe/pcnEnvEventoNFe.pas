@@ -83,6 +83,8 @@ type
     property RetInfEvento: TRetInfEvento read FRetInfEvento write FRetInfEvento;
   end;
 
+  { TEventoNFe }
+
   TEventoNFe = class(TPersistent)
   private
     FGerador: TGerador;

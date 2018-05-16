@@ -184,8 +184,10 @@ EACBrHTTPError = class( Exception ) ;
 TACBrHTTP = class( TACBrComponent )
   private
     fHTTPSend : THTTPSend ;
+    FIsUTF8: Boolean;
     fOnAntesAbrirHTTP : TACBrOnAntesAbrirHTTP ;
     fRespHTTP   : TStringList ;
+    FTimeOut: Integer;
     fURL        : String;
     FParseText: Boolean;
     function GetProxyHost : string ;
@@ -219,7 +221,9 @@ TACBrHTTP = class( TACBrComponent )
     property ProxyPort : string read GetProxyPort write SetProxyPort ;
     property ProxyUser : string read GetProxyUser write SetProxyUser ;
     property ProxyPass : string read GetProxyPass write SetProxyPass ;
-    property ParseText : Boolean read FParseText write FParseText default False;
+    property ParseText : Boolean read FParseText  write FParseText default False;
+    property IsUTF8    : Boolean read FIsUTF8     write FIsUTF8    default False;
+    property TimeOut   : Integer read FTimeOut    write FTimeOut   default 90000;
 
     property OnAntesAbrirHTTP : TACBrOnAntesAbrirHTTP
        read fOnAntesAbrirHTTP write fOnAntesAbrirHTTP ;
@@ -277,7 +281,6 @@ begin
     Result := True;
     Exit;
   end;
-
 end;
 
 { TACBrTCPServerDaemon }
@@ -351,7 +354,6 @@ begin
     WaitFor;
 
   fsEvent.Free;
-
   inherited Destroy;
 end;
 
@@ -491,8 +493,8 @@ begin
   // Chama o Evento, se estiver atribuido
   if Assigned( fsACBrTCPServerDaemon.ACBrTCPServer.OnConecta ) then
   begin
-     fsStrToSend := '' ;
-     fsACBrTCPServerDaemon.ACBrTCPServer.OnConecta( fsSock, fsStrToSend ) ;
+    fsStrToSend := '' ;
+    fsACBrTCPServerDaemon.ACBrTCPServer.OnConecta( fsSock, fsStrToSend ) ;
   end ;
 end;
 
@@ -508,8 +510,8 @@ begin
   // Chama o Evento, se estiver atribuido
   if Assigned( fsACBrTCPServerDaemon.ACBrTCPServer.OnDesConecta ) then
   begin
-     ErroDesc := fsSock.GetErrorDesc( fsErro ) ;
-     fsACBrTCPServerDaemon.ACBrTCPServer.OnDesConecta( fsSock, fsErro, ErroDesc ) ;
+    ErroDesc := fsSock.GetErrorDesc( fsErro ) ;
+    fsACBrTCPServerDaemon.ACBrTCPServer.OnDesConecta( fsSock, fsErro, ErroDesc ) ;
   end ;
 end;
 
@@ -523,7 +525,7 @@ end;
 
 constructor TACBrTCPServer.Create(AOwner: TComponent);
 begin
-  inherited create( AOwner );
+  inherited Create( AOwner );
 
   fsIP   := '0.0.0.0' ;
   fsPort := '0' ;
@@ -581,9 +583,9 @@ begin
 
   if Erro <> 0 then
   begin
-     Desativar;
-     raise Exception.Create( 'Erro: '+IntToStr(Erro)+' - '+ErroDesc+sLineBreak+
-                             ACBrStr('Não foi possível criar serviço na porta: ')+Port ) ;
+    Desativar;
+    raise Exception.Create( 'Erro: '+IntToStr(Erro)+' - '+ErroDesc+sLineBreak+
+                            ACBrStr('Não foi possível criar serviço na porta: ')+Port ) ;
   end ;
 end;
 
@@ -605,7 +607,7 @@ begin
         UmaConexao.WaitFor;
      end;
   finally
-     fsThreadList.UnlockList;
+    fsThreadList.UnlockList;
   end ;
   fsThreadList.Clear ;
 
@@ -875,7 +877,7 @@ begin
      LinhaHeader := HTTPSend.Headers[I];
 
      if (pos(AValue, LinhaHeader) = 1) then
-        Result := copy(LinhaHeader, Length(AValue)+1, Length(LinhaHeader) ) ;
+        Result := Trim(copy(LinhaHeader, Length(AValue)+1, Length(LinhaHeader) )) ;
 
      Inc( I ) ;
   end ;

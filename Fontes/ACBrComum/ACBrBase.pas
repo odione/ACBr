@@ -34,36 +34,6 @@
 {                                                                              }
 {******************************************************************************}
 
-{******************************************************************************
-|* Historico
-|*
-|* 26/05/2004: Primeira Versao
-|*    Daniel Simoes de Almeida
-|*    Criaçao do componente ACBrDevice, que implementa comunicaçao com portas
-|*    Seriais e Paralela e deverá ser usado por outros componentes ACBr*
-|* 26/09/2004: Criaçao da classe: TACBrThreadTimer
-|*    Daniel e Alexandre
-|*    Essa classe emula um TTimer, porem em uma Thread, evitando sobrecarregar
-|*    o Application. Usada por ACBrLCB e ACBrDIS
-|* 01/02/2005: Criaçao da classe: TACBrThreadEnviaLPT
-|*    Daniel Simoes de Almeida
-|*    Essa classe é usada pela funçao EnviaStrThread para detectar se os Dados
-|*    estao sendo "gravados" com sucesso na porta paralela ou arquivo.
-|* 07/10/2005: Removido o TACBrThreadTimer,  Daniel Simões de Almeida
-|*    Não apresenta vantagens em relação ao TTimer (Delphi), problemas quando
-|*    o componente está dentro de DLLs
-|* 27/10/2005: Daniel Simoes de Almeida
-|*    Desativada a TACBrThreadEnviaLPT, comentando o  $DEFINE ThreadEnviaLPT
-|*    devido a Problemas como "Erro gravando em LPTx"....  TODO: Corrigir...
-|* 22/11/2005: Daniel Simoes de Almeida
-|*    modificado gravação em Arquivos Texto para verificar se o arquivo já
-|*    existe e adcionar dados no final, ao inves de sempre sobrescreve-lo
-|* 13/03/2006: Daniel Simoes de Almeida
-|* - Permite modificar alguns parametros da porta serial mesmo com ela aberta.
-|* - Modificaçoes em run-time nos parametros da serial não eram efetivadas na
-|*   Synaser
-******************************************************************************}
-
 {$I ACBr.inc}
 
 //{$DEFINE ThreadEnviaLPT}  { Use // no inicio dessa linha para desabilitar a Thread}

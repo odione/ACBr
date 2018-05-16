@@ -41,9 +41,13 @@ unit ACBrDFeConfiguracoes;
 interface
 
 uses
-  Classes, SysUtils, types,
+  Classes, SysUtils, types, IniFiles,
   pcnConversao, pcnAuxiliar,
+  blcksock,
   ACBrDFeSSL;
+
+const
+  CDFeSessaoIni = 'DFe';
 
 type
 
@@ -55,7 +59,6 @@ type
 
   TCertificadosConf = class(TComponent)
   private
-    FConfiguracoes: TConfiguracoes;
     FDadosPFX: AnsiString;
     FSenha: AnsiString;
     FK: String;
@@ -68,9 +71,14 @@ type
     procedure SetDadosPFX(AValue: AnsiString);
     procedure SetNumeroSerie(const AValue: String);
     procedure SetSenha(AValue: AnsiString);
+  protected
+    fpConfiguracoes: TConfiguracoes;
+
   public
     constructor Create(AConfiguracoes: TConfiguracoes); reintroduce; overload;
     procedure Assign(DeCertificadosConf: TCertificadosConf); reintroduce; virtual;
+    procedure GravarIni( const AIni: TCustomIniFile ); virtual;
+    procedure LerIni( const AIni: TCustomIniFile ); virtual;
 
   published
     property ArquivoPFX: String read FArquivoPFX write SetArquivoPFX;
@@ -85,15 +93,15 @@ type
 
   TWebServicesConf = class(TComponent)
   private
-    FConfiguracoes: TConfiguracoes;
     FResourceName: String;
+    FSSLType: TSSLType;
     FTimeOut: Integer;
+    FTimeOutPorThread: Boolean;
     FTimeZoneConf: TTimeZoneConf;
     FVisualizar: Boolean;
     FUF: String;
     FUFCodigo: integer;
     FAmbiente: TpcnTipoAmbiente;
-    FAmbienteCodigo: integer;
     FProxyHost: String;
     FProxyPort: String;
     FProxyUser: String;
@@ -106,24 +114,30 @@ type
     FParams: TStrings;
     FQuebradeLinha: String;
 
+    function GetAmbienteCodigo: integer;
     procedure SetProxyHost(AValue: String);
     procedure SetProxyPass(AValue: String);
     procedure SetProxyPort(AValue: String);
     procedure SetProxyUser(AValue: String);
+    procedure SetSSLType(AValue: TSSLType);
     procedure SetTimeOut(AValue: Integer);
+    procedure SetTimeOutPorThread(AValue: Boolean);
     procedure SetUF(AValue: String);
-    procedure SetAmbiente(AValue: TpcnTipoAmbiente);
     procedure SetTentativas(const Value: integer);
     procedure SetIntervaloTentativas(const Value: cardinal);
     procedure SetParams(const AValue: TStrings);
 
   protected
+    fpConfiguracoes: TConfiguracoes;
     function LerParamsIniServicos: AnsiString; virtual;
     function LerParamsInterno: AnsiString; virtual;
+
   public
     constructor Create(AConfiguracoes: TConfiguracoes); reintroduce; overload;
     destructor Destroy; override;
     procedure Assign(DeWebServicesConf: TWebServicesConf); reintroduce; virtual;
+    procedure GravarIni( const AIni: TCustomIniFile ); virtual;
+    procedure LerIni( const AIni: TCustomIniFile ); virtual;
 
     procedure LerParams; virtual;
 
@@ -132,9 +146,8 @@ type
     property Visualizar: Boolean read FVisualizar write FVisualizar default False;
     property UF: String read FUF write SetUF;
     property UFCodigo: integer read FUFCodigo;
-    property Ambiente: TpcnTipoAmbiente
-      read FAmbiente write SetAmbiente default taHomologacao;
-    property AmbienteCodigo: integer read FAmbienteCodigo;
+    property Ambiente: TpcnTipoAmbiente read FAmbiente write FAmbiente default taHomologacao;
+    property AmbienteCodigo: integer read GetAmbienteCodigo;
     property ProxyHost: String read FProxyHost write SetProxyHost;
     property ProxyPort: String read FProxyPort write SetProxyPort;
     property ProxyUser: String read FProxyUser write SetProxyUser;
@@ -151,37 +164,66 @@ type
     property Salvar: Boolean read FSalvar write FSalvar default False;
     property Params: TStrings read FParams write SetParams;
     property TimeOut: Integer read FTimeOut write SetTimeOut default 5000;
+    property TimeOutPorThread: Boolean read FTimeOutPorThread write SetTimeOutPorThread default False;
     property QuebradeLinha: String read FQuebradeLinha write FQuebradeLinha;
     property TimeZoneConf: TTimeZoneConf read FTimeZoneConf write FTimeZoneConf;
+    property SSLType: TSSLType read FSSLType write SetSSLType default LT_all;
+  end;
+
+  TOrdenacaoPathItem = class;
+
+  TOrdenacaoPath = class(TOwnedCollection)
+  private
+    function GetItem(Index: Integer): TOrdenacaoPathItem;
+    procedure SetItem(Index: Integer; Value: TOrdenacaoPathItem);
+  public
+    function Add: TOrdenacaoPathItem;
+    property Items[Index: Integer]: TOrdenacaoPathItem read GetItem write SetItem; default;
+  end;
+
+  TOrdenacaoPathItem = class(TCollectionItem)
+  private
+    FItem: TTagOrdenacaoPath;
+  protected
+    function GetDisplayName: String; override;
+  public
+    procedure Assign(Source: TPersistent); override;
+  published
+    property Item: TTagOrdenacaoPath read FItem write FItem;
   end;
 
   { TGeralConf }
 
   TGeralConf = class(TComponent)
   private
-    FConfiguracoes: TConfiguracoes;
+    FIdentarXML: Boolean;
     FSSLLib: TSSLLib;
     FFormaEmissao: TpcnTipoEmissao;
-    FFormaEmissaoCodigo: integer;
     FSalvar: Boolean;
     FExibirErroSchema: Boolean;
     FFormatoAlerta: String;
     FRetirarAcentos: Boolean;
     FRetirarEspacos: Boolean;
     FValidarDigest: Boolean;
+    FCalcSSLLib: Boolean;
 
+    function GetFormaEmissaoCodigo: integer;
     procedure SetSSLLib(AValue: TSSLLib);
-    procedure SetFormaEmissao(AValue: TpcnTipoEmissao);
     function GetFormatoAlerta: String;
+  protected
+    fpConfiguracoes: TConfiguracoes;
+
   public
     constructor Create(AConfiguracoes: TConfiguracoes); reintroduce; overload; virtual;
     procedure Assign(DeGeralConf: TGeralConf); reintroduce; virtual;
+    procedure GravarIni( const AIni: TCustomIniFile ); virtual;
+    procedure LerIni( const AIni: TCustomIniFile ); virtual;
 
   published
     property SSLLib: TSSLLib read FSSLLib write SetSSLLib;
     property FormaEmissao: TpcnTipoEmissao read FFormaEmissao
-      write SetFormaEmissao default teNormal;
-    property FormaEmissaoCodigo: integer read FFormaEmissaoCodigo;
+      write FFormaEmissao default teNormal;
+    property FormaEmissaoCodigo: integer read GetFormaEmissaoCodigo;
     // Geral.Salvar - trata-se de arquivos gerais, ou seja, arquivos de envio e
     // de retorno sem validade jurídica.
     property Salvar: Boolean read FSalvar write FSalvar default True;
@@ -192,6 +234,7 @@ type
       write FRetirarAcentos default True;
     property RetirarEspacos: Boolean read FRetirarEspacos
       write FRetirarEspacos default True;
+    property IdentarXML: Boolean read FIdentarXML write FIdentarXML default False;
     property ValidarDigest: Boolean
       read FValidarDigest write FValidarDigest default True;
   end;
@@ -200,8 +243,6 @@ type
 
   TArquivosConf = class(TComponent)
   private
-    FConfiguracoes: TConfiguracoes;
-
     FPathSalvar: String;
     FPathSchemas: String;
     FIniServicos: String;
@@ -210,31 +251,41 @@ type
     FAdicionarLiteral: Boolean;
     FSepararPorCNPJ: Boolean;
     FSepararPorModelo: Boolean;
+    FOrdenacaoPath: TOrdenacaoPath;
+    FSepararPorAno: Boolean;
     FSepararPorMes: Boolean;
+    FSepararPorDia: Boolean;
   private
-
     function GetIniServicos: String;
     function GetPathSalvar: String;
     function GetPathSchemas: String;
+    procedure SetSepararPorDia(const Value: Boolean);
+    procedure SetSepararPorMes(const Value: Boolean);
+    procedure SetSepararPorAno(const Value: Boolean);
+  protected
+    fpConfiguracoes: TConfiguracoes;
   public
     constructor Create(AConfiguracoes: TConfiguracoes); reintroduce; overload; virtual;
+    destructor Destroy; override;
     procedure Assign(DeArquivosConf: TArquivosConf); reintroduce; virtual;
+    procedure GravarIni( const AIni: TCustomIniFile ); virtual;
+    procedure LerIni( const AIni: TCustomIniFile ); virtual;
 
     function GetPath(APath: String; ALiteral: String; CNPJ: String = '';
-      Data: TDateTime = 0): String; virtual;
+      Data: TDateTime = 0; ModeloDescr: String = ''): String; virtual;
   published
     property PathSalvar: String read GetPathSalvar write FPathSalvar;
     property PathSchemas: String read GetPathSchemas write FPathSchemas;
     property IniServicos: String read GetIniServicos write FIniServicos;
     // Arquivos.Salvar - trata-se de arquivos com validade jurídica.
     property Salvar: Boolean read FSalvar write FSalvar default True;
-    property AdicionarLiteral: Boolean read FAdicionarLiteral
-      write FAdicionarLiteral default False;
+    property AdicionarLiteral: Boolean read FAdicionarLiteral write FAdicionarLiteral default False;
     property SepararPorCNPJ: Boolean read FSepararPorCNPJ write FSepararPorCNPJ default False;
-    property SepararPorModelo: Boolean read FSepararPorModelo
-      write FSepararPorModelo default False;
-    property SepararPorMes: Boolean
-      read FSepararPorMes write FSepararPorMes default False;
+    property SepararPorModelo: Boolean read FSepararPorModelo write FSepararPorModelo default False;
+    property OrdenacaoPath: TOrdenacaoPath read FOrdenacaoPath write FOrdenacaoPath;
+    property SepararPorAno: Boolean read FSepararPorAno write SetSepararPorAno default False;
+    property SepararPorMes: Boolean read FSepararPorMes write SetSepararPorMes default False;
+    property SepararPorDia: Boolean read FSepararPorDia write SetSepararPorDia default False;
   end;
 
   { TConfiguracoes }
@@ -245,6 +296,7 @@ type
     FPWebServices: TWebServicesConf;
     FPCertificados: TCertificadosConf;
     FPArquivos: TArquivosConf;
+    FPSessaoIni: String;
   protected
     procedure CreateGeralConf; virtual;
     procedure CreateWebServicesConf; virtual;
@@ -255,6 +307,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Assign(DeConfiguracoes: TConfiguracoes); reintroduce; virtual;
+    procedure GravarIni( const AIni: TCustomIniFile ); virtual;
+    procedure LerIni( const AIni: TCustomIniFile ); virtual;
 
     procedure LerParams(NomeArqParams: String = '');
 
@@ -262,22 +316,26 @@ type
     property WebServices: TWebServicesConf read FPWebServices;
     property Certificados: TCertificadosConf read FPCertificados;
     property Arquivos: TArquivosConf read FPArquivos;
+    property SessaoIni: String read FPSessaoIni;
   end;
 
 implementation
 
 uses
   Math, strutils, DateUtils,
-  ACBrDFe, ACBrDFeException, ACBrUtil, synautil;
+  synautil, synacode,
+  ACBrDFe, ACBrDFeException, ACBrUtil;
 
 { TConfiguracoes }
 
 constructor TConfiguracoes.Create(AOwner: TComponent);
 begin
-  if not (AOwner is TACBrDFe) then
+  if Assigned(AOwner) and (not (AOwner is TACBrDFe)) then
     raise EACBrDFeException.Create('Owner de TConfiguracoes deve ser do tipo TACBrDFe');
 
   inherited Create(AOwner);
+
+  FPSessaoIni := '';
 
   CreateGeralConf;
   FPGeral.Name := 'GeralConf';
@@ -358,13 +416,29 @@ begin
   end;
 end;
 
+procedure TConfiguracoes.GravarIni(const AIni: TCustomIniFile);
+begin
+  Geral.GravarIni( AIni );
+  WebServices.GravarIni( AIni );
+  Certificados.GravarIni( AIni );
+  Arquivos.GravarIni( AIni );
+end;
+
+procedure TConfiguracoes.LerIni(const AIni: TCustomIniFile);
+begin
+  Geral.LerIni( AIni );
+  WebServices.LerIni( AIni );
+  Certificados.LerIni( AIni );
+  Arquivos.LerIni( AIni );
+end;
+
 { TGeralConf }
 
 constructor TGeralConf.Create(AConfiguracoes: TConfiguracoes);
 begin
   inherited Create(AConfiguracoes);
 
-  FConfiguracoes := AConfiguracoes;
+  fpConfiguracoes := AConfiguracoes;
   {$IFNDEF MSWINDOWS}
    FSSLLib := libOpenSSL;
   {$ELSE}
@@ -375,7 +449,6 @@ begin
    {$ENDIF}
   {$ENDIF}
   FFormaEmissao := teNormal;
-  FFormaEmissaoCodigo := StrToInt(TpEmisToStr(FFormaEmissao));
   FSalvar := True;
   FExibirErroSchema := True;
   FFormatoAlerta := 'TAG:%TAGNIVEL% ID:%ID%/%TAG%(%DESCRICAO%) - %MSG%.';
@@ -387,7 +460,9 @@ begin
   // %DESCRICAO% : Representa a Descrição da TAG
   FRetirarAcentos := True;
   FRetirarEspacos := True;
+  FIdentarXML := False;
   FValidarDigest := True;
+  FCalcSSLLib := True;
 end;
 
 procedure TGeralConf.Assign(DeGeralConf: TGeralConf);
@@ -402,6 +477,16 @@ begin
   ValidarDigest    := DeGeralConf.ValidarDigest;
 end;
 
+procedure TGeralConf.GravarIni(const AIni: TCustomIniFile);
+begin
+
+end;
+
+procedure TGeralConf.LerIni(const AIni: TCustomIniFile);
+begin
+
+end;
+
 function TGeralConf.GetFormatoAlerta: String;
 begin
   if (FFormatoAlerta = '') or ((pos('%TAGNIVEL%', FFormatoAlerta) <= 0) and
@@ -411,12 +496,6 @@ begin
     Result := 'TAG:%TAGNIVEL% ID:%ID%/%TAG%(%DESCRICAO%) - %MSG%.'
   else
     Result := FFormatoAlerta;
-end;
-
-procedure TGeralConf.SetFormaEmissao(AValue: TpcnTipoEmissao);
-begin
-  FFormaEmissao := AValue;
-  FFormaEmissaoCodigo := StrToInt(TpEmisToStr(FFormaEmissao));
 end;
 
 procedure TGeralConf.SetSSLLib(AValue: TSSLLib);
@@ -430,9 +509,13 @@ begin
     FSSLLib := libCapicom;
   {$ENDIF}
   {$ENDIF}
-  TACBrDFe(FConfiguracoes.Owner).SSL.SSLLib := FSSLLib;
+  TACBrDFe(fpConfiguracoes.Owner).SSL.SSLLib := FSSLLib;
 end;
 
+function TGeralConf.GetFormaEmissaoCodigo: integer;
+begin
+  Result := StrToInt(TpEmisToStr(FFormaEmissao));
+end;
 
 { TWebServicesConf }
 
@@ -440,14 +523,13 @@ constructor TWebServicesConf.Create(AConfiguracoes: TConfiguracoes);
 begin
   inherited Create(AConfiguracoes);
 
-  FConfiguracoes := AConfiguracoes;
+  fpConfiguracoes := AConfiguracoes;
   FParams := TStringList.Create;
   FTimeZoneConf := TTimeZoneConf.Create;
 
   FUF := DFeUF[24];
   FUFCodigo := DFeUFCodigo[24];
   FAmbiente := taHomologacao;
-  FAmbienteCodigo := StrToInt(TpAmbToStr(FAmbiente));
   FVisualizar := False;
   FProxyHost := '';
   FProxyPort := '';
@@ -459,8 +541,10 @@ begin
   FAjustaAguardaConsultaRet := False;
   FSalvar := False;
   FTimeOut := 5000;
+  FTimeOutPorThread := False;
   FResourceName := 'ACBrServicos';
   FQuebradeLinha := '|';
+  FSSLType := LT_all;
 end;
 
 destructor TWebServicesConf.Destroy;
@@ -488,6 +572,58 @@ begin
   Params.Assign(DeWebServicesConf.Params);
 end;
 
+procedure TWebServicesConf.GravarIni(const AIni: TCustomIniFile);
+begin
+  AIni.WriteString(CDFeSessaoIni, 'UF', UF);
+  AIni.WriteInteger(CDFeSessaoIni, 'TimeZone.Modo', Integer(TimeZoneConf.ModoDeteccao));
+  AIni.WriteString(CDFeSessaoIni, 'TimeZone.Str', TimeZoneConf.TimeZoneStr);
+  AIni.WriteString(CDFeSessaoIni, 'Proxy.Host', ProxyHost);
+  AIni.WriteString(CDFeSessaoIni, 'Proxy.Port', ProxyPort);
+  AIni.WriteString(CDFeSessaoIni, 'Proxy.User', ProxyUser);
+  AIni.WriteString(CDFeSessaoIni, 'Proxy.Pass', EncodeBase64(StrCrypt(ProxyPass, ProxyHost)));
+
+  if NaoEstaVazio(fpConfiguracoes.SessaoIni) then
+  begin
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'Ambiente', Integer(Ambiente));
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'Timeout', TimeOut);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'TimeoutPorThread', TimeOutPorThread);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Visualizar', Visualizar);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'AjustaAguardaConsultaRet', AjustaAguardaConsultaRet);
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'AguardarConsultaRet', AguardarConsultaRet);
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'IntervaloTentativas', IntervaloTentativas);
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'Tentativas', Tentativas);
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'SSLType', Integer(SSLType));
+    AIni.WriteString(fpConfiguracoes.SessaoIni, 'QuebradeLinha', QuebradeLinha);
+  end;
+end;
+
+procedure TWebServicesConf.LerIni(const AIni: TCustomIniFile);
+begin
+  UF := AIni.ReadString(CDFeSessaoIni, 'UF', UF);
+  TimeZoneConf.ModoDeteccao := TTimeZoneModoDeteccao(AIni.ReadInteger(CDFeSessaoIni, 'TimeZone.Modo', Integer(TimeZoneConf.ModoDeteccao)));
+  TimeZoneConf.TimeZoneStr := AIni.ReadString(CDFeSessaoIni, 'TimeZone.Str', TimeZoneConf.TimeZoneStr);
+  ProxyHost := AIni.ReadString(CDFeSessaoIni, 'Proxy.Host', ProxyHost);
+  ProxyPort := AIni.ReadString(CDFeSessaoIni, 'Proxy.Port', ProxyPort);
+  ProxyUser := AIni.ReadString(CDFeSessaoIni, 'Proxy.User', ProxyUser);
+  ProxyPass := StrCrypt( DecodeBase64(AIni.ReadString(CDFeSessaoIni, 'Proxy.Pass', '')), ProxyHost);
+
+  if NaoEstaVazio(fpConfiguracoes.SessaoIni) then
+  begin
+    Ambiente := TpcnTipoAmbiente( AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'Ambiente', Integer(Ambiente)));
+    Salvar := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+    TimeOut := AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'Timeout', TimeOut);
+    TimeOutPorThread := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'TimeoutPorThread', TimeOutPorThread);
+    Visualizar := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Visualizar', Visualizar);
+    AjustaAguardaConsultaRet := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'AjustaAguardaConsultaRet', AjustaAguardaConsultaRet);
+    AguardarConsultaRet := AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'AguardarConsultaRet', AguardarConsultaRet);
+    IntervaloTentativas := AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'IntervaloTentativas', IntervaloTentativas);
+    Tentativas := AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'Tentativas', Tentativas);
+    SSLType := TSSLType(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'SSLType', Integer(SSLType)));
+    QuebradeLinha := AIni.ReadString(fpConfiguracoes.SessaoIni, 'QuebradeLinha', QuebradeLinha);
+  end;
+end;
+
 procedure TWebServicesConf.LerParams;
 var
   ConteudoParams: AnsiString;
@@ -498,12 +634,6 @@ begin
     ConteudoParams := LerParamsInterno;
 
   FParams.Text := ConteudoParams;
-end;
-
-procedure TWebServicesConf.SetAmbiente(AValue: TpcnTipoAmbiente);
-begin
-  FAmbiente := AValue;
-  FAmbienteCodigo := StrToInt(TpAmbToStr(AValue));
 end;
 
 procedure TWebServicesConf.SetIntervaloTentativas(const Value: cardinal);
@@ -522,12 +652,12 @@ var
 begin
   Result := '';
 
-  if (FConfiguracoes.Arquivos.IniServicos <> '') and
-    FileExists(FConfiguracoes.Arquivos.IniServicos) then
+  if (fpConfiguracoes.Arquivos.IniServicos <> '') and
+    FileExists(fpConfiguracoes.Arquivos.IniServicos) then
   begin
     SL := TStringList.Create;
     try
-      SL.LoadFromFile(FConfiguracoes.Arquivos.IniServicos);
+      SL.LoadFromFile(fpConfiguracoes.Arquivos.IniServicos);
       Result := SL.Text;
     finally
       SL.Free;
@@ -582,36 +712,69 @@ end;
 procedure TWebServicesConf.SetProxyHost(AValue: String);
 begin
   if FProxyHost = AValue then Exit;
+
   FProxyHost := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.ProxyHost := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.ProxyHost := AValue;
+end;
+
+function TWebServicesConf.GetAmbienteCodigo: integer;
+begin
+  Result := StrToInt(TpAmbToStr(FAmbiente));
 end;
 
 procedure TWebServicesConf.SetProxyPass(AValue: String);
 begin
   if FProxyPass = AValue then Exit;
+
   FProxyPass := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.ProxyPass := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.ProxyPass := AValue;
 end;
 
 procedure TWebServicesConf.SetProxyPort(AValue: String);
 begin
   if FProxyPort = AValue then Exit;
+
   FProxyPort := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.ProxyPort := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.ProxyPort := AValue;
 end;
 
 procedure TWebServicesConf.SetProxyUser(AValue: String);
 begin
   if FProxyUser = AValue then Exit;
+
   FProxyUser := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.ProxyUser := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.ProxyUser := AValue;
+end;
+
+procedure TWebServicesConf.SetSSLType(AValue: TSSLType);
+begin
+  if FSSLType = AValue then Exit;
+
+  FSSLType := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.SSLType := AValue;
 end;
 
 procedure TWebServicesConf.SetTimeOut(AValue: Integer);
 begin
   if FTimeOut = AValue then Exit;
+
   FTimeOut := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.TimeOut := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.TimeOut := AValue;
+end;
+
+procedure TWebServicesConf.SetTimeOutPorThread(AValue: Boolean);
+begin
+  if FTimeOutPorThread = AValue then Exit;
+
+  FTimeOutPorThread := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.TimeOutPorThread := AValue;
 end;
 
 { TCertificadosConf }
@@ -620,7 +783,7 @@ constructor TCertificadosConf.Create(AConfiguracoes: TConfiguracoes);
 begin
   inherited Create(AConfiguracoes);
 
-  FConfiguracoes := AConfiguracoes;
+  fpConfiguracoes := AConfiguracoes;
   FSenha := '';
   FK := '';
   FArquivoPFX := '';
@@ -637,11 +800,33 @@ begin
   ArquivoPFX := DeCertificadosConf.ArquivoPFX;
 end;
 
+procedure TCertificadosConf.GravarIni(const AIni: TCustomIniFile);
+begin
+  AIni.WriteString(CDFeSessaoIni, 'ArquivoPFX', ArquivoPFX);
+  AIni.WriteString(CDFeSessaoIni, 'DadosPFX', EncodeBase64(DadosPFX));
+  AIni.WriteString(CDFeSessaoIni, 'NumeroSerie', NumeroSerie);
+  AIni.WriteString(CDFeSessaoIni, 'Senha', EncodeBase64(FSenha));
+  AIni.WriteString(CDFeSessaoIni, 'FK', EncodeBase64(FK));
+  AIni.WriteBool(CDFeSessaoIni, 'VerificarValidade', VerificarValidade);
+end;
+
+procedure TCertificadosConf.LerIni(const AIni: TCustomIniFile);
+begin
+  ArquivoPFX := AIni.ReadString(CDFeSessaoIni, 'ArquivoPFX', ArquivoPFX);
+  DadosPFX := DecodeBase64( AIni.ReadString(CDFeSessaoIni, 'DadosPFX', EncodeBase64(DadosPFX)));
+  NumeroSerie := AIni.ReadString(CDFeSessaoIni, 'NumeroSerie', NumeroSerie);
+  FSenha := DecodeBase64( AIni.ReadString(CDFeSessaoIni, 'Senha', EncodeBase64(FSenha)));
+  FK := DecodeBase64( AIni.ReadString(CDFeSessaoIni, 'FK', EncodeBase64(FK)));
+  VerificarValidade := AIni.ReadBool(CDFeSessaoIni, 'VerificarValidade', VerificarValidade);
+end;
+
 procedure TCertificadosConf.SetNumeroSerie(const AValue: String);
 begin
   if FNumeroSerie = AValue then Exit;
+
   FNumeroSerie := Trim(UpperCase(StringReplace(AValue, ' ', '', [rfReplaceAll])));
-  TACBrDFe(FConfiguracoes.Owner).SSL.NumeroSerie := FNumeroSerie;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.NumeroSerie := FNumeroSerie;
 end;
 
 procedure TCertificadosConf.SetSenha(AValue: AnsiString);
@@ -652,14 +837,17 @@ begin
   FK := FormatDateTime('hhnnsszzz',Now);
   FSenha := StrCrypt(AValue, FK);  // Salva Senha de forma Criptografada, para evitar "Inspect"
 
-  TACBrDFe(FConfiguracoes.Owner).SSL.Senha := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.Senha := AValue;
 end;
 
 procedure TCertificadosConf.SetArquivoPFX(AValue: String);
 begin
   if FArquivoPFX = AValue then Exit;
+
   FArquivoPFX := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.ArquivoPFX := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.ArquivoPFX := AValue;
 end;
 
 function TCertificadosConf.GetSenha: AnsiString;
@@ -670,8 +858,10 @@ end;
 procedure TCertificadosConf.SetDadosPFX(AValue: AnsiString);
 begin
   if FDadosPFX = AValue then Exit;
+
   FDadosPFX := AValue;
-  TACBrDFe(FConfiguracoes.Owner).SSL.DadosPFX := AValue;
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.DadosPFX := AValue;
 end;
 
 
@@ -681,19 +871,31 @@ constructor TArquivosConf.Create(AConfiguracoes: TConfiguracoes);
 begin
   inherited Create(AConfiguracoes);
 
-  FConfiguracoes := AConfiguracoes;
+  FOrdenacaoPath := TOrdenacaoPath.Create(Self, TOrdenacaoPathItem);
+
+  fpConfiguracoes := AConfiguracoes;
   FSalvar := True;
   FPathSalvar := '';
   FPathSchemas := '';
   FIniServicos := '';
 
+  FSepararPorDia := False;
   FSepararPorMes := False;
+  FSepararPorAno := False;
   FAdicionarLiteral := False;
   FSepararPorCNPJ := False;
   FSepararPorModelo := False;
 end;
 
+destructor TArquivosConf.Destroy;
+begin
+  FOrdenacaoPath.Free;
+  inherited;
+end;
+
 procedure TArquivosConf.Assign(DeArquivosConf: TArquivosConf);
+var
+  I: Integer;
 begin
   PathSalvar       := DeArquivosConf.PathSalvar;
   PathSchemas      := DeArquivosConf.PathSchemas;
@@ -703,13 +905,52 @@ begin
   SepararPorCNPJ   := DeArquivosConf.SepararPorCNPJ;
   SepararPorModelo := DeArquivosConf.SepararPorModelo;
   SepararPorMes    := DeArquivosConf.SepararPorMes;
+  SepararPorDia    := DeArquivosConf.SepararPorDia;
+  OrdenacaoPath.Clear;
+  for I := 0 to DeArquivosConf.OrdenacaoPath.Count-1 do
+    OrdenacaoPath.Add.Item := DeArquivosConf.OrdenacaoPath.Items[I].Item;
+end;
+
+procedure TArquivosConf.GravarIni(const AIni: TCustomIniFile);
+begin
+  if EstaVazio(fpConfiguracoes.SessaoIni) then
+    Exit;
+
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathSalvar', PathSalvar);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathSchemas', PathSchemas);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'IniServicos', IniServicos);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'AdicionarLiteral', AdicionarLiteral);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SepararPorCNPJ', SepararPorCNPJ);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SepararPorModelo', SepararPorModelo);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SepararPorAno', SepararPorAno);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SepararPorMes', SepararPorMes);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SepararPorDia', SepararPorDia);
+end;
+
+procedure TArquivosConf.LerIni(const AIni: TCustomIniFile);
+begin
+  if EstaVazio(fpConfiguracoes.SessaoIni) then
+    Exit;
+
+  PathSalvar := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathSalvar', PathSalvar);
+  PathSchemas := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathSchemas', PathSchemas);
+  IniServicos := AIni.ReadString(fpConfiguracoes.SessaoIni, 'IniServicos', IniServicos);
+  Salvar := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+  AdicionarLiteral := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'AdicionarLiteral', AdicionarLiteral);
+  SepararPorCNPJ := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SepararPorCNPJ', SepararPorCNPJ);
+  SepararPorModelo := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SepararPorModelo', SepararPorModelo);
+  SepararPorAno := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SepararPorAno', SepararPorAno);
+  SepararPorMes := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SepararPorMes', SepararPorMes);
+  SepararPorDia := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SepararPorDia', SepararPorDia);
 end;
 
 function TArquivosConf.GetPathSalvar: String;
 begin
   if FPathSalvar = '' then
-    if not (csDesigning in FConfiguracoes.Owner.ComponentState) then
-      FPathSalvar := ApplicationPath + 'Docs';
+    if Assigned(fpConfiguracoes.Owner) then
+      if not (csDesigning in fpConfiguracoes.Owner.ComponentState) then
+        FPathSalvar := ApplicationPath + 'Docs';
 
   FPathSalvar := PathWithDelim(Trim(FPathSalvar));
   Result := FPathSalvar;
@@ -718,24 +959,52 @@ end;
 function TArquivosConf.GetPathSchemas: String;
 begin
   if FPathSchemas = '' then
-    if not (csDesigning in FConfiguracoes.Owner.ComponentState) then
-      FPathSchemas := ApplicationPath + 'Schemas';
+    if Assigned(fpConfiguracoes.Owner) then
+      if not (csDesigning in fpConfiguracoes.Owner.ComponentState) then
+        FPathSchemas := ApplicationPath + 'Schemas';
 
   FPathSchemas := PathWithDelim(Trim(FPathSchemas));
   Result := FPathSchemas;
 end;
 
+procedure TArquivosConf.SetSepararPorAno(const Value: Boolean);
+begin
+  FSepararPorAno := Value;
+end;
+
+procedure TArquivosConf.SetSepararPorDia(const Value: Boolean);
+begin
+  FSepararPorDia := Value;
+  if FSepararPorDia then
+    FSepararPorMes := True;
+end;
+
+procedure TArquivosConf.SetSepararPorMes(const Value: Boolean);
+begin
+  FSepararPorMes := Value;
+  if not FSepararPorMes then
+    FSepararPorDia := False;
+end;
+
 function TArquivosConf.GetIniServicos: String;
 begin
   if FIniServicos = '' then
-    if not (csDesigning in FConfiguracoes.Owner.ComponentState) then
-      FIniServicos := ApplicationPath + FConfiguracoes.WebServices.ResourceName+'.ini';
+    if Assigned(fpConfiguracoes.Owner) then
+      if not (csDesigning in fpConfiguracoes.Owner.ComponentState) then
+        FIniServicos := ApplicationPath + fpConfiguracoes.WebServices.ResourceName+'.ini';
 
   Result := FIniServicos;
 end;
 
 function TArquivosConf.GetPath(APath: String; ALiteral: String; CNPJ: String;
-  Data: TDateTime): String;
+  Data: TDateTime; ModeloDescr: String): String;
+
+  procedure AddPathOrder(AAdicionar: Boolean; AItemOrdenacaoPath: TTagOrdenacaoPath);
+  begin
+    if AAdicionar then
+      FOrdenacaoPath.Add.Item := AItemOrdenacaoPath;
+  end;
+  
 var
   wDia, wMes, wAno: word;
   Dir, Modelo, AnoMes: String;
@@ -751,7 +1020,7 @@ begin
     CNPJ := OnlyNumber(CNPJ);
 
     if EstaVazio(CNPJ) then
-      CNPJ := OnlyNumber(TACBrDFe(FConfiguracoes.Owner).SSL.CertCNPJ);
+      CNPJ := OnlyNumber(TACBrDFe(fpConfiguracoes.Owner).SSL.CertCNPJ);
 
     if NaoEstaVazio(CNPJ) then
       Dir := PathWithDelim(Dir) + CNPJ;
@@ -759,7 +1028,7 @@ begin
 
   if SepararPorModelo then
   begin
-    Modelo := TACBrDFe(FConfiguracoes.Owner).GetNomeModeloDFe;
+    Modelo := TACBrDFe(fpConfiguracoes.Owner).GetNomeModeloDFe;
     Dir := PathWithDelim(Dir) + Modelo;
   end;
 
@@ -788,7 +1057,43 @@ begin
   Result := Dir;
 end;
 
+{ TOrdenacaoPath }
+
+function TOrdenacaoPath.Add: TOrdenacaoPathItem;
+begin
+  Result := TOrdenacaoPathItem(inherited Add);
+end;
+
+function TOrdenacaoPath.GetItem(Index: Integer): TOrdenacaoPathItem;
+begin
+  Result := TOrdenacaoPathItem(inherited GetItem(Index));
+end;
+
+procedure TOrdenacaoPath.SetItem(Index: Integer; Value: TOrdenacaoPathItem);
+begin
+  inherited SetItem(Index, Value);
+end;
+
+{ TOrdenacaoPathItem }
+
+procedure TOrdenacaoPathItem.Assign(Source: TPersistent);
+begin
+  if Source is TOrdenacaoPathItem then
+    FItem := TOrdenacaoPathItem(Source).FItem
+  else
+    inherited Assign(Source);
+end;
+
+function TOrdenacaoPathItem.GetDisplayName: String;
+begin
+  case FItem of
+    opNenhum:   Result := '(nenhum)';
+    opCNPJ:     Result := 'CNPJ';
+    opModelo:   Result := 'Modelo';
+    opData:     Result := 'Data';
+    opLiteral:  Result := 'Literal';
+  end;
+end;
 
 end.
 
-// TODO: Salvar senha do Certificado na memória de forma criptograda

@@ -285,7 +285,7 @@ begin
     // Homologação: 01/10/2015
     // Produção: 03/11/2015
 
-    if (NFe.Ide.modelo = 65) and (Configuracoes.Geral.IncluirQRCodeXMLNFCe) then
+    if (NFe.Ide.modelo = 65) then
     begin
       with TACBrNFe(TNotasFiscais(Collection).ACBrNFe) do
       begin
@@ -293,7 +293,12 @@ begin
                                   onlyNumber(NFe.infNFe.ID),
                                   trim(IfThen(NFe.Dest.idEstrangeiro <> '', NFe.Dest.idEstrangeiro, NFe.Dest.CNPJCPF)),
                                   NFe.Ide.dEmi, NFe.Total.ICMSTot.vNF,
-                                  NFe.Total.ICMSTot.vICMS, NFe.signature.DigestValue);
+                                  NFe.Total.ICMSTot.vICMS, NFe.signature.DigestValue,
+                                  NFe.infNFe.Versao);
+
+        if NFe.infNFe.Versao >= 4 then
+          NFe.infNFeSupl.urlChave := GetURLConsultaNFCe(NFe.Ide.cUF, NFe.Ide.tpAmb, NFe.infNFe.Versao);
+
         GerarXML;
       end;
     end;
@@ -1324,8 +1329,6 @@ begin
       Emit.EnderEmit.xMun    := INIRec.ReadString(  sSecao,'Cidade'     ,INIRec.ReadString(  sSecao,'xMun'   ,''));
       Emit.EnderEmit.UF      := INIRec.ReadString(  sSecao,'UF'         ,'');
       Emit.EnderEmit.CEP     := INIRec.ReadInteger( sSecao,'CEP'        ,0);
-   // if Emit.EnderEmit.cMun <= 0 then
-   //   Emit.EnderEmit.cMun := ObterCodigoMunicipio(Emit.EnderEmit.xMun,Emit.EnderEmit.UF);
       Emit.EnderEmit.cPais   := INIRec.ReadInteger( sSecao,'PaisCod'    ,INIRec.ReadInteger( sSecao,'cPais'    ,1058));
       Emit.EnderEmit.xPais   := INIRec.ReadString(  sSecao,'Pais'       ,INIRec.ReadString(  sSecao,'xPais'    ,'BRASIL'));
       Emit.EnderEmit.fone    := INIRec.ReadString(  sSecao,'Fone'       ,'');
@@ -1369,8 +1372,6 @@ begin
       Dest.EnderDest.xMun    := INIRec.ReadString(  sSecao,'Cidade'     ,INIRec.ReadString(  sSecao,'xMun'   ,''));
       Dest.EnderDest.UF      := INIRec.ReadString(  sSecao,'UF'         ,'');
       Dest.EnderDest.CEP     := INIRec.ReadInteger( sSecao,'CEP'       ,0);
-    //if Dest.EnderDest.cMun <= 0 then
-    //  Dest.EnderDest.cMun := ObterCodigoMunicipio(Dest.EnderDest.xMun,Dest.EnderDest.UF);
       Dest.EnderDest.cPais   := INIRec.ReadInteger( sSecao,'PaisCod'    ,INIRec.ReadInteger(sSecao,'cPais',1058));
       Dest.EnderDest.xPais   := INIRec.ReadString(  sSecao,'Pais'       ,INIRec.ReadString( sSecao,'xPais','BRASIL'));
       Dest.EnderDest.Fone    := INIRec.ReadString(  sSecao,'Fone'       ,'');
@@ -1386,8 +1387,6 @@ begin
         Retirada.cMun    := INIRec.ReadInteger('Retirada','cMun',0);
         Retirada.xMun    := INIRec.ReadString( 'Retirada','xMun','');
         Retirada.UF      := INIRec.ReadString( 'Retirada','UF'  ,'');
-      //if Retirada.cMun <= 0 then
-      //  Retirada.cMun := ObterCodigoMunicipio(Retirada.xMun,Retirada.UF);
       end;
 
       sCNPJCPF := INIRec.ReadString(  'Entrega','CNPJ',INIRec.ReadString(  'Entrega','CPF',INIRec.ReadString(  'Entrega','CNPJCPF','')));
@@ -1401,8 +1400,6 @@ begin
         Entrega.cMun    := INIRec.ReadInteger( 'Entrega','cMun',0);
         Entrega.xMun    := INIRec.ReadString(  'Entrega','xMun','');
         Entrega.UF      := INIRec.ReadString(  'Entrega','UF','');
-      //if Entrega.cMun <= 0 then
-      //  Entrega.cMun := ObterCodigoMunicipio(Entrega.xMun,Entrega.UF);
       end;
 
       I := 1 ;
@@ -1622,14 +1619,14 @@ begin
           begin
             sSecao := IfThen( INIRec.SectionExists('Medicamento'+IntToStrZero(I,3)+IntToStrZero(J,3)), 'Medicamento', 'med');
             sSecao := sSecao+IntToStrZero(I,3)+IntToStrZero(J,3) ;
-            sFim     := INIRec.ReadString(sSecao,'nLote','FIM') ;
+            sFim     := INIRec.ReadString(sSecao,'cProdANVISA','FIM') ;
             if (sFim = 'FIM') or (Length(sFim) <= 0) then
               break;
 
             with Prod.med.Add do
             begin
-              nLote := sFim;
-              cProdANVISA:=  INIRec.ReadString( sSecao,'cProdANVISA','');
+              nLote := INIRec.ReadString(sSecao,'nLote','FIM') ;
+              cProdANVISA:=  sFim;
               qLote := StringToFloatDef(INIRec.ReadString( sSecao,'qLote',''),0) ;
               dFab  := StringToDateTime(INIRec.ReadString( sSecao,'dFab','0')) ;
               dVal  := StringToDateTime(INIRec.ReadString( sSecao,'dVal','0')) ;
@@ -1680,6 +1677,13 @@ begin
               CIDE.qBCprod   := StringToFloatDef(INIRec.ReadString( sSecao,'qBCprod'  ,''),0) ;
               CIDE.vAliqProd := StringToFloatDef(INIRec.ReadString( sSecao,'vAliqProd',''),0) ;
               CIDE.vCIDE     := StringToFloatDef(INIRec.ReadString( sSecao,'vCIDE'    ,''),0) ;
+
+              sSecao := 'encerrante'+IntToStrZero(I,3) ;
+              encerrante.nBico    := INIRec.ReadInteger( sSecao,'nBico'  ,0) ;
+              encerrante.nBomba   := INIRec.ReadInteger( sSecao,'nBomba' ,0) ;
+              encerrante.nTanque  := INIRec.ReadInteger( sSecao,'nTanque',0) ;
+              encerrante.vEncIni  := StringToFloatDef(INIRec.ReadString( sSecao,'vEncIni',''),0) ;
+              encerrante.vEncFin  := StringToFloatDef(INIRec.ReadString( sSecao,'vEncFin',''),0) ;
 
               sSecao := 'ICMSComb'+IntToStrZero(I,3) ;
               ICMS.vBCICMS   := StringToFloatDef(INIRec.ReadString( sSecao,'vBCICMS'  ,''),0) ;

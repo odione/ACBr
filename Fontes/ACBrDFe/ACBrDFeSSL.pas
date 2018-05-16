@@ -40,18 +40,28 @@ unit ACBrDFeSSL;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, Contnrs,
+  blcksock, syncobjs;
 
 Const
   CBufferSize = 32768;
 
+  CDSIGNS = 'xmlns:ds="http://www.w3.org/2000/09/xmldsig#"';
+  CSIGNATURE_NODE = './/ds:Signature';
+  CDEFAULT_STORE_NAME = 'My'; //My CA Root AddressBook
+  CACBR_STORE_NAME = 'ACBrStore';
+
 type
 
-  { TDFeSSLClass }
+  TSSLLib = (libNone, libOpenSSL, libCapicom, libCapicomDelphiSoap, libWinCrypt, libCustom);
+  TSSLCryptLib = (cryNone, cryOpenSSL, cryCapicom, cryWinCrypt);
+  TSSLHttpLib = (httpNone, httpWinINet, httpWinHttp, httpOpenSSL, httpIndy);
+  TSSLXmlSignLib = (xsNone, xsXmlSec, xsMsXml, xsMsXmlCapicom, xsLibXml2);
 
-  TSSLTipoCertificado = (tpcA1, tpcA3);
+  TSSLTipoCertificado = (tpcDesconhecido, tpcA1, tpcA3);
   TSSLDgst = (dgstMD2, dgstMD4, dgstMD5, dgstRMD160, dgstSHA, dgstSHA1, dgstSHA256, dgstSHA512) ;
   TSSLHashOutput = (outHexa, outBase64, outBinary) ;
+  TSSLStoreLocation = (slMemory, slLocalMachine, slCurrentUser, slActiveDirectory, slSmartCard);
 
   TDFeSSL = class;
 
@@ -114,7 +124,7 @@ type
     property InternalErrorCode: Integer read GetInternalErrorCode;
   end;
 
-  TSSLLib = (libNone, libOpenSSL, libCapicom, libCapicomDelphiSoap);
+
 
   { TDFeSSL }
 
@@ -132,7 +142,9 @@ type
     FK: String;
     FSSLClass: TDFeSSLClass;
     FSSLLib: TSSLLib;
+    FSSLType: TSSLType;
     FTimeOut: Integer;
+    FTimeOutPorThread: Boolean;
     FUseCertificateHTTP: Boolean;
 
     function GetCertCNPJ: String;
@@ -212,6 +224,7 @@ type
 
   published
     property SSLLib: TSSLLib read FSSLLib write SetSSLLib;
+    property SSLType: TSSLType read FSSLType write FSSLType default LT_all;
     property SSLClass: TDFeSSLClass read FSSLClass;
 
     property ArquivoPFX: String read FArquivoPFX write SetArquivoPFX;
@@ -225,6 +238,7 @@ type
     property ProxyPass: String read FProxyPass write FProxyPass;
 
     property TimeOut: Integer read FTimeOut write FTimeOut default 5000;
+    property TimeOutPorThread: Boolean read FTimeOutPorThread write FTimeOutPorThread default False;
     property NameSpaceURI: String read FNameSpaceURI write FNameSpaceURI;
 
     property UseCertificateHTTP: Boolean read FUseCertificateHTTP write FUseCertificateHTTP;

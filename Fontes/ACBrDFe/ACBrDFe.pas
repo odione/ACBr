@@ -175,7 +175,6 @@ destructor TACBrDFe.Destroy;
 begin
   FSSL.Free;
   FListaDeSchemas.Free;
-
   FPConfiguracoes.Free;
   FPIniParams.Free;
 
@@ -506,7 +505,6 @@ begin
   Result := URL;
 end;
 
-
 procedure TACBrDFe.FazerLog(const Msg: String; out Tratado: Boolean);
 begin
   Tratado := False;
@@ -542,8 +540,8 @@ begin
 
     FMAIL := AValue;
 
-    if AValue <> nil then
-      AValue.FreeNotification(self);
+    if AValue <> Nil then
+      AValue.FreeNotification(Self);
   end;
 end;
 

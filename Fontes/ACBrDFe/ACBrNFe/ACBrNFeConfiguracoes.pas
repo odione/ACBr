@@ -41,7 +41,8 @@ unit ACBrNFeConfiguracoes;
 interface
 
 uses
-  Classes, SysUtils, ACBrDFeConfiguracoes, pcnConversao, pcnConversaoNFe;
+  Classes, SysUtils, IniFiles,
+  ACBrDFeConfiguracoes, pcnConversao, pcnConversaoNFe;
 
 type
 
@@ -55,7 +56,7 @@ type
     FAtualizarXMLCancelado: Boolean;
     FIdCSC: String;
     FCSC: String;
-    FIncluirQRCodeXMLNFCe: Boolean;
+    FVersaoQRCode: TpcnVersaoQrCode;
 
     procedure SetCSC(AValue: String);
     procedure SetIdCSC(AValue: String);
@@ -64,6 +65,8 @@ type
   public
     constructor Create(AOwner: TConfiguracoes); override;
     procedure Assign(DeGeralConfNFe: TGeralConfNFe); reintroduce;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
   published
     property ModeloDF: TpcnModeloDF read FModeloDF write SetModeloDF default moNFe;
@@ -73,7 +76,7 @@ type
       read FAtualizarXMLCancelado write FAtualizarXMLCancelado default False;
     property IdCSC: String read FIdCSC write SetIdCSC;
     property CSC: String read FCSC write SetCSC;
-    property IncluirQRCodeXMLNFCe: Boolean read FIncluirQRCodeXMLNFCe write FIncluirQRCodeXMLNFCe;
+    property VersaoQRCode: TpcnVersaoQrCode read FVersaoQRCode write FVersaoQRCode default veqr100;
   end;
 
   { TDownloadConfNFe }
@@ -97,17 +100,21 @@ type
     FEmissaoPathNFe: boolean;
     FSalvarEvento: boolean;
     FSalvarApenasNFeProcessadas: boolean;
+    FNormatizarMunicipios: Boolean;
     FPathNFe: String;
     FPathInu: String;
     FPathEvento: String;
+    FPathArquivoMunicipios: String;
     FDownloadNFe: TDownloadConfNFe;
   public
     constructor Create(AOwner: TConfiguracoes); override;
     destructor Destroy; override;
     procedure Assign(DeArquivosConfNFe: TArquivosConfNFe); reintroduce;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
     function GetPathInu(CNPJ: String = ''): String;
-    function GetPathNFe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 55): String;
+    function GetPathNFe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 0): String;
     function GetPathEvento(tipoEvento: TpcnTpEvento; CNPJ: String = ''; Data: TDateTime = 0): String;
     function GetPathDownload(xNome: String = ''; CNPJ: String = ''; Data: TDateTime = 0): String;
   published
@@ -117,9 +124,12 @@ type
       write FSalvarEvento default False;
     property SalvarApenasNFeProcessadas: boolean
       read FSalvarApenasNFeProcessadas write FSalvarApenasNFeProcessadas default False;
+    property NormatizarMunicipios: boolean
+      read FNormatizarMunicipios write FNormatizarMunicipios default False;
     property PathNFe: String read FPathNFe write FPathNFe;
     property PathInu: String read FPathInu write FPathInu;
     property PathEvento: String read FPathEvento write FPathEvento;
+    property PathArquivoMunicipios: String read FPathArquivoMunicipios write FPathArquivoMunicipios;
     property DownloadNFe: TDownloadConfNFe read FDownloadNFe write FDownloadNFe;
   end;
 
@@ -147,7 +157,7 @@ type
 implementation
 
 uses
-  ACBrUtil,
+  ACBrUtil, ACBrNFe,
   DateUtils;
 
 { TDownloadConfNFe }
@@ -175,6 +185,7 @@ constructor TConfiguracoesNFe.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
+  FPSessaoIni := 'NFe';
   WebServices.ResourceName := 'ACBrNFeServicos';
 end;
 
@@ -218,7 +229,7 @@ begin
   FAtualizarXMLCancelado := False;
   FIdCSC := '';
   FCSC := '';
-  FIncluirQRCodeXMLNFCe := False;
+  FVersaoQRCode := veqr000;
 end;
 
 procedure TGeralConfNFe.Assign(DeGeralConfNFe: TGeralConfNFe);
@@ -227,9 +238,34 @@ begin
 
   ModeloDF := DeGeralConfNFe.ModeloDF;
   VersaoDF := DeGeralConfNFe.VersaoDF;
+  AtualizarXMLCancelado := DeGeralConfNFe.AtualizarXMLCancelado;
   IdCSC    := DeGeralConfNFe.IdCSC;
   CSC      := DeGeralConfNFe.CSC;
-  IncluirQRCodeXMLNFCe := DeGeralConfNFe.IncluirQRCodeXMLNFCe;
+  VersaoQRCode := DeGeralConfNFe.VersaoQRCode;
+end;
+
+procedure TGeralConfNFe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'IdCSC', IdCSC);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'CSC', CSC);
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'ModeloDF', Integer(ModeloDF));
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF));
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'AtualizarXMLCancelado', AtualizarXMLCancelado);
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'VersaoQRCode', Integer(VersaoQRCode));
+end;
+
+procedure TGeralConfNFe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  IdCSC := AIni.ReadString(fpConfiguracoes.SessaoIni, 'IdCSC', IdCSC);
+  CSC := AIni.ReadString(fpConfiguracoes.SessaoIni, 'CSC', CSC);
+  ModeloDF := TpcnModeloDF(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'ModeloDF', Integer(ModeloDF)));
+  VersaoDF := TpcnVersaoDF(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF)));
+  AtualizarXMLCancelado := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'AtualizarXMLCancelado', AtualizarXMLCancelado);
+  VersaoQRCode :=  TpcnVersaoQrCode(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'VersaoQRCode', Integer(VersaoQRCode)));
 end;
 
 procedure TGeralConfNFe.SetModeloDF(AValue: TpcnModeloDF);
@@ -269,9 +305,11 @@ begin
   FEmissaoPathNFe := False;
   FSalvarEvento := False;
   FSalvarApenasNFeProcessadas := False;
+  FNormatizarMunicipios := False;
   FPathNFe := '';
   FPathInu := '';
   FPathEvento := '';
+  FPathArquivoMunicipios := '';
 end;
 
 destructor TArquivosConfNFe.Destroy;
@@ -287,10 +325,44 @@ begin
   EmissaoPathNFe             := DeArquivosConfNFe.EmissaoPathNFe;
   SalvarEvento               := DeArquivosConfNFe.SalvarEvento;
   SalvarApenasNFeProcessadas := DeArquivosConfNFe.SalvarApenasNFeProcessadas;
+  NormatizarMunicipios       := DeArquivosConfNFe.NormatizarMunicipios;
   PathNFe                    := DeArquivosConfNFe.PathNFe;
   PathInu                    := DeArquivosConfNFe.PathInu;
   PathEvento                 := DeArquivosConfNFe.PathEvento;
+  PathArquivoMunicipios      := DeArquivosConfNFe.PathArquivoMunicipios;
   FDownloadNFe.Assign(DeArquivosConfNFe.DownloadNFe);
+end;
+
+procedure TArquivosConfNFe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SalvarEvento', SalvarEvento);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SalvarApenasNFeProcessadas', SalvarApenasNFeProcessadas);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'EmissaoPathNFe', EmissaoPathNFe);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathNFe', PathNFe);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathInu', PathInu);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadNFe.PathDownload);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadNFe.SepararPorNome);
+end;
+
+procedure TArquivosConfNFe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  SalvarEvento := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SalvarEvento', SalvarEvento);
+  SalvarApenasNFeProcessadas := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SalvarApenasNFeProcessadas', SalvarApenasNFeProcessadas);
+  EmissaoPathNFe := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'EmissaoPathNFe', EmissaoPathNFe);
+  NormatizarMunicipios := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  PathNFe := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathNFe', PathNFe);
+  PathInu := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathInu', PathInu);
+  PathEvento := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  PathArquivoMunicipios := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  DownloadNFe.PathDownload := AIni.ReadString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadNFe.PathDownload);
+  DownloadNFe.SepararPorNome := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadNFe.SepararPorNome);
 end;
 
 function TArquivosConfNFe.GetPathDownload(xNome: String = ''; CNPJ: String = ''; Data: TDateTime = 0): String;
@@ -302,7 +374,7 @@ begin
      FDownloadNFe.PathDownload := PathSalvar;
 
   if (FDownloadNFe.SepararPorNome) and (NaoEstaVazio(xNome)) then
-     rPathDown := rPathDown + PathWithDelim(FDownloadNFe.PathDownload) + TiraAcentos(xNome)
+     rPathDown := rPathDown + PathWithDelim(FDownloadNFe.PathDownload) + OnlyAlphaNum(xNome)
   else
      rPathDown := FDownloadNFe.PathDownload;
 
@@ -330,15 +402,27 @@ begin
   Result := GetPath(FPathInu, 'Inu', CNPJ);
 end;
 
-function TArquivosConfNFe.GetPathNFe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 55): String;
+function TArquivosConfNFe.GetPathNFe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 0): String;
 var
   DescricaoModelo: String;
 begin
   case Modelo of
-    55: DescricaoModelo := 'NFe';
-    65: DescricaoModelo := 'NFCe';
+     0:
+       begin
+         if Assigned(fpConfiguracoes.Owner) then
+           DescricaoModelo := TACBrNFe(fpConfiguracoes.Owner).GetNomeModeloDFe
+         else
+           DescricaoModelo := 'NFe';
+       end;
+
+    55:
+       DescricaoModelo := 'NFe';
+    65:
+       DescricaoModelo := 'NFCe';
   end;
-  Result := GetPath(FPathNFe, DescricaoModelo, CNPJ, Data);
+
+  Result := GetPath(FPathNFe, DescricaoModelo, CNPJ, Data, DescricaoModelo);
 end;
 
 end.
+

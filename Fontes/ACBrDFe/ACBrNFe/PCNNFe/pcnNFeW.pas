@@ -1088,19 +1088,19 @@ begin
     begin
       Gerador.wCampo(tcStr, 'LA03', 'descANP', 02, 95, 1, nfe.Det[i].Prod.comb.descANP, DSC_DESCANP);
       if nfe.Det[i].Prod.comb.pGLP = 100 then 
-	    Gerador.wCampo(tcDe2, 'LA03a', 'pGLP  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGLP, DSC_PGLP)
-      else 
-	    Gerador.wCampo(tcDe4, 'LA03a', 'pGLP  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGLP, DSC_PGLP);
+  	    Gerador.wCampo(tcDe2, 'LA03a', 'pGLP  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGLP, DSC_PGLP)
+      else
+	      Gerador.wCampo(tcDe4, 'LA03a', 'pGLP  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGLP, DSC_PGLP);
 
-      if nfe.Det[i].Prod.comb.pGNn = 100 then 
-	    Gerador.wCampo(tcDe2, 'LA03b', 'pGNn  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNn, DSC_PGNN)
-      else 
-	    Gerador.wCampo(tcDe4, 'LA03b', 'pGNn  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNn, DSC_PGNN);
+      if nfe.Det[i].Prod.comb.pGNn = 100 then
+	      Gerador.wCampo(tcDe2, 'LA03b', 'pGNn  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNn, DSC_PGNN)
+      else
+	      Gerador.wCampo(tcDe4, 'LA03b', 'pGNn  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNn, DSC_PGNN);
 
-      if nfe.Det[i].Prod.comb.pGNi = 100 then 
-	    Gerador.wCampo(tcDe2, 'LA03c', 'pGNi  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNi, DSC_PGNI)
-      else 
-	    Gerador.wCampo(tcDe4, 'LA03c', 'pGNi  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNi, DSC_PGNI);
+      if nfe.Det[i].Prod.comb.pGNi = 100 then
+        Gerador.wCampo(tcDe2, 'LA03c', 'pGNi  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNi, DSC_PGNI)
+      else
+	      Gerador.wCampo(tcDe4, 'LA03c', 'pGNi  ', 01,  7, 0, nfe.Det[i].Prod.comb.pGNi, DSC_PGNI);
         
       Gerador.wCampo(tcDe2, 'LA03d', 'vPart ', 01, 15, 0, nfe.Det[i].Prod.comb.vPart, DSC_VPART);
     end;
@@ -1803,7 +1803,7 @@ begin
     (nfe.Det[i].Imposto.PIS.vPIS = 0) and
     (nfe.Det[i].Imposto.PIS.qBCProd = 0) and
     (nfe.Det[i].Imposto.PIS.vAliqProd = 0) and
-    (not (nfe.Det[i].Imposto.PIS.CST in [pis04, pis05, pis06, pis07, pis08, pis09, pis49]))) then      //No caso da NFC-e, o grupo de tributação do PIS e o grupo de tributação da COFINS são opcionais.
+    (not (nfe.Det[i].Imposto.PIS.CST in [pis04, pis05, pis06, pis07, pis08, pis09, pis49, pis99]))) then      //No caso da NFC-e, o grupo de tributação do PIS e o grupo de tributação da COFINS são opcionais.
       exit;
       
   Gerador.wGrupo('PIS', 'Q01');
@@ -1898,7 +1898,7 @@ begin
     (nfe.Det[i].Imposto.COFINS.vCOFINS = 0) and
     (nfe.Det[i].Imposto.COFINS.qBCProd = 0) and
     (nfe.Det[i].Imposto.COFINS.vAliqProd = 0) and
-    (not (nfe.Det[i].Imposto.COFINS.CST in [cof04, cof05, cof06, cof07, cof08, cof09, cof49]))) then      //No caso da NFC-e, o grupo de tributação do PIS e o grupo de tributação da COFINS são opcionais.
+    (not (nfe.Det[i].Imposto.COFINS.CST in [cof04, cof05, cof06, cof07, cof08, cof09, cof49, cof99]))) then      //No caso da NFC-e, o grupo de tributação do PIS e o grupo de tributação da COFINS são opcionais.
       exit;
 
   Gerador.wGrupo('COFINS', 'S01');
