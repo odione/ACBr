@@ -50,7 +50,7 @@ unit pcnEnvNFe;
 interface
 
 uses
-  SysUtils, Classes, pcnConversao, pcnGerador, pcnConsts, pcnNFeConsts, ACBRUtil;
+  SysUtils, Classes, pcnConversao, pcnGerador, pcnConsts, pcnNFeConsts;
 
 type
 
