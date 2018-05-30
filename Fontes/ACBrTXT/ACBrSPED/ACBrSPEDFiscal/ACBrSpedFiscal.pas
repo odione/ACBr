@@ -67,6 +67,9 @@ type
   /// ACBrSpedFiscal - Sitema Publico de Escrituração Digital Fiscal
 
   { TACBrSPEDFiscal }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrSPEDFiscal = class(TACBrComponent)
   private
     FACBrTXT: TACBrTXTClass;
@@ -1572,6 +1575,14 @@ begin
          begin
            REG_BLC := 'C460';
            QTD_REG_BLC := Bloco_C.RegistroC460Count;
+         end;
+       end;
+       if Bloco_C.RegistroC465Count > 0 then
+       begin
+         with New do
+         begin
+           REG_BLC := 'C465';
+           QTD_REG_BLC := Bloco_C.RegistroC465Count;
          end;
        end;
        if Bloco_C.RegistroC470Count > 0 then

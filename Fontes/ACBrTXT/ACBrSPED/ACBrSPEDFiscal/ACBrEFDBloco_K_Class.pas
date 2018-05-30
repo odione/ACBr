@@ -36,13 +36,17 @@
 |*
 |* 14/02/2014: Juliomar Marchetti
 |*  - Criação bloco K - alterado
+|*
+|* 26/10/2017 - (Edilson) - Validação K270, K275 e K280:
+|*  - Não enviar valor negativo, enviar somente um dos valores positivo ou
+|*    negativo.
 *******************************************************************************}
 
 unit ACBrEFDBloco_K_Class;
 
 interface
 
-uses SysUtils, Classes, DateUtils, ACBrSped, ACBrEFDBloco_K, ACBrEFDBlocos,
+uses SysUtils, StrUtils, Classes, DateUtils, ACBrSped, ACBrEFDBloco_K, ACBrEFDBlocos,
      ACBrEFDBloco_0_Class;
 
 type
@@ -274,7 +278,9 @@ begin
                LFill( DT_MOV ) +
                LFill( COD_ITEM_ORI  ) +
                LFill( COD_ITEM_DEST  ) +
-               DFill( QTD, 3 ) );
+               DFill( QTD, 3 )+
+               IfThen(DT_INI >= EncodeDate(2018,01,01),
+			           DFill( QTD_DEST, 3 ), EmptyStr));
         end;
         RegistroK990.QTD_LIN_K := RegistroK990.QTD_LIN_K + 1;
      end;
@@ -456,8 +462,8 @@ begin
                LFill( DT_FIN_AP ) +
                LFill( COD_OP_OS ) +
                LFill( COD_ITEM ) +
-               DFill( QTD_COR_POS , 3 ) +
-               DFill( QTD_COR_NEG , 3 ) +
+               DFill( QTD_COR_POS , 3 ,(QTD_COR_POS<=0)) +
+               DFill( QTD_COR_NEG , 3 ,(QTD_COR_NEG<=0)) +
                LFill( ORIGEM ));
 
 		      WriteRegistroK275(RegK100.RegistroK270.Items[intFor]);
@@ -481,8 +487,8 @@ begin
         begin
           Add( LFill('K275') +
                LFill( COD_ITEM  ) +
-               DFill( QTD_COR_POS , 3 ) +
-               DFill( QTD_COR_NEG , 3 ) +
+               DFill( QTD_COR_POS , 3 ,(QTD_COR_POS<=0)) +
+               DFill( QTD_COR_NEG , 3 ,(QTD_COR_NEG<=0)) +
                LFill( COD_INS_SUBST ));
         end;
         RegistroK990.QTD_LIN_K := RegistroK990.QTD_LIN_K + 1;
@@ -508,8 +514,8 @@ begin
           Add( LFill('K280') +
                LFill( DT_EST ) +
                LFill( COD_ITEM ) +
-               DFill( QTD_COR_POS , 3 ) +
-               DFill( QTD_COR_NEG , 3 ) +
+               DFill( QTD_COR_POS , 3 ,(QTD_COR_POS<=0)) +
+               DFill( QTD_COR_NEG , 3 ,(QTD_COR_NEG<=0)) +
                LFill( Integer(IND_EST), 0 ) +
                LFill( COD_PART ));
         end;
@@ -532,7 +538,7 @@ begin
   FRegistroK235Count := 0;
   FRegistroK250Count := 0;
   FRegistroK255Count := 0;
-
+  FRegistroK280Count := 0;
   FRegistroK990.QTD_LIN_K := 0;
 end;
 

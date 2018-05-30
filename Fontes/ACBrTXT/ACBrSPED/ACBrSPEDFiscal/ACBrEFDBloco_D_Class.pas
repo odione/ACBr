@@ -252,7 +252,7 @@ type
 
 implementation
 
-Uses ACBrUtil, StrUtils ;
+Uses ACBrUtil, StrUtils;
 
 { TBloco_D }
 
@@ -649,21 +649,21 @@ begin
           if DT_INI < EncodeDate(2012,07,01) then
           begin
              case IND_FRT of
-               tfPorContaTerceiros:    strIND_FRT := '0';
-               tfPorContaEmitente:     strIND_FRT := '1';
-               tfPorContaDestinatario: strIND_FRT := '2';
-               tfSemCobrancaFrete:     strIND_FRT := '9';
-               tfNenhum:               strIND_FRT := '';
+               tfPorContaTerceiros:                                   strIND_FRT := '0';
+               tfPorContaEmitente, tfProprioPorContaRemetente:        strIND_FRT := '1';
+               tfPorContaDestinatario, tfProprioPorContaDestinatario: strIND_FRT := '2';
+               tfSemCobrancaFrete:                                    strIND_FRT := '9';
+               tfNenhum:                                              strIND_FRT := '';
              end
           end
           else
           begin
              case IND_FRT of
-               tfPorContaTerceiros:    strIND_FRT := '2';
-               tfPorContaEmitente:     strIND_FRT := '0';
-               tfPorContaDestinatario: strIND_FRT := '1';
-               tfSemCobrancaFrete:     strIND_FRT := '9';
-               tfNenhum:               strIND_FRT := '';
+               tfPorContaEmitente, tfProprioPorContaRemetente:        strIND_FRT := '0';
+               tfPorContaDestinatario, tfProprioPorContaDestinatario: strIND_FRT := '1';
+               tfPorContaTerceiros:                                   strIND_FRT := '2';
+               tfSemCobrancaFrete:                                    strIND_FRT := '9';
+               tfNenhum:                                              strIND_FRT := '';
              end;
           end;
           case COD_SIT of
@@ -707,7 +707,10 @@ begin
                       LFill( VL_ICMS,0,2, booConsiderarComoValorNulo ) +
                       LFill( VL_NT,0,2, booConsiderarComoValorNulo ) +
                       LFill( COD_INF ) +
-                      LFill( COD_CTA );
+                      LFill( COD_CTA ) +
+                      IfThen(DT_INI >= EncodeDate(2018,01,01),
+                        LFill( COD_MUN_ORIG ) +
+                        LFill( COD_MUN_DEST),EmptyStr);
           //-- Write
           if Assigned(FOnWriteRegistroD100) then
              FOnWriteRegistroD100(strLinha);

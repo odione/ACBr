@@ -298,7 +298,8 @@ type
   TACBrPosseItem = TACBrIndProp;
   /// Informe o tipo de documento
   TACBrTipoDocto = (docDeclaracaoExportacao,           // 0 - Declaração de Exportação;
-                    docDeclaracaoSimplesExportacao     // 1 - Declaração Simplificada de Exportação.
+                    docDeclaracaoSimplesExportacao,    // 1 - Declaração Simplificada de Exportação;
+                    docDeclaracaoUnicaExportacao       // 2 - Declaração Única de Exportação.
                     );
   /// Preencher com
   TACBrExportacao = (exDireta,             // 0 - Exportação Direta
@@ -392,13 +393,13 @@ type
                       cdaJogosSoltos     // 05 - Jogos Soltos
                       );
   /// Código do Tipo de Assinante
-  TACBrTpAssinante = (assComercialIndustrial,    // 1 - Comercial/Industrial
+  TACBrTpAssinante = (assNenhum,                  // Preencher vazio
+                      assComercialIndustrial,    // 1 - Comercial/Industrial
                       assPodrPublico,            // 2 - Poder Público
                       assResidencial,            // 3 - Residencial/Pessoa física
                       assPublico,                // 4 - Público
                       assSemiPublico,            // 5 - Semi-Público
-                      assOutros,                 // 6 - Outros
-                      assNenhum                  // Preencher vazio
+                      assOutros                  // 6 - Outros
                       );
   TACBrTipoAssinante = TACBrTpAssinante;
 

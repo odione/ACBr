@@ -130,7 +130,7 @@ type
 
 implementation
 
-uses ACBrNFe, ACBrUtil, StrUtils, Dialogs, pcnConversaoNFe;
+uses ACBrNFe, ACBrUtil, StrUtils, pcnConversaoNFe;
 
 constructor TACBrNFeDANFEFR.Create(AOwner: TComponent);
 begin
@@ -205,7 +205,8 @@ end;
 function TACBrNFeDANFEFR.PrepareReport(NFE: TNFe): Boolean;
 var
   I: Integer;
- wProjectStream: TStringStream;
+  wProjectStream: TStringStream;
+  Page: TfrxReportPage;
 begin
   Result := False;
 

@@ -74,7 +74,7 @@ interface
 uses
   pcnEnvEventoNFe, pcnRetInutNFe,
   SysUtils, Classes, ACBrNFeDANFEClass, pcnNFe, frxClass, frxExportPDF, DB,
-  DBClient, frxDBSet, pcnConversao, ACBrUtil, frxBarcode, dialogs,
+  DBClient, frxDBSet, pcnConversao, ACBrUtil, frxBarcode,
   ACBrDelphiZXingQrCode, Graphics;
 
 type
@@ -182,6 +182,9 @@ type
     function ManterCombustivel(inItem: integer): String;
     function FormatQuantidade(dValor: Double): String;
     function FormatValorUnitario(dValor: Double): String;
+    function ManterContingencia(swObs: String): String;
+    function ManterInfAdi(swObs: String): String;
+    function ManterRastro(inItem: integer): String;
   public
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
@@ -389,9 +392,16 @@ begin
       if NaoEstaVazio(TributosFonte) then
         FieldByName('VTribFonte').AsString := '(Fonte: '+TributosFonte+')';
     end;
-
-    FieldByName('vTroco').AsCurrency    := FvTroco;
-    FieldByName('vTotPago').AsCurrency  := FvTroco+FieldByName('VProd').AsFloat;
+    if FNFe.pag.vTroco > 0 then
+    begin
+      FieldByName('vTroco').AsCurrency    := FNFe.pag.vTroco;
+      FieldByName('vTotPago').AsCurrency  := FNFe.pag.vTroco+FieldByName('VProd').AsFloat;
+    end
+    else
+    begin
+      FieldByName('vTroco').AsCurrency    := FvTroco;
+      FieldByName('vTotPago').AsCurrency  := FvTroco+FieldByName('VProd').AsFloat;
+    end;
     Post;
   end;
 end;
@@ -546,6 +556,9 @@ begin
         if Trim(FieldByName('XLgr').AsString) <> '' then
           FieldByName('Consumidor').AsString := FieldByName('Consumidor').AsString + #13 +
             Trim(FieldByName('XLgr').AsString) + ', ' + Trim(FieldByName('Nro').AsString);
+        if Trim(FieldByName('XCpl').AsString) <> '' then
+          FieldByName('Consumidor').AsString := FieldByName('Consumidor').AsString + #13 +
+            Trim(FieldByName('XCpl').AsString);
 
         if Trim(FieldByName('XMun').AsString) <> '' then
           FieldByName('Consumidor').AsString := FieldByName('Consumidor').AsString + #13 +
@@ -632,10 +645,10 @@ begin
       cdsEmitente.FieldByName('DADOS_ENDERECO').AsString    := cdsEmitente.FieldByName('DADOS_ENDERECO').AsString + ' - ' +
   										  	                                      Trim(FieldByName('XBairro').AsString) + ' - ' +
                                                                 Trim(FieldByName('XMun').AsString) + ' - ' +
-                                                                Trim(FieldByName('UF').AsString) + #13 +
-		  	  				  				                                    'Fone: ' + Trim(FieldByName('Fone').AsString) +
-                                                                IfThen(trim(FDANFEClassOwner.Fax) <> '', ' - FAX: ' + FormatarFone(trim(FDANFEClassOwner.Fax)),'')+
-                                                                ' - CEP: ' + Trim(FieldByName('CEP').AsString);
+                                                                Trim(FieldByName('UF').AsString) +
+                                                                ' - CEP: ' + Trim(FieldByName('CEP').AsString) + #13 +
+		  	  				  				                                    ' Fone: ' + Trim(FieldByName('Fone').AsString) +
+                                                                IfThen(trim(FDANFEClassOwner.Fax) <> '', ' - FAX: ' + FormatarFone(trim(FDANFEClassOwner.Fax)),'');
       if trim(FDANFEClassOwner.Site) <> '' then
         cdsEmitente.FieldByName('DADOS_ENDERECO').AsString  := cdsEmitente.FieldByName('DADOS_ENDERECO').AsString + #13 +
                                                                 trim(FDANFEClassOwner.Site);
@@ -1050,7 +1063,11 @@ begin
                         if EstaVazio(FNFe.procNFe.nProt) then
                           FieldByName('Contingencia_Valor').AsString := ACBrStr('NFe sem Autorização de Uso da SEFAZ')
                         else
+                        begin
                           FieldByName('Contingencia_Valor').AsString := FNFe.procNFe.nProt + ' ' + IfThen(FNFe.procNFe.dhRecbto <> 0, DateTimeToStr(FNFe.procNFe.dhRecbto), '');
+                          FieldByName('nProt').AsString := FNFe.procNfe.nProt;
+                          FieldByName('dhRecbto').AsDateTime := FNFe.procNFe.dhRecbto;
+                        end;
                       end
                       else
                         FieldByName('Contingencia_Valor').AsString := FDANFEClassOwner.ProtocoloNFe;
@@ -1082,6 +1099,8 @@ begin
 
          teOffLine: begin
                       FieldByName('Contingencia_Valor').AsString := FNFe.procNFe.nProt + ' ' + IfThen(FNFe.procNFe.dhRecbto <> 0, DateTimeToStr(FNFe.procNFe.dhRecbto), '');
+                      FieldByName('nProt').AsString := FNFe.procNfe.nProt;
+                      FieldByName('dhRecbto').AsDateTime := FNFe.procNFe.dhRecbto;
                     end;
       end;
 
@@ -1375,6 +1394,7 @@ begin
      Background    := IncorporarBackgroundPdf;
      EmbeddedFonts := IncorporarFontesPdf;
      Subject       := 'Exportando DANFE para PDF';
+     ShowProgress  := False;
   end;
 
   // cdsIdentificacao
@@ -1499,7 +1519,7 @@ begin
         Name := 'frxDadosProdutos';
         DataSet := cdsDadosProdutos;
         OpenDataSource := False;
-        Enabled := False; 
+        Enabled := False;
         UserName := 'DadosProdutos';
      end;
      with cdsDadosProdutos do
@@ -1764,6 +1784,7 @@ begin
          FieldDefs.Add('vBC', ftFloat);
          FieldDefs.Add('vISS', ftFloat);
          FieldDefs.Add('vDescIncond', ftFloat);
+         FieldDefs.Add('vISSRet', ftFloat);
          CreateDataSet;
       end;
    end;
@@ -2132,8 +2153,29 @@ begin
       end;
     end;
   end;
+end;
 
-
+Function TACBrNFeFRClass.ManterRastro( inItem:  integer  ) : String;
+Var
+  i : Integer;
+begin
+  Result := '';
+  { rastreabilidade do produto}
+  with FNFe.Det.Items[inItem].Prod do
+  begin
+    if Rastro.Count > 0 then
+    begin
+      Result := sQuebraLinha;
+      for i := 0 to Rastro.Count - 1 do
+      begin
+        Result := Result + 'LOTE: ' + rastro.Items[i].nLote+ sQuebraLinha;
+        Result := Result + 'QTD: '  + FormatFloatBr(rastro.Items[i].qLote)+ sQuebraLinha;
+        Result := Result + 'FAB: '  + FormatDateBr(rastro.Items[i].dFab)+ sQuebraLinha;
+        Result := Result + 'VAL: '  + FormatDateBr(rastro.Items[i].dVal)+ sQuebraLinha;
+        Result := Result + ACBrStr('C.AGREGAÇÃO: ' ) + rastro.Items[i].cAgreg+ ';';
+      end;
+    end;
+  end;
 end;
 
 Function TACBrNFeFRClass.ManterVeiculos( inItem:  integer  ) : String;
@@ -2245,6 +2287,7 @@ begin
       sQuebraLinha := QuebraLinha;
       Result := Result + ManterVeiculos( inItem  );
       Result := Result + ManterMedicamentos( inItem  );
+      Result := Result + ManterRastro( inItem  );
       Result := Result + ManterArma( inItem  );
       Result := Result + ManterCombustivel( inItem );
     end;
@@ -2285,10 +2328,10 @@ begin
   With cdsParametros do
   begin
      case FieldByName('iFormato').AsInteger of
-      0 : Result := FormatFloatBr( dValor , format(FieldByName('sDisplayFormat').AsString, [FieldByName('Casas_qCom').AsInteger, 0]));
+      0 : Result := FormatFloatBr( dValor , FloatMask( FieldByName('Casas_qCom').AsInteger));
       1 : Result := FormatFloatBr( dValor , FieldByName('Mask_qCom').AsString);
       else
-        Result := FormatFloatBr( dValor , format(FieldByName('sDisplayFormat').AsString, [FieldByName('Casas_qCom').AsInteger, 0]));
+        Result := FormatFloatBr( dValor , FloatMask( FieldByName('Casas_qCom').AsInteger));
     end;
   end;
 end;
@@ -2299,10 +2342,10 @@ begin
   With cdsParametros do
   begin
     case FieldByName('iFormato').AsInteger of
-      0 : Result := FormatFloatBr( dValor , format(FieldByName('sDisplayFormat').AsString, [FieldByName('Casas_vUnCom').AsInteger, 0]));
+      0 : Result := FormatFloatBr( dValor , FloatMask( FieldByName('Casas_vUnCom').AsInteger));
       1 : Result := FormatFloatBr( dValor , FieldByName('Mask_vUnCom').AsString);
       else
-        Result := FormatFloatBr( dValor , format(FieldByName('sDisplayFormat').AsString, [FieldByName('Casas_vUnCom').AsInteger, 0]));
+        Result := FormatFloatBr( dValor , FloatMask( FieldByName('Mask_vUnCom').AsInteger));
     end;
   end;
 end;
@@ -2314,6 +2357,62 @@ begin
     Result := ';'
   else
     Result := ' - ';
+end;
+
+
+Function TACBrNFeFRClass.ManterInfAdi( swObs : String ) : String;
+var
+  i : Integer;
+  TmpStr : String;
+begin
+  result := swObs;
+  TmpStr := '';
+  with FNFe.InfAdic do
+  begin
+
+    for i := 0 to ObsFisco.Count - 1 do
+    begin
+      with ObsFisco.Items[i] do
+        TmpStr := TmpStr + XCampo + ': ' + XTexto + ';';
+    end;
+
+    //Fisco
+    if Length(InfAdFisco) = 0 then InfAdFisco := '';
+
+    result  := result + TmpStr + InfAdFisco;
+    TmpStr  := '';
+    for i := 0 to ObsCont.Count - 1 do
+    begin
+      with ObsCont.Items[i] do
+        TmpStr := TmpStr + XCampo + ': ' + XTexto + ';';
+    end;
+    //Inf. Complementar
+    if Length(InfCpl) = 0 then InfCpl := '';
+
+    result  := result + TmpStr + InfCpl;
+  end;
+end;
+
+Function TACBrNFeFRClass.ManterContingencia( swObs : String ) : String;
+  //Contingencia
+begin
+  result := swObs;
+  case FNFe.Ide.tpEmis of
+    teNORMAL : result := result + '';
+    teOffLine,
+    teContingencia,
+    teFSDA,
+    teSCAN,
+    teSVCAN,
+    teSVCRS,
+    teSVCSP : result := result + ACBrStr('DANFE EM CONTINGÊNCIA, IMPRESSO EM DECORRÊNCIA DE PROBLEMAS TÉCNICOS;');
+    teDPEC  : begin
+                result := result +
+                  ACBrStr( 'DANFE IMPRESSO EM CONTINGÊNCIA - DPEC REGULARMENTE RECEBIDA PELA RECEITA FEDERAL DO BRASIL;')+
+                  ACBrStr('DATA/HORA INÍCIO: ') + IfThen(FNFe.ide.dhCont = 0, ' ', DateTimeToStr(FNFe.ide.dhCont)) + ';'+
+                  ACBrStr('MOTIVO CONTINGÊNCIA: ') + IfThen(EstaVazio(FNFe.ide.xJust), ' ', FNFe.ide.xJust)+';';
+              end;
+  end;
 end;
 
 end.
