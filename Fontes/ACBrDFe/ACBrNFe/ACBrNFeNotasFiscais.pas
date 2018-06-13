@@ -2072,6 +2072,7 @@ begin
         begin
           tPag  := StrToFormaPagamento(OK,sFim);
           vPag  := StringToFloatDef( INIRec.ReadString(sSecao,'vPag','') ,0) ;
+          indPag:= StrToIndpag(OK,INIRec.ReadString( sSecao,'indPag','0'));
 
           tpIntegra  := StrTotpIntegra(OK,INIRec.ReadString(sSecao,'tpIntegra',''));
           CNPJ  := INIRec.ReadString(sSecao,'CNPJ','');

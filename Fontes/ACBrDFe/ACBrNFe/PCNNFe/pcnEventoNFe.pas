@@ -80,7 +80,7 @@ type
     FDetEvento: TDetEvento;
 
     function getcOrgao: Integer;
-    function getVersaoEvento: String;
+//    function getVersaoEvento: String;
     function getDescEvento: String;
     function getTipoEvento: String;
   public
@@ -96,7 +96,8 @@ type
     property dhEvento: TDateTime     read FDataEvento     write FDataEvento;
     property tpEvento: TpcnTpEvento  read FTpEvento       write FTpEvento;
     property nSeqEvento: Integer     read FnSeqEvento     write FnSeqEvento;
-    property versaoEvento: String    read getVersaoEvento write FversaoEvento;
+//    property versaoEvento: String    read getVersaoEvento write FversaoEvento;
+    property versaoEvento: String    read FVersaoEvento   write FversaoEvento;
     property detEvento: TDetEvento   read FDetEvento      write FDetEvento;
     property DescEvento: String      read getDescEvento;
     property TipoEvento: String      read getTipoEvento;
@@ -270,10 +271,7 @@ begin
   if FcOrgao <> 0 then
     Result := FcOrgao
   else
-     Result := StrToIntDef(copy(FChave, 1, 2), 0);
-
-  if Result = 0 then
-    raise EventoException.Create('Campo cOrgao não informado');
+    Result := StrToIntDef(copy(FChave, 1, 2), 0);
 end;
 
 function TInfEvento.getDescEvento: String;
@@ -298,8 +296,10 @@ begin
     teRegistroPassagemNFeRFID     : Result := 'Registro de Passagem para NF-e RFID';
     teCTeAutorizado               : Result := 'CT-e Autorizado';
     teCTeCancelado                : Result := 'CT-e Cancelado';
-    teMDFeAutorizado              : Result := 'MDF-e Autorizado';
-    teMDFeCancelado               : Result := 'MDF-e Cancelado';
+    teMDFeAutorizado,
+    teMDFeAutorizado2             : Result := 'MDF-e Autorizado';
+    teMDFeCancelado,
+    teMDFeCancelado2              : Result := 'MDF-e Cancelado';
     teVistoriaSuframa             : Result := 'Vistoria SUFRAMA';
     tePedProrrog1,
     tePedProrrog2              : Result := 'Pedido de Prorrogacao';
@@ -311,7 +311,7 @@ begin
     teEventoFiscoCPP2          : Result := 'Evento Fisco';
     teConfInternalizacao       : Result := 'Confirmacao de Internalizacao da Mercadoria na SUFRAMA';
   else
-    raise EventoException.Create('Descrição do Evento não Implementado!');
+    Result := '';
   end;
 end;
 
@@ -320,14 +320,14 @@ begin
   try
     Result := TpEventoToStr( FTpEvento );
   except
-    raise EventoException.Create('Tipo do Evento não Implementado!');
+    Result := '';
   end;
 end;
 
-function TInfEvento.getVersaoEvento: String;
-begin
-  Result := '1.00';
-end;
+//function TInfEvento.getVersaoEvento: String;
+//begin
+//  Result := '1.00';
+//end;
 
 function TInfEvento.DescricaoTipoEvento(TipoEvento: TpcnTpEvento): String;
 begin
@@ -351,8 +351,10 @@ begin
     teRegistroPassagemNFeRFID     : Result := 'Registro de Passagem para NF-e RFID';
     teCTeAutorizado               : Result := 'CT-e Autorizado';
     teCTeCancelado                : Result := 'CT-e Cancelado';
-    teMDFeAutorizado              : Result := 'MDF-e Autorizado';
-    teMDFeCancelado               : Result := 'MDF-e Cancelado';
+    teMDFeAutorizado,
+    teMDFeAutorizado2             : Result := 'MDF-e Autorizado';
+    teMDFeCancelado,
+    teMDFeCancelado2              : Result := 'MDF-e Cancelado';
     teVistoriaSuframa             : Result := 'Vistoria SUFRAMA';
     tePedProrrog1,
     tePedProrrog2              : Result := 'Pedido de Prorrogacao';
