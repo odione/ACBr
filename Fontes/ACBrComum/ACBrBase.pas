@@ -79,10 +79,25 @@ TACBrComponent = class( TComponent )
 
 TACBrGravarLog = procedure(const ALogLine: String; var Tratado: Boolean) of object ;
 
-{ Essa classe emula um TTimer, porem em uma Thread, evitando sobrecarregar
-  o Application. Usada por ACBrLCB e ACBrDIS quando em modo CONSOLE, ou NOGUI }
+{ TACBrObjectList }
+
+TACBrObjectList = class(TObjectList)
+  protected
+    fIsSorted: Boolean;
+  public
+    constructor Create(FreeObjects: boolean);
+
+    Function Add(AObject: TObject): Integer;
+    Procedure Insert(Index: Integer; AObject: TObject);
+    procedure Sort(Compare: TListSortCompare);
+
+    function FindObject(Item: Pointer; Compare: TListSortCompare; Nearest: Boolean = False): Integer;
+  end;
 
 { TACBrThreadTimer }
+
+{ Essa classe emula um TTimer, porem em uma Thread, evitando sobrecarregar
+  o Application. Usada por ACBrLCB e ACBrDIS quando em modo CONSOLE, ou NOGUI }
 
 TACBrThreadTimer = class(TThread)
   private
@@ -108,10 +123,11 @@ TACBrThreadTimer = class(TThread)
 de campos quando necessário}
   TACBrInformacao = class
   private
+    fFloatDecimalDigits: Integer;
     fInfo: String;
     fName: String;
     function GetAsDate : TDateTime;
-    function GetAsFloat : Double;
+    function GetAsFloat: Double;
     function GetAsInteger : Integer;
     function GetAsString: String;
     function GetAsTime : TDateTime;
@@ -125,7 +141,9 @@ de campos quando necessário}
     procedure SetAsTime(const AValue : TDateTime);
     procedure SetAsTimeStamp(const AValue : TDateTime);
     procedure SetAsTimeStampSQL(const AValue : TDateTime);
+    procedure SetFloatDecimalDigits(AValue: Integer);
   public
+    constructor Create;
     property Nome          : String     read fName             write fName;
     property AsString      : String     read GetAsString       write SetAsString ;
     property AsDate        : TDateTime  read GetAsDate         write SetAsDate ;
@@ -134,6 +152,8 @@ de campos quando necessário}
     property AsTimeStampSQL: TDateTime  read GetAsTimeStampSQL write SetAsTimeStampSQL ;
     property AsInteger     : Integer    read GetAsInteger      write SetAsInteger ;
     property AsFloat       : Double     read GetAsFloat        write SetAsFloat ;
+
+    property FloatDecimalDigits : Integer read fFloatDecimalDigits write SetFloatDecimalDigits default 2;
   end ;
 
   { TACBrInformacoes }
@@ -148,6 +168,8 @@ de campos quando necessário}
     function AddField(const AName: String; AValue: String): TACBrInformacao;
     function FindFieldByName(const AName: String): TACBrInformacao;
     function FieldByName(const AName: String): TACBrInformacao;
+
+    function FieldExists(const AName: String): Boolean;
 
     procedure SaveToFile( AFileName: String) ;
     procedure LoadFromFile( AFileName: String) ;
@@ -191,6 +213,62 @@ begin
      MessageDlg(Msg ,mtInformation ,[mbOk],0) ;
     {$ENDIF}
  {$ENDIF}
+end;
+
+{ TACBrObjectList }
+
+constructor TACBrObjectList.Create(FreeObjects: boolean);
+begin
+  inherited Create(FreeObjects);
+  fIsSorted := False;
+end;
+
+function TACBrObjectList.Add(AObject: TObject): Integer;
+begin
+  Result := inherited Add(AObject);
+  fIsSorted := False;
+end;
+
+procedure TACBrObjectList.Insert(Index: Integer; AObject: TObject);
+begin
+  inherited Insert(Index, AObject);
+  fIsSorted := False;
+end;
+
+procedure TACBrObjectList.Sort(Compare: TListSortCompare);
+begin
+  inherited Sort(Compare);
+  fIsSorted := True;
+end;
+
+{ Inspirado de http://www.avdf.com/mar97/delf_sortlist.html }
+
+function TACBrObjectList.FindObject(Item: Pointer; Compare: TListSortCompare;
+  Nearest: Boolean): Integer;
+var
+  nLow, nHigh, nCompare, nCheckPos : Integer;
+begin
+  if not fIsSorted then
+    raise Exception.Create('Lista de Objetos não foi ordanada por chamada ao método "Sort"');
+
+  nLow := 0;
+  nHigh := Count-1;
+  Result := -1;
+  // keep searching until found or
+  // no more items to search
+  while (Result = -1) and (nLow <= nHigh) do
+  begin
+    nCheckPos := (nLow + nHigh) div 2;
+    nCompare := Compare(Item,Pointer(Items[nCheckPos]));
+    if (nCompare = -1) then                // less than
+      nHigh := nCheckPos - 1
+    else if (nCompare = 1) then            // greater than
+      nLow := nCheckPos + 1
+    else                                   // equal to
+      Result := nCheckPos;
+  end;
+   if (Result = -1) and Nearest then
+    Result := nLow;
 end;
 
 
@@ -280,12 +358,15 @@ end;
 
 function TACBrInformacao.GetAsFloat : Double;
 Var
-  Info : String ;
+  Info: String ;
+  Pow: Extended;
 begin
   Info := StringReplace( Trim(fInfo), ',','',[rfReplaceAll] );
   Info := StringReplace( Info       , '.','',[rfReplaceAll] );
+  Pow  := IntPower(10, FloatDecimalDigits);
 
-  Result := StrToIntDef( Info ,0) / 100 ;
+  Result := StrToFloatDef( Info , 0);
+  Result := Result / Pow;
 end;
 
 function TACBrInformacao.GetAsInteger : Integer;
@@ -323,9 +404,9 @@ begin
      Result := EncodeDateTime( YearOf(now),
                                StrToInt(copy(DateTimeStr,3,2)),
                                StrToInt(copy(DateTimeStr,1,2)),
-                               StrToInt(copy(DateTimeStr,5,2)),
-                               StrToInt(copy(DateTimeStr,7,2)),
-                               StrToInt(copy(DateTimeStr,9,2)), 0) ;
+                               StrToIntDef(copy(DateTimeStr,5,2),0),
+                               StrToIntDef(copy(DateTimeStr,7,2),0),
+                               StrToIntDef(copy(DateTimeStr,9,2),0), 0) ;
   except
      Result := 0 ;
   end;
@@ -333,7 +414,7 @@ end;
 
 function TACBrInformacao.GetAsTimeStampSQL : TDateTime;
 var
-   DateTimeStr : String;
+  DateTimeStr : String;
 begin
   DateTimeStr := OnlyNumber( Trim(fInfo) );
 
@@ -341,13 +422,14 @@ begin
      Result := EncodeDateTime( StrToInt(copy(DateTimeStr,1,4)),
                                StrToInt(copy(DateTimeStr,5,2)),
                                StrToInt(copy(DateTimeStr,7,2)),
-                               StrToInt(copy(DateTimeStr,9,2)),
-                               StrToInt(copy(DateTimeStr,11,2)),
-                               StrToInt(copy(DateTimeStr,13,2)), 0) ;
+                               StrToIntDef(copy(DateTimeStr,9,2),0),
+                               StrToIntDef(copy(DateTimeStr,11,2),0),
+                               StrToIntDef(copy(DateTimeStr,13,2),0), 0) ;
   except
      Result := 0 ;
   end;
 end;
+
 {
 procedure TACBrInformacao.SetAsAnsiString(const AValue: AnsiString);
 begin
@@ -363,15 +445,18 @@ begin
 end;
 
 procedure TACBrInformacao.SetAsFloat(const AValue : Double);
+var
+  Pow: Extended;
 begin
   if AValue = 0 then
      fInfo := ''
   else
-   begin
-     fInfo := IntToStr(Trunc(SimpleRoundTo( AValue * 100 ,0))) ;
-     if Length(fInfo) < 3 then
-        fInfo := PadLeft(fInfo,3,'0') ;
-   end ;
+  begin
+    Pow  := IntPower(10, FloatDecimalDigits);
+    fInfo := IntToStr(Trunc(SimpleRoundTo(AValue * Pow, 0)));
+    if Length(fInfo) < 3 then
+      fInfo := PadLeft(fInfo,3,'0') ;
+  end ;
 end;
 
 procedure TACBrInformacao.SetAsInteger(const AValue : Integer);
@@ -411,6 +496,20 @@ begin
      fInfo := FormatDateTime('YYYYMMDDHHNNSS', AValue);
 end;
 
+procedure TACBrInformacao.SetFloatDecimalDigits(AValue: Integer);
+begin
+  if fFloatDecimalDigits = AValue then
+    Exit;
+
+  fFloatDecimalDigits := abs(AValue);
+end;
+
+constructor TACBrInformacao.Create;
+begin
+  inherited Create;
+  fFloatDecimalDigits := 2;
+end;
+
 { TACBrInformacoes }
 
 function TACBrInformacoes.AddField(const AName: String; AValue: String
@@ -436,6 +535,11 @@ begin
 
   if Result = nil then
     raise Exception.CreateFmt('Campo "%s" não encontrado.', [AName]);
+end;
+
+function TACBrInformacoes.FieldExists(const AName: String): Boolean;
+begin
+  Result := FindFieldByName( AName ) <> nil;
 end;
 
 function TACBrInformacoes.FindFieldByName(const AName: String): TACBrInformacao;

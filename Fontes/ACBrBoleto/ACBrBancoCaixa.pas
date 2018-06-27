@@ -627,7 +627,7 @@ begin
       {Descontos}
       if (ValorDesconto > 0) then
        begin
-         if (DataDesconto <> Null) then
+         if (DataDesconto > 0) then
             ADataDesconto := FormatDateTime('ddmmyyyy', DataDesconto)
          else
             ADataDesconto := PadRight('', 8, '0');
@@ -661,13 +661,13 @@ begin
                '1'                                                        + //59 - Forma de cadastramento do título no banco: com cadastramento  1-cobrança Registrada
                '2'                                                        + //60 - Tipo de documento: Tradicional
                ATipoBoleto                                                + //61 e 62(juntos)- Quem emite e quem distribui o boleto?
-               PadRight(NumeroDocumento, 11, ' ')                             + //63 a 73 - Número que identifica o título na empresa
-               PadRight('', 4, ' ')                                           + //74 a 77 - Uso Exclusivo Caixa
+               PadRight(NumeroDocumento, 11, ' ')                         + //63 a 73 - Número que identifica o título na empresa
+               PadRight('', 4, ' ')                                       + //74 a 77 - Uso Exclusivo Caixa
                FormatDateTime('ddmmyyyy', Vencimento)                     + //78 a 85 - Data de vencimento do título
                IntToStrZero( round( ValorDocumento * 100), 15)            + //86 a 100 - Valor nominal do título
-               PadRight('', 5, '0')                                           + //101 a 105 - Agência cobradora. Se ficar em branco, a caixa determina automaticamente pelo CEP do sacado
+               PadRight('', 5, '0')                                       + //101 a 105 - Agência cobradora. Se ficar em branco, a caixa determina automaticamente pelo CEP do sacado
                '0'                                                        + //106 - Dígito da agência cobradora
-               PadRight(AEspecieDoc, 2)                                       + // 107 a 108 - Espécie do documento
+               PadRight(AEspecieDoc, 2)                                   + // 107 a 108 - Espécie do documento
                ATipoAceite                                                + //109 - Identificação de título Aceito / Não aceito
                FormatDateTime('ddmmyyyy', DataDocumento)                  + //110 a 117 - Data da emissão do documento
                IfThen( (ValorMoraJuros > 0) and (CodigoMora= ''), '1', PadRight(CodigoMora, 1, '3') )   + //118 - Código de juros de mora: Valor por dia
@@ -880,7 +880,7 @@ begin
       {Mora Juros}
       if (ValorMoraJuros > 0) then
        begin
-         if (DataMoraJuros <> Null) and (DataMoraJuros >= 30/12/2000) then
+         if (DataMoraJuros > 0) and (DataMoraJuros >= 30/12/2000) then
             ADataMoraJuros := FormatDateTime('ddmmyy',IncDay(DataMoraJuros))
          else
             ADataMoraJuros := PadLeft('', 6, '0');
@@ -1020,7 +1020,7 @@ begin
                   IntToStrZero(round((ValorDocumento* (PercentualMulta*100) )/100), 10)    + //358 até 367 - Valor nominal da multa
                   PadRight(Sacado.NomeSacado, 22)                                  + // 368 até 389 - Nome do Sacador Avalista
                   '00'                                                             + // 390  391 - Terceira instrução de Cobrança Default '00'
-                   IfThen((DataProtesto <> null) and
+                   IfThen((DataProtesto > 0) and
                       (DataProtesto > Vencimento),
                        PadLeft(IntToStr(DaysBetween(DataProtesto,
                        Vencimento)), 2, '0'), '99')                                + //392 até 393 - Quantidade de dias para início da ação de protesto ou devolução do Título
@@ -1087,7 +1087,7 @@ var
   Linha, rCedente, rCNPJCPF: String;
   rAgencia, rConta,rDigitoConta: String;
   MotivoLinha, CodMotivo: Integer;
-  wSeuNumero, TempData: String;
+  TempData: String;
   codOcorrencia : String;
 begin
 
@@ -1203,14 +1203,6 @@ begin
                 Liquidacao.FormaPagto := '';
               end;
             end;
-
-            // prevenir quando o seunumero não vem informado no arquivo
-            wSeuNumero := StringReplace(SeuNumero, '0','',[rfReplaceAll]);
-            if (AnsiSameText(wSeuNumero, EmptyStr)) then
-            begin
-              SeuNumero := NossoNumero;
-              NumeroDocumento := NossoNumero
-            end;            
 
             if (CodOcorrencia  = '02' ) or (CodOcorrencia  = '03' ) or
                (CodOcorrencia  = '26' ) or (CodOcorrencia  = '30' ) then
@@ -1846,12 +1838,6 @@ begin
 
        if TempData <> '00/00/00' then
          DataCredito:= StringToDateTimeDef(TempData, 0, 'DD/MM/YY');
-
-       if StrToIntDef(SeuNumero,0) = 0 then
-       begin
-         SeuNumero := NossoNumero;
-         NumeroDocumento := NossoNumero
-       end;
      end;
    end;
 

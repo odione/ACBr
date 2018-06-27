@@ -909,9 +909,11 @@ begin
     Append;
     with FNFe.Total.ISSQNtot do
     begin
-      FieldByName('vSERV').AsFloat  := VServ;
-      FieldByName('vBC').AsFloat    := VBC;
-      FieldByName('vISS').AsFloat   := VISS;
+      FieldByName('vSERV').AsFloat        := VServ;
+      FieldByName('vBC').AsFloat          := VBC;
+      FieldByName('vISS').AsFloat         := VISS;
+      FieldByName('vDescIncond').AsFloat  := vDescIncond;
+      FieldByName('vISSRet').AsFloat      := vISSRet;
     end;
     Post;
   end;
@@ -1160,6 +1162,8 @@ begin
 end;
 
 procedure TACBrNFeFRClass.CarregaTransportador;
+var
+  ok: Boolean;
 begin
   with cdsTransportador do
   begin
@@ -1169,7 +1173,7 @@ begin
 
     with FNFe.Transp do
     begin
-      FieldByName('ModFrete').AsString :=modFreteToDesStr( ModFrete );
+      FieldByName('ModFrete').AsString := modFreteToDesStr( ModFrete, DblToVersaoDF(ok, FNFe.infNFe.Versao) );
       with Transporta do
       begin
         FieldByName('CNPJCPF').AsString := FormatarCNPJouCPF(CNPJCPF);
@@ -2145,10 +2149,15 @@ begin
       Result := sQuebraLinha;
       for i := 0 to med.Count - 1 do
       begin
-        Result := Result + 'LOTE: ' + med.Items[i].nLote+ sQuebraLinha;
-        Result := Result + 'QTD: '  + FormatFloatBr(med.Items[i].qLote)+ sQuebraLinha;
-        Result := Result + 'FAB: '  + FormatDateBr(med.Items[i].dFab)+ sQuebraLinha;
-        Result := Result + 'VAL: '  + FormatDateBr(med.Items[i].dVal)+ sQuebraLinha;
+        if NFe.infNFe.Versao >= 4 then
+          Result := Result + 'C.P. ANVISA '+ med.Items[i].cProdANVISA+ sQuebraLinha
+        else
+        begin
+          Result := Result + 'LOTE: ' + med.Items[i].nLote+ sQuebraLinha;
+          Result := Result + 'QTD: '  + FormatFloatBr(med.Items[i].qLote)+ sQuebraLinha;
+          Result := Result + 'FAB: '  + FormatDateBr(med.Items[i].dFab)+ sQuebraLinha;
+          Result := Result + 'VAL: '  + FormatDateBr(med.Items[i].dVal)+ sQuebraLinha;
+        end;
         Result := Result + IfThen( med.Items[i].vPMC  > 0, 'PMC: ' + FormatFloatBr(med.Items[i].vPMC) + ';' , '');
       end;
     end;
