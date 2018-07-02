@@ -50,7 +50,7 @@ uses
 const
   cACBrSAT_Versao      = '0.2.0' ;
   cLIBSAT              = 'SAT.DLL';
-  cversaoDadosEnt      = 0.06;
+  cversaoDadosEnt      = 0.07;
   CPREFIXO_ArqCFe = 'AD';
   CPREFIXO_ArqCFeCanc = 'ADC';
   CPastaVendas = 'Vendas';
@@ -61,6 +61,8 @@ const
   cACBrSATSetModeloException   = 'Não é possível mudar o Modelo com o SAT Inicializado' ;
   cACBrSATModeloNaoDefinido    = 'Modelo de SAT não definido' ;
   cACBrSATNaoInicializado      = 'ACBrSAT não foi inicializado corretamente' ;
+  cACBrSATOcupadoException     = 'SAT ocupado!' + sLineBreak +
+                                 'Aguardando resposta da sessão %d' ;
   cACBrSATFuncaoNaoEncontrada  = 'Erro ao carregar a função: %s na Biblioteca: %s' ;
   cACBrSATCMDInvalidoException = 'Procedure: %s '+ sLineBreak +
                                  ' não implementada para o SAT: %s'+sLineBreak + sLineBreak +
@@ -68,7 +70,7 @@ const
                                  'Acesse nosso Forum em: http://projetoacbr.com.br/' ;
 type
 
-  TACBrSATModelo = ( satNenhum, satDinamico_cdecl, satDinamico_stdcall ) ;
+  TACBrSATModelo = ( satNenhum, satDinamico_cdecl, satDinamico_stdcall, mfe_Integrador_XML ) ;
 
   { EACBrSATErro }
 
@@ -530,16 +532,7 @@ TrocarCodigoDeAtivacao.......: numeroSessao, EEEEE, mensagem, cod, mensagemSEFAZ
   Clear;
   fRetornoStr := AValue;
 
-  fRetornoLst.Delimiter := '|';
-  {$IFDEF FPC}
-   fRetornoLst.StrictDelimiter := True;
-  {$ELSE}
-   AValue := '"' + StringReplace(AValue, fRetornoLst.Delimiter,
-                            '"' + fRetornoLst.Delimiter + '"', [rfReplaceAll]) +
-             '"';
-  {$ENDIF}
-  fRetornoLst.DelimitedText := AValue;
-
+  AddDelimitedTextToList(fRetornoStr, '|', fRetornoLst, #0);
 
   if fRetornoLst.Count > 1 then
   begin
@@ -561,9 +554,9 @@ TrocarCodigoDeAtivacao.......: numeroSessao, EEEEE, mensagem, cod, mensagemSEFAZ
 
   if fRetornoLst.Count > index+2 then
   begin
-    fmensagemRetorno := fRetornoLst[index];
+    fmensagemRetorno := Trim(fRetornoLst[index]);
     fcodigoSEFAZ     := StrToIntDef( fRetornoLst[index+1], 0);
-    fmensagemSEFAZ   := fRetornoLst[index+2];
+    fmensagemSEFAZ   := Trim(fRetornoLst[index+2]);
   end
   else
     fmensagemRetorno := AValue;

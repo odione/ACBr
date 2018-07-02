@@ -340,7 +340,7 @@ function MatchText(const AText: String; const AValues: array of String): Boolean
 
 function FindDelimiterInText( const AText: String; ADelimiters: String = ''): Char;
 function AddDelimitedTextToList( const AText: String; const ADelimiter: Char;
-   AStringList: TStrings): Integer;
+   AStringList: TStrings; const AQuoteChar: Char = '"'): Integer;
 
 function UnZip(S: TStream): AnsiString; overload;
 function UnZip(const ABinaryString: AnsiString): AnsiString; overload;
@@ -2147,21 +2147,29 @@ end ;
  ---------------------------------------------------------------------------- }
 function TiraAcento( const AChar : AnsiChar ) : AnsiChar ;
 begin
-  case AChar of
-    'à','á','ã','ä','â' : Result := 'a' ;
-    'À','Á','Ã','Ä','Â' : Result := 'A' ;
-    'è','é',    'ë','ê' : Result := 'e' ;
-    'È','É',    'Ë','Ê' : Result := 'E' ;
-    'ì','í',    'ï','î' : Result := 'i' ;
-    'Ì','Í',    'Ï','Î' : Result := 'I' ;
-    'ò','ó','õ','ö','ô' : Result := 'o' ;
-    'Ò','Ó','Õ','Ö','Ô' : Result := 'O' ;
-    'ù','ú',    'ü','û' : Result := 'u' ;
-    'Ù','Ú',    'Ü','Û' : Result := 'U' ;
-    'ç'                 : Result := 'c' ;
-    'Ç'                 : Result := 'C' ;
-    'ñ'                 : Result := 'n' ;
-    'Ñ'                 : Result := 'N' ;
+  case Byte(AChar) of
+    192..198 : Result := 'A' ;
+    199      : Result := 'C' ;
+    200..203 : Result := 'E' ;
+    204..207 : Result := 'I' ;
+    208      : Result := 'D' ;
+    209      : Result := 'N' ;
+    210..214 : Result := 'O' ;
+    215      : Result := 'x' ;
+    216,248  : Result := '0' ;
+    217..220 : Result := 'U' ;
+    221      : Result := 'Y' ;
+    222,254  : Result := 'b' ;
+    223      : Result := 'B' ;
+    224..230 : Result := 'a' ;
+    231      : Result := 'c' ;
+    232..235 : Result := 'e' ;
+    236..239 : Result := 'i' ;
+    240,242..246 : Result := 'o' ;
+    247      : Result := '/';
+    241      : Result := 'n' ;
+    249..252 : Result := 'u' ;
+    253,255  : Result := 'y' ;
   else
     Result := AChar ;
   end;
@@ -3241,19 +3249,30 @@ var
   FS : TFileStream ;
   LineBreak : AnsiString ;
   VDirectory : String;
+  ArquivoExiste: Boolean;
 begin
-  if EstaVazio(ArqTXT) or (Length(ABinaryString) = 0) then
+  if EstaVazio(ArqTXT) then
     Exit;
 
-  if ForceDirectory then
+  ArquivoExiste := FileExists(ArqTXT);
+
+  if ArquivoExiste then
   begin
-    VDirectory := ExtractFileDir(ArqTXT);
-    if NaoEstaVazio(VDirectory) and (not DirectoryExists(VDirectory)) then
-      ForceDirectories(VDirectory);
+    if (Length(ABinaryString) = 0) then
+      Exit;
+  end
+  else
+  begin
+     if ForceDirectory then
+     begin
+       VDirectory := ExtractFileDir(ArqTXT);
+       if NaoEstaVazio(VDirectory) and (not DirectoryExists(VDirectory)) then
+         ForceDirectories(VDirectory);
+     end;
   end;
 
   FS := TFileStream.Create( ArqTXT,
-               IfThen( AppendIfExists and FileExists(ArqTXT),
+               IfThen( AppendIfExists and ArquivoExiste,
                        Integer(fmOpenReadWrite), Integer(fmCreate)) or fmShareDenyWrite );
   try
      FS.Seek(0, soFromEnd);  // vai para EOF
@@ -3604,10 +3623,14 @@ end;
 {------------------------------------------------------------------------------
   Quebra a String "AText", em várias linhas, separando-a de acordo com a ocorrência
   de "ADelimiter", e adiciona os Itens encontrados em "AStringList".
-  Retorna o número de Itens Inseridos
+  Retorna o número de Itens Inseridos.
+  Informe #0 em "AQuoteChar", para que as Aspas Duplas sejam ignoradas na divisão
+  Se AQuoteChar for diferente de #0, ele será considerado, para evitar os delimitadores
+  que estão dentro de um contexto do QuoteChar...
+  Veja exemplos de uso e retorno em: "ACBrUtilTeste"
  ------------------------------------------------------------------------------}
 function AddDelimitedTextToList(const AText: String; const ADelimiter: Char;
-  AStringList: TStrings): Integer;
+  AStringList: TStrings; const AQuoteChar: Char): Integer;
 var
   SL: TStringList;
   ADelimitedText: String;

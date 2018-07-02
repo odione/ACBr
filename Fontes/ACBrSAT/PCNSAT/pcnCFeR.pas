@@ -133,11 +133,12 @@ begin
   (* Grupo da TAG <emit> ******************************************************)
   if Leitor.rExtrai(1, 'emit') <> '' then
   begin
-    (*C02/C02a*)CFe.Emit.CNPJ := Leitor.rCampoCNPJCPF;
-    (*C03*)CFe.Emit.xNome := Leitor.rCampo(tcStr, 'xNome');
-    (*C04*)CFe.Emit.xFant := Leitor.rCampo(tcStr, 'xFant');
-    (*C12*)CFe.Emit.IE := Leitor.rCampo(tcStr, 'IE');
-    (*C13*)CFe.Emit.IM := Leitor.rCampo(tcStr, 'IM');
+    (*C02/C02a*)CFe.Emit.CNPJ := IfEmptyThen(Leitor.rCampoCNPJCPF, CFe.Emit.CNPJ);
+    (*C03*)CFe.Emit.xNome := IfEmptyThen(Leitor.rCampo(tcStr, 'xNome'), CFe.Emit.xNome);
+    (*C04*)CFe.Emit.xFant := IfEmptyThen(Leitor.rCampo(tcStr, 'xFant'), CFe.Emit.xFant);
+    (*C12*)CFe.Emit.IE := IfEmptyThen(Leitor.rCampo(tcStr, 'IE'), CFe.Emit.IE);
+    (*C13*)CFe.Emit.IM := IfEmptyThen(Leitor.rCampo(tcStr, 'IM'), CFe.Emit.IM);
+
     ACampo := Leitor.rCampo(tcStr, 'cRegTrib');
     if (ACampo <> '') then
       (*C14*)CFe.Emit.cRegTrib := StrToRegTrib(ok, ACampo);

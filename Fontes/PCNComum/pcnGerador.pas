@@ -877,6 +877,21 @@ begin
         EstaVazio := ConteudoProcessado = '';
       end;
 
+    tcNumStr:
+      begin
+        ConteudoProcessado := Trim(VarToStr(valor));
+        EstaVazio := ConteudoProcessado = '';
+        
+        if Length(ConteudoProcessado) < TamMin then
+          ConteudoProcessado := PadLeft(ConteudoProcessado, TamMin, '0');
+      end;
+
+    tcStrOrig:
+      begin
+        ConteudoProcessado := VarToStr(valor);
+        EstaVazio := ConteudoProcessado = '';
+      end;
+
     tcDat, tcDatCFe:
       begin
         DecodeDate(VarToDateTime(valor), wAno, wMes, wDia);
@@ -981,6 +996,12 @@ begin
         if Length(ConteudoProcessado) < TamMin then
           ConteudoProcessado := PadLeft(ConteudoProcessado, TamMin, '0');
       end;
+
+     tcBoolStr:
+       begin
+         ConteudoProcessado := LowerCase(BoolToStr(valor, True));
+         EstaVazio := ConteudoProcessado = '';
+       end;
   end;
 
   alerta := '';

@@ -43,6 +43,7 @@ uses
 
 const
   CPREFIXO_CFe = 'CFe';
+  CMAX_ERROS_SESSAO = 1;
 
 type
 
@@ -118,6 +119,8 @@ type
 
      constructor Create( AOwner : TComponent ) ; override;
      destructor Destroy ; override;
+
+     function GetNomeModeloCFe: String;
 
      Procedure Inicializar;
      Procedure DesInicializar;
@@ -1291,6 +1294,11 @@ end;
 function TACBrSAT.GetModeloStrClass : String ;
 begin
    Result := fsSATClass.ModeloStr;
+end;
+
+function TACBrSAT.GetNomeModeloCFe: String;
+begin
+  Result := fsPrefixoCFe;
 end;
 
 function TACBrSAT.GetsignAC : AnsiString ;
