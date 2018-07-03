@@ -2204,7 +2204,7 @@ begin
     Gerador.wGrupo('fat', 'Y02');
     Gerador.wCampo(tcStr, 'Y03', 'nFat   ', 01, 60, 0, nfe.Cobr.Fat.nFat, DSC_NFAT);
     Gerador.wCampo(tcDe2, 'Y04', 'vOrig  ', 01, 15, 0, nfe.Cobr.Fat.vOrig, DSC_VORIG);
-    Gerador.wCampo(tcDe2, 'Y05', 'vDesc  ', 01, 15, 0, nfe.Cobr.Fat.vDesc, DSC_VDESC);
+    Gerador.wCampo(tcDe2, 'Y05', 'vDesc  ', 01, 15, 1, nfe.Cobr.Fat.vDesc, DSC_VDESC);
     Gerador.wCampo(tcDe2, 'Y06', 'vLiq   ', 01, 15, 0, nfe.Cobr.Fat.vLiq, DSC_VLIQ);
     Gerador.wGrupo('/fat');
   end;
