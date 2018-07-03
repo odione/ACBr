@@ -186,7 +186,7 @@ implementation
 
 Uses
   pcnConversaoNFe, pcnAuxiliar, pcnLayoutTXT,
-  ACBrDFeUtil, pcnConsts, ACBrUtil, ACBrValidador;
+  ACBrDFeUtil, pcnConsts, ACBrUtil, ACBrValidador, Math;
 
 { TNFeW }
 
@@ -2195,7 +2195,11 @@ begin
 end;
 
 procedure TNFeW.GerarCobrFat;
+var
+  ocorrencias: Integer;
 begin
+  ocorrencias := IfThen(NFe.Ide.tpAmb = taHomologacao,1,0);
+
   if (trim(nfe.Cobr.Fat.nFat) <> '') or
     (nfe.Cobr.Fat.vOrig > 0) or
     (nfe.Cobr.Fat.vDesc > 0) or
@@ -2204,7 +2208,7 @@ begin
     Gerador.wGrupo('fat', 'Y02');
     Gerador.wCampo(tcStr, 'Y03', 'nFat   ', 01, 60, 0, nfe.Cobr.Fat.nFat, DSC_NFAT);
     Gerador.wCampo(tcDe2, 'Y04', 'vOrig  ', 01, 15, 0, nfe.Cobr.Fat.vOrig, DSC_VORIG);
-    Gerador.wCampo(tcDe2, 'Y05', 'vDesc  ', 01, 15, 1, nfe.Cobr.Fat.vDesc, DSC_VDESC);
+    Gerador.wCampo(tcDe2, 'Y05', 'vDesc  ', 01, 15, ocorrencias, nfe.Cobr.Fat.vDesc, DSC_VDESC);
     Gerador.wCampo(tcDe2, 'Y06', 'vLiq   ', 01, 15, 0, nfe.Cobr.Fat.vLiq, DSC_VLIQ);
     Gerador.wGrupo('/fat');
   end;
