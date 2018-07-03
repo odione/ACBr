@@ -661,13 +661,13 @@ begin
                '1'                                                        + //59 - Forma de cadastramento do título no banco: com cadastramento  1-cobrança Registrada
                '2'                                                        + //60 - Tipo de documento: Tradicional
                ATipoBoleto                                                + //61 e 62(juntos)- Quem emite e quem distribui o boleto?
-               PadRight(NumeroDocumento, 11, ' ')                         + //63 a 73 - Número que identifica o título na empresa
-               PadRight('', 4, ' ')                                       + //74 a 77 - Uso Exclusivo Caixa
+               PadRight(NumeroDocumento, 11, ' ')                             + //63 a 73 - Número que identifica o título na empresa
+               PadRight('', 4, ' ')                                           + //74 a 77 - Uso Exclusivo Caixa
                FormatDateTime('ddmmyyyy', Vencimento)                     + //78 a 85 - Data de vencimento do título
                IntToStrZero( round( ValorDocumento * 100), 15)            + //86 a 100 - Valor nominal do título
-               PadRight('', 5, '0')                                       + //101 a 105 - Agência cobradora. Se ficar em branco, a caixa determina automaticamente pelo CEP do sacado
+               PadRight('', 5, '0')                                           + //101 a 105 - Agência cobradora. Se ficar em branco, a caixa determina automaticamente pelo CEP do sacado
                '0'                                                        + //106 - Dígito da agência cobradora
-               PadRight(AEspecieDoc, 2)                                   + // 107 a 108 - Espécie do documento
+               PadRight(AEspecieDoc, 2)                                       + // 107 a 108 - Espécie do documento
                ATipoAceite                                                + //109 - Identificação de título Aceito / Não aceito
                FormatDateTime('ddmmyyyy', DataDocumento)                  + //110 a 117 - Data da emissão do documento
                IfThen( (ValorMoraJuros > 0) and (CodigoMora= ''), '1', PadRight(CodigoMora, 1, '3') )   + //118 - Código de juros de mora: Valor por dia
@@ -1126,36 +1126,28 @@ begin
       rCNPJCPF := RightStr(rCNPJCPF,11) ;
     end;
 
-
+   ValidarDadosRetorno(rAgencia, rConta+rDigitoConta, rCNPJCPF, True);
    with ACBrBanco.ACBrBoleto do
    begin
+     if LeCedenteRetorno then
+     begin
+        Cedente.Nome    := rCedente;
+        Cedente.CNPJCPF := rCNPJCPF;
+        Cedente.Agencia := rAgencia;
+        Cedente.AgenciaDigito:= '0';
+        Cedente.Conta   := rConta;
+        Cedente.ContaDigito:= rDigitoConta;
+        Cedente.CodigoCedente:= rConta+rDigitoConta;
 
-      if (not LeCedenteRetorno) and (rCNPJCPF <> OnlyNumber(Cedente.CNPJCPF)) then
-         raise Exception.Create(ACBrStr('CNPJ\CPF do arquivo inválido'));
+        case StrToIntDef(Copy(ARetorno[1],18,1),0) of
+           1: Cedente.TipoInscricao:= pFisica;
+           2: Cedente.TipoInscricao:= pJuridica;
+           else
+              Cedente.TipoInscricao:= pJuridica;
+        end;
+     end;
 
-      if (not LeCedenteRetorno) and ((rAgencia <> OnlyNumber(Cedente.Agencia)) or
-          (rConta+rDigitoConta  <> OnlyNumber(Cedente.CodigoCedente))) then
-         raise Exception.Create(ACBrStr('Agencia\Conta do arquivo inválido'));
-
-      if LeCedenteRetorno then
-      begin
-         Cedente.Nome    := rCedente;
-         Cedente.CNPJCPF := rCNPJCPF;
-         Cedente.Agencia := rAgencia;
-         Cedente.AgenciaDigito:= '0';
-         Cedente.Conta   := rConta;
-         Cedente.ContaDigito:= rDigitoConta;
-         Cedente.CodigoCedente:= rConta+rDigitoConta;
-
-         case StrToIntDef(Copy(ARetorno[1],18,1),0) of
-            1: Cedente.TipoInscricao:= pFisica;
-            2: Cedente.TipoInscricao:= pJuridica;
-            else
-               Cedente.TipoInscricao:= pJuridica;
-         end;
-      end;
-
-      ACBrBanco.ACBrBoleto.ListadeBoletos.Clear;
+     ACBrBanco.ACBrBoleto.ListadeBoletos.Clear;
    end;
 
    Linha := '';
@@ -1775,13 +1767,9 @@ begin
    if TempData <> '00/00/00' then
      ACBrBanco.ACBrBoleto.DataArquivo   := StringToDateTimeDef(TempData, 0, 'DD/MM/YY');
 
+   ValidarDadosRetorno(rAgencia, rCodCedente, '', True);
    with ACBrBanco.ACBrBoleto do
    begin
-      if (not LeCedenteRetorno) and
-         ((rAgencia <> OnlyNumber(RightStr(Cedente.Agencia,4))) or
-          (rCodCedente <> OnlyNumber(Cedente.CodigoCedente))) then
-         raise Exception.Create(ACBrStr('Agencia\Conta do arquivo inválido'));
-
       if LeCedenteRetorno then
       begin
         Cedente.Nome         := rCedente;
