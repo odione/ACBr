@@ -65,7 +65,8 @@ type
     FAllowDefault: Boolean;
     FEnterAsTab: Boolean;
     FOldKeyPreview : Boolean ;
-    FOldOnKeyPress : TKeyPressEvent ; 
+    FOldOnKeyPress : TKeyPressEvent ;
+    FUseScreenControl: Boolean;
     procedure SetEnterAsTab(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent ); override ;
@@ -77,6 +78,8 @@ type
        default false ;
     property AllowDefault: Boolean read FAllowDefault write FAllowDefault
        default true ;
+    property UseScreenControl: Boolean read FUseScreenControl write FUseScreenControl
+       default {$IfDef FPC}True{$Else}False{$EndIf};
   end;
 
 implementation
@@ -90,6 +93,7 @@ begin
   inherited Create( AOwner );
   FEnterAsTab   := false ;
   FAllowDefault := True ;
+  FUseScreenControl := {$IfDef FPC}True{$Else}False{$EndIf};
 
   { Salvando estado das Propriedades do Form, que serao modificadas }
   with TForm( Owner ) do
@@ -141,11 +145,10 @@ begin
            exit ;
         end ;
 
-        {$IFDEF FPC}
-         THackForm( AForm ).SelectNext( Screen.ActiveControl, True, True );
-        {$ELSE}
-         THackForm( AForm ).SelectNext( TForm(AForm).ActiveControl, True, True );
-        {$ENDIF}
+        if FUseScreenControl then
+          THackForm( AForm ).SelectNext( Screen.ActiveControl, True, True )
+        else
+          THackForm( AForm ).SelectNext( TForm(AForm).ActiveControl, True, True );
      end ;
   finally
      if Assigned( FOldOnKeyPress ) then
