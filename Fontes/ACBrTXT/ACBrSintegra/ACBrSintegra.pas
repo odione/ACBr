@@ -95,7 +95,7 @@ unit ACBrSintegra;
 
 interface
 
-uses Classes, SysUtils, Contnrs, ACBrConsts, StrUtils;
+uses Classes, SysUtils, Contnrs, ACBrConsts, ACBrBase, StrUtils;
 
 type
   TVersaoValidador = (vv523, vv524);
@@ -1444,7 +1444,7 @@ type
   end;
 
 
-  TACBrSintegra = class(TComponent)
+  TACBrSintegra = class(TACBrComponent)
   private
     FFileName: string;
     FRegistro10: TRegistro10;

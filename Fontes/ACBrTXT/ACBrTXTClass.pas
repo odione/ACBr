@@ -119,7 +119,8 @@ type
 
 implementation
 
-Uses ACBrUtil ;
+Uses
+  ACBrUtil ;
 
 (* TACBrTXTClass *)
 

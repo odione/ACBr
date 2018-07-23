@@ -702,6 +702,9 @@ function TACBrNFe.Enviar(ALote: String; Imprimir: Boolean; Sincrono: Boolean): B
 var
   i: integer;
 begin
+  WebServices.Enviar.Clear;
+  WebServices.Retorno.Clear;
+
   if NotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhuma NF-e adicionada ao Lote'));
 

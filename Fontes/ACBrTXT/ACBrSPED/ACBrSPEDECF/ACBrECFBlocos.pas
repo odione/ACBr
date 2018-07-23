@@ -199,8 +199,8 @@ type
   TACBrIndicadorDados = TACBrIndDad;
 
   /// Versão do Leiaute do arquivo - TRegistro0000
-  TACBrECFCodVer = (ECFVersao100, ECFVersao200);
-  TACBrECFVersaoLeiaute = TACBrECFCodVer;
+  TACBrECFCodVer = (ECFVersao100, ECFVersao200, ECFVersao300, ECFVersao400);
+//  TACBrECFVersaoLeiaute = TACBrECFCodVer;
 
   /// Código da finalidade do arquivo - TRegistro0000
   TACBrCodFin = (raOriginal,     // 0 - Remessa do arquivo original
@@ -417,8 +417,9 @@ type
     );
   TACBrPosseItem   = TACBrIndProp;
   /// Informe o tipo de documento
-  TACBrTipoDocto   = (docDeclaracaoExportacao,           // 0 - Declaração de Exportação;
-    docDeclaracaoSimplesExportacao     // 1 - Declaração Simplificada de Exportação.
+  TACBrTipoDocto = (docDeclaracaoExportacao,           // 0 - Declaração de Exportação;
+    docDeclaracaoSimplesExportacao,    // 1 - Declaração Simplificada de Exportação;
+    docDeclaracaoUnicaExportacao       // 2 - Declaração Única de Exportação.
     );
   /// Preencher com
   TACBrExportacao  = (exDireta,             // 0 - Exportação Direta
@@ -773,6 +774,17 @@ type
     ftlLucroPresumidoArbitrado,
     ftlImuneIRPJ,
     ftlIsentoIRPJ);
+
+  // Critério de reconhecimento de receitas para empresas tributadas pelo Lucro Presumido
+  TACBrIndRecReceita = (irrRegimeCaixa, irrRegimeCompetencia, irrNenhum);
+
+  // Qualificação do representante legal;
+  TACBrQualificacaoRepLegal = (qrlProcurador,
+                               qrlCurador,
+                               qrlMae,
+                               qrlPai,
+                               qrlTutor,
+                               qrlOutro);
   { TBlocos }
 
   TBlocos = class
@@ -804,8 +816,8 @@ type
   end;
 
   // Fuções do ACBrECFBlocos.
-  //function StrToCodVer(AValue: string): TACBrCodVer;
-  //function CodVerToStr(AValue: TACBrCodVer): string;
+function CodVerToStr(AValue: TACBrECFCodVer): string;
+function StrToCodVer(AValue: string): TACBrECFCodVer;
 
 function IndOperToStr(AVAlue: TACBrIndOper): string;
 function StrToIndOper(AVAlue: string): TACBrIndOper;
@@ -841,64 +853,38 @@ function StrToIndReceita(AValue: string): TACBrIndReceita;
 implementation
 
 { TOpenBlocos }
+function StrToCodVer(AValue: string): TACBrECFCodVer;
+begin
+  if AValue = '0001' then
+    Result := ECFVersao100
+  else
+  if AValue = '0002' then
+    Result := ECFVersao200
+  else
+  if AValue = '0003' then
+    Result := ECFVersao300
+  else
+  if AValue = '0004' then
+    Result := ECFVersao400
+  else
+    raise Exception.CreateFmt('Valor informado [%s] deve estar entre (0001,0002 e 0003)', [AValue]);
+end;
+              
+function CodVerToStr(AValue: TACBrECFCodVer): string;
+begin
+  if AValue = ECFVersao100 then
+    Result := '0001'
+  else
+  if AValue = ECFVersao200 then
+    Result := '0002'
+  else
+  if AValue = ECFVersao300 then
+    Result := '0003'
+  else
+  if AValue = ECFVersao400 then
+    Result := '0004'
+end;
 
-//function StrToCodVer(AValue: string): TACBrCodVer;
-//begin
-//  if AValue = '001' then
-//    Result := vlVersao100
-//  else
-//  if AValue = '002' then
-//    Result := vlVersao101
-//  else
-//  if AValue = '003' then
-//    Result := vlVersao102
-//  else
-//  if AValue = '004' then
-//    Result := vlVersao103
-//  else
-//  if AValue = '005' then
-//    Result := vlVersao104
-//  else
-//  if AValue = '006' then
-//    Result := vlVersao105
-//  else
-//  if AValue = '007' then
-//    Result := vlVersao106
-//  else
-//  if AValue = '008' then
-//    Result := vlVersao107
-//  else
-//    raise Exception.CreateFmt('Versão desconhecida. Versao "%s" não é um valor válido.',
-//      [AValue]);
-//end;
-//
-//function CodVerToStr(AValue: TACBrCodVer): string;
-//begin
-//  if AValue = vlVersao100 then
-//    Result := '001'
-//  else
-//  if AValue = vlVersao101 then
-//    Result := '002'
-//  else
-//  if AValue = vlVersao102 then
-//    Result := '003'
-//  else
-//  if AValue = vlVersao103 then
-//    Result := '004'
-//  else
-//  if AValue = vlVersao104 then
-//    Result := '005'
-//  else
-//  if AValue = vlVersao105 then
-//    Result := '006'
-//  else
-//  if AValue = vlVersao106 then
-//    Result := '007'
-//  else
-//  if AValue = vlVersao107 then
-//    Result := '008';
-//end;
-//
 function IndOperToStr(AValue: TACBrIndOper): string;
 begin
   Result := IntToStr(integer(AValue));

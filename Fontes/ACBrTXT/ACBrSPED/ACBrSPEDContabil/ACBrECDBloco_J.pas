@@ -63,6 +63,8 @@ type
   TRegistroJ150List = class;
   TRegistroJ200List = class;
   TRegistroJ210List = class;
+  TRegistroJ800List = class;
+  TRegistroJ801List = class;
   TRegistroJ215List = class;
 
   /// Rregistro J005 – DEMONSTRAÇÕES CONTÁBEIS
@@ -77,7 +79,10 @@ type
     FRegistroJ100: TRegistroJ100List;  /// BLOCO J - Lista de RegistroJ100 (FILHO)
     FRegistroJ150: TRegistroJ150List;  /// BLOCO J - Lista de RegistroJ150 (FILHO)
     FRegistroJ200: TRegistroJ200List;  /// BLOCO J - Lista de RegistroJ200 (FILHO)
-    FRegistroJ210: TRegistroJ210List;  /// BLOCO J - Lista de RegistroJ210 (FILHO)
+    FRegistroJ210: TRegistroJ210List;
+    FRegistroJ800: TRegistroJ800List;
+    FRegistroJ801: TRegistroJ801List;
+
   public
     constructor Create; virtual; /// Create
     destructor Destroy; override; /// Destroy
@@ -90,6 +95,9 @@ type
     property RegistroJ150: TRegistroJ150List read FRegistroJ150 write FRegistroJ150;
     property RegistroJ200: TRegistroJ200List read FRegistroJ200 write FRegistroJ200;
     property RegistroJ210: TRegistroJ210List read FRegistroJ210 write FRegistroJ210;
+    property RegistroJ800: TRegistroJ800List read FRegistroJ800 write FRegistroJ800;
+    property RegistroJ801: TRegistroJ801List read FRegistroJ801 write FRegistroJ801;
+
   end;
 
   /// Registro J005 - Lista
@@ -115,6 +123,7 @@ type
     fIND_DC_BAL: String;     /// Indicador da situação do saldo informado no campo anterior: D - Devedor; C - Credor.
     fVL_CTA_INI: Currency;   /// Valor inicial do código de aglutinação no Balanço Patrimonial no exercício informado, ou de período definido em norma específica.
     fIND_DC_BAL_INI: string; /// Indicador da situação do saldo inicial informado no campo anterior: D - Devedor; C – Credor.
+    fNOTAS_EXP_REF: String;  /// Notas explicativas relativas às demonstrações contábeis.
   public
     property COD_AGL: String read fCOD_AGL write fCOD_AGL;
     property NIVEL_AGL: String read fNIVEL_AGL write fNIVEL_AGL;
@@ -124,6 +133,7 @@ type
     property IND_DC_BAL: String read fIND_DC_BAL write fIND_DC_BAL;
     property VL_CTA_INI: Currency read fVL_CTA_INI write fVL_CTA_INI;
     property IND_DC_BAL_INI: String read fIND_DC_BAL_INI write fIND_DC_BAL_INI;
+    property NOTAS_EXP_REF: String read fNOTAS_EXP_REF write fNOTAS_EXP_REF;
   end;
 
   /// Registro J100 - Lista
@@ -149,6 +159,7 @@ type
     fIND_VL: String;             /// Indicador da situação do valor informado no campo anterior: D - Despesa ou valor que represente parcela redutora do lucro;R - Receita ou valor que represente incremento do lucro;P - Subtotal ou total positivo;N - Subtotal ou total negativo.
     fVL_CTA_ULT_DRE: Currency;   /// Valor inicial total constante na Demonstração do Resultado do Exercício do último período informado.
     fIND_VL_ULT_DRE: String;     /// Indicador da situação do valor informado no campo anterior: D - Despesa ou valor que represente parcela redutora do lucro;R - Receita ou valor que represente incremento do lucro;P - Subtotal ou total positivo;N - Subtotal ou total negativo.
+    fNOTAS_EXP_REF: String;      /// Notas explicativas relativas às demonstrações contábeis.    
   public
     property COD_AGL: String read fCOD_AGL write fCOD_AGL;
     property NIVEL_AGL: String read fNIVEL_AGL write fNIVEL_AGL;
@@ -157,6 +168,7 @@ type
     property IND_VL: String read fIND_VL write fIND_VL;
     property VL_CTA_ULT_DRE: Currency read fVL_CTA_ULT_DRE write fVL_CTA_ULT_DRE;    
     property IND_VL_ULT_DRE: String read fIND_VL_ULT_DRE write fIND_VL_ULT_DRE;
+    property NOTAS_EXP_REF: String read fNOTAS_EXP_REF write fNOTAS_EXP_REF;
   end;
 
   /// Registro J150 - Lista
@@ -205,6 +217,7 @@ type
     fIND_DC_CTA: String;     /// Indicador da situação do saldo FINAL informado no campo anterior: D - Devedor; C - Credor.
     fVL_CTA_INI: Currency;   /// Saldo inicial do código de aglutinação na demonstração do período informado
     fIND_DC_CTA_INI: String; /// Indicador da situação do saldo inicial informado no campo anterior: D – Devedor C – Credor
+    fNOTAS_EXP_REF: String;  /// Notas explicativas relativas às demonstrações contábeis.    
     ///
     FRegistroJ215: TRegistroJ215List;  /// BLOCO J - Lista de RegistroJ215 (FILHO)
   public
@@ -218,6 +231,7 @@ type
     property IND_DC_CTA: String read fIND_DC_CTA write fIND_DC_CTA;
     property VL_CTA_INI: Currency read fVL_CTA_INI write fVL_CTA_INI;
     property IND_DC_CTA_INI: String read fIND_DC_CTA_INI write fIND_DC_CTA_INI;
+    property NOTAS_EXP_REF: String read fNOTAS_EXP_REF write fNOTAS_EXP_REF;
     /// Registros FILHOS
     property RegistroJ215: TRegistroJ215List read FRegistroJ215 write FRegistroJ215;
   end;
@@ -258,6 +272,57 @@ type
   end;
 
 
+  TRegistroJ800 = class
+  private
+    fTIPO_DOC: String; // Tipo de documento
+    fDESC_RTF: String; // Descrição do arquivo
+    fHASH_RTF: String; // Hash do arquivo
+    fARQ_RTF: String;  // Seqüência de bytes que representem um único arquivo no formato RTF (Rich Text Format).
+  public
+    property TIPO_DOC: String read fTIPO_DOC write fTIPO_DOC;
+    property DESC_RTF: String read fDESC_RTF write fDESC_RTF;
+    property HASH_RTF: String read fHASH_RTF write fHASH_RTF;
+    property ARQ_RTF: String read fARQ_RTF write fARQ_RTF;
+  end;
+
+  /// Registro J800 - Lista
+
+  TRegistroJ800List = class(TObjectList)
+  private
+    function GetItem(Index: Integer): TRegistroJ800;
+    procedure SetItem(Index: Integer; const Value: TRegistroJ800);
+  public
+    function New: TRegistroJ800;
+    property Items[Index: Integer]: TRegistroJ800 read GetItem write SetItem;
+  end;
+
+  /// Rregistro J801 – TERMO DE VERIFICAÇÃO PARA FINS DE SUBSTITUIÇÃO DA ECD
+
+  TRegistroJ801 = class
+  private
+    fTIPO_DOC: String; // Tipo de documento
+    fDESC_RTF: String; // Descrição do arquivo
+    fHASH_RTF: String; // Hash do arquivo
+    fARQ_RTF: String;  // Seqüência de bytes que representem um único arquivo no formato RTF (Rich Text Format).
+  public
+    property TIPO_DOC: String read fTIPO_DOC write fTIPO_DOC;
+    property DESC_RTF: String read fDESC_RTF write fDESC_RTF;
+    property HASH_RTF: String read fHASH_RTF write fHASH_RTF;
+    property ARQ_RTF: String read fARQ_RTF write fARQ_RTF;
+  end;
+
+  /// Registro J801 - Lista
+
+  TRegistroJ801List = class(TObjectList)
+  private
+    function GetItem(Index: Integer): TRegistroJ801;
+    procedure SetItem(Index: Integer; const Value: TRegistroJ801);
+  public
+    function New: TRegistroJ801;
+    property Items[Index: Integer]: TRegistroJ801 read GetItem write SetItem;
+  end;
+
+(*
   /// Rregistro J800 – OUTRAS INFORMAÇÕES
 
   TRegistroJ800 = class
@@ -278,6 +343,8 @@ type
     property Items[Index: Integer]: TRegistroJ800 read GetItem write SetItem;
   end;
 
+  *)
+
   /// Rregistro J900 – TERMO DE ENCERRAMENTO
 
   TRegistroJ900 = class
@@ -297,6 +364,7 @@ type
     property DT_FIN_ESCR: TDateTime read fDT_FIN_ESCR write fDT_FIN_ESCR;
   end;
 
+
   /// Rregistro J930 – IDENTIFICAÇÃO DOS SIGNATÁRIOS DA ESCRITURAÇÃO
 
   TRegistroJ930 = class
@@ -311,6 +379,7 @@ type
     fUF_CRC: String;         /// Indicação da unidade da federação que expediu o CRC.
     fNUM_SEQ_CRC: String;    /// Número sequencial no seguinte formato: UF/ano/número
     fDT_CRC: TDateTime;      /// Data de validade do CRC do contador
+    fIND_RESP_LEGAL: string;  /// Identificação do signatário que será validado como responsável legal da empresa junto as bases da RFB
   public
     property IDENT_NOM: String read fIDENT_NOM write fIDENT_NOM;
     property IDENT_CPF: String read fIDENT_CPF write fIDENT_CPF;
@@ -322,6 +391,7 @@ type
     property UF_CRC: String read fUF_CRC write fUF_CRC;
     property NUM_SEQ_CRC: String read fNUM_SEQ_CRC write fNUM_SEQ_CRC;
     property DT_CRC: TDateTime read fDT_CRC write fDT_CRC;
+    property IND_RESP_LEGAL: String read fIND_RESP_LEGAL write fIND_RESP_LEGAL;
   end;
 
   /// Registro J930 - Lista
@@ -572,6 +642,24 @@ begin
   Put(Index, Value);
 end;
 
+
+function TRegistroJ801List.GetItem(Index: Integer): TRegistroJ801;
+begin
+  Result := TRegistroJ801(Inherited Items[Index]);
+end;
+
+function TRegistroJ801List.New: TRegistroJ801;
+begin
+  Result := TRegistroJ801.Create;
+  Add(Result);
+end;
+
+procedure TRegistroJ801List.SetItem(Index: Integer; const Value: TRegistroJ801);
+begin
+  Put(Index, Value);
+end;
+
+
 { TRegistroJ930List }
 
 function TRegistroJ930List.GetItem(Index: Integer): TRegistroJ930;
@@ -598,6 +686,9 @@ begin
    FRegistroJ150 := TRegistroJ150List.Create;
    FRegistroJ200 := TRegistroJ200List.Create;
    FRegistroJ210 := TRegistroJ210List.Create;
+   FRegistroJ800 := TRegistroJ800List.Create;
+   FRegistroJ801 := TRegistroJ801List.Create;
+
 end;
 
 destructor TRegistroJ005.Destroy;
@@ -606,6 +697,9 @@ begin
   FRegistroJ150.Free;
   FRegistroJ200.Free;
   FRegistroJ210.Free;
+  FRegistroJ800.Free;
+  FRegistroJ801.Free;
+
   inherited;
 end;
 

@@ -63,7 +63,7 @@ type
     //FRegistro0180: TRegistro0180List;  /// BLOCO 0 - Lista de Registro0180
     FRegistro0990: TRegistro0990;      /// BLOCO 0 - FRegistro0990
     FRegistro0180Count: Integer;
-    procedure SetRegistro0035(const Value: TRegistro0035List);      /// BLOCO 0 - FRegistro0990
+//    procedure SetRegistro0035(const Value: TRegistro0035List);      /// BLOCO 0 - FRegistro0990
     procedure WriteRegistro0180(Reg0150: TRegistro0150);
   protected
   public
@@ -138,10 +138,10 @@ begin
   FRegistro0180Count := 0;
 end;
 
-procedure TBloco_0.SetRegistro0035(const Value: TRegistro0035List);
-begin
-
-end;
+//procedure TBloco_0.SetRegistro0035(const Value: TRegistro0035List);
+//begin
+//
+//end;
 
 procedure TBloco_0.WriteRegistro0000;
 begin
@@ -171,8 +171,33 @@ begin
        else
           Check(((IND_SIT_ESP >= '1') and (IND_SIT_ESP <= '6')), '(0-0000) O indicador "%s" de situação especial, deve ser informado o número 0 ou 1 ou 2 ou 3 ou 4!', [IND_SIT_ESP]);
 
+       // Layout 5 a partir da escrituração ano calendário 2016
+       if DT_INI >= EncodeDate(2016,01,01) then
+       begin
+         Add( LFill('0000') +
+              LFill('LECD') +
+              LFill(DT_INI) +
+              LFill(DT_FIN) +
+              LFill(NOME) +
+              LFill(CNPJ) +
+              LFill(UF) +
+              LFill(IE) +
+              LFill(COD_MUN, 7) +
+              LFill(IM) +
+              LFill(IND_SIT_ESP, 0, True) +
+              LFill(IND_SIT_INI_PER) +
+              LFill(IND_NIRE) +
+              LFill(IND_FIN_ESC) +
+              LFill(COD_HASH_SUB) +
+//              LFill(NIRE_SUBST) +
+              LFill(IND_EMP_GRD_PRT) +
+              LFill(TIP_ECD) +
+              LFill(COD_SCP) +
+              LFill(IDENT_MF) +
+              LFill(IND_ESC_CONS));
+       end
        // Layout 4 a partir da escrituração ano calendário 2015
-       if DT_INI >= EncodeDate(2015,01,01) then
+       else if DT_INI >= EncodeDate(2015,01,01) then
        begin
          Add( LFill('0000') +
               LFill('LECD') +

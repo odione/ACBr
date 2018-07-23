@@ -412,7 +412,7 @@ var
 begin
   SL := TStringList.Create;
   try
-    if (pos(LF, IniArquivoOuString) = 0) and FilesExists(IniArquivoOuString) then  // É um rquivo válido ?
+    if (pos(LF, IniArquivoOuString) = 0) and FilesExists(IniArquivoOuString) then  // É um Arquivo válido ?
       SL.LoadFromFile(IniArquivoOuString)
     else
       SL.Text := StringToBinaryString( IniArquivoOuString );
