@@ -48,7 +48,7 @@
 unit ACBrBoleto;
 
 interface
-uses Classes, Graphics, Contnrs,
+uses Classes, Graphics, Contnrs, IniFiles,
      {$IFDEF FPC}
        LResources,
      {$ENDIF}
@@ -56,9 +56,13 @@ uses Classes, Graphics, Contnrs,
      ACBrBase, ACBrMail, ACBrValidador;
 
 const
-  CACBrBoleto_Versao = '0.0.244';
+  CACBrBoleto_Versao = '0.0.246';
   CInstrucaoPagamento = 'Pagar preferencialmente nas agencias do %s';
   CInstrucaoPagamentoLoterica = 'Preferencialmente nas Casas Lotéricas até o valor limite';
+  CCedente = 'CEDENTE';
+  CBanco = 'BANCO';
+  CConta = 'CONTA';
+  CTitulo = 'TITULO';
 
   cACBrTipoOcorrenciaDecricao: array[0..281] of String = (
     'Remessa Registrar',
@@ -358,7 +362,6 @@ type
     cobSicred,
     cobBancoob,
     cobBanrisul,
-    cobCrediSIS,
     cobBanestes,
     cobHSBC,
     cobBancoDoNordeste,
@@ -372,7 +375,9 @@ type
     cobBancoDoBrasilSICOOB,
     cobUniprime,
     cobUnicredRS,
-    cobBanese
+    cobBanese,
+    cobCrediSIS,
+    cobUnicredES
     );
 
   TACBrTitulo = class;
@@ -884,7 +889,7 @@ type
   TACBrCodigoDesconto    = (cdSemDesconto, cdValorFixo);
 
   {Definir codigo Juros }
-  TACBrCodigoJuros       = (cjValorDia, cjTaxaMensal, cjIsento);
+  TACBrCodigoJuros       = (cjValorDia, cjTaxaMensal, cjIsento, cjValorMensal, cjTaxaDiaria);
 
   {Definir codigo Multa }
   TACBrCodigoMulta       = (cmValorFixo, cmPercentual);
@@ -1378,7 +1383,7 @@ Uses Forms, Math, dateutils, strutils,
      ACBrBancoSantander, ACBrBancoBancoob, ACBrBancoCaixaSICOB ,ACBrBancoHSBC,
      ACBrBancoNordeste , ACBrBancoBRB, ACBrBancoBic, ACBrBancoBradescoSICOOB,
      ACBrBancoSafra, ACBrBancoSafraBradesco, ACBrBancoCecred, ACBrBancoBrasilSicoob,
-     ACBrUniprime, ACBrBancoUnicredRS, ACBrBancoBanese, ACBrBancoCredisis;
+     ACBrUniprime, ACBrBancoUnicredRS, ACBrBancoBanese, ACBrBancoCredisis, ACBrBancoUnicredES;
 
 {$IFNDEF FPC}
    {$R ACBrBoleto.dcr}
@@ -2039,16 +2044,16 @@ begin
       begin
          if DataMoraJuros <> 0 then
             AStringList.Add(ACBrStr('Cobrar juros de '                        +
-                            ifthen(((CodigoMora = '2') or (CodigoMora = 'B')), FloatToStr(ValorMoraJuros) + '%',
-                                   FormatCurr('R$ #,##0.00',ValorMoraJuros))         +
-                             ' por dia de atraso para pagamento a partir de ' +
+                            ifthen(((CodigoMora = '2') or (CodigoMora = 'B')), FloatToStr(ValorMoraJuros) + '% ao mês',
+                                   FormatCurr('R$ #,##0.00 por dia',ValorMoraJuros))         +
+                             ' de atraso para pagamento a partir de ' +
                              FormatDateTime('dd/mm/yyyy',ifthen(Vencimento = DataMoraJuros,
                                                                 IncDay(DataMoraJuros,1),DataMoraJuros))))
          else
             AStringList.Add(ACBrStr('Cobrar juros de '                +
-                                    ifthen(((CodigoMora = '2') or (CodigoMora = 'B')), FloatToStr(ValorMoraJuros) + '%',
-                                           FormatCurr('R$ #,##0.00',ValorMoraJuros))         +
-                             ' por dia de atraso'));
+                                    ifthen(((CodigoMora = '2') or (CodigoMora = 'B')), FloatToStr(ValorMoraJuros) + '% ao mês',
+                                           FormatCurr('R$ #,##0.00 por dia',ValorMoraJuros))         +
+                             ' de atraso'));
       end;
 
       if PercentualMulta <> 0 then   
@@ -2261,6 +2266,7 @@ begin
      cobUniprime            : fBancoClass := TACBrUniprime.create(Self);            {099}
      cobCaixaEconomica      : fBancoClass := TACBrCaixaEconomica.create(Self);      {104}
      cobCaixaSicob          : fBancoClass := TACBrCaixaEconomicaSICOB.create(Self); {104}
+     cobUnicredES           : fBancoClass := TACBrBancoUnicredES.create(Self);      {136}
      cobBradesco            : fBancoClass := TACBrBancoBradesco.create(Self);       {237}
      cobItau                : fBancoClass := TACBrBancoItau.Create(Self);           {341}
      cobBancoMercantil      : fBancoClass := TACBrBancoMercantil.create(Self);      {389}
@@ -2835,6 +2841,7 @@ begin
         Banco.LerRetorno240(SlRetorno)
      else
         Banco.LerRetorno400(SlRetorno);
+
    finally
      SlRetorno.Free;
    end;
@@ -2854,7 +2861,7 @@ begin
     Raise Exception.Create(ACBrStr('Dígito da agência não informado'));
 end;
 
-function TACBrBoleto.GetOcorrenciasRemessa: TACBrOcorrenciasRemessa;
+function TACBrBoleto.GetOcorrenciasRemessa(): TACBrOcorrenciasRemessa;
 var I: Integer;
 begin
   SetLength(Result, 47);
@@ -2880,6 +2887,7 @@ begin
     097: Result := cobCrediSIS;
     099: Result := cobUniprime;
     104: Result := cobCaixaEconomica;
+    136: Result := cobUnicredES;
     237: Result := cobBradesco;
     341: Result := cobItau;
     389: Result := cobBancoMercantil;
@@ -3128,6 +3136,8 @@ begin
    fTipo := toRemessaRegistrar;
    fpAOwner:= AOwner;
 end;
+
+
 
 {$ifdef FPC}
 initialization

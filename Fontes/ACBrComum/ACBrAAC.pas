@@ -159,7 +159,9 @@ type
 
 implementation
 
-Uses IniFiles, ACBrUtil, math ;
+Uses
+  IniFiles, math,
+  ACBrUtil;
 
 { TACBrAAC }
 
@@ -272,7 +274,7 @@ begin
   try
      // DEBUG
      // GravaLog('Arquivo Lido: '+sLineBreak+ S );
-     R := DesCriptografar( S ) ;
+     R := Trim(DesCriptografar( S )) ;
      // DEBUG
      //GravaLog('Arquivo Descriptografado: '+sLineBreak+ R );
 
@@ -606,6 +608,7 @@ var
    Recarregar : Boolean ;
 begin
   Recarregar := ArquivoInvalido;
+  //GravaLog( 'VerificaReCarregarArquivo_Inicio(Recarregar = '+ BoolToStr(Recarregar, True ) + ' )' );
 
   if not Recarregar then
   begin
@@ -617,6 +620,8 @@ begin
        Recarregar := true;
      end;
   end ;
+
+//  GravaLog( 'VerificaReCarregarArquivo_FIM(Recarregar = '+ BoolToStr(Recarregar, True) + ' )' );
 
   if Recarregar then
      AbrirArquivo ;
@@ -654,7 +659,7 @@ begin
   GravaLog( 'VerificarGTECF( '+ NumeroSerie+ ', '+FloatToStr(ValorGT) +' )' );
 
   Result := 0;
-  VerificaReCarregarArquivo;
+//  VerificaReCarregarArquivo; // Não necessário. Já é chamado dentro de AchaECF
 
   AECF := AchaECF( NumeroSerie );
   if not Assigned( AECF ) then
@@ -745,6 +750,8 @@ var
 begin
   LogTXT := 'AtualizarGTECF - NumSerie: '+NumeroSerie ;
 
+//  GravaLog( LogTXT +' Entrada'); //Debug
+
   AECF := AchaECF( NumeroSerie );    // AchaECF chama VerificaReCarregarArquivo;
   if not Assigned( AECF ) then
   begin
@@ -755,11 +762,11 @@ begin
         ' ECF: '+NumeroSerie+' não encontrado') );
   end ;
 
+  if RoundTo( ValorGT, -2) = RoundTo( AECF.ValorGT, -2) then Exit ;
+
   LogTXT := LogTXT + ' - De:' +FormatFloat('###,###,##0.00',AECF.ValorGT)+
                      ' Para:'+FormatFloat('###,###,##0.00',ValorGT) ;
   GravaLog( LogTXT );
-
-  if RoundTo( ValorGT, -2) = RoundTo( AECF.ValorGT, -2) then exit ;
 
   AECF.ValorGT        := ValorGT ;
   AECF.DtHrAtualizado := Now;

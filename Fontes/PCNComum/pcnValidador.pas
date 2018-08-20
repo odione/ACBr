@@ -57,7 +57,7 @@
 //                                                                            //
 // 3 - Parametros da função que chama o validador                             //
 //                                                                            //
-//     Mensagens: AnsiString - Variavel que recebera as mensagens de erro     //
+//     Mensagens: String - Variavel que recebera as mensagens de erro     //
 //     PathArquivoXML: string - Caminho e o nome do arquivo xml               //
 //     PathValidador: string - Caminho para pasta que esta o validador        //
 //     Schema: TpcnSchema - Schema a ser utilizado                            //

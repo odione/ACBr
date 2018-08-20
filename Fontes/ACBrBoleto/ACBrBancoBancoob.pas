@@ -501,7 +501,7 @@ begin
        Cedente.ContaDigito:= rDigitoConta;
        Cedente.CodigoCedente:= rConta+rDigitoConta;
      end;
-     Cedente.Conta := PadLeft(IntToStr(StrToIntDef(Cedente.Conta,0)), 7, '0');
+     Cedente.Conta := RemoveZerosEsquerda(Cedente.Conta);
 
      ListadeBoletos.Clear;
    end;
@@ -534,7 +534,7 @@ begin
 
             ValorDocumento       := StrToFloatDef(Copy(Linha,82,15),0)/100;
             ValorDespesaCobranca := StrToFloatDef(Copy(Linha,199,15),0)/100;
-            NossoNumero          := Copy(Linha,40,7);
+            NossoNumero          := Copy(Linha,38,7);
             Carteira             := Copy(Linha,58,1);
             CodigoLiquidacao     := Copy(Linha,214,02);
             //CodigoLiquidacaoDescricao := CodigoLiquidacao_Descricao( StrToIntDef(CodigoLiquidacao,0) );

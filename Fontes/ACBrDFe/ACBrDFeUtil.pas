@@ -68,8 +68,6 @@ function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
                               const APathArqMun: String): String;
 function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String ): Integer;
 
-procedure LerIniArquivoOuString(const IniArquivoOuString: AnsiString; AMemIni: TMemIniFile);
-
 implementation
 
 uses
@@ -142,7 +140,7 @@ begin
 
   vUF          := Poem_Zeros(AUF, 2);
   vDataEmissao := FormatDateTime('YYMM', ADataEmissao);
-  vCNPJ        := copy(OnlyNumber(ACNPJ) + '00000000000000', 1, 14);
+  vCNPJ        := PadLeft(OnlyNumber(ACNPJ), 14, '0');
   vModelo      := Poem_Zeros(AModelo, 2);
   vSerie       := Poem_Zeros(ASerie, 3);
   vNumero      := Poem_Zeros(ANumero, 9);
@@ -217,23 +215,24 @@ end;
 
 function ValidaRE(AValue: String): Boolean;
 var
-  ano: integer;
+  AnoData, AnoValue, SerieRE: integer;
 begin
   // AValue = AANNNNNNNSSS
-  // Onde: AA Ano corrente da geração do documento
-  //       NNNNNNN Número sequencial dentro do Ano ( 7 dígitos )
+  // Onde: AA AnoData corrente da geração do documento
+  //       NNNNNNN Número sequencial dentro do AnoData ( 7 dígitos )
   //       SSS Serie do RE (001, 002, ...)
-  AValue := OnlyNumber(AValue);
-  ano := StrToInt(Copy(IntToStr(YearOf(Date)), 3, 2));
 
-  if length(AValue) <> 12 then
-    Result := False
-  else if not ((StrToInt(copy(Avalue, 1, 2)) >= ano - 1) and
-    (StrToInt(copy(Avalue, 1, 2)) <= ano + 1)) then
-    Result := False
-  else
-    Result := (StrToInt(copy(Avalue, 10, 3)) >= 1) and
-      (StrToInt(copy(Avalue, 10, 3)) <= 999);
+  Result := StrIsNumber(AValue) and (Length(AValue) = 12);
+
+  if Result then
+  begin
+    AnoData  := StrToInt(Copy(IntToStr(YearOf(Date)), 3, 2));
+    AnoValue := StrToInt(Copy(AValue, 1, 2));
+    SerieRE  := StrToInt(Copy(AValue,10, 3));
+
+    Result := ((AnoValue >= (AnoData - 1)) and (AnoValue <= (AnoData + 1))) and
+              ((SerieRE >= 1) and (SerieRE <= 999));
+  end;
 end;
 
 function ValidaDrawback(AValue: String): Boolean;
@@ -405,22 +404,8 @@ begin
   end;
 end;
 
-procedure LerIniArquivoOuString(const IniArquivoOuString: AnsiString;
-  AMemIni: TMemIniFile);
-var
-  SL: TStringList;
-begin
-  SL := TStringList.Create;
-  try
-    if (pos(LF, IniArquivoOuString) = 0) and FilesExists(IniArquivoOuString) then  // É um Arquivo válido ?
-      SL.LoadFromFile(IniArquivoOuString)
-    else
-      SL.Text := StringToBinaryString( IniArquivoOuString );
+initialization
 
-    AMemIni.SetStrings(SL);
-  finally
-    SL.Free;
-  end;
-end;
+  Randomize;
 
 end.

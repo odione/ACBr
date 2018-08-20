@@ -47,6 +47,8 @@ uses
 
 const
   ACBRDFE_VERSAO = '0.1.0a';
+  CSCHEMA_EXT = '.xsd';
+  CSCHEMA_SeparadorVersao = '_v';
 
 type
 

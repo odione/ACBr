@@ -48,7 +48,7 @@ unit ACBrNFeDANFEClass;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, ACBrBase,
   pcnNFe, pcnConversao;
 
 type
@@ -76,7 +76,7 @@ type
 
   { TACBrNFeDANFEClass }
 
-  TACBrNFeDANFEClass = class( TComponent )
+  TACBrNFeDANFEClass = class( TACBrComponent )
    private
     procedure SetNFE(const Value: TComponent);
     procedure ErroAbstract(NomeProcedure: String);
@@ -88,7 +88,10 @@ type
     FSistema: String;
     FUsuario: String;
     FPathPDF: String;
+    FPArquivoPDF: String;
+    FUsarSeparadorPathPDF: Boolean;
     FImpressora: String;
+    FNomeDocumento: String;
     FImprimeNomeFantasia: Boolean;
     FImprimirTotalLiquido: Boolean;
     FMostrarPreview: Boolean;
@@ -101,6 +104,7 @@ type
     FEmail: String;
     FImprimeDescPorc: Boolean;
     FProtocoloNFe: String;
+    FLarguraBobina: Integer;
     FMargemInferior: Double;
     FMargemSuperior: Double;
     FMargemEsquerda: Double;
@@ -119,6 +123,8 @@ type
     FImprimeEmUmaLinha: Boolean;
     FUsaCodigoEanImpressao: Boolean;
     FImprimeDescAcrescItem: Boolean;
+    FQRCodeLateral: Boolean;
+    FImprimeLogoLateral: Boolean;
 
     FTamanhoLogoHeight: Integer;
     FTamanhoLogoWidth: Integer;
@@ -134,6 +140,7 @@ type
     FvTribMun: Currency; //total tributos municipais
     FFonteTributos: String;
     FChaveTributos: String;
+    FImprimirTributos : Boolean;
 
     FPosCanhoto: TPosRecibo;
 
@@ -143,6 +150,7 @@ type
     destructor Destroy; override;
 
     procedure ImprimirDANFE(NFE: TNFe = nil); virtual;
+    procedure ImprimirDANFECancelado(NFE: TNFe = nil); virtual;
     procedure ImprimirDANFEResumido(NFE: TNFe = nil); virtual;
     procedure ImprimirDANFEPDF(NFE: TNFe = nil); virtual;
     procedure ImprimirDANFEResumidoPDF(NFE: TNFe = nil); virtual;
@@ -161,7 +169,10 @@ type
     property Sistema: String                         read FSistema                        write FSistema;
     property Usuario: String                         read FUsuario                        write FUsuario;
     property PathPDF: String                         read GetPathPDF                      write SetPathPDF;
+    property ArquivoPDF: String                      read FPArquivoPDF;
+    property UsarSeparadorPathPDF: Boolean           read FUsarSeparadorPathPDF           write FUsarSeparadorPathPDF default False;
     property Impressora: String                      read FImpressora                     write FImpressora;
+    property NomeDocumento: String                   read FNomeDocumento                  write FNomeDocumento;
     property MostrarPreview: Boolean                 read FMostrarPreview                 write FMostrarPreview;
     property MostrarStatus: Boolean                  read FMostrarStatus                  write FMostrarStatus;
     property TipoDANFE: TpcnTipoImpressao            read FTipoDANFE                      write FTipoDANFE;
@@ -173,6 +184,7 @@ type
     property ImprimirDescPorc: Boolean               read FImprimeDescPorc                write FImprimeDescPorc;
     property ImprimirTotalLiquido: Boolean           read FImprimirTotalLiquido           write FImprimirTotalLiquido;
     property ProtocoloNFe: String                    read FProtocoloNFe                   write FProtocoloNFe;
+    property LarguraBobina : Integer                 read FLarguraBobina                  write FLarguraBobina default 302;
     property MargemInferior: Double                  read FMargemInferior                 write FMargemInferior;
     property MargemSuperior: Double                  read FMargemSuperior                 write FMargemSuperior;
     property MargemEsquerda: Double                  read FMargemEsquerda                 write FMargemEsquerda;
@@ -196,7 +208,8 @@ type
     property LogoemCima: Boolean                     read FLogoEmCima                     write FLogoEmCima;
     property TamanhoFonteEndereco: Integer           read FTamanhoFonteEndereco           write FTamanhoFonteEndereco;
     property RecuoLogo: Integer                      read FRecuoLogo                      write FRecuoLogo;
-    property TributosSeparadamente: Boolean          read FTributosSeparadamente          write FTributosSeparadamente;
+    property ImprimirTributos: Boolean               read FImprimirTributos               write FImprimirTributos default True;
+    property TributosSeparadamente: Boolean          read FTributosSeparadamente          write FTributosSeparadamente default False;
     property vTribFed: Currency                      read FvTribFed                       write FvTribFed;
     property vTribEst: Currency                      read FvTribEst                       write FvTribEst;
     property vTribMun: Currency                      read FvTribMun                       write FvTribMun;
@@ -206,6 +219,9 @@ type
     property ImprimeEmUmaLinha: Boolean              read FImprimeEmUmaLinha              write FImprimeEmUmaLinha default True;
     property ImprimeDescAcrescItem: Boolean          read FImprimeDescAcrescItem          write FImprimeDescAcrescItem default True;
     property UsaCodigoEanImpressao: Boolean          read FUsaCodigoEanImpressao          write FUsaCodigoEanImpressao default False;
+    property QRCodeLateral: Boolean                  read FQRCodeLateral                  write FQRCodeLateral default False;
+    property ImprimeLogoLateral: Boolean             read FImprimeLogoLateral             write FImprimeLogoLateral default False;
+
   end;
 
 implementation
@@ -257,8 +273,10 @@ begin
   FSistema    := '';
   FUsuario    := '';
   FPathPDF    := '';
+  FPArquivoPDF:= '';
+  FUsarSeparadorPathPDF := False;
   FImpressora := '';
-
+  FNomeDocumento := '';
   FImprimirTotalLiquido := False;
   FMostrarPreview       := True;
   FMostrarStatus        := True;
@@ -268,6 +286,7 @@ begin
   FEmail     := '';
   FImprimeDescPorc := False;
   FProtocoloNFe    := '';
+  FLarguraBobina   := 302;
   FMargemInferior  := 0.8;
   FMargemSuperior  := 0.8;
   FMargemEsquerda  := 0.6;
@@ -275,7 +294,7 @@ begin
   FExibeResumoCanhoto := false;
   FExibeResumoCanhoto_Texto := '';
   FFormularioContinuo := false;
-  FTamanhoFonte_DemaisCampos := 10;
+  FTamanhoFonte_DemaisCampos := 8;
   FProdutosPorPagina := 0;
   FImprimeNomeFantasia            := False;
   FImprimirDetalhamentoEspecifico := true;
@@ -288,7 +307,8 @@ begin
   FViaConsumidor:= True;
   FvTroco       := 0.0;
 
-  FTributosSeparadamente:= False;
+  FImprimirTributos      := True;
+  FTributosSeparadamente := False;
   FvTribFed:= 0.0;
   FvTribEst:= 0.0;
   FvTribMun:= 0.0;
@@ -297,6 +317,8 @@ begin
   FImprimeEmUmaLinha     := True;
   FImprimeDescAcrescItem := True;
   FUsaCodigoEanImpressao := False;
+  FQRCodeLateral         := False;
+  FImprimeLogoLateral    := False;
 
   {$IFDEF COMPILER6_UP}
       FCasasDecimais.SetSubComponent( true );{ para gravar no DFM/XFM }
@@ -312,6 +334,11 @@ end;
 procedure TACBrNFeDANFEClass.ImprimirDANFE(NFE : TNFe = nil);
 begin
   ErroAbstract('Imprimir');
+end;
+
+procedure TACBrNFeDANFEClass.ImprimirDANFECancelado(NFE: TNFe);
+begin
+  ErroAbstract('ImprimirCancelado');
 end;
 
 procedure TACBrNFeDANFEClass.ImprimirDANFEResumido(NFE : TNFe = nil);
@@ -386,22 +413,22 @@ end;
 
 procedure TACBrNFeDANFEClass.ImprimirEVENTO(NFE: TNFe);
 begin
-  ErroAbstract('Imprimir');
+  ErroAbstract('ImprimirEVENTO');
 end;
 
 procedure TACBrNFeDANFEClass.ImprimirEVENTOPDF(NFE: TNFe);
 begin
-  ErroAbstract('ImprimirPDF');
+  ErroAbstract('ImprimirEVENTOPDF');
 end;
 
 procedure TACBrNFeDANFEClass.ImprimirINUTILIZACAO(NFE: TNFe);
 begin
-  ErroAbstract('Imprimir');
+  ErroAbstract('ImprimirINUTILIZACAO');
 end;
 
 procedure TACBrNFeDANFEClass.ImprimirINUTILIZACAOPDF(NFE: TNFe);
 begin
-  ErroAbstract('ImprimirPDF');
+  ErroAbstract('ImprimirINUTILIZACAOPDF');
 end;
 
 function TACBrNFeDANFEClass.FormatQuantidade(dValor: Double; dForcarDecimais: Boolean) : String;
@@ -434,7 +461,7 @@ end;
 
 function TACBrNFeDANFEClass.ManterCodigo( scEAN , scProd : String ) : String;
 begin
-  if (Length( scEAN ) > 0) and (UsaCodigoEanImpressao) then
+  if (Length( scEAN ) > 0) and (UpperCase(Trim(scEAN)) <> 'SEM GTIN') and (UsaCodigoEanImpressao) then
     Result := Trim(scEAN)
   else
     Result := Trim(scProd);

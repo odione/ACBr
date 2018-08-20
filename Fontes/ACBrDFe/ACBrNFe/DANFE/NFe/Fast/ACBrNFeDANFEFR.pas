@@ -88,7 +88,7 @@ type
 		function GetPreparedReportInutilizacao: TfrxReport;
     function PrepareReport(NFE: TNFe = nil): Boolean;
     function PrepareReportEvento: Boolean;
-    function PrepareReportInutilizacao: Boolean;    
+    function PrepareReportInutilizacao: Boolean;
     procedure setTributosPercentual(const Value: TpcnPercentualTributos);
     procedure setTributosPercentualPersonalizado(const Value: double);
   public
@@ -101,18 +101,18 @@ type
     procedure ImprimirEVENTOPDF(NFE: TNFe = nil); override;
     procedure ImprimirINUTILIZACAO(NFE: TNFe = nil); override;
     procedure ImprimirINUTILIZACAOPDF(NFE: TNFe = nil); override;
+    property PreparedReport: TfrxReport read GetPreparedReport;
+    property PreparedReportEvento: TfrxReport read GetPreparedReportEvento;
+    property PreparedReportInutilizacao: TfrxReport read GetPreparedReportInutilizacao;
   published
     property FastFile: String read FFastFile write FFastFile;
     property FastFileEvento: String read FFastFileEvento write FFastFileEvento;
     property FastFileInutilizacao: String read FFastFileInutilizacao write FFastFileInutilizacao;
     property dmDanfe: TACBrNFeFRClass read FdmDanfe write FdmDanfe;
     property EspessuraBorda: Integer read FEspessuraBorda write FEspessuraBorda;
-    property PreparedReport: TfrxReport read GetPreparedReport;
-    property PreparedReportEvento: TfrxReport read GetPreparedReportEvento;
-		property PreparedReportInutilizacao: TfrxReport read GetPreparedReportInutilizacao;
-    property ShowDialog: Boolean read FShowDialog write FShowDialog default false; // Isaque Pinheiro
+    property ShowDialog: Boolean read FShowDialog write FShowDialog default false;
     property ExibirTotalTributosItem: Boolean read FExibirTotalTributosItem write FExibirTotalTributosItem;
-    property ExibeCampoFatura: Boolean read FExibeCampoFatura write FExibeCampoFatura;  //Incluido em 22/05/2013 - Fábio Gabriel
+    property ExibeCampoFatura: Boolean read FExibeCampoFatura write FExibeCampoFatura;
     property TributosFonte: string read FTributosFonte write FTributosFonte;
     property TributosPercentual: TpcnPercentualTributos read FTributosPercentual write setTributosPercentual;
     property TributosPercentualPersonalizado: double read FTributosPercentualPersonalizado write setTributosPercentualPersonalizado;
@@ -323,7 +323,11 @@ begin
 
   FdmDanfe.frxReport.PrintOptions.Copies := NumCopias;
   FdmDanfe.frxReport.PrintOptions.ShowDialog := ShowDialog;
+  FdmDanfe.frxReport.ShowProgress := FMostrarStatus;
 
+  // Define a impressora
+  if Length(Impressora) > 0 then
+    FdmDanfe.frxReport.PrintOptions.Printer := FImpressora;
   // preparar relatorio
   if Assigned(ACBrNFe) then
   begin
@@ -440,7 +444,6 @@ procedure TACBrNFeDANFEFR.ImprimirDANFEPDF(NFE: TNFe);
 const
   TITULO_PDF = 'Nota Fiscal Eletrônica';
 var
-  I: Integer;
 	fsShowDialog : Boolean;
 begin
   if PrepareReport(NFE) then
@@ -458,18 +461,13 @@ begin
 			frxPDFExport.EmbeddedFonts := False;
 			frxPDFExport.Background    := False;
 
-			for I := 0 to TACBrNFe(ACBrNFe).NotasFiscais.Count - 1 do
-			begin
-				frxPDFExport.FileName :=
-					PathWithDelim(Self.PathPDF) +
-					StringReplace(UpperCase(NFe.infNFe.ID),'NFE','', [rfReplaceAll, rfIgnoreCase]) +
-					'-nfe.pdf';
-
-				if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
-					ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
-
-				frxReport.Export(frxPDFExport);
-			end;
+			frxPDFExport.FileName := PathWithDelim(Self.PathPDF) +	OnlyNumber(NFe.infNFe.ID) + '-nfe.pdf';
+            Self.FPArquivoPDF := frxPDFExport.FileName;
+	
+			if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
+				ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
+	
+			frxReport.Export(frxPDFExport);
 			frxPDFExport.ShowDialog := fsShowDialog;
     end;		
   end;
@@ -505,6 +503,7 @@ begin
     NomeArq := StringReplace(TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[0].InfEvento.id, 'ID', '', [rfIgnoreCase]);
 
     FdmDanfe.frxPDFExport.FileName := PathWithDelim(Self.PathPDF) + NomeArq + '-procEventoNFe.pdf';
+    Self.FPArquivoPDF := FdmDanfe.frxPDFExport.FileName;
 
     if not DirectoryExists(ExtractFileDir(FdmDanfe.frxPDFExport.FileName)) then
       ForceDirectories(ExtractFileDir(FdmDanfe.frxPDFExport.FileName));
@@ -542,7 +541,8 @@ begin
 
     NomeArq := OnlyNumber(TACBrNFe(ACBrNFe).InutNFe.RetInutNFe.Id);
 
-    FdmDanfe.frxPDFExport.FileName := PathWithDelim(Self.PathPDF) + NomeArq + '-ped-inu.pdf';
+    FdmDanfe.frxPDFExport.FileName := PathWithDelim(Self.PathPDF) + NomeArq + '-procInutNFe.pdf';
+    Self.FPArquivoPDF := FdmDanfe.frxPDFExport.FileName;
 
     if not DirectoryExists(ExtractFileDir(FdmDanfe.frxPDFExport.FileName)) then
       ForceDirectories(ExtractFileDir(FdmDanfe.frxPDFExport.FileName));
