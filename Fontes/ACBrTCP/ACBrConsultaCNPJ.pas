@@ -53,16 +53,19 @@ type
   EACBrConsultaCNPJException = class ( Exception );
 
   { TACBrConsultaCNPJ }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrConsultaCNPJ = class(TACBrHTTP)
   private
     FACBrIBGE: TACBrIBGE;
     FNaturezaJuridica : String ;
-    FViewState: String;
+    //FViewState: String;
     FEmpresaTipo: String;
     FAbertura: TDateTime;
     FRazaoSocial: String;
     FFantasia: String;
+    FPorte: String;
     FCNAE1: String;
     FCNAE2: TStringList;
     FEndereco: String;
@@ -81,7 +84,7 @@ type
     FMotivoSituacaoCad: string;
     FPesquisarIBGE: Boolean;
     FCodigoIBGE: String;
-    Function GetCaptchaURL: String;
+    //Function GetCaptchaURL: String;
     function GetIBGE_UF : String ;
 
     function VerificarErros(Str: String): String;
@@ -99,6 +102,7 @@ type
     property Abertura: TDateTime Read FAbertura;
     property RazaoSocial: String Read FRazaoSocial;
     property Fantasia: String Read FFantasia;
+    property Porte: String read FPorte;
     property CNAE1: String Read FCNAE1;
     property CNAE2: TStringList Read FCNAE2;
     property Endereco: String Read FEndereco;
@@ -123,37 +127,21 @@ type
 implementation
 
 uses
-  ACBrUtil, ACBrValidador, strutils;
+  strutils,
+  blcksock, synautil,
+  ACBrUtil, ACBrValidador;
 
-function StrEntreStr(Str, StrInicial, StrFinal: String; ComecarDe: Integer = 1): String;
-var
-  Ini, Fim: Integer;
-begin
-  Ini:= PosEx(StrInicial, Str, ComecarDe) + Length(StrInicial);
-  if Ini > 0 then
-  begin
-    Fim:= PosEx(StrFinal, Str, Ini);
-    if Fim > 0 then
-      Result:= Copy(Str, Ini, Fim - Ini)
-    else
-      Result:= '';
-  end
-  else
-    Result:= '';
-end;
-
-function TACBrConsultaCNPJ.GetCaptchaURL : String ;
+(*function TACBrConsultaCNPJ.GetCaptchaURL : String ;
 var
   AURL, Html: String;
 begin
   try
-    Self.HTTPGet('http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/cnpjreva_solicitacao3.asp');
+    Self.HTTPGet('https://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/Cnpjreva_solicitacao3.asp');
     Html := Self.RespHTTP.Text;
 
-    AURL := 'http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/' +
-           StrEntreStr(Html, '<img id="imgCaptcha" src="', '"');
+    AURL := RetornarConteudoEntre(Html, '<img id="imgCaptcha" src="', '"');
 
-    FViewState := StrEntreStr(Html, '<input type=hidden id=viewstate name=viewstate value='+'''', '''');
+    FViewState := RetornarConteudoEntre(Html, '<input type=hidden id=viewstate name=viewstate value='+'''', '''');
 
     Result := StringReplace(AURL, 'amp;', '', []);
   except
@@ -162,21 +150,21 @@ begin
       raise EACBrConsultaCNPJException.Create('Erro na hora de obter a URL do captcha.'+#13#10+E.Message);
     end;
   end;
-end;
+end;*)
 
 procedure TACBrConsultaCNPJ.Captcha(Stream: TStream);
 begin
   try
-    HTTPGet(GetCaptchaURL);
+    HTTPGet('https://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/captcha/gerarCaptcha.asp');  // GetCaptchaURL
     if HttpSend.ResultCode = 200 then
     begin
       HTTPSend.Document.Position := 0;
       Stream.CopyFrom(HttpSend.Document, HttpSend.Document.Size);
       Stream.Position := 0;
     end;
-  Except on E: Exception do begin
-    raise EACBrConsultaCNPJException.Create('Erro na hora de fazer o download da imagem do captcha.'+#13#10+E.Message);
-  end;
+  except
+    on E: Exception do
+      raise EACBrConsultaCNPJException.Create('Erro na hora de fazer o download da imagem do captcha.'+sLineBreak+E.Message);
   end;
 end;
 
@@ -189,13 +177,9 @@ begin
     if Pos( ACBrStr('Imagem com os caracteres anti robô'), Str) > 0 then
       Res := 'Catpcha errado.';
 
-    if Pos( ACBrStr( 'Erro na Consulta' ), Str ) > 0  then
-       Res := 'Erro na Consulta.';
-
   if Res = '' then
-    if Pos(ACBrStr('O número do CNPJ não é válido. Verifique se o mesmo foi digitado corretamente.'), Str) > 0 then
-      Res := 'O número do CNPJ não é válido. Verifique se o mesmo foi digitado'+
-             ' corretamente.';
+    if Pos( 'Erro na Consulta', Str ) > 0  then
+       Res := 'Erro na Consulta. Atualize o Captcha';
 
   if Res = '' then
     if Pos(ACBrStr('Não existe no Cadastro de Pessoas Jurídicas o número de CNPJ informado. '+
@@ -233,12 +217,12 @@ end;
 function TACBrConsultaCNPJ.Consulta(const ACNPJ, ACaptcha: String;
   ARemoverEspacosDuplos: Boolean): Boolean;
 var
-  Post: TStringStream;
   Erro: String;
   Resposta : TStringList;
   StrAux: String;
-  sMun:String;
-  CountCid:Integer;
+  sMun, PostStr:String;
+  CountCid, Tentativas:Integer;
+  Retentar: Boolean;
 begin
   Result := False;
   Erro := ValidarCNPJ( ACNPJ ) ;
@@ -246,118 +230,125 @@ begin
      raise EACBrConsultaCNPJException.Create(Erro);
 
   Clear;
-  Post:= TStringStream.Create('');
-  try
-    Post.WriteString('origem=comprovante&');
-    Post.WriteString('cnpj='+OnlyNumber(ACNPJ)+'&');
-    Post.WriteString('txtTexto_captcha_serpro_gov_br='+Trim(ACaptcha)+'&');
+  Retentar := True;
+  Tentativas := 0;
+  while Retentar do
+  begin
+    HTTPSend.Clear;
+    PostStr := 'cnpj='+OnlyNumber(ACNPJ)+'&' +
+               'origem=comprovante&' +
+               'search_type=cnpj&' +
+               'submit1=Consultar&' +
+               'txtTexto_captcha_serpro_gov_br='+Trim(ACaptcha);
 
-    Post.WriteString('opcao=Limpar&');
-    Post.WriteString('submit1=Consultar&');
-    Post.WriteString('search_type=cnpj');
-    Post.Position:= 0;
-
-    HttpSend.Clear;
-    HttpSend.Document.Position:= 0;
-    HttpSend.Document.CopyFrom(Post, Post.Size);
+    WriteStrToStream( HTTPSend.Document, PostStr );
     HTTPSend.MimeType := 'application/x-www-form-urlencoded';
-    HTTPPost('http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/valida.asp');
+    HTTPSend.Cookies.Add('flag=1');
+    HTTPSend.Headers.Add('Referer: https://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/Cnpjreva_solicitacao3.asp');
+    HTTPPost('https://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/valida.asp');
 
-    Erro := VerificarErros(RespHTTP.Text);
+    //DEBUG:
+    //RespHTTP.SaveToFile('c:\temp\cnpj1.txt');
 
-    if Erro = '' then
-    begin
-      Result:= True;
-      Resposta := TStringList.Create;
-      try
-        Resposta.Text := StripHTML(RespHTTP.Text);
-        RemoveEmptyLines( Resposta );
-
-        //DEBUG:
-        //Resposta.SaveToFile('d:\cnpj.txt');
-
-        FCNPJ         := LerCampo(Resposta,'NÚMERO DE INSCRIÇÃO');
-        if FCNPJ <> '' then
-          FEmpresaTipo  := LerCampo(Resposta,FCNPJ);
-        FAbertura     := StringToDateTimeDef(LerCampo(Resposta,'DATA DE ABERTURA'),0);
-        FRazaoSocial  := LerCampo(Resposta,'NOME EMPRESARIAL');
-        FFantasia     := LerCampo(Resposta,'TÍTULO DO ESTABELECIMENTO (NOME DE FANTASIA)');
-        FCNAE1        := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DA ATIVIDADE ECONÔMICA PRINCIPAL');
-        FEndereco     := LerCampo(Resposta,'LOGRADOURO');
-        FNumero       := LerCampo(Resposta,'NÚMERO');
-        FComplemento  := LerCampo(Resposta,'COMPLEMENTO');
-        FCEP          := OnlyNumber( LerCampo(Resposta,'CEP') ) ;
-        if FCEP <> '' then
-          FCEP        := copy(FCEP,1,5)+'-'+copy(FCEP,6,3) ;
-        FBairro       := LerCampo(Resposta,'BAIRRO/DISTRITO');
-        FCidade       := LerCampo(Resposta,'MUNICÍPIO');
-        FUF           := LerCampo(Resposta,'UF');
-        FSituacao     := LerCampo(Resposta,'SITUAÇÃO CADASTRAL');
-        FDataSituacao := StringToDateTimeDef(LerCampo(Resposta,'DATA DA SITUAÇÃO CADASTRAL'),0);
-        FNaturezaJuridica := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DA NATUREZA JURÍDICA');
-        FEndEletronico:= LerCampo(Resposta, 'ENDEREÇO ELETRÔNICO');
-        if Trim(FEndEletronico) = 'TELEFONE' then
-          FEndEletronico := '';
-        FTelefone     := LerCampo(Resposta, 'TELEFONE');
-        FEFR          := LerCampo(Resposta, 'ENTE FEDERATIVO RESPONSÁVEL (EFR)');
-        FMotivoSituacaoCad := LerCampo(Resposta, 'MOTIVO DE SITUAÇÃO CADASTRAL');
-
-        FCNAE2.Clear;
-        StrAux := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DAS ATIVIDADES ECONÔMICAS SECUNDÁRIAS');
-        FCNAE2.Add(ACBrUtil.RemoverEspacosDuplos(StrAux));
-        repeat
-          strAux := LerCampo(Resposta, StrAux);
-          if StrAux <> '' then
-            FCNAE2.Add(ACBrUtil.RemoverEspacosDuplos(StrAux));
-        until StrAux = '';
-
-      finally
-        Resposta.Free;
-      end ;
-
-
-      // Consulta Codigo da Cidade ACBrIBGE
-      fCodigoIBGE := '';
-      if (FCidade <> '') and
-         (FPesquisarIBGE) then
-      begin
-        if (sMun <> FCidade) then  // Evita buscar municipio já encontrado
-        begin
-          FACBrIBGE.BuscarPorNome( FCidade, FUF, False, False ) ;
-          sMun := FCidade;
-        end ;
-
-        if FACBrIBGE.Cidades.Count > 0 then  // Achou ?
-        for CountCid := 0  to FACBrIBGE.Cidades.Count -1 do
-        Begin
-           if (TiraAcentos(FCidade)  = TiraAcentos(FACBrIBGE.Cidades[CountCid].Municipio)) And
-           (FUF =  FACBrIBGE.Cidades[CountCid].UF) then
-		   Begin
-             FCodigoIBGE := IntToStr( FACBrIBGE.Cidades[CountCid].CodMunicio );
-             Break;
-		   End;
-        End;
-      end ;
-
-      if Trim(FRazaoSocial) = '' then
-        raise EACBrConsultaCNPJException.Create('Não foi possível obter os dados.');
-
-      if ARemoverEspacosDuplos then
-      begin
-        FRazaoSocial := RemoverEspacosDuplos(FRazaoSocial);
-        FFantasia    := RemoverEspacosDuplos(FFantasia);
-        FEndereco    := RemoverEspacosDuplos(FEndereco);
-        FNumero      := RemoverEspacosDuplos(FNumero);
-        FComplemento := RemoverEspacosDuplos(FComplemento);
-        FBairro      := RemoverEspacosDuplos(FBairro);
-        FCidade      := RemoverEspacosDuplos(FCidade);
-      end;
-    end
-    else
-      raise EACBrConsultaCNPJException.Create(Erro);
-  finally
-    Post.Free;
+    Retentar := (Tentativas < 2) and
+                (pos('Captcha Sonoro', RespHTTP.Text) > 0) and
+                (pos(ACBrStr('Digite o número de CNPJ da empresa e clique em'), RespHTTP.Text) > 0);
+    Inc( Tentativas );
   end;
+
+  Erro := VerificarErros(RespHTTP.Text);
+
+  if Erro = '' then
+  begin
+    Result:= True;
+    Resposta := TStringList.Create;
+    try
+      Resposta.Text := StripHTML(RespHTTP.Text);
+      RemoveEmptyLines( Resposta );
+
+      //DEBUG:
+      //Resposta.SaveToFile('c:\temp\cnpj2.txt');
+
+      FCNPJ         := LerCampo(Resposta,'NÚMERO DE INSCRIÇÃO');
+      if FCNPJ <> '' then
+        FEmpresaTipo  := LerCampo(Resposta,FCNPJ);
+      FAbertura     := StringToDateTimeDef(LerCampo(Resposta,'DATA DE ABERTURA'),0);
+      FRazaoSocial  := LerCampo(Resposta,'NOME EMPRESARIAL');
+      FFantasia     := LerCampo(Resposta,'TÍTULO DO ESTABELECIMENTO (NOME DE FANTASIA)');
+      FPorte        := LerCampo(Resposta,'PORTE');
+      FCNAE1        := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DA ATIVIDADE ECONÔMICA PRINCIPAL');
+      FEndereco     := LerCampo(Resposta,'LOGRADOURO');
+      FNumero       := LerCampo(Resposta,'NÚMERO');
+      FComplemento  := LerCampo(Resposta,'COMPLEMENTO');
+      FCEP          := OnlyNumber( LerCampo(Resposta,'CEP') ) ;
+      if FCEP <> '' then
+        FCEP        := copy(FCEP,1,5)+'-'+copy(FCEP,6,3) ;
+      FBairro       := LerCampo(Resposta,'BAIRRO/DISTRITO');
+      FCidade       := LerCampo(Resposta,'MUNICÍPIO');
+      FUF           := LerCampo(Resposta,'UF');
+      FSituacao     := LerCampo(Resposta,'SITUAÇÃO CADASTRAL');
+      FDataSituacao := StringToDateTimeDef(LerCampo(Resposta,'DATA DA SITUAÇÃO CADASTRAL'),0);
+      FNaturezaJuridica := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DA NATUREZA JURÍDICA');
+      FEndEletronico:= LerCampo(Resposta, 'ENDEREÇO ELETRÔNICO');
+      if Trim(FEndEletronico) = 'TELEFONE' then
+        FEndEletronico := '';
+      FTelefone     := LerCampo(Resposta, 'TELEFONE');
+      FEFR          := LerCampo(Resposta, 'ENTE FEDERATIVO RESPONSÁVEL (EFR)');
+      FMotivoSituacaoCad := LerCampo(Resposta, 'MOTIVO DE SITUAÇÃO CADASTRAL');
+
+      FCNAE2.Clear;
+      StrAux := LerCampo(Resposta,'CÓDIGO E DESCRIÇÃO DAS ATIVIDADES ECONÔMICAS SECUNDÁRIAS');
+      FCNAE2.Add(ACBrUtil.RemoverEspacosDuplos(StrAux));
+      repeat
+        strAux := LerCampo(Resposta, StrAux);
+        if StrAux <> '' then
+          FCNAE2.Add(ACBrUtil.RemoverEspacosDuplos(StrAux));
+      until StrAux = '';
+
+    finally
+      Resposta.Free;
+    end ;
+
+
+    // Consulta Codigo da Cidade ACBrIBGE
+    fCodigoIBGE := '';
+    if (FCidade <> '') and
+       (FPesquisarIBGE) then
+    begin
+      if (sMun <> FCidade) then  // Evita buscar municipio já encontrado
+      begin
+        FACBrIBGE.BuscarPorNome( FCidade, FUF, False);
+        sMun := FCidade;
+      end ;
+
+      if FACBrIBGE.Cidades.Count > 0 then  // Achou ?
+      for CountCid := 0 to FACBrIBGE.Cidades.Count -1 do
+      Begin
+         if (UpperCase(TiraAcentos(FCidade)) = UpperCase(TiraAcentos(FACBrIBGE.Cidades[CountCid].Municipio))) And
+            (FUF = FACBrIBGE.Cidades[CountCid].UF) then
+         Begin
+           FCodigoIBGE := IntToStr( FACBrIBGE.Cidades[CountCid].CodMunicipio );
+           Break;
+         End;
+      End;
+    end ;
+
+    if Trim(FRazaoSocial) = '' then
+      raise EACBrConsultaCNPJException.Create(ACBrStr('Não foi possível obter os dados.'));
+
+    if ARemoverEspacosDuplos then
+    begin
+      FRazaoSocial := RemoverEspacosDuplos(FRazaoSocial);
+      FFantasia    := RemoverEspacosDuplos(FFantasia);
+      FEndereco    := RemoverEspacosDuplos(FEndereco);
+      FNumero      := RemoverEspacosDuplos(FNumero);
+      FComplemento := RemoverEspacosDuplos(FComplemento);
+      FBairro      := RemoverEspacosDuplos(FBairro);
+      FCidade      := RemoverEspacosDuplos(FCidade);
+    end;
+  end
+  else
+    raise EACBrConsultaCNPJException.Create(Erro);
 end;
 
 constructor TACBrConsultaCNPJ.Create(AOwner: TComponent);
@@ -382,6 +373,7 @@ begin
   FAbertura         := 0;
   FRazaoSocial      := '';
   FFantasia         := '';
+  FPorte            := '';
   FCNAE1            := '';
   FEndereco         := '';
   FNumero           := '';
