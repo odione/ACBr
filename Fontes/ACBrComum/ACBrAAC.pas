@@ -65,7 +65,9 @@ type
   TACBrAACOnVerificarRecomporNumSerie = procedure(const NumSerie: String;
      const ValorGT : Double; var CRO: Integer; var CNI: Integer) of object ;
   { TACBrAAC }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrAAC = class( TACBrComponent )
   private
      fsArqLOG : String ;
@@ -256,7 +258,11 @@ begin
                  '"'+NomeArquivoAux+'"'+sLineBreak+
                  'não encontrado') );
 
+  {$IFDEF DELPHI2007_UP}
+  FileAge( fsNomeCompleto, fsDtHrArquivo );
+  {$ELSE}
   fsDtHrArquivo := FileDateToDateTime( FileAge( fsNomeCompleto ) );
+  {$ENDIF}
 
   // Lê arquivo de modo binário e transfere para a AnsiString = S //
   MS := TMemoryStream.Create;
@@ -264,7 +270,7 @@ begin
     MS.LoadFromFile( fsNomeCompleto );
     MS.Position := 0;
     SetLength(S, MS.Size);
-    MS.ReadBuffer(PChar(S)^, MS.Size);
+    MS.ReadBuffer(PAnsiChar(S)^, MS.Size);
   finally
     MS.Free;
   end;
@@ -278,22 +284,20 @@ begin
      // DEBUG
      //GravaLog('Arquivo Descriptografado: '+sLineBreak+ R );
 
-     SL.Text := R;
-     if Trim(SL.Text) <> '' then
+     if (R <> '') then
      begin
-       // Verificando o arquivo:
-       I := SL.Count-1 ;
-       Linha := SL[ I ] ;   // Pega Ultima Linha
-       if copy(Linha,1,4) = 'CRC:' then   // Ultima Linha é CRC ?
+       I := PosLast('CRC:', R);
+       if (I > 0) then
        begin
-          CRC := StrToIntDef( copy( Linha, 5, Length(Linha) ), -999) ;
-          SL.Delete( I );
+         CRC := StrToIntDef( copy( R, I+4, 20 ), -999) ;
 
-          if StringCrc16( SL.Text ) <> CRC then
-             fsDtHrArquivo := 0;
+         if StringCrc16( copy(R, 1, I-1 ) ) <> CRC then
+           fsDtHrArquivo := 0;
        end
      end;
+
      // Atribuindo para o .INI //
+     SL.Text := R;
      Ini.SetStrings( SL );
 
      if GravarDadosSH then
@@ -323,6 +327,8 @@ begin
         else
         begin
            fsIdentPAF.NumeroLaudo             := Ini.ReadString('PAF','NumeroLaudo','');        // Número do Laudo
+           fsIdentPAF.DataLaudo               := Ini.ReadDate('PAF','EmissaoLaudo',0);          // Emissão do Laudo
+           fsIdentPAF.NumeroCredencimento     := Ini.ReadString('PAF','NumeroCredencimento','');// Número do Laudo
            fsIdentPAF.VersaoER                := Ini.ReadString('PAF','VersaoER','');           // Versão do Roteiro Executado na Homologação
            fsIdentPAF.Paf.Nome                := Ini.ReadString('PAF','Nome','');               // Nome do Sistema PAF
            fsIdentPAF.Paf.Versao              := Ini.ReadString('PAF','Versao','');             // Versão do Sistema PAF
@@ -337,6 +343,7 @@ begin
            fsIdentPAF.Paf.IntegracaoPAFECF    := TACBrPAFTipoIntegracao(Ini.ReadInteger('PAF', 'IntegracaoPAFECF', 0));
 
            fsIdentPAF.Paf.PerfilRequisitos    := Ini.ReadString('PAF', 'PerfilRequisitos', '');
+           fsIdentPAF.Paf.UFContribuinte      := Ini.ReadString('PAF', 'UFContribuinte', '');  // Sigla da UF do Contribuinte
         end ;
      end ;
 
@@ -495,6 +502,8 @@ begin
         Ini.WriteString('PAF','SistemaOperacional',fsIdentPAF.Paf.SistemaOperacional); // Sistema operacional no qual roda o aplicativo
 
         Ini.WriteString('PAF','NumeroLaudo',fsIdentPAF.NumeroLaudo);       // Número do Laudo
+        Ini.WriteDate('PAF','EmissaoLaudo',fsIdentPAF.DataLaudo);       // Emissão do Laudo
+        Ini.WriteString('PAF','NumeroCredencimento',fsIdentPAF.NumeroCredencimento);       // Número do Laudo
         Ini.WriteString('PAF','VersaoER',fsIdentPAF.VersaoER);             // Versão do Roteiro Executado na Homologação
         Ini.WriteString('PAF','NomeExe',fsIdentPAF.Paf.PrincipalExe.Nome); // Nome do Principal EXE do PAF
         Ini.WriteString('PAF','MD5Exe',fsIdentPAF.Paf.PrincipalExe.MD5);   // MD5  do Principal EXE do PAF
@@ -504,6 +513,7 @@ begin
         Ini.WriteInteger('PAF', 'IntegracaoPAFECF', Integer(fsIdentPAF.Paf.IntegracaoPAFECF));
 
         Ini.WriteString('PAF', 'PerfilRequisitos', fsIdentPAF.Paf.PerfilRequisitos);
+        Ini.WriteString('PAF', 'UFContribuinte', fsIdentPAF.Paf.UFContribuinte);  // Sigla da UF do Contribuinte
      end ;
 
      if GravarConfigApp then
@@ -592,7 +602,11 @@ begin
      if fsEfetuarFlush then
         FlushFileToDisk( fsNomeCompleto );
 
+     {$IFDEF DELPHI2007_UP}
+     FileAge( fsNomeCompleto, fsDtHrArquivo );
+     {$ELSE}
      fsDtHrArquivo := FileDateToDateTime( FileAge( fsNomeCompleto ) );
+     {$ENDIF}
 
      if Assigned( fsOnDepoisGravarArquivo ) then
         fsOnDepoisGravarArquivo( Self );
@@ -614,7 +628,11 @@ begin
   begin
      // Data/Hora do arquivo é diferente ?
      try
-       NewDtHrArquivo := FileDateToDateTime( FileAge( fsNomeCompleto ) ) ;
+       {$IFDEF DELPHI2007_UP}
+       FileAge( fsNomeCompleto, NewDtHrArquivo );
+       {$ELSE}
+       NewDtHrArquivo := FileDateToDateTime( FileAge( fsNomeCompleto ) );
+       {$ENDIF}
        Recarregar := (fsDtHrArquivo <> NewDtHrArquivo)
      except
        Recarregar := true;

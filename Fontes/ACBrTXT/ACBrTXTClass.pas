@@ -53,7 +53,9 @@ type
   TErrorEvent = procedure(const MsnError: String) of object;
 
   { TACBrTXTClass }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrTXTClass = class
   private
     FLinhasBuffer: Integer;
@@ -120,6 +122,7 @@ type
 implementation
 
 Uses
+  {$IFDEF MSWINDOWS} Windows, {$ENDIF MSWINDOWS}
   ACBrUtil ;
 
 (* TACBrTXTClass *)
@@ -189,7 +192,7 @@ begin
 
    if FNomeArquivo <> '' then
       if FileExists( FNomeArquivo ) then
-         DeleteFile( FNomeArquivo );
+         SysUtils.DeleteFile( FNomeArquivo );
 end;
 
 function TACBrTXTClass.Add(const AString: String; AddDelimiter: Boolean

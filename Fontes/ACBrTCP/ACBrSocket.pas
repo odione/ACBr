@@ -121,19 +121,23 @@ TACBrTCPServerThread = class(TThread)
 { Componente ACBrTCPServer - Servidor TCP muito simples }
 
 { TACBrTCPServer }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
 TACBrTCPServer = class( TACBrComponent )
   private
     { Propriedades do Componente ACBrTCPServer }
-    fsACBrTCPServerDaemon : TACBrTCPServerDaemon ;
+    fsACBrTCPServerDaemon: TACBrTCPServerDaemon ;
     fsTimeOut: Integer;
     fsIP: String;
     fsPort: String;
-    fsThreadList : TThreadList ;
+    fsThreadList: TThreadList ;
     fsOnConecta: TACBrTCPServerConecta;
     fsOnRecebeDados: TACBrTCPServerRecive;
     fsOnDesConecta: TACBrTCPServerDesConecta;
-    fsTerminador : String;
+    fsTerminador: String;
+    fsUsaSynchronize: Boolean;
+    fsWaitsInterval: Integer;
     fs_Terminador: AnsiString;
     function GetTCPBlockSocket: TTCPBlockSocket ;
     procedure SetAtivo(const Value: Boolean);
@@ -141,6 +145,8 @@ TACBrTCPServer = class( TACBrComponent )
     procedure SetPort(const Value: String);
     procedure SetTerminador( const AValue: String) ;
     procedure SetTimeOut(const Value: Integer);
+    procedure SetUsaSynchronize(AValue: Boolean);
+    procedure SetWaitInterval(AValue: Integer);
 
     procedure VerificaAtivo ;
     function GetAtivo: Boolean;
@@ -164,8 +170,11 @@ TACBrTCPServer = class( TACBrComponent )
     property IP         : String  read fsIP         write SetIP;
     property Port       : String  read fsPort       write SetPort ;
     property TimeOut    : Integer read fsTimeOut    write SetTimeOut
-       default 5000 ;
-    property Terminador : String  read fsTerminador write SetTerminador ;
+      default 5000;
+    property WaitInterval: Integer read fsWaitsInterval write SetWaitInterval default 200;
+    property Terminador    : String  read fsTerminador     write SetTerminador;
+    property UsaSynchronize: Boolean read fsUsaSynchronize write SetUsaSynchronize
+      default {$IFNDEF NOGUI}True{$ELSE}False{$ENDIF};
 
     property OnConecta     : TACBrTCPServerConecta    read  fsOnConecta
                                                       write fsOnConecta ;
@@ -180,7 +189,9 @@ end ;
 TACBrOnAntesAbrirHTTP = procedure( var AURL : String ) of object ;
 
 EACBrHTTPError = class( Exception ) ;
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
 TACBrHTTP = class( TACBrComponent )
   private
     fHTTPSend : THTTPSend ;
@@ -234,7 +245,11 @@ function IsAbsoluteURL(URL: String): Boolean;
 
 implementation
 
-Uses ACBrUtil, synacode, synautil {$IFNDEF NOGUI},Controls, Forms {$ENDIF} ;
+Uses
+  math,  
+  ACBrUtil,
+  synacode, synautil
+  {$IFNDEF NOGUI},Controls, Forms{$ENDIF};
 
 function GetURLBasePath(URL: String): String;
 begin
@@ -650,6 +665,24 @@ end;
 procedure TACBrTCPServer.SetTimeOut(const Value: Integer);
 begin
   fsTimeOut := Value;
+end;
+
+procedure TACBrTCPServer.SetUsaSynchronize(AValue: Boolean);
+begin
+  if (fsUsaSynchronize = AValue) then
+    Exit;
+
+  {$IFNDEF NOGUI}
+    fsUsaSynchronize := AValue;
+  {$ELSE}
+    fsUsaSynchronize := False;
+  {$ENDIF};
+end;
+
+procedure TACBrTCPServer.SetWaitInterval(AValue: Integer);
+begin
+  if fsWaitsInterval = AValue then Exit;
+  fsWaitsInterval := min( max(AValue,10), 5000);
 end;
 
 procedure TACBrTCPServer.VerificaAtivo;

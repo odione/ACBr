@@ -107,6 +107,9 @@ type
   end;
 
   { TACBrValidador }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrValidador = class( TACBrComponent )
   private
     { Propriedades do Componente ACBrValidador }
@@ -2023,5 +2026,47 @@ begin
   fsFormulaDigito := frModulo11 ;
 end;
 
+(*{$IfDef HAS_REGEXPR}
+const
+  cEmailRegex = '^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}' +
+                '\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\' +
+                '.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$';
+
+Uses
+  {$IfDef HAS_REGEXPR}
+   {$IfDef FPC} RegExpr, {$Else} RegularExpressions,{$EndIf}
+  {$EndIf}
+
+Implementation
+
+{$IfDef FPC}
+procedure TACBrValidador.ValidarEmail;
+var
+  vRegex: TRegExpr;
+begin
+  vRegex := TRegExpr.Create;
+  try
+    vRegex.Expression := cEmailRegex;
+    if not vRegex.Exec(Documento) then
+      fsMsgErro := 'e-mail inválido!'
+    else
+      fsMsgErro := '';
+  finally
+    vRegex.Free;
+  end;
+end;
+{$Else}
+procedure TACBrValidador.ValidarEmail;
+var
+  vRegex: TRegEx;
+begin
+  if not vRegex.IsMatch(Documento, cEmailRegex) then
+    fsMsgErro := 'e-mail inválido!'
+  else
+    fsMsgErro := '';
+end;
+{$EndIf}
+{$EndIf}
+*)
 end.
 

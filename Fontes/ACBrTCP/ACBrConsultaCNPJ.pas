@@ -357,6 +357,9 @@ begin
   FCNAE2 := TStringList.Create;
   FPesquisarIBGE := False;
   fACBrIBGE := TACBrIBGE.Create(nil);
+  FACBrIBGE.IgnorarCaixaEAcentos := True;
+
+  HTTPSend.Sock.SSL.SSLType := LT_TLSv1;
 end;
 
 destructor TACBrConsultaCNPJ.Destroy;

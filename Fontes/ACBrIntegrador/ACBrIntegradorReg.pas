@@ -3,9 +3,9 @@
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2015   Isaque Pinheiro                      }
+{ Direitos Autorais Reservados (c) 2014 Daniel Simoes de Almeida               }
 {                                                                              }
-{ Colaboradores nesse arquivo:                                                 }
+{ Colaboradores nesse arquivo: André Ferreira de Moraes                        }
 {                                                                              }
 {  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
@@ -31,65 +31,35 @@
 {                                                                              }
 {******************************************************************************}
 
-{******************************************************************************
-|* Historico
-|*
-|* 10/04/2009: Isaque Pinheiro
-|*  - Criação e distribuição da Primeira Versao
-*******************************************************************************}
+{$I ACBr.inc}
 
-unit ACBrSped;
+unit ACBrIntegradorReg;
 
 interface
 
-uses SysUtils, Classes, DateUtils, ACBrTXTClass;
+uses
+  Classes, SysUtils, ACBrIntegrador
+  {$IFDEF FPC}, LResources {$ENDIF} ;
 
-type
-  TWriteRegistroEvent = procedure(var ALinha: String) of object;
-  TCheckRegistroEvent = procedure(ARegistro: TObject; var AAbortar: Boolean) of object;
-
-  EACBrSPEDException = class(Exception);
-
-  { TACBrSPED }
-	{$IFDEF RTL230_UP}
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}
-  TACBrSPED = class(TACBrTXTClass)
-  private
-    FDT_INI: TDateTime;  /// Data inicial das informações contidas no arquivo
-    FDT_FIN: TDateTime;  /// Data final das informações contidas no arquivo
-    FGravado: Boolean;
-    procedure CriaRegistros;virtual;
-    procedure LiberaRegistros;virtual;
-  public
-    procedure LimpaRegistros;virtual;
-    property DT_INI : TDateTime read FDT_INI  write FDT_INI;
-    property DT_FIN : TDateTime read FDT_FIN  write FDT_FIN;
-    property Gravado: Boolean   read FGravado write FGravado ;
-  end;
+procedure Register;
 
 implementation
 
-{ TACBrSPED }
+{$IFNDEF FPC}
+   {$R ACBrIntegrador.dcr}
+{$ENDIF}
 
-procedure TACBrSPED.CriaRegistros;
+procedure Register;
 begin
-
+  RegisterComponents('ACBrIntegrador', [TACBrIntegrador]);
 end;
 
-procedure TACBrSPED.LiberaRegistros;
-begin
-
-end;
-
-procedure TACBrSPED.LimpaRegistros;
-begin
-  /// Limpa os Registros
-  LiberaRegistros;
-  Conteudo.Clear;
-
-  /// Recriar os Registros Limpos
-  CriaRegistros;
-end;
+{$IFDEF FPC}
+{$IFNDEF NOGUI}
+initialization
+   {$I ACBrIntegrador.lrs}
+{$ENDIF}
+{$ENDIF}
 
 end.
+

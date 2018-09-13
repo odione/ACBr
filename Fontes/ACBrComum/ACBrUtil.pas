@@ -51,14 +51,20 @@ Uses
   ACBrConsts, IniFiles,
   {$IfDef COMPILER6_UP} StrUtils, DateUtils {$Else} ACBrD5, FileCtrl {$EndIf}
   {$IfDef FPC}
-    ,dynlibs, LazUTF8, LConvEncoding
+    ,dynlibs, LazUTF8, LConvEncoding, LCLType
     {$IfDef USE_LCLIntf} ,LCLIntf {$EndIf}
   {$EndIf}
   {$IfDef MSWINDOWS}
     ,Windows, ShellAPI
   {$Else}
     {$IfNDef FPC}
+      {$IFDEF  POSIX}
+      ,Posix.Stdlib
+      ,Posix.Unistd
+      ,Posix.Fcntl
+      {$ELSE}
       ,Libc
+      {$EndIf}
     {$Else}
       ,unix, BaseUnix {$IfNDef NOGUI}, Forms{$EndIf}
     {$EndIf}
@@ -240,6 +246,9 @@ function StoD( YYYYMMDDhhnnss: String) : TDateTime;
 function DtoS( ADate : TDateTime) : String;
 function DTtoS( ADateTime : TDateTime) : String;
 
+function Iso8601ToDateTime(const AISODate: string): TDateTime;
+function DateTimeToIso8601(ADate: TDateTime; ATimeZone: string = ''): string;
+
 function StrIsAlpha(const S: String): Boolean;
 function StrIsAlphaNum(const S: String): Boolean;
 function StrIsNumber(const S: String): Boolean;
@@ -320,7 +329,7 @@ function FlushFileToDisk(const sFile: string): boolean;
 Procedure DesligarMaquina(Reboot: Boolean = False; Forcar: Boolean = False;
    LogOff: Boolean = False) ;
 {$IfNDef NOGUI}
-function ForceForeground(AppHandle:THandle): boolean;
+function ForceForeground(AppHandle:{$IfDef FPC}LCLType.HWND{$Else}THandle{$EndIf}): boolean;
 {$EndIf}
 
 Procedure WriteToFile( const Arq: String; ABinaryString : AnsiString);
@@ -1848,6 +1857,34 @@ begin
   Result := FormatDateTime('yyyymmddhhnnss', ADateTime ) ;
 end ;
 
+
+function Iso8601ToDateTime(const AISODate: string): TDateTime;
+var
+  y, m, d, h, n, s: word;
+begin
+  y := StrToInt(Copy(AISODate, 1, 4));
+  m := StrToInt(Copy(AISODate, 6, 2));
+  d := StrToInt(Copy(AISODate, 9, 2));
+  h := StrToInt(Copy(AISODate, 12, 2));
+  n := StrToInt(Copy(AISODate, 15, 2));
+  s := StrToInt(Copy(AISODate, 18, 2));
+
+  Result := EncodeDateTime(y,m,d, h,n,s,0);
+end;
+
+function DateTimeToIso8601(ADate: TDateTime; ATimeZone: string = ''): string;
+const
+  SDateFormat: string = 'yyyy''-''mm''-''dd''T''hh'':''nn'':''ss''.''zzz''Z''';
+begin
+  Result := FormatDateTime(SDateFormat, ADate);
+  if ATimeZone <> '' then
+  begin ;
+    // Remove the Z, in order to add the UTC_Offset to the string.
+    SetLength(Result, Length(Result) - 1);
+    Result := Result + ATimeZone;
+  end;
+end;
+
 {-----------------------------------------------------------------------------
  *** Extraido de JclStrings.pas  - Project JEDI Code Library (JCL) ***
   Retorna <True> se <S> contem apenas caracteres Alpha maiusculo/minuscula
@@ -2939,7 +2976,7 @@ begin
 
      {$IFNDEF FPC}
        ConnectCommand := PChar(FullCommand);
-       Libc.system(ConnectCommand);
+       {$IFDEF POSIX}_system{$ELSE}Libc.system{$ENDIF}(ConnectCommand);
      {$ELSE}
        fpSystem(FullCommand)
      {$ENDIF}
@@ -3036,8 +3073,8 @@ end ;
    hDrive: THandle;
  begin
    hDrive := fpOpen(sFile, O_Creat or O_RDWR {$IFDEF LINUX}or O_SYNC{$ENDIF});
-   Result := (fpfsync(hDrive) = 0);
-   fpClose(hDrive);
+   Result := {$IFDEF POSIX}fsync{$ELSE}fpfsync{$ENDIF}(hDrive) = 0;
+   {$IFDEF POSIX}__close{$ELSE}fpClose{$ENDIF}(hDrive);
  end ;
 {$ENDIF}
 
@@ -3106,8 +3143,8 @@ end ;
    hDrive: THandle;
  begin
    hDrive := fpOpen(sFile, O_Creat or O_RDWR {$IFDEF LINUX}or O_SYNC{$ENDIF});
-   Result := (fpfsync(hDrive) = 0);
-   fpClose(hDrive);
+   Result := {$IFDEF POSIX}fsync{$ELSE}fpfsync{$ENDIF}(hDrive) = 0;
+   {$IFDEF POSIX}__close{$ELSE}fpClose{$ENDIF}(hDrive);
  end ;
 {$ENDIF}
 
@@ -3178,6 +3215,7 @@ end;
    begin
       // Precisa ser o ROOT ou a
       // aplicação ter provilegios de ROOT  (use: su  ,  chmod u+s SeuPrograma )
+      //
       if Reboot then
          RunCommand('sudo shutdown -r now')
       else
@@ -3189,7 +3227,7 @@ end;
 {$IfNDef NOGUI}
 {$IfDef MSWINDOWS}
 // Origem: https://www.experts-exchange.com/questions/20294536/WM-ACTIVATE.html
-function ForceForeground(AppHandle:THandle): boolean;
+function ForceForeground(AppHandle:{$IfDef FPC}LCLType.HWND{$Else}THandle{$EndIf}): boolean;
 const
   SPI_GETFOREGROUNDLOCKTIMEOUT = $2000;
   SPI_SETFOREGROUNDLOCKTIMEOUT = $2001;
@@ -3259,7 +3297,7 @@ begin
   end;
 end;
 {$Else}
-function ForceForeground(AppHandle:THandle): boolean;
+function ForceForeground(AppHandle: {$IfDef FPC}LCLType.HWND{$Else}THandle{$EndIf}): boolean;
 begin
   Application.Restore;
   Application.BringToFront;
@@ -3317,7 +3355,7 @@ begin
                IfThen( AppendIfExists and ArquivoExiste,
                        Integer(fmOpenReadWrite), Integer(fmCreate)) or fmShareDenyWrite );
   try
-     FS.Seek(0, soFromEnd);  // vai para EOF
+     FS.Seek(0, {$IFDEF COMPILER23_UP}soEnd{$ELSE}soFromEnd{$ENDIF});  // vai para EOF
      FS.Write(Pointer(ABinaryString)^,Length(ABinaryString));
 
      if AddLineBreak then
@@ -3675,7 +3713,9 @@ function AddDelimitedTextToList(const AText: String; const ADelimiter: Char;
   AStringList: TStrings; const AQuoteChar: Char): Integer;
 var
   SL: TStringList;
-  ADelimitedText: String;
+  {$IfNDef HAS_STRICTDELIMITER}
+   L, Pi, Pf, Pq: Integer;
+  {$EndIf}
 begin
   Result := 0;
   if (AText = '') then
@@ -3683,16 +3723,48 @@ begin
 
   SL := TStringList.Create;
   try
-    SL.Delimiter := ADelimiter;
-    {$IFDEF FPC}
+    {$IfDef HAS_STRICTDELIMITER}
+     SL.Delimiter := ADelimiter;
+     SL.QuoteChar := AQuoteChar;
      SL.StrictDelimiter := True;
-     ADelimitedText := AText;
-    {$ELSE}
-     ADelimitedText := '"' + StringReplace(AText, ADelimiter,
-                            '"' + ADelimiter + '"', [rfReplaceAll]) +
-                       '"';
-    {$ENDIF}
-    SL.DelimitedText := ADelimitedText;
+     SL.DelimitedText := AText;
+    {$Else}
+     L  := Length(AText);
+     Pi := 1;
+     if (ADelimiter = AQuoteChar) then
+       Pq := L+1
+     else
+     begin
+       Pq := Pos(AQuoteChar, AText);
+       if Pq = 0 then
+         Pq := L+1;
+     end;
+
+     while Pi <= L do
+     begin
+       if (Pq = Pi) then
+       begin
+         Inc(Pi);  // Pula o Quote
+         Pf := PosEx(AQuoteChar, AText, Pi);
+         Pq := Pf;
+       end
+       else
+         Pf := PosEx(ADelimiter, AText, Pi);
+
+       if Pf = 0 then
+         Pf := L+1;
+
+       SL.Add(Copy(AText, Pi, Pf-Pi));
+
+       if (Pq = Pf) then
+       begin
+         Pq := PosEx(AQuoteChar, AText, Pq+1);
+         Inc(Pf);
+       end;
+
+       Pi := Pf + 1;
+     end;
+    {$EndIf}
     Result := SL.Count;
 
     AStringList.AddStrings(SL);
@@ -3869,10 +3941,10 @@ function ParseText( const Texto : AnsiString; const Decode : Boolean = True;
 var
   AStr: String;
 
-  function InternalStringReplace(const S, OldPatern: String; NewPattern: String ): String;
+  function InternalStringReplace(const S, OldPatern, NewPattern: String ): String;
   begin
     if pos(OldPatern, S) > 0 then
-      Result := StringReplace(S, OldPatern, ACBrStr(NewPattern), [rfReplaceAll])
+      Result := ReplaceString(AnsiString(S), AnsiString(OldPatern), AnsiString(ACBrStr(NewPattern)))
     else
       Result := S;
   end;

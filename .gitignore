@@ -6,3 +6,4 @@ ACBrComum/*.txt
 *.exe
 Pacotes/
 ACBrInstall_trunk2.ini
+Fontes/**/*.dcu

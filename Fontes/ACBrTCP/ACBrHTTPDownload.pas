@@ -51,10 +51,13 @@ interface
 
 uses
   Classes, SysUtils,
-  ACBrUtil, ACBrDownloadClass,
+  ACBrDownloadClass,
   httpsend, blcksock, synautil;
 
 type
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrHTTPDownload = class(TACBrDownloadClass)
   private
     fHTTPSend: THTTPSend;
@@ -159,6 +162,7 @@ begin
      fHTTPSend.ProxyPort := fProxy.ProxyPort;
      fHTTPSend.ProxyUser := fProxy.ProxyUser;
      fHTTPSend.ProxyPass := fProxy.ProxyPass;
+     fHTTPSend.Timeout   := fProxy.ProxyTimeout;
 
      // StringReplace() foi chamado aqui porque no Delphi não reconhece barra "/"
      // como o Lazarus que reconhece os dois.

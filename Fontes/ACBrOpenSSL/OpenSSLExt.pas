@@ -704,6 +704,10 @@ const
 //DES modes
   DES_ENCRYPT = 1;
   DES_DECRYPT = 0;
+
+  XN_FLAG_SEP_MASK       = 983040;  //(0xf << 16)
+  XN_FLAG_SEP_CPLUS_SPC  = 131072;  //(2 << 16) ,+ spaced: more readable
+  ASN1_STRFLGS_UTF8_CONVERT = 16;
   
 var
   SSLLibHandle: TLibHandle = 0;
@@ -2869,7 +2873,7 @@ begin
   Result := BIO_ctrl(b, BIO_C_SET_FILENAME, BIO_CLOSE or BIO_FP_READ, name);
 end;
 
-function BIO_s_file: PBIO_METHOD;
+function BIO_s_file: pBIO_METHOD;
 begin
   if InitlibeaInterface and Assigned(_BIO_s_file) then
     Result := _BIO_s_file
@@ -2921,7 +2925,7 @@ begin
     Result := -1;
 end;
 
-function BN_dec2bn(var n: PBIGNUM; const str: PChar):  cint ;
+function BN_dec2bn(var n: PBIGNUM; const str: PChar): cint;
 begin
   if InitlibeaInterface and Assigned(_BN_dec2bn) then
     Result := _BN_dec2bn(n, str)
@@ -3536,8 +3540,6 @@ result:=false;
   result:=false;
  end;
 end;
-
-
 
 function IsSSLloaded: Boolean;
 begin

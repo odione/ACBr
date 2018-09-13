@@ -46,7 +46,7 @@ unit ACBrEAD;
 interface
 
 uses
-   Classes, SysUtils, strutils, ACBrConsts,
+   Classes, SysUtils, strutils, ACBrConsts, ACBrBase,
    ACBrUtil, {$IFDEF USE_libeay32}libeay32{$ELSE} OpenSSLExt{$ENDIF};
 
 const

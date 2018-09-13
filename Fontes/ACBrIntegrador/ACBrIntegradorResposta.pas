@@ -3,12 +3,15 @@
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2015   Isaque Pinheiro                      }
+{ Direitos Autorais Reservados (c) 2017 André Ferreira de Moraes               }
 {                                                                              }
 { Colaboradores nesse arquivo:                                                 }
 {                                                                              }
 {  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
+{                                                                              }
+{  Esse arquivo usa a classe  PCN (c) 2009 - Paulo Casagrande                  }
+{  PCN - Projeto Cooperar NFe       (Found at URL:  www.projetocooperar.org)   }
 {                                                                              }
 {  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
 { sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
@@ -30,66 +33,76 @@
 {              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
 {                                                                              }
 {******************************************************************************}
-
-{******************************************************************************
-|* Historico
-|*
-|* 10/04/2009: Isaque Pinheiro
-|*  - Criação e distribuição da Primeira Versao
-*******************************************************************************}
-
-unit ACBrSped;
+unit ACBrIntegradorResposta;
 
 interface
 
-uses SysUtils, Classes, DateUtils, ACBrTXTClass;
+uses
+  Classes, SysUtils, pcnLeitor, pcnConversao;
 
 type
-  TWriteRegistroEvent = procedure(var ALinha: String) of object;
-  TCheckRegistroEvent = procedure(ARegistro: TObject; var AAbortar: Boolean) of object;
 
-  EACBrSPEDException = class(Exception);
+{$M+}
+  { TIntegradorResposta }
 
-  { TACBrSPED }
-	{$IFDEF RTL230_UP}
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}
-  TACBrSPED = class(TACBrTXTClass)
+  TIntegradorResposta = class
   private
-    FDT_INI: TDateTime;  /// Data inicial das informações contidas no arquivo
-    FDT_FIN: TDateTime;  /// Data final das informações contidas no arquivo
-    FGravado: Boolean;
-    procedure CriaRegistros;virtual;
-    procedure LiberaRegistros;virtual;
+    FLeitor: TLeitor;
+    FIdentificador: Integer;
+    FCodigo: String;
+    FValor: String;
   public
-    procedure LimpaRegistros;virtual;
-    property DT_INI : TDateTime read FDT_INI  write FDT_INI;
-    property DT_FIN : TDateTime read FDT_FIN  write FDT_FIN;
-    property Gravado: Boolean   read FGravado write FGravado ;
+    constructor Create;
+    destructor Destroy; override;
+    procedure Clear;
+
+    procedure LerResposta(const XML: String);
+  published
+    property Identificador: Integer read FIdentificador write FIdentificador;
+    property Codigo: String read FCodigo write FCodigo;
+    property Valor: String read FValor write FValor;
   end;
+
+{$M-}
 
 implementation
 
-{ TACBrSPED }
+{ TIntegradorResposta }
 
-procedure TACBrSPED.CriaRegistros;
+constructor TIntegradorResposta.Create;
 begin
-
+  FLeitor := TLeitor.Create;
 end;
 
-procedure TACBrSPED.LiberaRegistros;
+destructor TIntegradorResposta.Destroy;
 begin
-
+  FLeitor.Free;
+  inherited Destroy;
 end;
 
-procedure TACBrSPED.LimpaRegistros;
+procedure TIntegradorResposta.Clear;
 begin
-  /// Limpa os Registros
-  LiberaRegistros;
-  Conteudo.Clear;
+  FIdentificador := 0;
+  FCodigo        := '';
+  FValor         := '';
+end;
 
-  /// Recriar os Registros Limpos
-  CriaRegistros;
+procedure TIntegradorResposta.LerResposta(const XML: String);
+begin
+  FLeitor.Arquivo := XML;
+
+  if FLeitor.rExtrai(1, 'Integrador') <> '' then
+  begin
+    if FLeitor.rExtrai(2, 'Identificador') <> '' then
+      FIdentificador := FLeitor.rCampo(tcInt, 'valor');
+
+    if FLeitor.rExtrai(2, 'IntegradorResposta') <> '' then
+    begin
+      FCodigo := FLeitor.rCampo(tcStr, 'Codigo');
+      FValor  := FLeitor.rCampo(tcStr, 'Valor');
+    end;
+  end ;
 end;
 
 end.
+

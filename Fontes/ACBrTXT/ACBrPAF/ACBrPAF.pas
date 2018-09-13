@@ -89,7 +89,9 @@ type
   // DECLARANDO O COMPONENTE - PAF-ECF:
 
   { TACBrPAF }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrPAF = class(TACBrComponent)
   private
     FOnError: TErrorEvent;
@@ -449,7 +451,7 @@ begin
 //  Result := False;
   Arquivo := AjustaNomeArquivo(Arquivo);
 
-  DeleteFile(Arquivo);
+  SysUtils.DeleteFile(Arquivo);
 
   with FPAF_TITP do
   begin
@@ -491,7 +493,7 @@ begin
 //  Result := False;
   Arquivo := AjustaNomeArquivo(Arquivo);
 
-  DeleteFile(Arquivo);
+  SysUtils.DeleteFile(Arquivo);
 
   with PAF_Z do
   begin
@@ -580,7 +582,7 @@ begin
     end;
   end ;
 
-  DeleteFile(Arquivo);
+  SysUtils.DeleteFile(Arquivo);
 
   with FPAF_N do
   begin
@@ -675,7 +677,7 @@ begin
 //  Result := False;
   Arquivo := AjustaNomeArquivo(Arquivo);
 
-  DeleteFile(Arquivo);
+  SysUtils.DeleteFile(Arquivo);
 
   FPAF_U.Conteudo.Clear;
   FPAF_A.Conteudo.Clear;
