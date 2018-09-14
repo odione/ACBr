@@ -39,7 +39,7 @@ interface
 
 uses
   Classes, SysUtils, pcnCFe, pcnRede, pcnCFeCanc, ACBrBase, ACBrSATClass,
-  ACBrSATExtratoClass, synacode, ACBrMail;
+  ACBrSATExtratoClass, synacode, ACBrMail, ACBrIntegrador, ACBrDFeSSL;
 
 const
   CPREFIXO_CFe = 'CFe';
@@ -73,7 +73,9 @@ type
      fsRespostaComando : String ;
      fsSATClass : TACBrSATClass ;
      fsExtrato : TACBrSATExtratoClass;
-     FMAIL: TACBrMail;
+     fsMAIL: TACBrMail;
+     fsIntegrador: TACBrIntegrador;
+     fsSSL: TDFeSSL;
 
      fsArqLOG: String;
      fsComandoLog: String;
@@ -92,6 +94,10 @@ type
      fsOnConsultarNumeroSessao: TACBrSATEventoDados;
      fsOnMensagemSEFAZ: TACBrSATMensagem;
      fsOnCalcPath: TACBrSATCalcPathEvent;
+     fsValidarNumeroSessaoResposta: Boolean;
+     fsNumeroTentativasValidarSessao: Integer;
+     fsErrosSessaoCount: Integer;
+     fsSessaoAVerificar: Integer;
 
      function CodificarPaginaDeCodigoSAT(ATexto: String): AnsiString;
      function DecodificarPaginaDeCodigoSAT(ATexto: AnsiString): String;
@@ -104,22 +110,26 @@ type
      procedure SetInicializado(AValue : Boolean) ;
      procedure SetModelo(AValue : TACBrSATModelo) ;
      procedure SetNomeDLL(AValue : string) ;
+     procedure SetAguardandoResposta(AValue: Boolean);
 
      procedure VerificaInicializado ;
-     procedure IniciaComando ;
-     function FinalizaComando(AResult: String): String;
      procedure VerificaCondicoesImpressao( EhCancelamento: Boolean = False);
 
      procedure GravaLog(AString : AnsiString ) ;
      procedure SetExtrato(const Value: TACBrSATExtratoClass);
-    procedure SetMAIL(const AValue: TACBrMail);
-    function GravarStream(AStream: TStream): Boolean;
+     procedure SetMAIL(const AValue: TACBrMail);
+     procedure SetIntegrador(AValue: TACBrIntegrador);
+
+     function GravarStream(AStream: TStream): Boolean;
    protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
    public
+     procedure IniciaComando ;
+     function FinalizaComando(AResult: String): String;
      procedure DecodificaRetorno6000;
      procedure DecodificaRetorno7000;
      property SAT : TACBrSATClass read fsSATClass ;
+     property SSL: TDFeSSL read fsSSL;
 
      constructor Create( AOwner : TComponent ) ; override;
      destructor Destroy ; override;
@@ -132,13 +142,14 @@ type
 
      Property ModeloStr : String  read GetModeloStrClass;
 
-     property numeroSessao : Integer read fsnumeroSessao write fsnumeroSessao;
+     property numeroSessao : Integer read fsnumeroSessao;
      function GerarnumeroSessao : Integer ;
 
      property codigoDeAtivacao : AnsiString read GetcodigoDeAtivacao ;
      property signAC           : AnsiString read GetsignAC ;
 
      property RespostaComando: String read fsRespostaComando ;
+     Property AguardandoResposta : Boolean read fsAguardandoResposta ;
 
      property CFe : TCFe read fsCFe ;
      property CFeCanc : TCFeCanc read fsCFeCanc ;
@@ -148,6 +159,7 @@ type
      property PrefixoCFe: String read fsPrefixoCFe;
 
      procedure InicializaCFe( ACFe : TCFe = nil );
+     function VerificarVersaoSAT(const VersaoLayout: Double = 0): Double;
 
      procedure DoLog(AString : String ) ;
 
@@ -182,9 +194,9 @@ type
     procedure ImprimirExtratoCancelamento;
 
     function CalcCFeNomeArq( Pasta: String; NomeArquivo: String = '';
-      Sufixo: String = ''): String;
+      Sufixo: String = ''; Extensao: String = '.xml'): String;
     function CalcCFeCancNomeArq( Pasta: String; NomeArquivo: String = '';
-      Sufixo: String = ''): String;
+      Sufixo: String = ''; Extensao: String = '.xml'): String;
 
     procedure EnviarEmail(sPara, sAssunto: String; NomeArq: String = '';
       sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil;
@@ -194,12 +206,13 @@ type
       sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil); overload;
 
    published
-     property MAIL: TACBrMail read FMAIL write SetMAIL;
+     property MAIL: TACBrMail read fsMAIL write SetMAIL;
+     property Integrador: TACBrIntegrador read fsIntegrador write SetIntegrador;
 
      property Modelo : TACBrSATModelo read fsModelo write SetModelo
                  default satNenhum ;
 
-     property Extrato: TACBrSATExtratoClass read fsExtrato write SetExtrato ;
+     property Extrato: TACBrSATExtratoClass read fsExtrato write SetExtrato;
 
      property NomeDLL: string read fsNomeDLL write SetNomeDLL;
 
@@ -743,6 +756,7 @@ begin
   fsConfigArquivos.SetSubComponent( true );{ para gravar no DFM/XFM }
   {$ENDIF}
 
+  fsSSL     := TDFeSSL.Create;
   fsRede    := TRede.Create;
   fsCFe     := TCFe.Create;
   fsCFeCanc := TCFeCanc.Create;
@@ -762,6 +776,7 @@ begin
   fsCFeCanc.Free;
   fsResposta.Free;
   fsStatus.Free;
+  fsSSL.Free;
 
   if Assigned( fsSATClass ) then
     FreeAndNil( fsSATClass );
@@ -780,7 +795,9 @@ begin
   Randomize;
 
   DoLog( 'ACBrSAT.Inicializado');
+
   fsInicializado := true ;
+  fsAguardandoResposta := False;
   fsPrefixoCFe := CPREFIXO_CFe;
 end ;
 
@@ -789,9 +806,12 @@ begin
   if not fsInicializado then exit ;
 
   fsSATClass.DesInicializar ;
-
   DoLog( 'ACBrSAT.DesInicializado');
+
   fsInicializado := false;
+  fsStatus.Clear;
+  fsResposta.Clear;
+  fsRede.Clear;
 end ;
 
 procedure TACBrSAT.VerificaInicializado ;
@@ -813,27 +833,30 @@ begin
      AStr := AStr + ' - Comando: '+fsComandoLog;
 
   DoLog( AStr );
+  SetAguardandoResposta(True);
 end ;
 
 function TACBrSAT.FinalizaComando( AResult : String ) : String ;
 var
   AStr : String ;
+  SessaoEnviada: Integer;
 begin
   fsRespostaComando := DecodificarPaginaDeCodigoSAT( AResult );
   Result := fsRespostaComando;
+
+  SetAguardandoResposta(False);
 
   fsComandoLog := '';
   AStr := 'NumeroSessao: '+IntToStr(numeroSessao) ;
   if fsRespostaComando <> '' then
      AStr := AStr + ' - Resposta:'+fsRespostaComando;
 
+  DoLog( AStr );
   Resposta.RetornoStr := fsRespostaComando;
 
   if Assigned(fsOnMensagemSEFAZ) then
     if (Resposta.codigoSEFAZ > 0) or (Resposta.mensagemSEFAZ <> '') then
       fsOnMensagemSEFAZ( Resposta.codigoSEFAZ, Resposta.mensagemSEFAZ );
-
-  DoLog( AStr );
 end ;
 
 procedure TACBrSAT.VerificaCondicoesImpressao(EhCancelamento: Boolean);
@@ -958,7 +981,7 @@ function TACBrSAT.CancelarUltimaVenda(chave, dadosCancelamento : AnsiString
   ) : String ;
 var
   NomeCFe: String;
-  Retorno: String;
+  SATResp: String;
 begin
   fsComandoLog := 'CancelarUltimaVenda( '+chave+', '+dadosCancelamento+' )';
 
@@ -981,15 +1004,16 @@ begin
   end;
 
   IniciaComando;
+  try
+    SATResp := '';
+    if Assigned(fsOnCancelarUltimaVenda) then
+      fsOnCancelarUltimaVenda(dadosCancelamento, SATResp);
 
-  Retorno := '';
-  if Assigned(fsOnCancelarUltimaVenda) then
-    fsOnCancelarUltimaVenda(dadosCancelamento, Retorno);
-
-  if EstaVazio(Retorno) then
-    Retorno := fsSATClass.CancelarUltimaVenda(chave, dadosCancelamento);
-
-  Result := FinalizaComando( Retorno ) ;
+    if EstaVazio(SATResp) then
+      SATResp := fsSATClass.CancelarUltimaVenda(chave, dadosCancelamento);
+  finally
+    Result := FinalizaComando( SATResp ) ;
+  end;
 
   DecodificaRetorno7000;
 end ;
@@ -1123,10 +1147,16 @@ begin
 end ;
 
 function TACBrSAT.DesbloquearSAT : String ;
+var
+  SATResp: String;
 begin
   fsComandoLog := 'DesbloquearSAT';
   IniciaComando;
-  Result := FinalizaComando( fsSATClass.DesbloquearSAT );
+  try
+    SATResp := fsSATClass.DesbloquearSAT;
+  finally
+    Result := FinalizaComando( SATResp );
+  end;
 end ;
 
 function TACBrSAT.EnviarDadosVenda: String;
@@ -1332,12 +1362,26 @@ end ;
 
 procedure TACBrSAT.SetMAIL(const AValue: TACBrMail);
 begin
-  if AValue <> FMAIL then
+  if AValue <> fsMAIL then
   begin
-    if Assigned(FMAIL) then
-      FMAIL.RemoveFreeNotification(Self);
+    if Assigned(fsMAIL) then
+      fsMAIL.RemoveFreeNotification(Self);
 
-    FMAIL := AValue;
+    fsMAIL := AValue;
+
+    if AValue <> nil then
+      AValue.FreeNotification(self);
+  end;
+end;
+
+procedure TACBrSAT.SetIntegrador(AValue: TACBrIntegrador);
+begin
+  if AValue <> fsIntegrador then
+  begin
+    if Assigned(fsIntegrador) then
+      fsIntegrador.RemoveFreeNotification(Self);
+
+    fsIntegrador := AValue;
 
     if AValue <> nil then
       AValue.FreeNotification(self);
@@ -1351,7 +1395,10 @@ begin
   if fsModelo = AValue then exit ;
 
   if fsInicializado then
-     raise EACBrSATErro.Create( cACBrSATSetModeloException );
+    raise EACBrSATErro.Create( cACBrSATSetModeloException );
+
+  if (AValue = mfe_Integrador_XML) and (not Assigned(fsIntegrador)) then
+    raise EACBrSATErro.Create( cACBrSATSemIntegrador );
 
   wArqLOG := ArqLOG ;
 
@@ -1382,6 +1429,16 @@ begin
   if FileName = '' then
     fsNomeDLL := PathWithDelim( fsNomeDLL ) + cLIBSAT;
 end ;
+
+procedure TACBrSAT.SetAguardandoResposta(AValue: Boolean);
+begin
+  if fsAguardandoResposta = AValue then
+    Exit;
+
+  fsAguardandoResposta := AValue;
+  if Assigned(fsOnAguardandoRespostaChange) then
+    fsOnAguardandoRespostaChange(Self);
+end;
 
 procedure TACBrSAT.SetExtrato(const Value: TACBrSATExtratoClass);
 Var
@@ -1485,7 +1542,7 @@ begin
 end;
 
 function TACBrSAT.CalcCFeNomeArq(Pasta: String; NomeArquivo: String;
-  Sufixo: String): String;
+  Sufixo: String; Extensao: String): String;
 var
   Dir: String;
 begin
@@ -1497,11 +1554,11 @@ begin
   if NomeArquivo = '' then
     NomeArquivo := fsConfigArquivos.PrefixoArqCFe + CFe.infCFe.ID;
 
-  Result := Dir + NomeArquivo + Sufixo + '.xml';
+  Result := Dir + NomeArquivo + Sufixo + Extensao;
 end;
 
 function TACBrSAT.CalcCFeCancNomeArq(Pasta: String; NomeArquivo: String;
-  Sufixo: String): String;
+  Sufixo: String; Extensao: String): String;
 var
   Dir, Chave: String;
 begin
@@ -1519,7 +1576,7 @@ begin
     NomeArquivo := fsConfigArquivos.PrefixoArqCFeCanc + Chave;
   end;
 
-  Result := Dir + NomeArquivo + Sufixo + '.xml';
+  Result := Dir + NomeArquivo + Sufixo + Extensao;
 end;
 
 function TACBrSAT.CodificarPaginaDeCodigoSAT(ATexto: String): AnsiString;
@@ -1551,30 +1608,30 @@ begin
   Result := True;
 end;
 
+function TACBrSAT.VerificarVersaoSAT(const VersaoLayout: Double): Double;
+begin
+  ConsultarStatusOperacional;
+  if (Resposta.codigoDeRetorno <> 10000) then
+    raise EACBrSATErro.Create('VerificarVersaoSAT: Erro ao ConsultarStatusOperacional');
+
+  Result := StringToFloatDef(Status.VER_LAYOUT, -1);
+  if Result <= 0 then
+    raise EACBrSATErro.Create('VerificarVersaoSAT: Falha ao ler versão do SAT');
+
+  if (VersaoLayout > 0) and (VersaoLayout > Result) then
+    raise EACBrSATErro.CreateFmt('VerificarVersaoSAT: SAT não suporta a versão [%f]', [VersaoLayout]);
+end;
+
 procedure TACBrSAT.EnviarEmail(sPara, sAssunto: String; NomeArq: String;
   sMensagem: TStrings; sCC: TStrings; Anexos: TStrings; StreamCFe: TStream);
 var
-  i : Integer;
-  EMails : TStringList;
-  sDelimiter : Char;
+  i: Integer;
 begin
   if not Assigned(MAIL) then
     raise EACBrSATErro.Create('Componente ACBrMail não associado');
 
-  EMails := TStringList.Create;
-  try
-    if Pos( ';', sPara) > 0 then
-       sDelimiter := ';'
-    else
-       sDelimiter := ',';
-    QuebrarLinha( sPara, EMails, '"', sDelimiter);
-
-    for i := 0 to EMails.Count -1 do
-        MAIL.AddAddress( EMails[i] );
-  finally
-    EMails.Free;
-  end;
-
+  MAIL.Clear;
+  MAIL.AddAddress(sPara);
   MAIL.Subject := sAssunto;
 
   if Assigned(sMensagem) then
@@ -1607,7 +1664,7 @@ var
   AnexosEmail:TStrings;
   StreamCFe : TMemoryStream;
 begin
-  if not Assigned(FMAIL) then
+  if not Assigned(fsMAIL) then
     raise EACBrSATErro.Create('Componente ACBrMail não associado');
 
   AnexosEmail := TStringList.Create;
