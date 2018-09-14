@@ -526,7 +526,7 @@ begin
     Exit;
 
   aSocket := BuscarPorIP(aIP);
-  // Desliga a Thread desta coenxão, para ler a resposta manualmente
+  // Desliga a Thread desta conexão, para ler a resposta manualmente
   if aSocket.Owner is TACBrTCPServerThread then
     TACBrTCPServerThread(aSocket.Owner).Enabled := False;
 

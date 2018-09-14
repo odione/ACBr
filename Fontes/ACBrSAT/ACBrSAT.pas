@@ -53,12 +53,16 @@ type
    TACBrSATCalcPathEvent = procedure (var APath: String; ACNPJ: String; AData: TDateTime) of object;
 
    { TACBrSAT }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
    TACBrSAT = class( TACBrComponent )
    private
      fsCFe : TCFe ;
      fsCFeCanc : TCFeCanc ;
      fsnumeroSessao : Integer ;
+     fsAguardandoResposta: Boolean;
+     fsOnAguardandoRespostaChange: TNotifyEvent;
      fsOnGetcodigoDeAtivacao : TACBrSATGetChave ;
      fsOnGetNumeroSessao: TACBrSATGetNumeroSessao;
      fsOnGetsignAC : TACBrSATGetChave ;
@@ -111,7 +115,7 @@ type
     procedure SetMAIL(const AValue: TACBrMail);
     function GravarStream(AStream: TStream): Boolean;
    protected
-     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
    public
      procedure DecodificaRetorno6000;
      procedure DecodificaRetorno7000;
