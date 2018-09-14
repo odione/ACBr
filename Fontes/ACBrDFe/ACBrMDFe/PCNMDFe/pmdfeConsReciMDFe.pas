@@ -42,7 +42,8 @@ interface
 
 uses
   SysUtils, Classes,
-  pcnAuxiliar, pcnConversao, pcnGerador, ACBrUtil, pmdfeConversaoMDFe;
+  pcnAuxiliar, pcnConversao, pcnGerador, ACBrUtil, pmdfeConversaoMDFe,
+  pcnConsts;
 
 type
 
@@ -56,7 +57,6 @@ type
     constructor Create;
     destructor Destroy; override;
     function GerarXML: Boolean;
-    function ObterNomeArquivo: String;
   published
     property Gerador: TGerador       read FGerador write FGerador;
     property tpAmb: TpcnTipoAmbiente read FtpAmb   write FtpAmb;
@@ -77,11 +77,6 @@ destructor TConsReciMDFe.Destroy;
 begin
   FGerador.Free;
   inherited;
-end;
-
-function TConsReciMDFe.ObterNomeArquivo: String;
-begin
-  Result := OnlyNumber(FnRec) + '-ped-rec.xml';
 end;
 
 function TConsReciMDFe.GerarXML: Boolean;

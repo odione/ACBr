@@ -42,6 +42,9 @@ uses
   Forms, SysUtils, Classes, ACBrMDFeDAMDFeClass, pmdfeMDFe;
 
 type
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrMDFeDAMDFeRL = class(TACBrMDFeDAMDFeClass)
   private
   protected
@@ -232,7 +235,8 @@ begin
               FMargemEsquerda,
               FMargemDireita,
               FImpressora,
-              TACBrMDFe(ACBrMDFe).Manifestos.Items[j].MDFe);
+              TACBrMDFe(ACBrMDFe).Manifestos.Items[j].MDFe,
+              PrintDialog);
             Impresso := True;
             Break;
           end;
@@ -251,7 +255,9 @@ begin
             FMargemInferior,
             FMargemEsquerda,
             FMargemDireita,
-            FImpressora);
+            FImpressora,
+            Nil,
+            PrintDialog);
         end;
       end;
     end
@@ -270,7 +276,9 @@ begin
           FMargemInferior,
           FMargemEsquerda,
           FMargemDireita,
-          FImpressora);
+          FImpressora,
+          Nil,
+          PrintDialog);
       end;
     end;
   finally

@@ -81,12 +81,11 @@ Begin
 End;
 
 Procedure TACBrTERWilbor.LeBalanca(  Terminal : Word = 0 );
-  var PesoOk : string ;
 Begin
     if TACBrTER( fpOwner ).Comutadora Then
      begin
        fpDevice.EnviaString( 'S'+Format('%2.2d', [Terminal]) + #5  );
-       PesoOk := fpDevice.LeString( 500 );
+       fpDevice.LeString( 500 );
      end
     else
      begin
@@ -95,9 +94,12 @@ Begin
 End;
 
 Procedure TACBrTERWilbor.LeSerial( MillisecTimeOut: Integer );
-Var Packet : String;
+var
+  Packet: String;
+  nToque: Integer;
 Begin
   Try
+     nToque := IfThen(fpDuplaConfirmacao, 1, 0);
      Packet := fpDevice.LeString( MillisecTimeOut );
      If TACBrTER( fpOwner ).Comutadora Then
       begin   //Possui Comutadora gerenciando vários Terminais?
@@ -109,7 +111,7 @@ Begin
       end
      else
       begin
-        while Length( Packet ) > 1 Do
+        while (Length( Packet ) > nToque) Do
         begin
            TACBrTER( fpOwner ).DoRecebeChar( 0, Packet[1] );
            Delete( Packet, 1, 1 );

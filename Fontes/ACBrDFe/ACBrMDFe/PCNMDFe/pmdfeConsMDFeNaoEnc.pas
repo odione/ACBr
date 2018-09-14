@@ -42,7 +42,8 @@ interface
 
 uses
   SysUtils, Classes,
-  pcnAuxiliar, pcnConversao, pcnGerador, ACBrUtil, pmdfeConversaoMDFe;
+  pcnAuxiliar, pcnConversao, pcnGerador, ACBrUtil, pmdfeConversaoMDFe,
+  pcnConsts;
 
 type
 
@@ -50,17 +51,16 @@ type
   private
     FGerador: TGerador;
     FtpAmb: TpcnTipoAmbiente;
-    FCNPJ: String;
+    FCNPJCPF: String;
     FVersao: String;
   public
     constructor Create;
     destructor Destroy; override;
     function GerarXML: Boolean;
-    function ObterNomeArquivo: String;
   published
     property Gerador: TGerador       read FGerador write FGerador;
     property tpAmb: TpcnTipoAmbiente read FtpAmb   write FtpAmb;
-    property CNPJ: String            read FCNPJ    write FCNPJ;
+    property CNPJCPF: String         read FCNPJCPF write FCNPJCPF;
     property Versao: String          read FVersao  write FVersao;
   end;
 
@@ -79,31 +79,18 @@ begin
   inherited;
 end;
 
-function TConsMDFeNaoEnc.ObterNomeArquivo: String;
-var
-  DataHora: TDateTime;
-  Year, Month, Day, Hour, Min, Sec, Milli: Word;
-  AAAAMMDDTHHMMSS: String;
-begin
-  Datahora:=now;
-  DecodeTime(DataHora, Hour, Min, Sec, Milli);
-  DecodeDate(DataHora, Year, Month, Day);
-  AAAAMMDDTHHMMSS := IntToStrZero(Year, 4) + IntToStrZero(Month, 2) + IntToStrZero(Day, 2) +
-    IntToStrZero(Hour, 2) + IntToStrZero(Min, 2) + IntToStrZero(Sec, 2);
-  Result := AAAAMMDDTHHMMSS + '-ped-cons.xml';
-end;
-
 function TConsMDFeNaoEnc.GerarXML: Boolean;
 begin
- Gerador.ArquivoFormatoXML := '';
+  Gerador.ArquivoFormatoXML := '';
 
- Gerador.wGrupo('consMDFeNaoEnc ' + NAME_SPACE_MDFE + ' versao="' + Versao + '"');
- Gerador.wCampo(tcStr, 'CP03', 'tpAmb', 01, 01, 1, tpAmbToStr(FtpAmb), DSC_TPAMB);
- Gerador.wCampo(tcStr, 'CP04', 'xServ', 24, 24, 1, 'CONSULTAR NÃO ENCERRADOS', DSC_XSERV);
- Gerador.wCampo(tcEsp, 'CP05', 'CNPJ ', 14, 14, 1, OnlyNumber(FCNPJ), DSC_CNPJ);
- Gerador.wGrupo('/consMDFeNaoEnc');
+  Gerador.wGrupo('consMDFeNaoEnc ' + NAME_SPACE_MDFE + ' versao="' + Versao + '"');
+  Gerador.wCampo(tcStr, 'CP03', 'tpAmb', 01, 01, 1, tpAmbToStr(FtpAmb), DSC_TPAMB);
+  Gerador.wCampo(tcStr, 'CP04', 'xServ', 24, 24, 1, ACBrStr('CONSULTAR NÃO ENCERRADOS'), DSC_XSERV);
+  Gerador.wCampoCNPJCPF('CP05', 'CP05a', OnlyNumber(FCNPJCPF));
+//  Gerador.wCampo(tcEsp, 'CP05', 'CNPJ ', 14, 14, 1, OnlyNumber(FCNPJCPF), DSC_CNPJ);
+  Gerador.wGrupo('/consMDFeNaoEnc');
 
- Result := (Gerador.ListaDeAlertas.Count = 0);
+  Result := (Gerador.ListaDeAlertas.Count = 0);
 end;
 
 end.

@@ -40,11 +40,14 @@ unit ACBrDFeWebService;
 
 interface
 
-uses Classes, SysUtils,
+uses Classes, SysUtils, strutils,
   {$IFNDEF NOGUI}
    {$IFDEF CLX} QDialogs,{$ELSE} Dialogs,{$ENDIF}
   {$ENDIF}
-  ACBrDFeConfiguracoes, ACBrDFe, pcnGerador;
+  ACBrDFeConfiguracoes, ACBrIntegrador, ACBrDFe, pcnGerador;
+
+const
+  CErroSemResposta = 'Erro ao obter resposta do webservice.';
 
 type
 
@@ -82,12 +85,14 @@ type
     procedure DefinirServicoEAction; virtual;
     procedure DefinirURL; virtual;
     procedure DefinirDadosMsg; virtual;
+    procedure DefinirDadosIntegrador; virtual;
     procedure DefinirEnvelopeSoap; virtual;
     procedure SalvarEnvio; virtual;
     procedure EnviarDados; virtual;
     function TratarResposta: Boolean; virtual;
     procedure SalvarResposta; virtual;
     procedure FinalizarServico; virtual;
+    procedure VerificarSemResposta; virtual;
 
     function GetUrlWsd: String; virtual;
 
@@ -132,7 +137,7 @@ implementation
 
 uses
   ACBrDFeUtil, ACBrDFeException, ACBrUtil,
-  pcnAuxiliar;
+  pcnAuxiliar, pcnConversao, synacode;
 
 { TDFeWebService }
 
@@ -167,6 +172,8 @@ begin
   FPRetornoWS := '';
   FPRetWS := '';
   FPMsg := '';
+  if Assigned(FPDFeOwner.Integrador) then
+    FPDFeOwner.Integrador.Clear;
 end;
 
 function TDFeWebService.Executar: Boolean;
@@ -175,9 +182,13 @@ var
 begin
   { Sobrescrever apenas se realmente necessário }
 
+  FazerLog('Inicio '+ClassName, False);
   InicializarServico;
   try
     DefinirDadosMsg;
+    if Assigned(FPDFeOwner.Integrador) then
+      DefinirDadosIntegrador;
+
     DefinirEnvelopeSoap;
     SalvarEnvio;
 
@@ -250,6 +261,17 @@ begin
   GerarException(ACBrStr('DefinirDadosMsg não implementado para: ') + ClassName);
 end;
 
+procedure TDFeWebService.DefinirDadosIntegrador;
+begin
+  if not Assigned(FPDFeOwner.Integrador) then Exit;
+
+  FPDFeOwner.Integrador.Clear;
+  FPDFeOwner.Integrador.Parametros.Values['versaoDados'] := FPVersaoServico;
+  FPDFeOwner.Integrador.Parametros.Values['cUF'] := IntToStr(FPConfiguracoes.WebServices.UFCodigo);
+
+  { Sobrescrever nas classes filhas, para informar NomeComponente, NomeMetodo }
+end;
+
 
 procedure TDFeWebService.DefinirEnvelopeSoap;
 var
@@ -297,38 +319,87 @@ end;
 
 procedure TDFeWebService.EnviarDados;
 Var
-  Tentar, Tratado: Boolean;
+  Tentar, Tratado, TemCertificadoConfigurado: Boolean;
+  HTTPResultCode, InternalErrorCode: Integer;
 begin
   { Sobrescrever apenas se necessário }
 
-  FPRetWS := '';
+  FPRetWS     := '';
   FPRetornoWS := '';
+
+  TemCertificadoConfigurado := (FPConfiguracoes.Certificados.NumeroSerie <> '') or
+                               (FPConfiguracoes.Certificados.DadosPFX <> '') or
+                               (FPConfiguracoes.Certificados.ArquivoPFX <> '');
+
+  if TemCertificadoConfigurado then
+    if FPConfiguracoes.Certificados.VerificarValidade then
+       if (FPDFeOwner.SSL.CertDataVenc < Now) then
+         raise EACBrDFeException.Create('Data de Validade do Certificado já expirou: '+
+                                            FormatDateBr(FPDFeOwner.SSL.CertDataVenc));
 
   { Verifica se precisa converter o Envelope para UTF8 antes de ser enviado.
      Entretanto o Envelope pode já ter sido convertido antes, como por exemplo,
      para assinatura.
-     Se o XML está assinado, não deve modificar o conteúdo }
-  if not XmlEstaAssinado(FPEnvelopeSoap) then
+     Se o XML está assinado, não deve modificar o conteúdo
+
+     Quando FPMimeType = multipart/form-data é binário e não deve sofrer encoding
+                         Apenas se MimeType for do tipo XML deve tentar converter
+
+     https://www.w3schools.com/tags/att_form_enctype.asp
+  }
+
+  if (EstaVazio(FPMimeType) or (Pos('xml',LowerCase(FPMimeType)) > 0 )) and
+     ( not XmlEstaAssinado(FPEnvelopeSoap)) then
+  begin
     FPEnvelopeSoap := ConverteXMLtoUTF8(FPEnvelopeSoap);
+  end;
 
   Tentar := True;
   while Tentar do
   begin
-    Tentar := False;
+    Tentar  := False;
     Tratado := False;
-
-    if (FPConfiguracoes.Certificados.NumeroSerie <> '') then  // Tem Certificado carregado ?
-      if FPConfiguracoes.Certificados.VerificarValidade then
-         if (FPDFeOwner.SSL.CertDataVenc < Now) then
-           raise EACBrDFeException.Create('Data de Validade do Certificado já expirou: '+
-                                          FormatDateBr(FPDFeOwner.SSL.CertDataVenc));
+    FPRetWS     := '';
+    FPRetornoWS := '';
+    HTTPResultCode := 0;
+    InternalErrorCode := 0;
 
     try
-      FPRetornoWS := FPDFeOwner.SSL.Enviar(FPEnvelopeSoap, FPURL, FPSoapAction, FPMimeType);
+      if Assigned(FPDFeOwner.OnTransmit) then  // Envio por Evento... Aplicação cuidará do envio
+      begin
+        FPDFeOwner.OnTransmit( FPEnvelopeSoap, FPURL, FPSoapAction,
+                               FPMimeType, FPRetornoWS, HTTPResultCode, InternalErrorCode);
+        if (InternalErrorCode <> 0) then
+          raise EACBrDFeException.Create('Erro ao Transmitir');
+      end
+
+      else if Assigned( FPDFeOwner.Integrador ) then   // Envio pelo Integrador Fiscal (CE)
+      begin
+        FPDFeOwner.Integrador.Parametros.Values['dados'] := EncodeBase64(FPEnvelopeSoap);
+        FPDFeOwner.Integrador.Enviar(True);
+        if (FPDFeOwner.Integrador.Respostas.Count >= 6) then
+          FPRetornoWS := DecodeBase64(FPDFeOwner.Integrador.Respostas[6])
+        else
+        begin
+          if (FPDFeOwner.Integrador.Respostas.Count >= 2) then
+            raise EACBrDFeException.Create(FPDFeOwner.Integrador.Respostas[2])
+          else
+            raise EACBrDFeException.Create('Resposta do Integrador inválida');
+        end;
+      end
+
+      else   // Envio interno, por TDFeSSL
+      begin
+        try
+          FPRetornoWS := FPDFeOwner.SSL.Enviar(FPEnvelopeSoap, FPURL, FPSoapAction, FPMimeType);
+        finally
+          HTTPResultCode := FPDFeOwner.SSL.HTTPResultCode;
+          InternalErrorCode := FPDFeOwner.SSL.InternalErrorCode;
+        end;
+      end;
     except
       if Assigned(FPDFeOwner.OnTransmitError) then
-        FPDFeOwner.OnTransmitError( FPDFeOwner.SSL.HTTPResultCode,
-                                    FPDFeOwner.SSL.InternalErrorCode,
+        FPDFeOwner.OnTransmitError( HTTPResultCode, InternalErrorCode,
                                     FPURL, FPEnvelopeSoap, FPSoapAction,
                                     Tentar, Tratado) ;
 
@@ -439,7 +510,9 @@ begin
   AOpcoes.FormatoAlerta := FPDFeOwner.Configuracoes.Geral.FormatoAlerta;
   AOpcoes.RetirarAcentos := FPDFeOwner.Configuracoes.Geral.RetirarAcentos;
   AOpcoes.RetirarEspacos := FPDFeOwner.Configuracoes.Geral.RetirarEspacos;
+  AOpcoes.IdentarXML := FPDFeOwner.Configuracoes.Geral.IdentarXML;
   pcnAuxiliar.TimeZoneConf.Assign( FPDFeOwner.Configuracoes.WebServices.TimeZoneConf );
+  AOpcoes.QuebraLinha := FPDFeOwner.Configuracoes.WebServices.QuebradeLinha;
 end;
 
 function TDFeWebService.GerarMsgErro(E: Exception): String;
@@ -460,6 +533,14 @@ procedure TDFeWebService.FinalizarServico;
 begin
   { Sobrescrever apenas se necessário }
 
+end;
+
+procedure TDFeWebService.VerificarSemResposta;
+begin
+  { Sobrescrever apenas se necessário }
+  if EstaVazio(FPRetWS) then
+    raise EACBrDFeException.Create( CErroSemResposta +
+          ifthen(NaoEstaVazio(FPRetornoWS),sLineBreak+FPRetornoWS,''));
 end;
 
 function TDFeWebService.GetUrlWsd: String;

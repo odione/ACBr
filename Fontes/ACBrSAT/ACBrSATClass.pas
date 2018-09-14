@@ -45,7 +45,8 @@ unit ACBrSATClass ;
 interface
 
 uses
-  Classes, SysUtils, pcnConversao ;
+  Classes, SysUtils,
+  pcnConversao, ACBrDFeSSL;
 
 const
   cACBrSAT_Versao      = '0.2.0' ;
@@ -100,8 +101,12 @@ type
     fsinfCFe_versaoDadosEnt : Real ;
     fside_tpAmb : TpcnTipoAmbiente ;
     fsPaginaDeCodigo: Word;
+    fsArqSchema: String;
+    fsXmlSignLib: TSSLXmlSignLib;
+
     function GetEhUTF8: Boolean;
     procedure SetEhUTF8(AValue: Boolean);
+    procedure SetXmlSignLib(AValue: TSSLXmlSignLib);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -126,6 +131,9 @@ type
        write fsemit_indRatISSQN;
     property EhUTF8: Boolean read GetEhUTF8 write SetEhUTF8;
     property PaginaDeCodigo : Word read fsPaginaDeCodigo write fsPaginaDeCodigo;
+
+    property ArqSchema : String read fsArqSchema write fsArqSchema ;
+    property XmlSignLib: TSSLXmlSignLib read fsXmlSignLib write SetXmlSignLib;
   end;
 
   { TACBrSATConfigArquivos }
@@ -142,13 +150,19 @@ type
     fsPastaEnvio: String;
     fsSalvarEnvio: Boolean;
     fsSepararPorCNPJ: Boolean;
+    fsSepararPorAno: Boolean;
     fsSepararPorMes: Boolean;
+    fsSepararPorDia: Boolean;
+    fsSepararPorModelo: Boolean;
     function GetPastaCFeCancelamento: String;
     function GetPastaCFeVenda: String;
     function GetPastaEnvio: String;
     procedure SetPastaCFeCancelamento(AValue: String);
     procedure SetPastaCFeVenda(AValue: String);
     procedure SetPastaEnvio(AValue: String);
+    procedure SetSepararPorDia(const Value: Boolean);
+    procedure SetSepararPorMes(const Value: Boolean);
+    procedure SetSepararPorAno(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -161,16 +175,17 @@ type
     property SalvarEnvio: Boolean read fsSalvarEnvio write fsSalvarEnvio default false;
 
     property SepararPorCNPJ: Boolean read fsSepararPorCNPJ write fsSepararPorCNPJ default False;
-    property SepararPorMes: Boolean read fsSepararPorMes write fsSepararPorMes default False;
+    property SepararPorModelo: Boolean read fsSepararPorModelo write fsSepararPorModelo default False;
+    property SepararPorAno: Boolean read fsSepararPorAno write SetSepararPorAno default False;
+    property SepararPorMes: Boolean read fsSepararPorMes write SetSepararPorMes default False;
+    property SepararPorDia: Boolean read fsSepararPorDia write SetSepararPorDia default False;
 
     property PastaCFeVenda: String read GetPastaCFeVenda write SetPastaCFeVenda;
-    property PastaCFeCancelamento: String read GetPastaCFeCancelamento
-       write SetPastaCFeCancelamento;
+    property PastaCFeCancelamento: String read GetPastaCFeCancelamento write SetPastaCFeCancelamento;
     property PastaEnvio: String read GetPastaEnvio write SetPastaEnvio;
 
     property PrefixoArqCFe: String read fsPrefixoArqCFe write fsPrefixoArqCFe;
-    property PrefixoArqCFeCanc: String read fsPrefixoArqCFeCanc
-       write fsPrefixoArqCFeCanc;
+    property PrefixoArqCFeCanc: String read fsPrefixoArqCFeCanc write fsPrefixoArqCFeCanc;
   end;
 
   { TACBrSATRespostaClass }
@@ -350,7 +365,9 @@ begin
   fsSalvarEnvio := False;
 
   fsSepararPorCNPJ := False;
+  fsSepararPorModelo := False;
   fsSepararPorMes := False;
+  fsSepararPorDia := False;
 
   fsPrefixoArqCFe := CPREFIXO_ArqCFe;
   fsPrefixoArqCFeCanc := CPREFIXO_ArqCFeCanc;
@@ -398,11 +415,30 @@ begin
   fsPastaEnvio := PathWithoutDelim( AValue );
 end;
 
+procedure TACBrSATConfigArquivos.SetSepararPorDia(const Value: Boolean);
+begin
+  fsSepararPorDia := Value;
+  if fsSepararPorDia then
+    fsSepararPorMes := True;
+end;
+
+procedure TACBrSATConfigArquivos.SetSepararPorMes(const Value: Boolean);
+begin
+  fsSepararPorMes := Value;
+  if not fsSepararPorMes then
+    fsSepararPorDia := False;
+end;
+
+procedure TACBrSATConfigArquivos.SetSepararPorAno(const Value: Boolean);
+begin
+  fsSepararPorAno := Value;
+end;
+
 function TACBrSATConfigArquivos.CalcPath(APath: String; CNPJ: String;
   Data: TDateTime): String;
 var
-  wDia, wMes, wAno: word;
-  Dir, AnoMes: String;
+  wDia, wMes, wAno: Word;
+  Dir, Modelo, sAno, sMes, sDia: String;
 begin
   if EstaVazio(APath) then
     Dir := PastaCFeVenda
@@ -411,23 +447,43 @@ begin
 
   if SepararPorCNPJ then
   begin
+    CNPJ := OnlyNumber(CNPJ);
     if EstaVazio(CNPJ) then
-      CNPJ := TACBrSAT(fsOwner).Config.emit_CNPJ;
+      CNPJ := OnlyNumber(TACBrSAT(fsOwner).Config.emit_CNPJ);
 
     if NaoEstaVazio(CNPJ) then
       Dir := PathWithDelim(Dir) + CNPJ;
   end;
 
-  if SepararPorMes then
+  if SepararPorModelo then
+  begin
+    Modelo := TACBrSAT(fsOwner).GetNomeModeloCFe;
+    Dir := PathWithDelim(Dir) + Modelo;
+  end;
+
+  if (SepararPorAno or SepararPorMes or SepararPorDia) then
   begin
     if Data = 0 then
       Data := Now;
 
     DecodeDate(Data, wAno, wMes, wDia);
-    AnoMes := IntToStr(wAno) + IntToStrZero(wMes, 2);
+    sDia := IntToStrZero(wDia, 2);
+    sMes := IntToStrZero(wMes, 2);
+    sAno := IntToStrZero(wAno, 4);
+  end;
 
-    if Pos(AnoMes, Dir) <= 0 then
-      Dir := PathWithDelim(Dir) + AnoMes;
+  if SepararPorAno then
+    Dir := PathWithDelim(Dir) + sAno;
+
+  if SepararPorMes then
+  begin
+    if SepararPorAno then
+      Dir := PathWithDelim(Dir) + sMes
+    else
+      Dir := PathWithDelim(Dir) + sAno + sMes;
+
+    if SepararPorDia then
+      Dir := PathWithDelim(Dir) + sDia;
   end;
 
   with TACBrSAT(fsOwner) do
@@ -607,6 +663,12 @@ begin
 
 end;
 
+procedure TACBrSATConfig.SetXmlSignLib(AValue: TSSLXmlSignLib);
+begin
+  TACBrSAT(fsOwner).SSL.SSLXmlSignLib := AValue;
+  fsXmlSignLib := AValue;
+end;
+
 constructor TACBrSATConfig.Create(AOwner: TComponent);
 begin
   if not (AOwner is TACBrSAT) then
@@ -633,8 +695,11 @@ begin
   fsemit_indRatISSQN      := irSim ;
   fside_CNPJ              := '' ;
   fside_numeroCaixa       := 0 ;
-  fside_tpAmb             := taHomologacao ;
-  fsinfCFe_versaoDadosEnt := cversaoDadosEnt ;
+  fside_tpAmb             := taHomologacao;
+  fsinfCFe_versaoDadosEnt := cversaoDadosEnt;
+
+  fsArqSchema  := '';
+  fsXmlSignLib := xsNone;
 end ;
 
 { EACBrSATErro }
@@ -820,8 +885,9 @@ begin
   if not Assigned( LibPointer )  then
   begin
     sLibName := NomeDLL;
-    if not FileExists(sLibName) then
-      raise EACBrSATErro.Create( 'Arquivo não encontrado: '+sLibName );
+    if ExtractFilePath(sLibName) <> '' then
+      if not FileExists(sLibName) then
+        raise EACBrSATErro.Create( 'Arquivo não encontrado: '+sLibName );
 
     if not FunctionDetect( sLibName, FuncName, LibPointer) then
     begin

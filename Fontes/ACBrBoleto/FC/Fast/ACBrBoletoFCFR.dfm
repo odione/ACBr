@@ -1,18 +1,18 @@
 object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Left = 106
-  Top = 6
   Height = 341
   Width = 539
   object frxPDFExport: TfrxPDFExport
     UseFileCache = True
     ShowProgress = True
     OverwritePrompt = False
+    DataOnly = False
     PrintOptimized = True
     Outline = False
     Background = True
     HTMLTags = True
+    Quality = 95
     Author = 'FastReport'
     Subject = 'Exportando DANFE para PDF'
     ProtectionFlags = [ePrint, eModify, eCopy, eAnnot]
@@ -45,7 +45,7 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     Top = 200
   end
   object frxReport: TfrxReport
-    Version = '4.7.37'
+    Version = '5.2.3'
     DotMatrixReport = False
     IniFile = '\Software\Fast Reports'
     PreviewOptions.AllowEdit = False
@@ -56,12 +56,8 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     ReportOptions.CreateDate = 40401.475989294000000000
     ReportOptions.LastChange = 42257.626775173600000000
     ScriptLanguage = 'PascalScript'
-    ScriptText.Strings = (
-      'begin'
-      ''
-      'end.')
     StoreInDFM = False
-    OnBeforePrint = frxReportBeforePrint
+    OnProgressStart = frxReportProgressStart
     Left = 50
     Top = 36
   end
@@ -69,10 +65,13 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     UseFileCache = True
     ShowProgress = True
     OverwritePrompt = False
+    DataOnly = False
     FixedWidth = True
     Background = False
     Centered = False
     EmptyLines = True
+    Print = False
+    PictureType = gpPNG
     Left = 46
     Top = 148
   end
@@ -105,5 +104,13 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     BCDToCurrency = False
     Left = 192
     Top = 160
+  end
+  object frxJPEGExport: TfrxJPEGExport
+    UseFileCache = True
+    ShowProgress = True
+    OverwritePrompt = False
+    DataOnly = False
+    Left = 40
+    Top = 248
   end
 end

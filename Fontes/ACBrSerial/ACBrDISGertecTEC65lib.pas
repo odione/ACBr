@@ -119,7 +119,7 @@ end;
 procedure TACBrDISGertecTEC65lib.Escrever(Texto: String);
 begin
   if Assigned(xDispStr) then
-    xDispStr( PAnsiChar( ACBrStrToAnsi(Texto)) );
+    xDispStr( PAnsiChar( AnsiString(ACBrStrToAnsi(Texto))) );
 end;
 
 procedure TACBrDISGertecTEC65lib.Ativar;
@@ -162,6 +162,9 @@ end ;
 
 procedure TACBrDISGertecTEC65lib.UnLoadDLLFunctions;
 begin
+  if not Assigned(xOpenTec65) then
+    Exit;
+
   UnLoadLibrary( CTEC65LIB );
 
   xOpenTec65  := Nil;

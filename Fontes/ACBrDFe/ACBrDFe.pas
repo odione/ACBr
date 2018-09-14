@@ -42,7 +42,7 @@ interface
 
 uses
   Classes, SysUtils, IniFiles,
-  ACBrBase, ACBrDFeConfiguracoes, ACBrMail, ACBrDFeSSL,
+  ACBrBase, ACBrDFeConfiguracoes, ACBrMail, ACBrIntegrador, ACBrDFeSSL,
   pcnConversao;
 
 const
@@ -51,26 +51,37 @@ const
   CSCHEMA_SeparadorVersao = '_v';
 
 type
+  TACBrDFeOnTransmit = procedure(const Dados, URL, SoapAction, MimeType: String;
+    var Resposta: String; var HTTPResultCode: Integer; var InternalErrorCode: Integer) of object ;
 
   TACBrDFeOnTransmitError = procedure(const HttpError, InternalError: Integer;
     const URL, DadosEnviados, SoapAction: String; var Retentar: Boolean; var Tratado: Boolean) of object ;
 
   { TACBrDFe }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrDFe = class(TACBrComponent)
   private
     FMAIL: TACBrMail;
+    FIntegrador: TACBrIntegrador;
+    FOnTransmit: TACBrDFeOnTransmit;
     FOnTransmitError: TACBrDFeOnTransmitError;
     FSSL: TDFeSSL;
     FListaDeSchemas: TStringList;
+    FPathSchemas: String;
     FOnStatusChange: TNotifyEvent;
     FOnGerarLog: TACBrGravarLog;
+    function GetOnAntesDeAssinar: TDFeSSLAntesDeAssinar;
     procedure SetAbout(AValue: String);
+    procedure SetAntesDeAssinar(AValue: TDFeSSLAntesDeAssinar);
     procedure SetMAIL(AValue: TACBrMail);
+    procedure SetIntegrador(AValue: TACBrIntegrador);
   protected
     FPConfiguracoes: TConfiguracoes;
     FPIniParams: TMemIniFile;
     FPIniParamsCarregado: Boolean;
+    FPSeparadorVersaoSchema: String;
 
     function GetAbout: String; virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -78,6 +89,12 @@ type
     function CreateConfiguracoes: TConfiguracoes; virtual;
 
     procedure LerParamsIni( ApenasSeNaoLido: Boolean = False); virtual;
+
+    function NomeServicoToNomeSchema(const NomeServico: String): String; virtual;
+    function ExtrairVersaoNomeArquivoSchema(ArqSchema: String): String; virtual;
+    function VersaoSchemaDoubleToString(AVersao: Double): String; virtual;
+    function VersaoSchemaStringToDouble(AVersao: String): Double; virtual;
+    procedure AchaArquivoSchema(NomeSchema: String; var AVersao: Double; var ArqSchema: String); virtual;
 
   public
     property SSL: TDFeSSL read FSSL;
@@ -94,15 +111,16 @@ type
       sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil;
       StreamNFe: TStream = nil; NomeArq: String = ''; sReplyTo: TStrings = nil); virtual;
 
-    function NomeServicoToNomeSchema(const NomeServico: String): String; virtual;
-    procedure AchaArquivoSchema(NomeSchema: String; var Versao: Double;
-      var ArqSchema: String);
-
     procedure LerServicoChaveDeParams(const NomeSessao, NomeServico: String;
       var Versao: Double; var URL: String);
+    procedure LerDeParams(const NomeSessao, NomeServico: String;
+      var Versao: Double; var Servico: String);
     procedure LerServicoDeParams(const ModeloDFe, UF: String;
       const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
-      var Versao: Double; var URL: String);
+      var Versao: Double; var URL: String); overload;
+    procedure LerServicoDeParams(const ModeloDFe, UF: String;
+      const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
+      var Versao: Double; var URL: String; var Servico: String; var SoapAction: String);overload;
     function LerVersaoDeParams(const ModeloDFe, UF: String;
       const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
       VersaoBase: Double): Double; virtual;
@@ -116,11 +134,16 @@ type
 
   published
     property MAIL: TACBrMail read FMAIL write SetMAIL;
+    property Integrador: TACBrIntegrador read FIntegrador write SetIntegrador;
+    property OnTransmit : TACBrDFeOnTransmit read FOnTransmit write FOnTransmit;
     property OnTransmitError : TACBrDFeOnTransmitError read FOnTransmitError
        write FOnTransmitError;
     property OnStatusChange: TNotifyEvent read FOnStatusChange write FOnStatusChange;
     property About: String read GetAbout write SetAbout stored False;
+
     property OnGerarLog: TACBrGravarLog read FOnGerarLog write FOnGerarLog;
+    property OnAntesDeAssinar: TDFeSSLAntesDeAssinar read GetOnAntesDeAssinar
+       write SetAntesDeAssinar;
   end;
 
 implementation
@@ -135,16 +158,20 @@ constructor TACBrDFe.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
+  FPSeparadorVersaoSchema := CSCHEMA_SeparadorVersao;
   FPConfiguracoes := CreateConfiguracoes;
   FPConfiguracoes.Name := 'Configuracoes';
   {$IFDEF COMPILER6_UP}
   FPConfiguracoes.SetSubComponent(True);{ para gravar no DFM/XFM }
   {$ENDIF}
 
-  FMAIL := nil;
+  FMAIL := Nil;
+  FIntegrador := Nil;
+
   // Criando uma instância de FSSL e atribuindo valores de "Configuracoes" a ela;
   FSSL := TDFeSSL.Create;
   FListaDeSchemas := TStringList.Create;
+  FPathSchemas := '';
 
   with FSSL do
   begin
@@ -153,15 +180,21 @@ begin
     NameSpaceURI := GetNameSpaceURI;
     NumeroSerie := Configuracoes.Certificados.NumeroSerie;
     Senha := Configuracoes.Certificados.Senha;
+
     ProxyHost := Configuracoes.WebServices.ProxyHost;
     ProxyPass := Configuracoes.WebServices.ProxyPass;
     ProxyPort := Configuracoes.WebServices.ProxyPort;
     ProxyUser := Configuracoes.WebServices.ProxyUser;
     TimeOut := Configuracoes.WebServices.TimeOut;
-    SSLLib := Configuracoes.Geral.SSLLib;
+    TimeOutPorThread := Configuracoes.WebServices.TimeOutPorThread;
+
+    SSLCryptLib := Configuracoes.Geral.SSLCryptLib;
+    SSLHttpLib := Configuracoes.Geral.SSLHttpLib;
+    SSLXmlSignLib := Configuracoes.Geral.SSLXmlSignLib;
   end;
 
   FOnGerarLog := nil;
+  FOnTransmit := nil;
   FOnTransmitError := nil;
 
   FPIniParams := TMemIniFile.Create(Configuracoes.Arquivos.IniServicos);
@@ -201,6 +234,16 @@ end;
 procedure TACBrDFe.SetAbout(AValue: String);
 begin
   {nada aqui}
+end;
+
+function TACBrDFe.GetOnAntesDeAssinar: TDFeSSLAntesDeAssinar;
+begin
+  Result := FSSL.AntesDeAssinar;
+end;
+
+procedure TACBrDFe.SetAntesDeAssinar(AValue: TDFeSSLAntesDeAssinar);
+begin
+  FSSL.AntesDeAssinar := AValue;
 end;
 
 
@@ -265,12 +308,12 @@ begin
 
   MAIL.ClearAttachments;
   if Assigned(StreamNFe) then
-    MAIL.AddAttachment(StreamNFe, NomeArq);
+    MAIL.AddAttachment(StreamNFe, NomeArq, adAttachment);
 
   if Assigned(Anexos) then
   begin
     for i := 0 to Anexos.Count - 1 do
-      MAIL.AddAttachment(Anexos[i]);
+      MAIL.AddAttachment(Anexos[i], '', adAttachment);
   end;
 
   if Assigned(sCC) then
@@ -294,23 +337,57 @@ begin
   Result := '';
 end;
 
-procedure TACBrDFe.AchaArquivoSchema(NomeSchema: String; var Versao: Double;
+function TACBrDFe.ExtrairVersaoNomeArquivoSchema(ArqSchema: String): String;
+var
+  P1, P2: Integer;
+begin
+  Result := '';
+  P1 := pos(FPSeparadorVersaoSchema, ArqSchema );
+  if (P1 > 0) then
+  begin
+    P1 := P1 + Length(FPSeparadorVersaoSchema);
+    P2 := PosEx(CSCHEMA_EXT, ArqSchema, P1);
+    if (P2 = 0) then
+      P2 := Length(ArqSchema);
+
+    Result := copy(ArqSchema, P1, P2-P1);
+  end;
+end;
+
+function TACBrDFe.VersaoSchemaDoubleToString(AVersao: Double): String;
+begin
+  if (AVersao > 0) then
+    Result := FloatToString(AVersao,'.','0.00')
+  else
+    Result := '';
+end;
+
+function TACBrDFe.VersaoSchemaStringToDouble(AVersao: String): Double;
+begin
+  Result := StringToFloatDef(AVersao, 0);
+end;
+
+procedure TACBrDFe.AchaArquivoSchema(NomeSchema: String; var AVersao: Double;
   var ArqSchema: String);
 Var
   VersaoMaisProxima, VersaoArq: Double;
-  Arq, VersaoStr: String;
+  ArqAtual: String;
   I, P, LenNome: Integer;
-const
-  CSeparadorVersao = '_v';
 begin
   if NomeSchema = '' then exit;
 
   VersaoMaisProxima := 0;
   ArqSchema := '';
 
-  if FListaDeSchemas.Count = 0 then   // Carrega todos arquivos de Schema
+  if (FPathSchemas <> Configuracoes.Arquivos.PathSchemas) then
   begin
-    FindFiles(Configuracoes.Arquivos.PathSchemas +'*.xsd', FListaDeSchemas, False );
+    FListaDeSchemas.Clear;
+    FPathSchemas := Configuracoes.Arquivos.PathSchemas;
+  end;
+
+  if (FListaDeSchemas.Count = 0) then   // Carrega todos arquivos de Schema
+  begin
+    FindFiles(FPathSchemas +'*'+CSCHEMA_EXT, FListaDeSchemas, False );
 
     if FListaDeSchemas.Count = 0 then
       raise EACBrDFeException.Create('Nenhum arquivo de Schema encontrado na pasta: '+sLineBreak+
@@ -319,43 +396,42 @@ begin
     FListaDeSchemas.Sort;
   end;
 
-  if Versao = 0 then
-    P := FListaDeSchemas.IndexOf(NomeSchema+'.xsd')
+  if (AVersao = 0) then
+    ArqAtual := NomeSchema + CSCHEMA_EXT
   else
-    P := FListaDeSchemas.IndexOf(NomeSchema + CSeparadorVersao + FloatToString(Versao,'.','0.00')+'.xsd');
+    ArqAtual := NomeSchema + FPSeparadorVersaoSchema + VersaoSchemaDoubleToString(AVersao) + CSCHEMA_EXT ;
+
+  P := FListaDeSchemas.IndexOf(ArqAtual);
 
   if P >= 0 then
   begin
     ArqSchema := FListaDeSchemas[P];
-    VersaoMaisProxima := Versao;
+    VersaoMaisProxima := AVersao;
   end
-  else if Versao > 0 then
+  else if AVersao > 0 then
   begin
-    NomeSchema := NomeSchema + CSeparadorVersao;
+    NomeSchema := NomeSchema + FPSeparadorVersaoSchema;
     LenNome := Length(NomeSchema);
 
     For I := 0 to FListaDeSchemas.Count-1 do
     begin
-      Arq := FListaDeSchemas[I];
+      ArqAtual := FListaDeSchemas[I];
 
-      if copy(Arq, 1, LenNome) = NomeSchema then
+      if (copy(ArqAtual, 1, LenNome) = NomeSchema) then
       begin
-        VersaoStr := copy( Arq, LenNome+1, Length(Arq));
-        VersaoStr := copy( VersaoStr, 1, Length(VersaoStr)-4);  // Remove '.xsd'
-        VersaoArq := StringToFloatDef(VersaoStr, 0);
-
+        VersaoArq := VersaoSchemaStringToDouble(ExtrairVersaoNomeArquivoSchema(ArqAtual));
         if (VersaoArq > 0) and
            (VersaoArq > VersaoMaisProxima) and
-           (VersaoArq <= Versao) then
+           (VersaoArq <= AVersao) then
         begin
           VersaoMaisProxima := VersaoArq;
-          ArqSchema := Arq;
+          ArqSchema := ArqAtual;
         end;
       end;
     end;
   end;
 
-  Versao := VersaoMaisProxima;
+  AVersao := VersaoMaisProxima;
   if NaoEstaVazio(ArqSchema) then
     ArqSchema := Configuracoes.Arquivos.PathSchemas + ArqSchema;
 end;
@@ -375,7 +451,7 @@ end;
 procedure TACBrDFe.LerServicoChaveDeParams(const NomeSessao, NomeServico: String;
   var Versao: Double; var URL: String);
 var
-  Chave, K: String;
+  Chave, ChaveBase, K: String;
   SL: TStringList;
   I: integer;
   VersaoAtual, VersaoAchada: Double;
@@ -388,7 +464,8 @@ begin
   if not FPIniParams.SectionExists(NomeSessao) then
     exit;
 
-  Chave := NomeServico + '_' + FloatToString(VersaoAtual,'.','0.00');
+  ChaveBase := NomeServico + '_';
+  Chave := ChaveBase + FloatToString(VersaoAtual,'.','0.00');
 
   // Achou com busca exata ? (mesma versao) //
   if NaoEstaVazio(FPIniParams.ReadString(NomeSessao, Chave, '')) then
@@ -397,7 +474,6 @@ begin
   if VersaoAchada = 0 then
   begin
     // Procure por serviço com o mesmo nome, mas com versão inferior //
-    Chave := NomeServico + '_';
     SL := TStringList.Create;
     try
       FPIniParams.ReadSection(NomeSessao, SL);
@@ -405,9 +481,9 @@ begin
       begin
         K := SL[I];
 
-        if copy(K, 1, Length(Chave)) = Chave then
+        if copy(K, 1, Length(ChaveBase)) = ChaveBase then
         begin
-          VersaoAtual := StringToFloatDef(copy(K, Length(Chave) + 1, Length(K)), 0);
+          VersaoAtual := StringToFloatDef(copy(K, Length(ChaveBase) + 1, Length(K)), 0);
 
           if (VersaoAtual > VersaoAchada) and (VersaoAtual <= Versao) then
           begin
@@ -428,11 +504,27 @@ begin
     URL := FPIniParams.ReadString(NomeSessao, NomeServico, '');
 end;
 
+procedure TACBrDFe.LerDeParams(const NomeSessao, NomeServico: String;
+  var Versao: Double; var Servico: String);
+begin
+  LerServicoChaveDeParams(NomeSessao,NomeServico,Versao,Servico);
+end;
+
 procedure TACBrDFe.LerServicoDeParams(const ModeloDFe, UF: String;
   const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
   var Versao: Double; var URL: String);
 var
-  Sessao, NomeSchema, ArqSchema: String;
+  Servico, SoapAction: String;
+begin
+  LerServicoDeParams(ModeloDFe, UF, TipoAmbiente, NomeServico, Versao, URL, Servico, SoapAction);
+end;
+
+procedure TACBrDFe.LerServicoDeParams(const ModeloDFe, UF: String;
+  const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
+  var Versao: Double; var URL: String; var Servico: String;
+  var SoapAction: String);
+var
+  Sessao, ListaSessoes, SessaoUsar, NomeSchema, ArqSchema: String;
   VersaoAchada, VersaoSchema: Double;
 begin
   if EstaVazio(ModeloDFe) then
@@ -444,19 +536,37 @@ begin
   Sessao := ModeloDFe + '_' + UF + '_' + IfThen(TipoAmbiente = taProducao, 'P', 'H');
   VersaoAchada := Versao;
 
-  LerServicoChaveDeParams( Sessao, NomeServico, VersaoAchada, URL);
+  LerServicoChaveDeParams( Sessao, NomeServico, VersaoAchada, URL );
+  LerDeParams( FPIniParams.ReadString(Sessao, 'WSDL', ''), NomeServico, VersaoAchada, Servico );
+  LerDeParams( FPIniParams.ReadString(Sessao, 'SoapAction', ''), NomeServico, VersaoAchada, SoapAction );
 
   // Se não achou, verifique se está fazendo redirecionamento "Usar="
-  if EstaVazio(URL) then
+  ListaSessoes := '';  // proteção contra redirecionamento circular
+  while EstaVazio(URL) do
   begin
+    if NaoEstaVazio(Sessao) then
+    begin
+      if (Pos(Sessao, ListaSessoes) > 0) then
+        raise EACBrDFeException.Create('Redirecionamento circular detectado: Sessão "'+Sessao+'" no arquivo "'+
+          Configuracoes.WebServices.ResourceName+'"');
+
+      ListaSessoes := ListaSessoes + ';' + Sessao;
+    end;
+
     if FPIniParams.SectionExists(Sessao) then
     begin
-      Sessao := FPIniParams.ReadString(Sessao, 'Usar', '');
-      if NaoEstaVazio(Sessao) then
+      SessaoUsar := FPIniParams.ReadString(Sessao, 'Usar', '');
+      if NaoEstaVazio(SessaoUsar) then
       begin
+        Sessao := SessaoUsar;
         VersaoAchada := Versao;
-        LerServicoChaveDeParams( Sessao, NomeServico, VersaoAchada, URL);
-      end;
+        LerServicoChaveDeParams( Sessao, NomeServico, VersaoAchada, URL );
+        LerDeParams(  FPIniParams.ReadString(Sessao, 'WSDL', ''), NomeServico, VersaoAchada, Servico );
+        LerDeParams( FPIniParams.ReadString(Sessao, 'SoapAction', ''), NomeServico, VersaoAchada, SoapAction );
+      end
+      else
+        raise EACBrDFeException.Create('URL para o serviço "' + NomeServico + '" não encontrada na sessão "'+Sessao+'" no arquivo "'+
+                                       Configuracoes.WebServices.ResourceName+'"');
     end
     else
       raise EACBrDFeException.Create('Sessão "'+Sessao+'", não encontrada no arquivo "'+
@@ -474,9 +584,9 @@ begin
       VersaoAchada := VersaoSchema;
   end;
 
-  Versao := VersaoAchada;
+  if VersaoAchada > 0 then
+    Versao := VersaoAchada;
 end;
-
 function TACBrDFe.LerVersaoDeParams(const ModeloDFe, UF: String;
   const TipoAmbiente: TpcnTipoAmbiente; const NomeServico: String;
   VersaoBase: Double): Double;
@@ -529,6 +639,7 @@ begin
   Tratado := False;
   FazerLog('ERRO: ' + MsgErro, Tratado);
 
+  // MsgErro já está na String Nativa da IDE... por isso deve usar "CreateDef"
   if not Tratado then
     raise EACBrDFeException.CreateDef(MsgErro);
 end;
@@ -547,12 +658,32 @@ begin
   end;
 end;
 
+procedure TACBrDFe.SetIntegrador(AValue: TACBrIntegrador);
+begin
+  if AValue <> FIntegrador then
+  begin
+    if Assigned(FIntegrador) then
+      FIntegrador.RemoveFreeNotification(Self);
+
+    FIntegrador := AValue;
+
+    if AValue <> Nil then
+      AValue.FreeNotification(Self);
+  end;
+end;
+
 procedure TACBrDFe.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
 
-  if (Operation = opRemove) and (FMAIL <> nil) and (AComponent is TACBrMail) then
-    FMAIL := nil;
+  if (Operation = opRemove) then
+  begin
+    if (FMAIL <> Nil) and (AComponent is TACBrMail) then
+      FMAIL := Nil
+
+    else if (FIntegrador <> Nil) and (AComponent is TACBrIntegrador) then
+      FIntegrador := Nil;
+  end;
 end;
 
 end.

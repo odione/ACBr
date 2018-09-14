@@ -76,7 +76,7 @@
 {$EndIf}
 
 // Descomente essa linha, para usar a carga de DLL tardia, nas Units do OpenSSL  (Apenas Delphi)
-{.$DEFINE USE_DELAYED}
+{$DEFINE USE_DELAYED}
 
 // Descomente essa linha, para usar ZLibExGZ de \ACBr\Fontes\Terceiros\ZLibExGZ
 // ZLib de D7 contém bugs e está incompleta. Caso contrário usará compactação nativa, unit "ZLib"

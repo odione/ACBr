@@ -51,11 +51,14 @@ unit ACBrCTeDACTEClass;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, ACBrBase,
   pcteCTE, pcnConversao;
 
 type
-  TACBrCTeDACTEClass = class(TComponent)
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
+  TACBrCTeDACTEClass = class(TACBrComponent)
   private
     function GetPathPDF: String;
     procedure SetPathPDF(const Value: String);
@@ -67,6 +70,7 @@ type
     FSistema: String;
     FUsuario: String;
     FPathPDF: String;
+    FUsarSeparadorPathPDF: Boolean;
     FImpressora: String;
     FImprimirHoraSaida: Boolean;
     FImprimirHoraSaida_Hora: String;
@@ -107,6 +111,7 @@ type
     property Sistema: String                read FSistema                write FSistema;
     property Usuario: String                read FUsuario                write FUsuario;
     property PathPDF: String                read GetPathPDF              write SetPathPDF;
+    property UsarSeparadorPathPDF: Boolean  read FUsarSeparadorPathPDF   write FUsarSeparadorPathPDF default False;
     property Impressora: String             read FImpressora             write FImpressora;
     property ImprimirHoraSaida: Boolean     read FImprimirHoraSaida      write FImprimirHoraSaida;
     property ImprimirHoraSaida_Hora: String read FImprimirHoraSaida_Hora write FImprimirHoraSaida_Hora;
@@ -144,6 +149,7 @@ begin
   FLogo       := '';
   FSistema    := '';
   FUsuario    := '';
+  FUsarSeparadorPathPDF := False;
   FPathPDF    := '';
   FImpressora := '';
 
@@ -249,17 +255,60 @@ begin
 end;
 
 function TACBrCTeDACTEClass.GetPathPDF: String;
+var
+  dhEmissao: TDateTime;
+  DescricaoModelo: String;
+  ACTe: TCTe;
 begin
-  if Trim(FPathPDF) <> '' then
-    Result := IncludeTrailingPathDelimiter(FPathPDF)
-  else
-    Result := Trim(FPathPDF)
+  if (csDesigning in ComponentState) then
+  begin
+    Result := FPathPDF;
+    Exit;
+  end;
+
+  Result := Trim(FPathPDF);
+
+  if EstaVazio(Result) then  // Se não pode definir o Parth, use o Path da Aplicaçao
+    Result := PathWithDelim( ExtractFilePath(ParamStr(0))) + 'pdf';
+
+  if FUsarSeparadorPathPDF then
+  begin
+    if Assigned(ACBrCTe) then  // Se tem o componente ACBrCTe
+    begin
+      if TACBrCTe(ACBrCTe).Conhecimentos.Count > 0 then  // Se tem algum Conhecimento carregado
+      begin
+        ACTe := TACBrCTe(ACBrCTe).Conhecimentos.Items[0].CTe;
+        if TACBrCTe(ACBrCTe).Configuracoes.Arquivos.EmissaoPathCTe then
+          dhEmissao := ACTe.Ide.dhEmi
+        else
+          dhEmissao := Now;
+
+        DescricaoModelo := '';
+        if TACBrCTe(ACBrCTe).Configuracoes.Arquivos.AdicionarLiteral then
+        begin
+           case ACTe.Ide.modelo of
+             0: DescricaoModelo := TACBrCTe(FACBrCTe).GetNomeModeloDFe;
+             57: DescricaoModelo := 'CTe';
+             67: DescricaoModelo := 'CTeOS';
+           end;
+        end;
+
+        Result := TACBrCTe(FACBrCTe).Configuracoes.Arquivos.GetPath(
+                         Result,
+                         DescricaoModelo,
+                         ACTe.Emit.CNPJ,
+                         dhEmissao,
+                         DescricaoModelo);
+      end;
+    end;
+  end;
+
+  Result := PathWithDelim( Result );
 end;
 
 procedure TACBrCTeDACTEClass.SetPathPDF(const Value: String);
 begin
-  if Trim(Value) <> '' then
-    FPathPDF := IncludeTrailingPathDelimiter(Value);
+  FPathPDF := PathWithDelim(Value);
 end;
 
 end.

@@ -56,7 +56,7 @@ interface
 
 uses
   SysUtils, Classes, DB, DBClient, ACBrBase, ACBrBoleto, StrUtils,
-  frxClass, frxDBSet, frxBarcode, frxExportHTML, frxExportPDF;
+  frxClass, frxDBSet, frxBarcode, frxExportHTML, frxExportPDF, frxExportImage;
 
 const
   CACBrBoletoFCFR_Versao = '0.0.15';
@@ -67,6 +67,9 @@ type
   TdmACBrBoletoFCFR = class;
 
   { TACBrBoletoFCFR }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrBoletoFCFR = class(TACBrBoletoFCClass)
   private
     MensagemPadrao: TStringList;
@@ -110,8 +113,10 @@ type
     frxCedente: TfrxDBDataset;
     cdsBanco: TClientDataSet;
     frxBanco: TfrxDBDataset;
+    frxJPEGExport: TfrxJPEGExport;
     procedure DataModuleCreate(Sender: TObject);
-    procedure frxReportBeforePrint(Sender: TfrxReportComponent);
+    procedure frxReportProgressStart(Sender: TfrxReport;
+      ProgressType: TfrxProgressType; Progress: Integer);
   private
     { Private declarations }
     procedure SetDataSetsToFrxReport;
@@ -128,14 +133,14 @@ implementation
 uses ACBrUtil, ACBrBancoBanestes;
 
 { TdmACBrBoletoFCFR }
-procedure TdmACBrBoletoFCFR.frxReportBeforePrint(Sender: TfrxReportComponent);
+
+procedure TdmACBrBoletoFCFR.frxReportProgressStart(Sender: TfrxReport;
+  ProgressType: TfrxProgressType; Progress: Integer);
 begin
   ImprimeLogoMarca(cdsBanco.FieldByName('DirLogo').AsString + '\' + cdsBanco.FieldByName('Numero').AsString + '.bmp', 'Logo_1');
   ImprimeLogoMarca(cdsBanco.FieldByName('DirLogo').AsString + '\' + cdsBanco.FieldByName('Numero').AsString + '.bmp', 'Logo_2');
   ImprimeLogoMarca(cdsBanco.FieldByName('DirLogo').AsString + '\' + cdsBanco.FieldByName('Numero').AsString + '.bmp', 'Logo_3');
 end;
-
-
 
 function TACBrBoletoFCFR.GetACBrTitulo: TACBrTitulo;
 begin
@@ -250,7 +255,6 @@ begin
     FieldDefs.Add('Instrucao2', ftString, 300);
     FieldDefs.Add('TextoLivre', ftMemo, 2000);
     FieldDefs.Add('Asbace', ftString, 40);
-    FieldDefs.Add('UsoBanco',ftString,10);
     // Sacado
     FieldDefs.Add('Sacado_NomeSacado', ftString, 100);
     FieldDefs.Add('Sacado_CNPJCPF', ftString, 18);
@@ -368,6 +372,19 @@ begin
               if frxHTMLExport.FileName <> NomeArquivo then
                 NomeArquivo := frxHTMLExport.FileName;
             end;
+          fiJPG:
+            begin
+              frxJPEGExport.FileName      := NomeArquivo;
+              frxJPEGExport.ShowDialog    := False;
+              frxJPEGExport.ShowProgress  := True;
+              frxJPEGExport.Monochrome    := True;
+              frxJPEGExport.SeparateFiles := True;
+              frxJPEGExport.JPEGQuality   := 200;
+              frxJPEGExport.Resolution    := 160;
+              frxReport.Export(FdmBoleto.frxJPEGExport);
+              if frxJPEGExport.FileName <> NomeArquivo then
+                NomeArquivo := frxJPEGExport.FileName;
+            end;
         else
           exit;
         end;
@@ -376,14 +393,23 @@ begin
 end;
 
 function TACBrBoletoFCFR.CarregaFastReportFile: Boolean;
+var
+	BoletoStreamFR3: TStringStream;
 begin
   Result := False;
   if Trim(fFastReportFile) <> '' then
   begin
-    with FdmBoleto do
-    begin
+  	if Pos('.FR3',UpperCase(fFastReportFile)) = 0 then
+  	begin
+			BoletoStreamFR3:=TStringStream.Create(fFastReportFile);
+      FdmBoleto.frxReport.FileName := '';
+      FdmBoleto.frxReport.LoadFromStream(BoletoStreamFR3);
+      BoletoStreamFR3.Free;
+   	end
+   	else
+   	begin
       if FileExists(fFastReportFile) then
-         frxReport.LoadFromFile(fFastReportFile)
+         FdmBoleto.frxReport.LoadFromFile(fFastReportFile)
       else
         raise EACBrBoletoFCFR.CreateFmt('Caminho do arquivo de impressão do boleto "%s" inválido.', [fFastReportFile]);
       Result := True;

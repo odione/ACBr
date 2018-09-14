@@ -55,7 +55,7 @@ uses
   Variants,
 {$ENDIF}
   pcnAuxiliar, pcnConversao, pcnGerador, pcteRetInutCTe, pcnLeitor,
-  ACBrUtil;
+  ACBrUtil, pcnConsts, pcteSignature;
 
 
 type
@@ -78,13 +78,13 @@ type
     FIDInutilizacao: String;
     FRetInutCTe: TRetInutCTe;
     FVersao: String;
+    Fsignature: Tsignature;
   public
     constructor Create;
     destructor Destroy; override;
     function GerarXML: boolean;
     function LerXML(CaminhoArquivo: String): boolean;
     function LerXMLFromString(const AXML: String): boolean;
-    function ObterNomeArquivo: String;
   published
     property Leitor: TLeitor         read FLeitor     write FLeitor;
     property Gerador: TGerador       read FGerador    write FGerador;
@@ -99,7 +99,8 @@ type
     property xJust: String           read FxJust      write FxJust;
     property ID: String              read FIDInutilizacao write FIDInutilizacao;
     property RetInutCTe: TRetInutCTe read FRetInutCTe write FRetInutCTe;
-    property Versao: String          read FVersao     write FVersao; 
+    property Versao: String          read FVersao     write FVersao;
+    property signature: Tsignature   read Fsignature  write Fsignature;
   end;
 
 implementation
@@ -111,6 +112,7 @@ begin
   FGerador    := TGerador.Create;
   FRetInutCTe := TRetInutCTe.Create;
   FLeitor     := TLeitor.Create;
+  Fsignature  := Tsignature.Create;
 end;
 
 destructor TinutCTe.Destroy;
@@ -118,12 +120,8 @@ begin
   FGerador.Free;
   FRetInutCTe.Free;
   FLeitor.Free;
+  Fsignature.Free;
   inherited;
-end;
-
-function TinutCTe.ObterNomeArquivo: String;
-begin
-  Result := OnlyNumber(FIDInutilizacao) + '-ped-inu.xml';
 end;
 
 function TinutCTe.GerarXML: boolean;
@@ -157,6 +155,14 @@ begin
     Gerador.wAlerta('DP13', 'nCTFin', DSC_NNFFIN, ERR_MSG_FINAL_MENOR_INICIAL);
   Gerador.wCampo(tcStr, 'CP14', 'xJust ', 015, 255, 1, FiltrarTextoXML(true, FxJust), DSC_XJUST);
   Gerador.wGrupo('/infInut');
+
+  if signature.URI <> '' then
+  begin
+    signature.Gerador.Opcoes.IdentarXML := Gerador.Opcoes.IdentarXML;
+    signature.GerarXMLCTe;
+    Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + signature.Gerador.ArquivoFormatoXML;
+  end;
+
   Gerador.wGrupo('/inutCTe');
 
   Result := (Gerador.ListaDeAlertas.Count = 0);
@@ -180,6 +186,7 @@ var
   RetornoInutCTe: TRetInutCTe;
   Ok : Boolean;
 begin
+  RetornoInutCTe := TRetInutCTe.Create;
   try
     // Lendo dados do pedido de inutilização, se houver...
     Leitor.Arquivo := AXML;
@@ -201,12 +208,19 @@ begin
 
         Result := True;
       end;
+
+      if Leitor.rExtrai(1, 'Signature') <> '' then
+      begin
+        signature.URI             := Leitor.rAtributo('Reference URI=');
+        signature.DigestValue     := Leitor.rCampo(tcStr, 'DigestValue');
+        signature.SignatureValue  := Leitor.rCampo(tcStr, 'SignatureValue');
+        signature.X509Certificate := Leitor.rCampo(tcStr, 'X509Certificate');
+      end;
     except
       Result := False;
     end;
 
     // Lendo dados do retorno, se houver
-    RetornoInutCTe := TRetInutCTe.Create;
     RetornoInutCTe.Leitor.Arquivo := AXML;
     Result := RetornoInutCTe.LerXml;
 
@@ -217,7 +231,7 @@ begin
     end;
 
     with FRetInutCTe do
-     begin
+    begin
       ID       := RetornoInutCTe.Id;
       tpAmb    := RetornoInutCTe.tpAmb;
       verAplic := RetornoInutCTe.verAplic;
@@ -234,11 +248,10 @@ begin
       nCTFin   := RetornoInutCTe.nCTFin;
       dhRecbto := RetornoInutCTe.dhRecbto;
       nProt    := RetornoInutCTe.nProt;
-     end;
+    end;
   finally
-     RetornoInutCTe.Free;
+    RetornoInutCTe.Free;
   end;
 end;
 
 end.
-

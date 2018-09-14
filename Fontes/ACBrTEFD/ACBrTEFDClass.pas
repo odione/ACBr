@@ -409,6 +409,10 @@ type
     FAutorizacao: String;
     FBandeira: String;
     FCNPJCredenciadora: String;
+    FDonoCartao : string;
+    FDataExpiracao : string;
+    FUltimosQuatroDigitos : string;
+
    public
     procedure Clear;
 
@@ -416,6 +420,10 @@ type
     property CNPJCredenciadora: String read FCNPJCredenciadora write FCNPJCredenciadora;
     property Bandeira: String read FBandeira write FBandeira;
     property Autorizacao: String read FAutorizacao write FAutorizacao;
+    property DonoCartao : string read FDonoCartao write FDonoCartao;
+    property DataExpiracao : string read FDataExpiracao write FDataExpiracao;
+    property UltimosQuatroDigitos : string read FUltimosQuatroDigitos write FUltimosQuatroDigitos;
+
    end;
 
 
@@ -428,12 +436,13 @@ type
      fpAutenticacao : String;
      fpArqBackup : String;
      fpArqRespPendente: String;
+     fpViaClienteReduzida: Boolean;
      fpBanco : String;
      fpCheque : String;
      fpChequeDC : String;
      fpCMC7 : String;
      fpCNFEnviado : Boolean;
-     fpCodigoAutorizacaoTransacao : Integer;
+     fpCodigoAutorizacaoTransacao : String;
      fpCodigoOperadoraCelular: String;
      fpConta : String;
      fpContaDC : String;
@@ -468,6 +477,7 @@ type
      fpTipoPessoa : AnsiChar;
      fpTipoTransacao : Integer;
      fpTrailer : String;
+     fpBin : String;
      fpValorTotal : Double;
      fpValorOriginal: Double;
      fpValorRecargaCelular: Double;
@@ -493,6 +503,11 @@ type
      fpDataEntradaCDC:TDateTime;
      fpTipoOperacao: TACBrTEFDRespTipoOperacao;
      fpNFCeSAT: TACBrTEFDRespNFCeSAT;
+     fpIdPagamento : LongInt;
+     fpIdRespostaFiscal : LongInt;
+     fpSerialPOS: String;
+     fpCodigoBandeiraPadrao: String;
+     fpEstabelecimento: String;
 
      procedure SetCNFEnviado(const AValue : Boolean);
      procedure SetIndiceFPG_ECF(const AValue : String);
@@ -500,8 +515,6 @@ type
      procedure SetOrdemPagamento(const AValue : Integer);
    protected
      function GetTransacaoAprovada : Boolean; virtual;
-   published
-
    public
      constructor Create ;
      destructor Destroy ; override;
@@ -535,7 +548,7 @@ type
      property StatusTransacao             : String    read fpStatusTransacao ;
      property TransacaoAprovada           : Boolean   read GetTransacaoAprovada ;
      property TipoTransacao               : Integer   read fpTipoTransacao ;
-     property CodigoAutorizacaoTransacao  : Integer   read fpCodigoAutorizacaoTransacao ;
+     property CodigoAutorizacaoTransacao  : String   read fpCodigoAutorizacaoTransacao ;
      property NumeroLoteTransacao         : Integer   read fpNumeroLoteTransacao ;
      property DataHoraTransacaoHost       : TDateTime read fpDataHoraTransacaoHost ;
      property DataHoraTransacaoLocal      : TDateTime read fpDataHoraTransacaoLocal ;
@@ -558,6 +571,8 @@ type
      property NomeAdministradora          : String    read fpNomeAdministradora ;
      property DataHoraTransacaoComprovante: TDateTime read fpDataHoraTransacaoComprovante ;
      property Trailer                     : String    read fpTrailer ;
+     property BIN                         : String    read fpBin ;
+     property CodigoBandeiraPadrao        : String    read fpCodigoBandeiraPadrao ;
 
      property CorrespBancarios: TACBrTEFDRespListaCB read fpCorrespBancarios;
 
@@ -579,6 +594,8 @@ type
      property CNFEnviado     : Boolean read fpCNFEnviado      write SetCNFEnviado ;
      property OrdemPagamento : Integer read fpOrdemPagamento  write SetOrdemPagamento ;
 
+     property ViaClienteReduzida : Boolean read fpViaClienteReduzida write fpViaClienteReduzida;
+
      property DataVencimento : TDateTime read fpDataVencimento;
      property Instituicao    : String read fpInstituicao;
      property ModalidadePagto :String read fpModalidadePagto;
@@ -594,6 +611,10 @@ type
      property TipoOperacao: TACBrTEFDRespTipoOperacao read fpTipoOperacao;
 
      property NFCeSAT: TACBrTEFDRespNFCeSAT read fpNFCeSAT;
+     property IdPagamento : Integer read fpIdPagamento  write fpIdPagamento ;
+     property IdRespostaFiscal : Integer read fpIdRespostaFiscal  write fpIdRespostaFiscal ;
+     property SerialPOS : String read fpSerialPOS  write fpSerialPOS ;
+     property Estabelecimento : String read fpEstabelecimento  write fpEstabelecimento ;
    end;
 
    { TACBrTEFDRespTXT }
@@ -682,7 +703,6 @@ type
      Procedure LerRespostaRequisicao ; virtual;
      procedure FinalizarResposta( ApagarArqResp : Boolean ) ; virtual;
 
-     Function CriarResposta( Tipo: TACBrTEFDTipo ): TACBrTEFDResp;
      Function CopiarResposta : String ; virtual;
 
      procedure ProcessarResposta ; virtual;
@@ -724,6 +744,7 @@ type
      property AguardandoResposta : Boolean read fpAguardandoResposta ;
 
      procedure GravaLog(AString: AnsiString; Traduz: Boolean = False);
+     Function CriarResposta( Tipo: TACBrTEFDTipo ): TACBrTEFDResp;
 
      property Inicializado : Boolean read fpInicializado write SetInicializado ;
      procedure VerificaInicializado ;
@@ -734,6 +755,7 @@ type
      procedure AtivarGP ; virtual;
      procedure VerificaAtivo ; virtual;
 
+     procedure VerificarTransacoesPendentesClass(aVerificarCupom: Boolean); virtual;
      procedure CancelarTransacoesPendentesClass; virtual;
      procedure ConfirmarTransacoesAnteriores; virtual;
 
@@ -759,6 +781,8 @@ type
      Function CNC : Boolean ; overload; virtual;
      Function CNC(Rede, NSU : String; DataHoraTransacao : TDateTime;
         Valor : Double) : Boolean; overload; virtual;
+     Function PRE(Valor : Double; DocumentoVinculado : String = '';
+        Moeda : Integer = 0) : Boolean; virtual;
    published
      property ArqLOG : String read fArqLOG write fArqLOG ;
      property LogDebug : Boolean read fLogDebug write fLogDebug default false;
@@ -807,7 +831,7 @@ function NomeCampo(const Identificacao: Integer; const Sequencia: Integer ): Str
 implementation
 
 Uses dateutils, StrUtils, Math, {$IFDEF FMX} System.Types {$ELSE} types{$ENDIF},
-  ACBrConsts, ACBrTEFD, ACBrTEFDCliSiTef, ACBrTEFDVeSPague, ACBrUtil ;
+  ACBrTEFD, ACBrTEFDCliSiTef, ACBrTEFDVeSPague, ACBrUtil ;
 
 function NomeCampo(const Identificacao: Integer; const Sequencia: Integer): String;
 var
@@ -1177,7 +1201,7 @@ end;
 
 procedure TACBrTEFDReq.SetNSU(const AValue : String);
 begin
-  fNSU := OnlyNumber(AValue);
+  fNSU := Trim(AValue);
   fConteudo.GravaInformacao(12,0,fNSU);
 end;
 
@@ -1284,6 +1308,7 @@ begin
 
   ArqBackup := Source.ArqBackup; { ArqBackup não é salva em Conteudo (memory only) }
   TipoGP    := Source.TipoGP;    { TipoGP não é salva em Conteudo (memory only) }
+  ViaClienteReduzida := Source.ViaClienteReduzida;
 end;
 
 procedure TACBrTEFDResp.ConteudoToProperty;
@@ -1308,7 +1333,7 @@ begin
    fpCheque                       := '' ;
    fpChequeDC                     := '' ;
    fpCMC7                         := '' ;
-   fpCodigoAutorizacaoTransacao   := 0 ;
+   fpCodigoAutorizacaoTransacao   := '' ;
    fpConta                        := '' ;
    fpContaDC                      := '' ;
    fpDataCheque                   := 0 ;
@@ -1333,6 +1358,7 @@ begin
    fpTipoPessoa                   := ' ';
    fpTipoTransacao                := 0 ;
    fpTrailer                      := '' ;
+   fpBin                          := '';
    fpValorTotal                   := 0 ;
    fpValorOriginal                := 0 ;
    fpSaque                        := 0 ;
@@ -1342,6 +1368,7 @@ begin
    fpTipoParcelamento             := 0 ;
    fpValorEntradaCDC              := 0;
    fpDataEntradaCDC               := 0;
+   fpCodigoBandeiraPadrao         := '';
 
    fpCodigoOperadoraCelular := '';
    fpNomeOperadoraCelular   := '';
@@ -1361,8 +1388,13 @@ begin
 
    fpArqBackup := '' ;
    fpArqRespPendente := '' ;
+   fpViaClienteReduzida := False;
 
    fpNFCeSAT.Clear;
+   fpIdPagamento := 0;
+   fpIdRespostaFiscal := 0;
+   fpSerialPOS := '';
+   fpEstabelecimento := '';
 end;
 
 procedure TACBrTEFDResp.LeArquivo(const NomeArquivo : String);
@@ -1411,10 +1443,10 @@ end;
 
 procedure TACBrTEFDRespTXT.ConteudoToProperty;
 var
-   Linha : TACBrTEFDLinha ;
-   I     : Integer;
-   Parc  : TACBrTEFDRespParcela;
-   Usar711, Usar713, Usar715, TemParcelas : Boolean ;
+   Linha: TACBrTEFDLinha ;
+   I : Integer;
+   Parc: TACBrTEFDRespParcela;
+   Usar711, Usar713, Usar715, Usar29, TemParcelas: Boolean ;
 
    function AjustaLinhaImagemComprovante( Linha: AnsiString ) : AnsiString;
    begin
@@ -1434,6 +1466,7 @@ begin
    Usar713     := False;
    Usar715     := False;
    TemParcelas := False;
+   Usar29      := False;
 
    for I := 0 to Conteudo.Count - 1 do
    begin
@@ -1450,10 +1483,17 @@ begin
        7   : fpDocumentoPessoa            := Linha.Informacao.AsString;
        8   : fpDataCheque                 := Linha.Informacao.AsDate;
        9   : fpStatusTransacao            := Linha.Informacao.AsString;
-       10  : fpRede                       := Linha.Informacao.AsString;
+       10  :
+         begin
+           case Linha.Sequencia of
+             0 : fpRede := Linha.Informacao.AsString;
+             4 : fpBin  := Linha.Informacao.AsString; //Seis primeiros digitos do cartão
+             5 : fpNFCeSAT.UltimosQuatroDigitos  := Linha.Informacao.AsString; 
+           end;
+         end;
        11  : fpTipoTransacao              := Linha.Informacao.AsInteger;
        12  : fpNSU                        := Linha.Informacao.AsString;
-       13  : fpCodigoAutorizacaoTransacao := Linha.Informacao.AsInteger;
+       13  : fpCodigoAutorizacaoTransacao := Linha.Informacao.AsString;
        14  : fpNumeroLoteTransacao        := Linha.Informacao.AsInteger;
        15  : fpDataHoraTransacaoHost      := Linha.Informacao.AsTimeStamp;
        16  : fpDataHoraTransacaoLocal     := Linha.Informacao.AsTimeStamp;
@@ -1481,21 +1521,43 @@ begin
          begin
            if not (Usar711 or Usar713) then
            begin
-              fpImagemComprovante1aVia.Clear;
-              fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
+             fpImagemComprovante1aVia.Clear;
+             fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
            end;
 
            if not Usar715 then
-              fpImagemComprovante2aVia.Clear;
+             fpImagemComprovante2aVia.Clear;
+
+           if (Linha.Sequencia = 1) then
+           begin
+             Usar29 := True;
+             fpImagemComprovante1aVia.Clear;
+             fpImagemComprovante2aVia.Clear;
+             fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
+           end;
          end;
-       29  :
+         
+       29 : 
          begin
-            if not (Usar711 or Usar713) then
+           if Usar29 then
+           begin
+             if (Linha.Sequencia <= fpQtdLinhasComprovante) then
+               fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) )
+             else
+               fpImagemComprovante2aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
+
+           end
+           else
+           begin
+             if not (Usar711 or Usar713) then
                fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
 
-            if not Usar715 then
+             if not Usar715 then
                fpImagemComprovante2aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
+           end;
          end;
+         
+
        30  : fpTextoEspecialOperador := Linha.Informacao.AsString;
        31  : fpTextoEspecialCliente  := Linha.Informacao.AsString;
        32  : fpAutenticacao          := Linha.Informacao.AsString;
@@ -1507,54 +1569,73 @@ begin
        38  : fpCheque                := Linha.Informacao.AsString;
        39  : fpChequeDC              := Linha.Informacao.AsString;
        40  : fpNomeAdministradora    := Linha.Informacao.AsString;
+       131 : fpInstituicao           := Linha.Informacao.AsString;
+       132 : fpCodigoBandeiraPadrao  := Linha.Informacao.AsString;
+       136 : fpBin                   := Linha.Informacao.AsString;
+
+       300 : case Linha.Sequencia of
+               1 : fpNFCeSAT.DataExpiracao := Linha.Informacao.AsString;
+               2 : fpNFCeSAT.DonoCartao    := Linha.Informacao.AsString;
+             end;
+
+       600 : fpNFCeSAT.CNPJCredenciadora := Linha.Informacao.AsString;
+       601 : fpNFCeSAT.Bandeira          := Linha.Informacao.AsString;
+       602 : fpNFCeSAT.Autorizacao       := Linha.Informacao.AsString;
+       603 : fpNFCeSAT.CodCredenciadora := Linha.Informacao.AsString;
+
        707 : fpValorOriginal         := Linha.Informacao.AsFloat;
        708 : fpSaque                 := Linha.Informacao.AsFloat;
        709 : fpDesconto              := Linha.Informacao.AsFloat;
        710 :
          begin
-           if Linha.Informacao.AsInteger > 0 then
+           if ((Linha.Informacao.AsInteger > 0) and ViaClienteReduzida) then
            begin
-              Usar711 := True;
-              fpImagemComprovante1aVia.Clear;
-              fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
+             Usar711 := True;
+             fpImagemComprovante1aVia.Clear;
+             fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
            end;
          end;
        711 :
          begin
-            if Usar711 then
-               fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
+           if Usar711 then
+             fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
          end;
        712 :
          begin
-           if not Usar711 then
+           if ((Linha.Informacao.AsInteger > 0) and (not ViaClienteReduzida)) then
            begin
-              Usar713 := True;
-              fpImagemComprovante1aVia.Clear;
-              fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
+             Usar713 := True;
+             fpImagemComprovante1aVia.Clear;
+             fpQtdLinhasComprovante := Linha.Informacao.AsInteger;
            end;
          end;
        713 :
          begin
            if Usar713 then
-              fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
+             fpImagemComprovante1aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
          end ;
        714 :
          if Linha.Informacao.AsInteger > 0 then
          begin
-            Usar715 := True;
-            fpImagemComprovante2aVia.Clear;
+           Usar715 := True;
+           fpImagemComprovante2aVia.Clear;
          end;
        715 :
          begin
            if Usar715 then
-              fpImagemComprovante2aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
+             fpImagemComprovante2aVia.Add( AjustaLinhaImagemComprovante( Linha.Informacao.AsString ) );
          end;
        899 :  // Tipos de Uso Interno do ACBrTEFD
         begin
           case Linha.Sequencia of
-            1 : fpCNFEnviado     := (UpperCase( Linha.Informacao.AsString ) = 'S' );
-            2 : fpIndiceFPG_ECF  := Linha.Informacao.AsString ;
-            3 : fpOrdemPagamento := Linha.Informacao.AsInteger ;
+              1 : fpCNFEnviado       := (UpperCase( Linha.Informacao.AsString ) = 'S' );
+              2 : fpIndiceFPG_ECF    := Linha.Informacao.AsString ;
+              3 : fpOrdemPagamento   := Linha.Informacao.AsInteger ;
+            103 : fpValorTotal       := fpValorTotal + Linha.Informacao.AsFloat;
+            500 : fpIdPagamento      := Linha.Informacao.AsInteger ;
+            501 : fpIdRespostaFiscal := Linha.Informacao.AsInteger ;
+            502 : fpSerialPOS        := Linha.Informacao.AsString ;
+            503 : fpEstabelecimento  := Linha.Informacao.AsString ;
           end;
         end;
        999 : fpTrailer           := Linha.Informacao.AsString ;
@@ -1735,7 +1816,7 @@ begin
      Resp.Clear;
   end ;
 
-  CancelarTransacoesPendentesClass ;
+  VerificarTransacoesPendentesClass(TACBrTEFD(Owner).ConfirmarAntesDosComprovantes);
 
   VerificaAtivo;
 end;
@@ -1766,6 +1847,42 @@ begin
   end;
 end;
 
+procedure TACBrTEFDClass.VerificarTransacoesPendentesClass(aVerificarCupom: Boolean);
+var
+  wEstadoECF: AnsiChar;
+begin
+  if aVerificarCupom then
+  begin
+    try
+      wEstadoECF := TACBrTEFD(Owner).EstadoECF;
+    except
+      wEstadoECF := 'O';
+      { Se o ECF estiver desligado, será retornado 'O', o que fará o código
+        abaixo Cancelar Todas as Transações Pendentes, porém, pelo Roteiro do
+        TEF dedicado, é necessário confirmar a Transação se o Cupom foi
+        finalizado com sucesso.
+          Criar um arquivo de Status que seja atualizado no Fim do Cupom e no
+        inicio do CCD, de maneira que seja possível identificar o Status do
+        Documento no ECF indepentende do mesmo estar ou não ligado
+
+          Como alteranativa, é possível implementar código no Evento "OnInfoECF"
+        para buscar o Status do Documento no Banco de dados da sua aplicação, e
+        responder diferente de 'O',   (Veja exemplo nos fontes do TEFDDemo) }
+    end;
+
+    TACBrTEFD(Owner).GPAtual := Tipo;
+
+    // Cupom Ficou aberto?? ...Se SIM, Cancele tudo... //
+    if (wEstadoECF in ['V', 'P', 'N', 'O']) then
+      CancelarTransacoesPendentesClass
+    else
+      // NAO, Cupom Fechado, Pode confirmar e Mandar aviso para re-imprimir //
+      ConfirmarESolicitarImpressaoTransacoesPendentes;
+  end
+  else
+    CancelarTransacoesPendentesClass;
+end;
+
 procedure TACBrTEFDClass.ATV;
 begin
   IniciarRequisicao('ATV');
@@ -1774,8 +1891,6 @@ end;
 
 function TACBrTEFDClass.ADM: Boolean;
 begin
-  Result := False ;
-
   IniciarRequisicao('ADM');
   AdicionarIdentificacao;
   FinalizarRequisicao;
@@ -1792,7 +1907,6 @@ end;
 function TACBrTEFDClass.CRT(Valor: Double; IndiceFPG_ECF: String;
   DocumentoVinculado: String; Moeda: Integer): Boolean;
 begin
-  Result := False ;
   VerificarTransacaoPagamento( Valor );
 
   IniciarRequisicao('CRT');
@@ -1813,7 +1927,6 @@ function TACBrTEFDClass.CHQ(Valor: Double; IndiceFPG_ECF: String;
 begin
   // Compensacao não é utilizado em TEF discado //
 
-  Result := False ;
   VerificarTransacaoPagamento( Valor );
 
   IniciarRequisicao('CHQ');
@@ -1849,7 +1962,6 @@ function TACBrTEFDClass.CNC: Boolean;
 Var
   OldResp : TACBrTEFDRespTXT ;
 begin
-  Result  := False ;
   OldResp := TACBrTEFDRespTXT.Create;
   try
      OldResp.Assign(Resp);      { Salvando dados da Resposta Atual }
@@ -1892,8 +2004,6 @@ end;
 function TACBrTEFDClass.CNC(Rede, NSU: String; DataHoraTransacao: TDateTime;
   Valor: Double): Boolean;
 begin
-  Result := False ;
-
   IniciarRequisicao('CNC');
   Req.ValorTotal                   := Valor;
   Req.Rede                         := Rede;
@@ -2106,7 +2216,7 @@ end;
 procedure TACBrTEFDClass.AdicionarIdentificacao;
 var
   TemIdentificacao : Boolean ;
-  Operacoes : String ;
+  Operacoes : Integer ;
 begin
   TemIdentificacao := False;
   
@@ -2119,25 +2229,43 @@ begin
         TemIdentificacao := True;
      end;
 
+     if (Identificacao.RegistroCertificacao <> '') then
+     begin
+        Req.Conteudo.GravaInformacao(738,000, Identificacao.RegistroCertificacao) ;
+        TemIdentificacao := True;
+     end;
+
      if (Identificacao.RazaoSocial <> '') then
      begin
         Req.Conteudo.GravaInformacao(716,000, Identificacao.RazaoSocial ) ;
         TemIdentificacao := True;
      end;
 
-     Operacoes := EmptyStr;
-     if SuportaSaque and not SuportaDesconto then
-        Operacoes := '1'
+     Operacoes := 0;
+     if AutoEfetuarPagamento then
+     begin
+        if SuportaSaque and not SuportaDesconto then
+           Operacoes := 1
+        else if SuportaDesconto and not SuportaSaque then
+           Operacoes := 2;
+     end
      else
-     if SuportaDesconto and not SuportaSaque then
-        Operacoes := '2';
+     begin
+        if SuportaSaque then
+           Operacoes := Operacoes + 1;
 
-     if SuportaSaque and SuportaDesconto
-        and (not AutoEfetuarPagamento) then
-        Operacoes := '3';
+        if SuportaDesconto then
+           Operacoes := Operacoes + 2;
 
-     if TemIdentificacao and (Operacoes <> EmptyStr) then
-        Req.Conteudo.GravaInformacao(706,000, Operacoes ) ;
+        if SuportaReajusteValor then
+           Operacoes := Operacoes + 64;
+
+        if SuportaNSUEstendido then
+           Operacoes := Operacoes + 128;
+     end;
+
+     if TemIdentificacao and (Operacoes > 0) then
+        Req.Conteudo.GravaInformacao(706,000, IntToStr(Operacoes) ) ;
   end;
 end;
 
@@ -2222,6 +2350,24 @@ begin
   end ;
 end;
 
+function TACBrTEFDClass.PRE(Valor: Double; DocumentoVinculado: String;
+  Moeda: Integer): Boolean;
+begin
+  IniciarRequisicao('PRE');
+  Req.DocumentoVinculado  := DocumentoVinculado;
+  Req.ValorTotal          := Valor;
+  Req.Moeda               := Moeda;
+  AdicionarIdentificacao;
+  FinalizarRequisicao;
+  LerRespostaRequisicao;
+  Result := Resp.TransacaoAprovada ;
+  try
+     ProcessarResposta ;         { Faz a Impressão e / ou exibe Mensagem ao Operador }
+  finally
+     FinalizarResposta( True ) ; { True = Apaga Arquivo de Resposta }
+  end;
+end;
+
 procedure TACBrTEFDClass.ProcessarResposta ;
 var
    RespostaPendente: TACBrTEFDRespTXT;
@@ -2268,16 +2414,6 @@ begin
    Req.Clear;
    Resp.Clear;
 end;
-
-function TACBrTEFDClass.CriarResposta(Tipo : TACBrTEFDTipo) : TACBrTEFDResp ;
-begin
-  Case Tipo of
-    gpCliSiTef : Result := TACBrTEFDRespCliSiTef.Create;
-    gpVeSPague : Result := TACBrTEFDRespVeSPague.Create;
-  else
-    Result := TACBrTEFDRespTXT.Create;
-  end ;
-end ;
 
 procedure TACBrTEFDClass.CancelarTransacoesPendentesClass;
 Var
@@ -2697,8 +2833,6 @@ var
   UltimaTransacao, ImpressaoOk, TecladoEstavaLivre : Boolean;
   RespostaPendente : TACBrTEFDRespTXT;
 begin
-  Result := False ;
-
   LerRespostaRequisicao;
 
   GravaLog( Name +' ProcessarRespostaPagamento: '+Resp.Header+' - '+IntToStr(Resp.ID)+
@@ -2743,6 +2877,7 @@ begin
      { Cria cópia do Objeto Resp, e salva no ObjectList "RespostasPendentes" }
      RespostaPendente := TACBrTEFDRespTXT.Create ;
      RespostaPendente.ArqRespPendente := ArqResp;
+     RespostaPendente.ViaClienteReduzida := ImprimirViaClienteReduzida;
      RespostaPendente.Assign( Resp );
      RespostasPendentes.Add( RespostaPendente );
 
@@ -2922,6 +3057,16 @@ begin
   end ;
 end;
 
+function TACBrTEFDClass.CriarResposta(Tipo: TACBrTEFDTipo): TACBrTEFDResp;
+begin
+  case Tipo of
+    gpCliSiTef: Result := TACBrTEFDRespCliSiTef.Create;
+    gpVeSPague: Result := TACBrTEFDRespVeSPague.Create;
+  else
+    Result := TACBrTEFDRespTXT.Create;
+  end;
+end;
+
 { TACBrTEFDClasses }
 
 procedure TACBrTEFDClassList.SetObject(Index : Integer; Item : TACBrTEFDClass);
@@ -3028,6 +3173,9 @@ begin
   FAutorizacao       := '';
   FBandeira          := '';
   FCNPJCredenciadora := '';
+  FDonoCartao        := '';
+  FDataExpiracao     := '';
+  FUltimosQuatroDigitos := '';
 end;
 
 end.

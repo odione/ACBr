@@ -202,6 +202,7 @@ begin
   FOpcoes.FGerarTXTSimultaneamente := False;
   FOpcoes.FGerarTagIPIparaNaoTributado := True;
   FOpcoes.FNormatizarMunicipios := False;
+  FOpcoes.FPathArquivoMunicipios:= '';
   FOpcoes.FGerarTagAssinatura := taSomenteSeAssinada;
   FOpcoes.FValidarInscricoes := False;
   FOpcoes.FValidarListaServicos := False;
@@ -541,7 +542,7 @@ var
   xMun: String;
   xUF: String;
 begin
-  AjustarMunicipioUF(xUF, xMun, cMun, nfe.Emit.enderEmit.cPais, nfe.Emit.enderEmit.UF, nfe.Emit.enderEmit.xMun, nfe.Emit.EnderEmit.cMun);
+  AjustarMunicipioUF(xUF, xMun, cMun, CODIGO_BRASIL, nfe.Emit.enderEmit.UF, nfe.Emit.enderEmit.xMun, nfe.Emit.EnderEmit.cMun);
   Gerador.wGrupo('enderEmit', 'C05');
   Gerador.wCampo(tcStr, 'C06', 'xLgr   ', 02, 60, 1, nfe.Emit.enderEmit.xLgr, DSC_XLGR);
   Gerador.wCampo(tcStr, 'C07', 'nro    ', 01, 60, 1, ExecutarAjusteTagNro(FOpcoes.FAjustarTagNro, nfe.Emit.enderEmit.nro), DSC_NRO);

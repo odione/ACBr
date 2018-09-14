@@ -78,9 +78,6 @@ uses
   ACBrDelphiZXingQrCode, Graphics;
 
 type
-  ArrOfStr = Array of String;
-  TSplitResult = array of string;
-
   TACBrNFeFRClass = class
   private
     FDANFEClassOwner: TACBrNFeDANFEClass;
@@ -96,7 +93,7 @@ type
     FDetalhado: Boolean;
     FURLConsultaPublica:String;
     FDescricaoViaEstabelec: string;
-    FImprimirUnQtVlComercial: boolean;
+    FImprimirUnQtVlComercial: TImprimirUnidQtdeValor;
     FExpandirDadosAdicionaisAuto: boolean;
     FImprimirDadosArma: Boolean;
     fQuebraLinhaEmDetalhamentoEspecifico : Boolean;
@@ -143,6 +140,7 @@ type
     FInutilizacao: TRetInutNFe;
     FfrxInutilizacao: TfrxDBDataset;
     cdsInutilizacao: TClientDataSet;
+    FImprimirDadosDocReferenciados: Boolean;
 
     procedure frxReportBeforePrint(Sender: TfrxReportComponent);
     procedure CarregaIdentificacao;
@@ -163,10 +161,7 @@ type
     procedure CarregaInformacoesAdicionais;
     function QuebraLinha: String;
 
-    function SubstrCount(const ASubString, AString: string): Integer;
-    function Split(const ADelimiter, AString: string): TSplitResult;
     function CollateBr(Str: String): String;
-    function Explode(sPart, sInput: String): ArrOfStr;
     function ManterVprod(dVProd, dvDesc: Double): String;
     function ManterdvTotTrib(dvTotTrib: Double):  String;
     function ManterVDesc(dvDesc: Currency; dVUnCom , dQCom : double ) : Double;
@@ -199,7 +194,7 @@ type
     property TributosPercentual: TpcnPercentualTributos read FTributosPercentual write FTributosPercentual;
     property TributosPercentualPersonalizado: double read FTributosPercentualPersonalizado write FTributosPercentualPersonalizado;
     property MarcaDaguaMSG: string read FMarcaDaguaMSG write FMarcaDaguaMSG;
-    property ImprimirUnQtVlComercial: boolean read FImprimirUnQtVlComercial write FImprimirUnQtVlComercial;
+    property ImprimirUnQtVlComercial: TImprimirUnidQtdeValor read FImprimirUnQtVlComercial write FImprimirUnQtVlComercial;
     property ExpandirDadosAdicionaisAuto: boolean read FExpandirDadosAdicionaisAuto write FExpandirDadosAdicionaisAuto;
     property vTroco: Currency read FvTroco write FvTroco;
     property Detalhado: Boolean read FDetalhado write FDetalhado;
@@ -212,6 +207,7 @@ type
     property sQuebraLinha : String read fsQuebraLinha Write    fsQuebraLinha;
     property IncorporarBackgroundPdf: Boolean read FIncorporarBackgroundPdf write FIncorporarBackgroundPdf;
     property IncorporarFontesPdf: Boolean read FIncorporarFontesPdf write FIncorporarFontesPdf;
+    property ImprimirDadosDocReferenciados: Boolean read FImprimirDadosDocReferenciados write FImprimirDadosDocReferenciados; 
 
     procedure SetDataSetsToFrxReport;
     procedure CarregaDadosNFe;
@@ -228,18 +224,6 @@ uses ACBrNFe, ACBrDFeUtil, StrUtils, Math, DateUtils, pcnConversaoNFe,
   ACBrValidador;
 
 { TACBrNFeFRClass }
-
-function TACBrNFeFRClass.SubstrCount(const ASubString, AString: string): Integer;
-var
-  i: integer;
-begin
-  Result := -1;
-  i := 0;
-  repeat
-    Inc(Result);
-    i := PosEx(ASubString, AString, i + 1);
-  until i = 0;
-end;
 
 procedure TACBrNFeFRClass.SetDataSetsToFrxReport;
 begin
@@ -262,68 +246,6 @@ begin
   frxReport.EnabledDataSets.Add(FfrxParametros);
   frxReport.EnabledDataSets.Add(FfrxDuplicatas);
   frxReport.EnabledDataSets.Add(FfrxInutilizacao);
-end;
-
-function TACBrNFeFRClass.Split(const ADelimiter, AString: string): TSplitResult;
-var
-  Step: ^String;
-  Chr: PChar;
-  iPos, iLast, iDelLen, iLen, x: integer;
-label
-  EndLoop;
-begin
-  SetLength(Result, SubstrCount(ADelimiter, AString) + 1);
-  if High(Result) = 0 then
-    Result[0] := AString
-  else
-  begin
-    iDelLen := Length(ADelimiter);
-    iLen := Length(AString);
-    Step := @Result[0];
-    iLast := 0;
-    iPos := 0;
-    repeat
-      if iPos + iDelLen > iLen then
-      begin
-        if iLast <> iPos then
-          iPos := iLen;
-      end else
-        for x := 1 to iDelLen do
-          if AString[iPos + x] <> ADelimiter[x] then
-            goto EndLoop;
-
-      if iPos - iLast > 0 then
-      begin
-        SetLength(Step^, iPos - iLast);
-        Chr := PChar(Step^);
-        for x := 1 to PCardinal(Cardinal(Step^) - SizeOf(Cardinal))^ do
-        begin
-          Chr^ := AString[iLast + x];
-          Inc(Chr);
-        end;
-      end else
-        Step^ := '';
-
-      Cardinal(Step) := Cardinal(Step) + SizeOf(Cardinal);
-      iLast := iPos + iDelLen;
-
-      EndLoop:
-        Inc(iPos);
-    until iLast >= iLen;
-  end;
-end;
-
-function TACBrNFeFRClass.Explode(sPart, sInput: String): ArrOfStr;
-begin
-  while Pos(sPart, sInput) <> 0 do
-    begin
-      SetLength(Result, Length(Result) + 1);
-      Result[Length(Result) - 1] := Copy(sInput, 0, Pos(sPart, sInput) - 1);
-      Delete(sInput, 1, Pos(sPart, sInput));
-    end;
-
-  SetLength(Result, Length(Result) + 1);
-  Result[Length(Result) - 1] := sInput;
 end;
 
 function TACBrNFeFRClass.CollateBr(Str: String): String;
@@ -485,17 +407,32 @@ begin
           FieldByName('ValorAcrescimos').AsString   := FormatFloatBr( Prod.vProd + Prod.vOutro,'###,###,##0.00');
 
           case FImprimirUnQtVlComercial of
-          true:
+          iuComercial:
             begin
               FieldByName('Unidade').AsString       := FieldByName('Ucom').AsString;
               FieldByName('Quantidade').AsString    := FormatQuantidade( FieldByName('QCom').AsFloat );
               FieldByName('ValorUnitario').AsString := FormatValorUnitario( FieldByName('VUnCom').AsFloat );
             end;
-          false:
+          iuTributavel:
             begin
               FieldByName('Unidade').AsString       := FieldByName('UTrib').AsString;
               FieldByName('Quantidade').AsString    := FormatQuantidade( FieldByName('QTrib').AsFloat );
               FieldByName('ValorUnitario').AsString := FormatValorUnitario( FieldByName('VUnTrib').AsFloat);
+            end;
+          iuComercialETributavel:
+            begin
+              if FieldByName('Ucom').AsString = FieldByName('UTrib').AsString then
+              begin
+                FieldByName('Unidade').AsString       := FieldByName('Ucom').AsString;
+                FieldByName('Quantidade').AsString    := FormatQuantidade( FieldByName('QCom').AsFloat );
+                FieldByName('ValorUnitario').AsString := FormatValorUnitario( FieldByName('VUnCom').AsFloat );
+              end
+              else
+              begin
+                FieldByName('Unidade').AsString       := FDANFEClassOwner.ManterUnidades(FieldByName('Ucom').AsString, FieldByName('UTrib').AsString);
+                FieldByName('Quantidade').AsString    := FDANFEClassOwner.ManterQuantidades(FieldByName('QCom').AsFloat, FieldByName('QTrib').AsFloat);
+                FieldByName('ValorUnitario').AsString := FDANFEClassOwner.ManterValoresUnitarios(FieldByName('VUnCom').AsFloat, FieldByName('VUnTrib').AsFloat);
+              end;
             end;
           end;
           Post;
@@ -801,102 +738,40 @@ end;
 
 procedure TACBrNFeFRClass.CarregaInformacoesAdicionais;
 var
-  i: Integer;
-  vTemp: TStringList;
-  IndexCampo:Integer;
-  Campos: TSplitResult;
-  BufferInfCpl: String;
-  TmpStr: String;
-  wContingencia: string;
-  wObs:string;
-  wLinhasObs: integer;
+  vTemp         : TStringList;
+  IndexCampo    : Integer;
+  Campos        : TSplitResult;
+  BufferInfCpl  : String;
+  wObs          : string;
+  wLinhasObs    : integer;
 begin
-  with cdsInformacoesAdicionais do
-  begin
-    Close;
-    CreateDataSet;
-    Append;
-
-    wLinhasObs := 0;
-    with FNFe.InfAdic do
+  wLinhasObs  := 0;
+  BufferInfCpl:= '';
+  vTemp       := TStringList.Create;
+  try
+    wObs  := FDANFEClassOwner.ManterDocreferenciados( FNFe,FImprimirDadosDocReferenciados , ';' );
+    wObs  := ManterInfAdi( wObs );
+    wObs  := ManterContingencia( wObs );
+    if Trim(wObs) <> '' then
     begin
-      TmpStr := '';
-      //Fisco
-      if Length(InfAdFisco) = 0 then InfAdFisco := '';
+      Campos := Split(';', wObs);
+      for IndexCampo := 0 to Length(Campos) - 1 do
+        vTemp.Add(Campos[IndexCampo]);
 
-      for i := 0 to ObsFisco.Count - 1 do
-      begin
-        with ObsFisco.Items[i] do
-          TmpStr := TmpStr + XCampo + ': ' + XTexto + ';';
-      end;
-      wObs := TmpStr + InfAdFisco;
-      TmpStr := '';
-
-      //Inf. Complementar
-      if Length(InfCpl) = 0 then InfCpl := '';
-
-      for i := 0 to ObsCont.Count - 1 do
-      begin
-        with ObsCont.Items[i] do
-          TmpStr := TmpStr + XCampo + ': ' + XTexto + ';';
-      end;
-      if Length(wObs) > 0 then
-        wObs := wObs + ';';
-      wObs := wObs + TmpStr + InfCpl;
-      TmpStr := '';
-
-      //Contingencia
-      if FNFe.Ide.tpEmis=teNORMAL then
-        wContingencia := ''
-      else
-      begin
-        case FNFe.Ide.tpEmis of
-          teOffLine,
-          teContingencia,
-          teFSDA,
-          teSCAN,
-          teSVCAN,
-          teSVCRS,
-          teSVCSP:
-            wContingencia := ACBrStr('DANFE EM CONTINGÊNCIA, IMPRESSO EM DECORRÊNCIA DE PROBLEMAS TÉCNICOS');
-
-          teDPEC:
-          begin
-            wContingencia := ACBrStr( 'DANFE IMPRESSO EM CONTINGÊNCIA - DPEC REGULARMENTE RECEBIDA PELA RECEITA FEDERAL DO BRASIL');
-            wContingencia := wContingencia + ';' +
-                             ACBrStr('DATA/HORA INÍCIO: ') + IfThen(FNFe.ide.dhCont = 0, ' ', DateTimeToStr(FNFe.ide.dhCont)) + ';'+
-                             ACBrStr('MOTIVO CONTINGÊNCIA: ') + IfThen(EstaVazio(FNFe.ide.xJust), ' ', FNFe.ide.xJust);
-          end;
-        end;
-      end;
-      if Length(wObs) > 0 then
-        wObs := wObs + ';';
-      wObs := wObs + wContingencia;
-
-      vTemp := TStringList.Create;
-      try
-        if Trim(wObs) <> '' then
-        begin
-          Campos := Split(';', wObs);
-          for IndexCampo := 0 to Length(Campos) - 1 do
-              vTemp.Add(Campos[IndexCampo]);
-           wLinhasObs := 1; //TotalObS(vTemp.Text);
-           TmpStr := vTemp.Text;
-
-           BufferInfCpl := TmpStr;
-        end
-        else
-           BufferInfCpl := '';
-
-      finally
-        vTemp.Free;
-      end;
+      wLinhasObs    := 1; //TotalObS(vTemp.Text);
+      BufferInfCpl  := vTemp.Text;
     end;
-
-    FieldByName('OBS').AsString        := BufferInfCpl;
-    FieldByName('LinhasOBS').AsInteger := wLinhasObs;
-
-    Post;
+    with cdsInformacoesAdicionais do
+    begin
+      Close;
+      CreateDataSet;
+      Append;
+      FieldByName('OBS').AsString        := BufferInfCpl;
+      FieldByName('LinhasOBS').AsInteger := wLinhasObs;
+      Post;
+    end;
+  finally
+    vTemp.Free;
   end;
 end;
 
@@ -980,6 +855,7 @@ var
   vChave_Contingencia : String;
   vStream             : TMemoryStream;
   vStringStream       : TStringStream;
+  P: Integer;
 begin
   { parâmetros }
   with cdsParametros do
@@ -1072,7 +948,22 @@ begin
                         end;
                       end
                       else
+                      begin
                         FieldByName('Contingencia_Valor').AsString := FDANFEClassOwner.ProtocoloNFe;
+                        P := Pos('-', FDANFEClassOwner.ProtocoloNFe);
+                        if P = 0 then
+                        begin
+                          FieldByName('nProt').AsString := Trim(FDANFEClassOwner.ProtocoloNFe);
+                          FieldByName('dhRecbto').AsDateTime := 0;
+                        end
+                        else
+                        begin
+                          FieldByName('nProt').AsString := Trim(Copy(FDANFEClassOwner.ProtocoloNFe, 1, P - 1));
+                          FieldByName('dhRecbto').AsDateTime := StringToDateTimeDef(Trim(
+                            Copy(FDANFEClassOwner.ProtocoloNFe, P + 1, Length(FDANFEClassOwner.ProtocoloNFe) - P)
+                            ), 0, 'dd/mm/yyyy hh:nn:ss');
+                        end;
+                      end;
                     end;
 
         teContingencia ,
@@ -1520,7 +1411,6 @@ begin
      FfrxDadosProdutos  := TfrxDBDataset.Create(nil);
      with FfrxDadosProdutos do
      begin
-        Name := 'frxDadosProdutos';
         DataSet := cdsDadosProdutos;
         OpenDataSource := False;
         Enabled := False;
@@ -1568,7 +1458,7 @@ begin
         FieldDefs.Add('DescricaoProduto', ftString, 2000);
         FieldDefs.Add('Unidade'   , ftString, 14);
         FieldDefs.Add('Quantidade', ftString, 18);
-        FieldDefs.Add('ValorUnitario'   , ftString, 18);
+        FieldDefs.Add('ValorUnitario'   , ftString, 50);
         FieldDefs.Add('Valorliquido'    , ftString, 18);
         FieldDefs.Add('ValorAcrescimos' , ftString, 18);
         CreateDataSet;
@@ -2012,7 +1902,7 @@ end;
 procedure TACBrNFeFRClass.frxReportBeforePrint(Sender: TfrxReportComponent);
 var
   qrcode: String;
-  CpTituloReport, CpLogomarca, CpQrCode, CpDescrProtocolo, CpTotTrib: TfrxComponent;
+  CpTituloReport, CpLogomarca, CpDescrProtocolo, CpTotTrib, CpContingencia1, CpContingencia2 : TfrxComponent;
 begin
 
   qrCode := '';
@@ -2055,17 +1945,25 @@ begin
               else
                 qrcode := NFe.infNFeSupl.qrCode;
 
-              CpQrCode := frxReport.FindObject('ImgQrCode');
-              if Assigned(CpQrCode) then
-                PintarQRCode( qrcode, TfrxPictureView(CpQrCode).Picture );
+              if Assigned(Sender) and (Sender.Name = 'ImgQrCode') then
+                PintarQRCode(qrcode, TfrxPictureView(Sender).Picture);
 
-              CpDescrProtocolo := frxReport.FindObject('Memo5');
+              CpDescrProtocolo := frxReport.FindObject('Memo25');
               if Assigned(CpDescrProtocolo) then
                 CpDescrProtocolo.Visible := cdsParametros.FieldByName('Contingencia_Valor').AsString <> '';
 
               CpTotTrib := frxReport.FindObject('ValorTributos');
               if Assigned(CpTotTrib) then
                 CpTotTrib.Visible := cdsCalculoImposto.FieldByName('VTotTrib').AsFloat > 0;
+
+              // ajusta Informação de contingência no NFCe
+              CpContingencia1 := frxReport.FindObject('ChildContingenciaCabecalho');
+              if Assigned(CpContingencia1) then
+                CpContingencia1.Visible := FNFe.Ide.tpEmis <> teNormal;
+
+              CpContingencia2 := frxReport.FindObject('ChildContingenciaIdentificacao');
+              if Assigned(CpContingencia2) then
+                CpContingencia2.Visible := FNFe.Ide.tpEmis <> teNormal;
             end;
     end;
   end;
@@ -2146,19 +2044,21 @@ begin
   begin
     if med.Count > 0 then
     begin
-      Result := sQuebraLinha;
       for i := 0 to med.Count - 1 do
       begin
         if NFe.infNFe.Versao >= 4 then
-          Result := Result + 'C.P. ANVISA '+ med.Items[i].cProdANVISA+ sQuebraLinha
+          Result := Result + IfThen(Result = '', '', sQuebraLinha) + 'C.P. ANVISA: '+ med.Items[i].cProdANVISA
         else
         begin
-          Result := Result + 'LOTE: ' + med.Items[i].nLote+ sQuebraLinha;
-          Result := Result + 'QTD: '  + FormatFloatBr(med.Items[i].qLote)+ sQuebraLinha;
-          Result := Result + 'FAB: '  + FormatDateBr(med.Items[i].dFab)+ sQuebraLinha;
-          Result := Result + 'VAL: '  + FormatDateBr(med.Items[i].dVal)+ sQuebraLinha;
+          Result := Result + IfThen(Result = '', '', sQuebraLinha) + 'LOTE: ' + med.Items[i].nLote;
+
+          if(med.Items[i].qLote <> qCom) Then
+            Result := Result + sQuebraLinha + 'QTD: '  + FormatFloatBr(med.Items[i].qLote);
+
+          Result := Result + sQuebraLinha + 'FAB: '  + FormatDateBr(med.Items[i].dFab);
+          Result := Result + sQuebraLinha + 'VAL: '  + FormatDateBr(med.Items[i].dVal);
         end;
-        Result := Result + IfThen( med.Items[i].vPMC  > 0, 'PMC: ' + FormatFloatBr(med.Items[i].vPMC) + ';' , '');
+        Result := Result + IfThen( med.Items[i].vPMC  > 0, sQuebraLinha + 'PMC: ' + FormatFloatBr(med.Items[i].vPMC), '') + ';';
       end;
     end;
   end;
@@ -2174,14 +2074,20 @@ begin
   begin
     if Rastro.Count > 0 then
     begin
-      Result := sQuebraLinha;
       for i := 0 to Rastro.Count - 1 do
       begin
-        Result := Result + 'LOTE: ' + rastro.Items[i].nLote+ sQuebraLinha;
-        Result := Result + 'QTD: '  + FormatFloatBr(rastro.Items[i].qLote)+ sQuebraLinha;
-        Result := Result + 'FAB: '  + FormatDateBr(rastro.Items[i].dFab)+ sQuebraLinha;
-        Result := Result + 'VAL: '  + FormatDateBr(rastro.Items[i].dVal)+ sQuebraLinha;
-        Result := Result + ACBrStr('C.AGREGAÇÃO: ' ) + rastro.Items[i].cAgreg+ ';';
+        Result := Result + IfThen(Result = '', '', sQuebraLinha) + 'LOTE: ' + rastro.Items[i].nLote;
+
+        if(rastro.Items[i].qLote <> qCom) Then
+          Result := Result + sQuebraLinha + 'QTD: '  + FormatFloatBr(rastro.Items[i].qLote);
+
+        Result := Result + sQuebraLinha + 'FAB: '  + FormatDateBr(rastro.Items[i].dFab);
+        Result := Result + sQuebraLinha + 'VAL: '  + FormatDateBr(rastro.Items[i].dVal);
+
+        if NaoEstaVazio(rastro.Items[i].cAgreg) Then
+          Result := Result + sQuebraLinha + ACBrStr('C.AGREGAÇÃO: ' ) + rastro.Items[i].cAgreg;
+
+        Result := Result + ';';
       end;
     end;
   end;

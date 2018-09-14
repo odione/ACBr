@@ -55,14 +55,14 @@ type
   TAutoSimNao = (rAuto, rSim, rNao);
 
   { TACBrSATExtratoESCPOS }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrSATExtratoESCPOS = class( TACBrSATExtratoClass )
   private
     FBuffer:TStringList;
     FImprimeChaveEmUmaLinha: TAutoSimNao;
-    FImprimeDescAcrescItem: Boolean;
-    FImprimeEmUmaLinha: Boolean;
     FPosPrinter : TACBrPosPrinter ;
-    FUsaCodigoEanImpressao: Boolean;
 
     procedure ImprimirCopias ;
     procedure SetPosPrinter(AValue: TACBrPosPrinter);
@@ -86,15 +86,10 @@ type
     procedure ImprimirExtrato(ACFe : TCFe = nil); override;
     procedure ImprimirExtratoResumido(ACFe : TCFe = nil); override;
     procedure ImprimirExtratoCancelamento(ACFe : TCFe = nil; ACFeCanc: TCFeCanc = nil); override;
+    function GerarImpressaoFiscalMFe(ACFe : TCFe = nil) : String;
   published
     property PosPrinter : TACBrPosPrinter read FPosPrinter write SetPosPrinter;
 
-    property ImprimeEmUmaLinha: Boolean read FImprimeEmUmaLinha
-      write FImprimeEmUmaLinha default True;
-    property ImprimeDescAcrescItem: Boolean read FImprimeDescAcrescItem
-      write FImprimeDescAcrescItem default True;
-    property UsaCodigoEanImpressao: Boolean read FUsaCodigoEanImpressao
-      write FUsaCodigoEanImpressao default False;
     property ImprimeChaveEmUmaLinha: TAutoSimNao read FImprimeChaveEmUmaLinha
       write FImprimeChaveEmUmaLinha default rAuto;
 
@@ -106,7 +101,7 @@ implementation
 
 uses
   strutils, math,
-  ACBrValidador, ACBrUtil, ACBrConsts, ACBrDFeUtil;
+  ACBrValidador, ACBrUtil, ACBrConsts, ACBrDFeUtil, ACBrSATClass;
 
 {$IFNDEF FPC}
    {$R ACBrSATExtratoESCPOS.dcr}
@@ -125,9 +120,6 @@ begin
   FBuffer := TStringList.create;
   FPosPrinter := Nil;
 
-  FImprimeEmUmaLinha := True;
-  FImprimeDescAcrescItem := True;
-  FUsaCodigoEanImpressao := False;
   FImprimeChaveEmUmaLinha := rAuto;
 end;
 
@@ -138,25 +130,29 @@ begin
 end;
 
 procedure TACBrSATExtratoESCPOS.GerarCabecalho(Cancelamento: Boolean);
-var        
-  nCFe: String;
+var
+  nCFe, DocsEmit: String;
 begin
   FBuffer.Clear;
   FBuffer.Add('</zera></ce></logo>');
   FBuffer.Add('<n>'+CFe.Emit.xFant+'</n>');
 
   FBuffer.Add('<c>'+CFe.Emit.xNome);
-  FBuffer.Add(Trim(CFe.Emit.EnderEmit.xLgr)+' '+
+  FBuffer.Add(QuebraLinhas(Trim(CFe.Emit.EnderEmit.xLgr)+' '+
               Trim(CFe.Emit.EnderEmit.nro)+' '+
               Trim(CFe.Emit.EnderEmit.xCpl)+' '+
               Trim(CFe.Emit.EnderEmit.xBairro)+'-'+
               Trim(CFe.Emit.EnderEmit.xMun)+'-'+
-              FormatarCEP(CFe.Emit.EnderEmit.CEP));
+              FormatarCEP(CFe.Emit.EnderEmit.CEP),FPosPrinter.ColunasFonteCondensada));
 
-  FBuffer.Add( '</ae><c>'+
-               'CNPJ:'+FormatarCNPJ(CFe.Emit.CNPJ)+
-               ' IE:'+Trim(CFe.Emit.IE)+
-               ' IM:'+Trim(CFe.Emit.IM));
+  DocsEmit := 'CNPJ:'+FormatarCNPJ(CFe.Emit.CNPJ)+
+                  ' IE:'+Trim(CFe.Emit.IE);
+
+  { Verifica se existe valor no campo IM }
+  if (CFe.Emit.IM <> '') and (CFe.Emit.IM <> '0') then
+    DocsEmit := DocsEmit + ' IM:'+Trim(CFe.Emit.IM);
+
+  FBuffer.Add( '</ce><c>'+ DocsEmit);
   FBuffer.Add('</linha_simples>');
 
 
@@ -177,14 +173,19 @@ begin
       nCFe := IntToStrZero( CFeCanc.ide.nCFe, 6)
     else
       nCFe := IntToStrZero( CFE.ide.nCFe, 6);
-                                      
+
     FBuffer.Add('</fn></ce><n>Extrato No. '+ nCFe );
     FBuffer.Add( ACBrStr('CUPOM FISCAL ELETRÔNICO - SAT</n>'));
   end;
 
-  FBuffer.Add('</linha_simples>');
-  FBuffer.Add('</ae><c>CPF/CNPJ do Consumidor: '+
-              ifthen(Trim(CFe.Dest.CNPJCPF)<>'',FormatarCNPJouCPF(CFe.Dest.CNPJCPF),ACBrStr('CONSUMIDOR NÃO IDENTIFICADO')));
+  if (Trim(Cfe.Dest.CNPJCPF) <> '') or ImprimeCPFNaoInformado then
+  begin
+    FBuffer.Add('</linha_simples>');
+    FBuffer.Add('</ae><c>CPF/CNPJ do Consumidor: '+
+                IfThen( Trim(CFe.Dest.CNPJCPF)<>'',
+                        FormatarCNPJouCPF(CFe.Dest.CNPJCPF),
+                        ACBrStr('CONSUMIDOR NÃO IDENTIFICADO')));
+  end;
 
   if Trim(CFe.Dest.xNome) <> '' then
     FBuffer.Add( ACBrStr('Razão Social/Nome: ')+CFe.Dest.xNome );
@@ -208,7 +209,7 @@ begin
     sItem        := IntToStrZero(CFe.Det.Items[i].nItem, 3);
     sDescricao   := Trim(CFe.Det.Items[i].Prod.xProd);
     sUnidade     := Trim(CFe.Det.Items[i].Prod.uCom);
-    sVlrProduto  := FormatFloat('#,###,##0.00', CFe.Det.Items[i].Prod.vProd);
+    sVlrProduto  := FormatFloatBr(CFe.Det.Items[i].Prod.vProd);
 
     if (Length( Trim( CFe.Det.Items[i].Prod.cEAN ) ) > 0) and (UsaCodigoEanImpressao) then
       sCodigo := Trim(CFe.Det.Items[i].Prod.cEAN)
@@ -216,9 +217,10 @@ begin
       sCodigo := Trim(CFe.Det.Items[i].Prod.cProd);
 
     // formatar conforme configurado
-    sVlrUnitario := FormatFloatBr(CFe.Det.Items[i].Prod.VUnCom, Mask_vUnCom );
+    sVlrUnitario := FormatFloatBr(CFe.Det.Items[i].Prod.vUnCom,
+      IfThen(CFe.Det.Items[i].Prod.EhCombustivel, ',0.000', Mask_vUnCom));
     if CFe.Det.Items[i].Imposto.vItem12741 > 0 then
-      sVlrImpostos := ' ('+FormatFloatBr(CFe.Det.Items[i].Imposto.vItem12741, '0.00')+') '
+      sVlrImpostos := ' ('+FormatFloatBr(CFe.Det.Items[i].Imposto.vItem12741)+') '
     else
       sVlrImpostos := ' ';
 
@@ -257,14 +259,16 @@ begin
 
     if ImprimeDescAcrescItem then
     begin
+      VlrLiquido := CFe.Det.Items[i].Prod.vProd;
+
       // desconto
       if CFe.Det.Items[i].Prod.vDesc > 0 then
       begin
-        VlrLiquido := CFe.Det.Items[i].Prod.vProd - CFe.Det.Items[i].Prod.vDesc;
+        VlrLiquido := VlrLiquido - CFe.Det.Items[i].Prod.vDesc;
 
         LinhaCmd := '</ae><c>' + padSpace(
-            'desconto ' + padLeft(FormatFloatBr(CFe.Det.Items[i].Prod.vDesc, '-0.00'), 15, ' ')
-            + '|' + FormatFloatBr(VlrLiquido, '0.00'),
+            'desconto ' + padLeft(FormatFloatBr(CFe.Det.Items[i].Prod.vDesc, '-,0.00'), 15, ' ')
+            + '|' + FormatFloatBr(VlrLiquido),
             FPosPrinter.ColunasFonteCondensada, '|');
         FBuffer.Add('</ae><c>' + LinhaCmd);
       end;
@@ -272,11 +276,11 @@ begin
       // ascrescimo
       if CFe.Det.Items[i].Prod.vOutro > 0 then
       begin
-        VlrLiquido := CFe.Det.Items[i].Prod.vProd + CFe.Det.Items[i].Prod.vOutro;
+        VlrLiquido := VlrLiquido + CFe.Det.Items[i].Prod.vOutro;
 
         LinhaCmd := '</ae><c>' + ACBrStr(padSpace(
-            'acréscimo ' + padLeft(FormatFloatBr(CFe.Det.Items[i].Prod.vOutro, '+0.00'), 15, ' ')
-            + '|' + FormatFloatBr(VlrLiquido, '0.00'),
+            'acréscimo ' + padLeft(FormatFloatBr(CFe.Det.Items[i].Prod.vOutro, '+,0.00'), 15, ' ')
+            + '|' + FormatFloatBr(VlrLiquido),
             FPosPrinter.ColunasFonteCondensada, '|'));
         FBuffer.Add('</ae><c>' + LinhaCmd);
       end;
@@ -285,10 +289,10 @@ begin
     if CFe.Det.Items[i].Imposto.ISSQN.vDeducISSQN > 0 then
     begin
       FBuffer.Add(ACBrStr(PadSpace('Dedução para ISSQN|'+
-         FormatFloatBr(CFe.Det.Items[i].Imposto.ISSQN.vDeducISSQN, '-#,###,##0.00'),
+         FormatFloatBr(CFe.Det.Items[i].Imposto.ISSQN.vDeducISSQN, '-,0.00'),
          FPosPrinter.ColunasFonteCondensada, '|')));
       FBuffer.Add(ACBrStr(PadSpace('Base de cálculo ISSQN|'+
-         FormatFloatBr(CFe.Det.Items[i].Imposto.ISSQN.vBC, '#,###,##0.00'),
+         FormatFloatBr(CFe.Det.Items[i].Imposto.ISSQN.vBC),
          FPosPrinter.ColunasFonteCondensada, '|')));
     end;
 
@@ -306,22 +310,22 @@ begin
 
      if (Descontos > 0) or (Acrescimos > 0) then
         FBuffer.Add('<c>'+PadSpace('Subtotal|'+
-           FormatFloatBr(CFe.Total.ICMSTot.vProd, '#,###,##0.00'),
+           FormatFloatBr(CFe.Total.ICMSTot.vProd),
            FPosPrinter.ColunasFonteCondensada, '|'));
 
      if Descontos > 0 then
         FBuffer.Add('<c>'+PadSpace('Descontos|'+
-           FormatFloatBr(Descontos, '-#,###,##0.00'),
+           FormatFloatBr(Descontos, '-,0.00'),
            FPosPrinter.ColunasFonteCondensada, '|'));
 
      if Acrescimos > 0 then
         FBuffer.Add('<c>'+ACBrStr(PadSpace('Acréscimos|'+
-           FormatFloatBr(Acrescimos, '+#,###,##0.00'),
+           FormatFloatBr(Acrescimos, '+,0.00'),
            FPosPrinter.ColunasFonteCondensada, '|')));
    end;
 
   FBuffer.Add('</ae></fn><e>'+PadSpace('TOTAL R$|'+
-     FormatFloatBr(CFe.Total.vCFe, '#,###,##0.00'),
+     FormatFloatBr(CFe.Total.vCFe),
      trunc(FPosPrinter.ColunasFonteExpandida), '|')+'</e>');
 end;
 
@@ -335,13 +339,13 @@ begin
   for i:=0 to CFe.Pagto.Count - 1 do
   begin
     FBuffer.Add('<c>'+ACBrStr(PadSpace(CodigoMPToDescricao(CFe.Pagto.Items[i].cMP)+'|'+
-                FormatFloatBr(CFe.Pagto.Items[i].vMP, '#,###,##0.00'),
+                FormatFloatBr(CFe.Pagto.Items[i].vMP),
                 FPosPrinter.ColunasFonteCondensada, '|')));
   end;
 
   if CFe.Pagto.vTroco > 0 then
     FBuffer.Add('<c>'+PadSpace('Troco R$|'+
-       FormatFloatBr(CFe.Pagto.vTroco, '#,###,##0.00'),
+       FormatFloatBr(CFe.Pagto.vTroco),
        FPosPrinter.ColunasFonteCondensada, '|'));
 end;
 
@@ -408,7 +412,7 @@ begin
     FBuffer.Add('<c>'+StringReplace(Trim(CFe.InfAdic.infCpl),';',sLineBreak,[rfReplaceAll]));
   end;
 
-  if CFe.Total.vCFeLei12741 > 0 then
+  if ImprimeMsgOlhoNoImposto and (CFe.Total.vCFeLei12741 > 0) then
   begin
     if not CabecalhoGerado then
       GerarCabecalhoObsContribuinte;
@@ -419,7 +423,7 @@ begin
       FBuffer.Add('<c>*Valor aproximado dos tributos do item');
 
     FBuffer.Add('<c>'+PadSpace('Valor aproximado dos tributos deste cupom R$ |<n>'+
-                FormatFloatBr(CFe.Total.vCFeLei12741, '#,###,##0.00'),
+                FormatFloatBr(CFe.Total.vCFeLei12741),
                 FPosPrinter.ColunasFonteCondensada, '|'));
     FBuffer.Add('</n>(conforme Lei Fed. 12.741/2012)');
   end;
@@ -428,7 +432,6 @@ end;
 procedure TACBrSATExtratoESCPOS.GerarRodape(CortaPapel: Boolean = True; Cancelamento: Boolean = False);
 var
   QRCode, Chave, TagCode128: String;
-  ConfigQRCodeTipo, ConfigQRCodeErrorLevel: Integer;
   ChaveEmUmaLinha, Suporta128c: Boolean;
 begin
   FBuffer.Add('</fn></linha_simples>');
@@ -449,7 +452,8 @@ begin
   TagCode128 := IfThen(Suporta128c,'code128c', 'code128' );
 
   ChaveEmUmaLinha := (ImprimeChaveEmUmaLinha = rSim) or
-                     ((ImprimeChaveEmUmaLinha = rAuto) and Suporta128c);
+                     ((ImprimeChaveEmUmaLinha = rAuto) and Suporta128c and
+                      ((FPosPrinter.ColunasFonteNormal -2) >= Length(CFe.infCFe.ID)));
 
   if not ChaveEmUmaLinha then
   begin
@@ -461,9 +465,6 @@ begin
 
   if ImprimeQRCode then
   begin
-    ConfigQRCodeTipo := FPosPrinter.ConfigQRCode.Tipo;
-    ConfigQRCodeErrorLevel := FPosPrinter.ConfigQRCode.ErrorLevel;
-
     QRCode := CalcularConteudoQRCode( CFe.infCFe.ID,
                                       CFe.ide.dEmi+CFe.ide.hEmi,
                                       CFe.Total.vCFe,
@@ -472,14 +473,14 @@ begin
 
     FBuffer.Add('<qrcode_tipo>2</qrcode_tipo>'+
                 '<qrcode_error>0</qrcode_error>'+
-                '<qrcode>'+QRCode+'</qrcode>'+
-                '<qrcode_tipo>'+IntToStr(ConfigQRCodeTipo)+'</qrcode_tipo>'+
-                '<qrcode_error>'+IntToStr(ConfigQRCodeErrorLevel)+'</qrcode_error>');
+                '<qrcode>'+QRCode+'</qrcode>');
   end;
-
 
   if not Cancelamento then
   begin
+    if MsgAppQRCode <> '' then
+      FBuffer.Add('</ce><c>' + QuebraLinhas(MsgAppQRCode, FPosPrinter.ColunasFonteCondensada ));
+
     if (SoftwareHouse <> '') or (Site <> '') then
       FBuffer.Add('</linha_simples>');
 
@@ -491,6 +492,8 @@ begin
       FBuffer.Add('</ce><c>' + Site);
   end;
 
+  FBuffer.Add('</zera>');
+  
   if CortaPapel then
   begin
     if FPosPrinter.CortaPapel then
@@ -502,7 +505,6 @@ end;
 
 procedure TACBrSATExtratoESCPOS.GerarDadosCancelamento;
 Var
-  ConfigQRCodeTipo, ConfigQRCodeErrorLevel: Integer;
   ChaveEmUmaLinha, Suporta128c : Boolean;
   Chave, TagCode128 : String;
   QRCode: AnsiString;
@@ -536,9 +538,6 @@ begin
 
   if ImprimeQRCode then
   begin
-    ConfigQRCodeTipo := FPosPrinter.ConfigQRCode.Tipo;
-    ConfigQRCodeErrorLevel := FPosPrinter.ConfigQRCode.ErrorLevel;
-
     QRCode := CalcularConteudoQRCode( CFeCanc.infCFe.ID,
                                       CFeCanc.ide.dEmi+CFeCanc.ide.hEmi,
                                       CFeCanc.Total.vCFe,
@@ -547,10 +546,13 @@ begin
 
     FBuffer.Add('<qrcode_tipo>2</qrcode_tipo>'+
                 '<qrcode_error>0</qrcode_error>'+
-                '<qrcode>'+QRCode+'</qrcode>'+
-                '<qrcode_tipo>'+IntToStr(ConfigQRCodeTipo)+'</qrcode_tipo>'+
-                '<qrcode_error>'+IntToStr(ConfigQRCodeErrorLevel)+'</qrcode_error>');
+                '<qrcode>'+QRCode+'</qrcode>');
   end;
+
+  if MsgAppQRCode <> '' then
+    FBuffer.Add('</ce><c>' + QuebraLinhas(MsgAppQRCode, FPosPrinter.ColunasFonteCondensada ));
+	
+  FBuffer.Add('</zera>');	
 
   if FPosPrinter.CortaPapel then
     FBuffer.Add('</corte_total>')
@@ -638,6 +640,36 @@ begin
   GerarDadosCancelamento;
 
   ImprimirCopias;
+end;
+
+function TACBrSATExtratoESCPOS.GerarImpressaoFiscalMFe(ACFe: TCFe): String;
+var
+  OldImprimeQRCode : Boolean;
+begin
+  SetInternalCFe( ACFe );
+  fpLayOut := lCompleto;
+
+  if (CFe = nil) or (CFe.infCFe.ID = '') then
+    raise EACBrSATErro.Create( 'Nenhum CFe carregado na memória' ) ;
+
+  OldImprimeQRCode := ImprimeQRCode;
+  try
+    ImprimeQRCode := False;
+
+    GerarCabecalho;
+    GerarItens;
+    GerarTotais;
+    GerarPagamentos;
+    GerarObsFisco;
+    GerarDadosEntrega;
+    GerarObsContribuinte;
+    GerarRodape;
+
+    Result := StripHTML(FBuffer.Text);
+  finally
+    FBuffer.clear;
+    ImprimeQRCode := OldImprimeQRCode;
+  end;
 end;
 
 procedure TACBrSATExtratoESCPOS.ImprimirExtratoResumido(ACFe: TCFe);

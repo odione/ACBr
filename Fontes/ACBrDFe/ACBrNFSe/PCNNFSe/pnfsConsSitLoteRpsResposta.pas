@@ -35,6 +35,7 @@ interface
 
 uses
   SysUtils, Classes,
+  ACBrUtil, 
   pcnAuxiliar, pcnConversao, pcnLeitor, pnfsConversao, pnfsNFSe;
 
 type
@@ -206,7 +207,7 @@ begin
   if Provedor = proISSCuritiba then
     Leitor.Arquivo := RemoverNameSpace(Leitor.Arquivo)
   else
-    Leitor.Arquivo := RemoverNameSpace(RetirarPrefixos(Leitor.Arquivo));
+    Leitor.Arquivo := RemoverNameSpace(RemoverAtributos(RetirarPrefixos(Leitor.Arquivo, Provedor), Provedor));
 
   Leitor.Grupo := Leitor.Arquivo;
 
@@ -214,9 +215,12 @@ begin
     proCONAM:      Result := LerXml_proCONAM;
     proISSDSF:     Result := LerXml_proISSDSF;
     proEquiplano:  Result := LerXML_proEquiplano;
-    proInfIsc:     Result := LerXml_proInfisc;
+    proInfisc,
+    proInfiscv11:  Result := LerXml_proInfisc;
     proEL:         Result := LerXML_proEL;
     proNFSeBrasil: Result := LerXml_proNFSeBrasil;
+    proSP, 
+    proNotaBlu:    Result := LerXml_proSP;
   else
     Result := LerXml_ABRASF;
   end;
@@ -263,6 +267,9 @@ begin
              (trim(InfSit.FMsgRetorno[i].FCodigo) <> 'E92') then
             InfSit.FSituacao := 'Erro';
 
+          if trim(InfSit.FMsgRetorno[i].FCodigo) = 'E92' then
+            InfSit.FSituacao := '2';
+
           inc(i);
         end;
       end;
@@ -294,7 +301,7 @@ begin
     if (leitor.rExtrai(1, 'Sdt_consultaprotocoloout') <> '') or
        (leitor.rExtrai(1, 'Sdt_consultanotasprotocoloout') <> '') then
     begin
-      FInfSit.FSituacao:= Leitor.rCampo(tcStr, 'PrtXS'); {1 (Aguardando processamento)
+      FInfSit.FSituacao:= Leitor.rCampo(tcStr, 'PrtXSts'); {1 (Aguardando processamento)
                                                             2 (Em Processamento)
                                                             3 (Rejeitado)
                                                             4 (Rejeitado Parcialmente)
@@ -408,7 +415,7 @@ begin
           begin
             sMotDes := Leitor.rCampo(tcStr, 'mot');
             if Pos('Error', sMotDes) > 0 then
-              sMotCod := SomenteNumeros(copy(sMotDes, 1, Pos(' ', sMotDes)))
+              sMotCod := OnlyNumber(copy(sMotDes, 1, Pos(' ', sMotDes)))
             else
               sMotCod := '';
             InfSit.FMsgRetorno.Add;
@@ -619,19 +626,24 @@ begin
     begin
       if (leitor.rExtrai(2, 'Cabecalho') <> '') then
       begin
-        FInfSit.FSucesso := Leitor.rCampo(tcStr, 'Sucesso');
+        FInfSit.FSucesso  := Leitor.rCampo(tcStr, 'Sucesso');
+
+        if (FInfSit.FSucesso = 'false') then
+          FInfSit.FSituacao := '2'
+        else
+          FInfSit.FSituacao := '4';
 
         if (leitor.rExtrai(3, 'InformacoesLote') <> '') then
         begin
-          FInfSit.InformacoesLote.NumeroLote := Leitor.rCampo(tcStr, 'NumeroLote');
-          FInfSit.InformacoesLote.InscricaoPrestador := Leitor.rCampo(tcStr, 'InscricaoPrestador');
-          FInfSit.InformacoesLote.CPFCNPJRemetente := Leitor.rCampo(tcStr, 'CNPJ');
+          FInfSit.InformacoesLote.NumeroLote          := Leitor.rCampo(tcStr, 'NumeroLote');
+          FInfSit.InformacoesLote.InscricaoPrestador  := Leitor.rCampo(tcStr, 'InscricaoPrestador');
+          FInfSit.InformacoesLote.CPFCNPJRemetente    := Leitor.rCampo(tcStr, 'CNPJ');
           if FInfSit.InformacoesLote.CPFCNPJRemetente = '' then
-            FInfSit.InformacoesLote.CPFCNPJRemetente := Leitor.rCampo(tcStr, 'CPF');
-          FInfSit.InformacoesLote.DataEnvioLote := Leitor.rCampo(tcDatHor, 'DataEnvioLote');
+            FInfSit.InformacoesLote.CPFCNPJRemetente  := Leitor.rCampo(tcStr, 'CPF');
+          FInfSit.InformacoesLote.DataEnvioLote       := Leitor.rCampo(tcDatHor, 'DataEnvioLote');
           FInfSit.InformacoesLote.QtdNotasProcessadas := Leitor.rCampo(tcInt, 'QtdeNotasProcessadas');
-          FInfSit.InformacoesLote.TempoProcessamento := Leitor.rCampo(tcInt, 'TempoProcessamento');
-          FInfSit.InformacoesLote.ValorTotalServico := Leitor.rCampo(tcDe2, 'ValorTotalServicos');
+          FInfSit.InformacoesLote.TempoProcessamento  := Leitor.rCampo(tcInt, 'TempoProcessamento');
+          FInfSit.InformacoesLote.ValorTotalServico   := Leitor.rCampo(tcDe2, 'ValorTotalServicos');
         end;
       end;
 

@@ -43,7 +43,7 @@ uses
   ACBrConsts,
   pnfsNFSeW,
   pcnAuxiliar, pcnConversao, pcnGerador,
-  pnfsNFSe, pnfsConversao;
+  pnfsNFSe, pnfsConversao, pnfsConsts;
 
 type
   { TNFSeW_SP }
@@ -57,13 +57,13 @@ type
     procedure GerarValoresServico;
     procedure GerarTomador;
     procedure GerarIntermediarioServico;
+    procedure GerarConstrucaoCivil;
     procedure GerarListaServicos;
 
     procedure GerarRPSSubstituido;
     procedure GerarPrestador;
     procedure GerarServicoValores;
 
-    procedure GerarConstrucaoCivil;
     procedure GerarCondicaoPagamento;
 
     procedure GerarXML_SP;
@@ -95,7 +95,7 @@ begin
   Gerador.wGrupoNFSe('ChaveRPS');
   Gerador.wCampoNFSe(tcStr, '', 'InscricaoPrestador', 1, 11, 1, NFSe.Prestador.InscricaoMunicipal, '');
   Gerador.wCampoNFSe(tcStr, '', 'SerieRPS'          , 1, 02, 1, NFSe.IdentificacaoRps.Serie, '');
-  Gerador.wCampoNFSe(tcStr, '', 'NumeroRPS'         , 1, 12, 1, NFSe.IdentificacaoRps.Numero, '');
+  Gerador.wCampoNFSe(tcStr, '', 'NumeroRPS'         , 1, 12, 1, NFSe.IdentificacaoRps.Numero, DSC_NUMRPS);
   Gerador.wGrupoNFSe('/ChaveRPS');
 end;
 
@@ -117,7 +117,7 @@ end;
 
 procedure TNFSeW_SP.GerarValoresServico;
 var
-  ISSRetido: String;
+  aliquota, ISSRetido: String;
 begin
   Gerador.wCampoNFSe(tcDe2, '', 'ValorServicos', 1, 15, 1, NFSe.Servico.Valores.ValorServicos, '');
   Gerador.wCampoNFSe(tcDe2, '', 'ValorDeducoes', 1, 15, 1, NFSe.Servico.Valores.ValorDeducoes, '');
@@ -126,9 +126,15 @@ begin
   Gerador.wCampoNFSe(tcDe2, '', 'ValorINSS'    , 1, 15, 0, NFSe.Servico.Valores.ValorInss, '');
   Gerador.wCampoNFSe(tcDe2, '', 'ValorIR'      , 1, 15, 0, NFSe.Servico.Valores.ValorIr, '');
   Gerador.wCampoNFSe(tcDe2, '', 'ValorCSLL'    , 1, 15, 0, NFSe.Servico.Valores.ValorCsll, '');
-
   Gerador.wCampoNFSe(tcStr, '', 'CodigoServico'   , 1, 05, 1, OnlyNumber(NFSe.Servico.ItemListaServico), '');
-  Gerador.wCampoNFSe(tcDe4, '', 'AliquotaServicos', 1, 05, 0, NFSe.Servico.Valores.Aliquota, '');
+
+  if NFSe.Servico.Valores.Aliquota > 0 then
+    begin
+      aliquota := FormatFloat('0.00##', NFSe.Servico.Valores.Aliquota / 100);
+      aliquota := StringReplace(aliquota, ',', '.', [rfReplaceAll]);
+    end
+  else aliquota := '0';
+  Gerador.wCampoNFSe(tcStr, '', 'AliquotaServicos', 1, 6, 1, aliquota, '');
 
   ISSRetido := EnumeradoToStr( NFSe.Servico.Valores.IssRetido,
                                        ['false', 'true'], [stNormal, stRetencao]);
@@ -185,8 +191,10 @@ end;
 procedure TNFSeW_SP.GerarListaServicos;
 begin
   Gerador.wCampoNFSe(tcStr, '', 'Discriminacao', 1, 2000, 1, NFSe.Servico.Discriminacao, '');
+  Gerador.wCampoNFSe(tcDe2, '', 'ValorCargaTributaria', 1, 15, 0, NFSe.Servico.ValorCargaTributaria, '');
+  Gerador.wCampoNFSe(tcDe4, '', 'PercentualCargaTributaria', 1, 5, 0, NFSe.Servico.PercentualCargaTributaria, '');
+  Gerador.wCampoNFSe(tcStr, '', 'FonteCargaTributaria', 1, 10, 0, NFSe.Servico.FonteCargaTributaria, '');
 end;
-
 
 procedure TNFSeW_SP.GerarRPSSubstituido;
 begin
@@ -205,7 +213,10 @@ end;
 
 procedure TNFSeW_SP.GerarConstrucaoCivil;
 begin
-  // Não definido
+  Gerador.wCampoNFSe(tcStr, '', 'CodigoCEI', 1, 12, 0, NFSe.ConstrucaoCivil.nCei, '');
+  Gerador.wCampoNFSe(tcStr, '', 'MatriculaObra', 1, 12, 0, NFSe.ConstrucaoCivil.nMatri, '');
+  Gerador.wCampoNFSe(tcStr, '', 'NumeroEncapsulamento', 1, 12, 0, NFSe.ConstrucaoCivil.nNumeroEncapsulamento, '');
+  Gerador.wCampoNFSe(tcStr, '', 'MunicipioPrestacao', 1, 7, 0, NFSe.ConstrucaoCivil.CodigoMunicipioObra, '');
 end;
 
 procedure TNFSeW_SP.GerarCondicaoPagamento;
@@ -236,6 +247,7 @@ begin
   GerarTomador;
   GerarIntermediarioServico;
   GerarListaServicos;
+  GerarConstrucaoCivil;
 
   Gerador.wGrupoNFSe('/RPS');
 end;
@@ -257,6 +269,7 @@ function TNFSeW_SP.GerarXml: Boolean;
 var
   Gerar: Boolean;
 begin
+  Gerador.ListaDeAlertas.Clear;
   Gerador.Opcoes.SuprimirDecimais := True;
   Gerador.ArquivoFormatoXML := '';
   Gerador.Prefixo           := FPrefixo4;

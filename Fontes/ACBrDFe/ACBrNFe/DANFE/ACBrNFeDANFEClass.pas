@@ -52,7 +52,9 @@ uses
   pcnNFe, pcnConversao;
 
 type
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TCasasDecimais = class(TComponent)
   private
     fFormato : TDetFormato;
@@ -75,7 +77,9 @@ type
   end;
 
   { TACBrNFeDANFEClass }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrNFeDANFEClass = class( TACBrComponent )
    private
     procedure SetNFE(const Value: TComponent);
@@ -163,6 +167,12 @@ type
     function ManterNomeImpresso(sXNome, sXFant: String): String;
     function FormatQuantidade(dValor: Double; dForcarDecimais: Boolean = True): String;
     function FormatValorUnitario(dValor: Double): String;
+    function ManterUnidades(sUCom, sUTrib: String): String;
+    function ManterQuantidades(dQCom, dQTrib: Double): String;
+    function ManterValoresUnitarios(dVCom, dVTrib: Double): String;
+    function ManterDocreferenciados( aNFE: TNFe;bImprimirDadosDocReferenciados: Boolean;
+      sQuebraLinha: String = ' '): String;
+
   published
     property ACBrNFe: TComponent                     read FACBrNFe                        write SetNFE;
     property Logo: String                            read FLogo                           write FLogo;
@@ -227,14 +237,14 @@ type
 implementation
 
 uses
-  ACBrNFe, ACBrUtil, ACBrConsts;
+  ACBrNFe, ACBrUtil,ACBrDFeUtil,ACBrValidador;
 
 //Casas Decimais
 constructor TCasasDecimais.Create(AOwner: TComponent);
 begin
   inherited create( AOwner );
-  FMask_qCom    := '###,###,###,##0.00';
-  FMask_vUnCom  := '###,###,###,##0.00';
+  FMask_qCom    := ',0.00';
+  FMask_vUnCom  := ',0.00';
   FQCom         := 2;
   FvUnCom       := 2;
 end;
@@ -394,8 +404,7 @@ end;
 
 procedure TACBrNFeDANFEClass.SetPathPDF(const Value: String);
 begin
-  if Trim(Value) <> '' then
-    FPathPDF := IncludeTrailingPathDelimiter(Value);
+  FPathPDF := PathWithDelim(Value);
 end;
 
 procedure TACBrNFeDANFEClass.ErroAbstract(NomeProcedure: String);
@@ -404,11 +413,55 @@ begin
 end;
 
 function TACBrNFeDANFEClass.GetPathPDF: String;
+var
+   dhEmissao: TDateTime;
+   DescricaoModelo: String;
+   ANFe: TNFe;
 begin
-  if Trim(FPathPDF) <> '' then
-    Result := IncludeTrailingPathDelimiter(FPathPDF)
-  else
-    Result := Trim(FPathPDF)
+  if (csDesigning in ComponentState) then
+  begin
+    Result := FPathPDF;
+    Exit;
+  end;
+
+  Result := Trim(FPathPDF);
+
+  if EstaVazio(Result) then  // Se não pode definir o Parth, use o Path da Aplicaçao
+    Result := PathWithDelim( ExtractFilePath(ParamStr(0))) + 'pdf';
+
+  if FUsarSeparadorPathPDF then
+  begin
+    if Assigned(ACBrNFe) then  // Se tem o componente ACBrNFe
+    begin
+      if TACBrNFe(ACBrNFe).NotasFiscais.Count > 0 then  // Se tem alguma Nota carregada
+      begin
+        ANFe := TACBrNFe(ACBrNFe).NotasFiscais.Items[0].NFe;
+        if TACBrNFe(ACBrNFe).Configuracoes.Arquivos.EmissaoPathNFe then
+          dhEmissao := ANFe.Ide.dEmi
+        else
+          dhEmissao := Now;
+
+        DescricaoModelo := '';
+        if TACBrNFe(ACBrNFe).Configuracoes.Arquivos.AdicionarLiteral then
+        begin
+           case ANFe.Ide.modelo of
+             0: DescricaoModelo := TACBrNFe(FACBrNFe).GetNomeModeloDFe;
+             55: DescricaoModelo := 'NFe';
+             65: DescricaoModelo := 'NFCe';
+           end;
+        end;
+
+        Result := TACBrNFe(FACBrNFe).Configuracoes.Arquivos.GetPath(
+                         Result,
+                         DescricaoModelo,
+                         ANFe.Emit.CNPJCPF,
+                         dhEmissao,
+                         DescricaoModelo);
+      end;
+    end;
+  end;
+
+  Result := PathWithDelim( Result );
 end;
 
 procedure TACBrNFeDANFEClass.ImprimirEVENTO(NFE: TNFe);
@@ -436,10 +489,10 @@ begin
   if (Frac(dValor) > 0) or (dForcarDecimais) then
   begin
     case CasasDecimais.Formato of
-      tdetInteger : Result := FormatFloatBr( dValor , format(sDisplayFormat,  [CasasDecimais._qCom, 0]));
+      tdetInteger : Result := FormatFloatBr( dValor , FloatMask( CasasDecimais._qCom));
       tdetMascara : Result := FormatFloatBr( dValor , CasasDecimais._Mask_qCom);
     else
-      Result := FormatFloatBr( dValor , format(sDisplayFormat,  [CasasDecimais._qCom, 0]));
+      Result := FormatFloatBr( dValor , FloatMask( CasasDecimais._qCom));
     end
   end
   else
@@ -452,10 +505,10 @@ function TACBrNFeDANFEClass.FormatValorUnitario( dValor : Double ) : String;
 begin
   // formatar conforme configurado
   case CasasDecimais.Formato of
-    tdetInteger : Result := FormatFloatBr( dValor , format(sDisplayFormat, [CasasDecimais._vUnCom, 0]));
+    tdetInteger : Result := FormatFloatBr( dValor , FloatMask( CasasDecimais._vUnCom));
     tdetMascara : Result := FormatFloatBr( dValor , CasasDecimais._Mask_vUnCom);
     else
-      Result := FormatFloatBr( dValor , format(sDisplayFormat, [CasasDecimais._vUnCom, 0]));
+      Result := FormatFloatBr( dValor , FloatMask( CasasDecimais._vUnCom));
   end;
 end;
 
@@ -473,6 +526,101 @@ begin
     Result := sXFant
   else
     Result := sXNome;
+end;
+
+function TACBrNFeDANFEClass.ManterQuantidades(dQCom, dQTrib: Double): String;
+begin
+   Result := FormatQuantidade( dQCom );
+   if dQTrib > 0 then
+      Result := Result + #13#10 + FormatQuantidade( dQTrib );
+end;
+
+function TACBrNFeDANFEClass.ManterUnidades(sUCom, sUTrib: String): String;
+begin
+   Result := Trim( sUCom );
+   if Trim( sUTrib ) <> '' then
+      Result := Result + #13#10 + Trim( sUTrib );
+end;
+
+function TACBrNFeDANFEClass.ManterValoresUnitarios(dVCom,
+  dVTrib: Double): String;
+begin
+   Result := FormatValorUnitario ( dVCom );
+   if dVTrib > 0 then
+      Result := Result + #13#10 + FormatValorUnitario ( dVTrib );
+end;
+
+function TACBrNFeDANFEClass.ManterDocreferenciados( aNFE: TNFe;bImprimirDadosDocReferenciados : Boolean; sQuebraLinha : String = ' ' ) : String;
+// Informações de Documentos referenciados
+  function DescrModeloNFe(chave: String):String;
+  begin
+    case StrToIntDef(Copy(chave, 21, 2),0) of
+      59:   Result := 'CFe-SAT Ref.:';
+      65:   Result := 'NFCe Ref.:';
+      else  Result := 'NFe Ref.:';
+    end;
+  end;
+  Function MontaLadoALado(  bExecuta : Boolean;
+                            sResult : string;
+                            sInicio : String;
+                            sString : String ) : String;
+  begin
+    if bExecuta  then
+    begin
+      if sResult = '' then
+        Result := sInicio
+      else
+      if pos(sInicio,sResult) = 0 then
+        Result := sResult+', '+ sInicio
+      else
+        Result := sResult+', ';
+
+      Result := Result + '(' + sString +')' ;
+    end
+    else
+      Result := sResult;
+  end;
+var
+  i : Integer;
+begin
+  Result  := '';
+  if ( bImprimirDadosDocReferenciados ) and ( ANFe.Ide.NFref.Count > 0 ) then
+  begin
+    for i := 0 to (ANFe.ide.NFref.Count - 1) do
+    begin
+      Result := MontaLadoALado( ( ANFe.ide.NFref[i].refNFe <> '' ),
+                                  Result,
+                                  DescrModeloNFe(ANFe.ide.NFref[i].refNFe) ,
+                                  FormatarChaveAcesso( ANFe.ide.NFref[i].refNFe ) );
+      Result := MontaLadoALado( ( ANFe.ide.NFref[i].refCTe <> '' ),
+                                  Result,
+                                  'CTe Ref.:',
+                                  FormatarChaveAcesso( ANFe.ide.NFref[i].refCTe ));
+      Result := MontaLadoALado( ( ANFe.ide.NFref[i].RefECF.modelo <> ECFModRefVazio ) ,
+                                  Result,
+                                  'ECF Ref.:',
+                                  ACBrStr('modelo: ' + ECFModRefToStr(ANFe.ide.NFref[i].RefECF.modelo) +
+                                  ' ECF: ' +ANFe.ide.NFref[i].RefECF.nECF + ' COO: ' + ANFe.ide.NFref[i].RefECF.nCOO));
+      Result := MontaLadoALado( ( ANFe.ide.NFref[i].RefNF.CNPJ <> '' ),
+                                  Result,
+                                  'NF Ref.:',
+                                  ACBrStr('série: ' + IntTostr(ANFe.ide.NFref[i].RefNF.serie) +
+                                  ' número: ' + IntTostr(ANFe.ide.NFref[i].RefNF.nNF) +
+                                  ' emit: ' + FormatarCNPJouCPF(ANFe.ide.NFref[i].RefNF.CNPJ) +
+                                  ' modelo: ' + IntTostr(ANFe.ide.NFref[i].RefNF.modelo)));
+      Result := MontaLadoALado( ( ANFe.ide.NFref[i].RefNFP.nNF > 0 ),
+                                  Result,
+                                  'NFP Ref.:',
+                                  ACBrStr('série: ' + IntTostr(ANFe.ide.NFref[i].RefNFP.serie) +
+                                  ' número: ' + IntTostr(ANFe.ide.NFref[i].RefNFP.nNF) +
+                                  ' modelo: ' + ANFe.ide.NFref[i].RefNFP.modelo +
+                                  ' emit: ' + FormatarCNPJouCPF(ANFe.ide.NFref[i].RefNFP.CNPJCPF) +
+                                  ' IE: ' + ANFe.ide.NFref[i].RefNFP.IE +
+                                  ' UF: ' + CUFtoUF(ANFe.ide.NFref[i].RefNFP.cUF)));
+
+    end;
+    Result := Result + sQuebraLinha;
+  end;
 end;
 
 end.

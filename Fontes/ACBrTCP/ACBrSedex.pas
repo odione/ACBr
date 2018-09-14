@@ -45,18 +45,18 @@ unit ACBrSedex;
 interface
 
 uses
-  Classes, SysUtils, contnrs, ACBrSocket, ACBrUtil;
+  Classes, SysUtils, contnrs, ACBrSocket, ACBrUtil, IniFiles;
 
 const
   CURL_SEDEX = 'http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?';
 
 type
-  TACBrTpServico = (Tps41106PAC, Tps40010SEDEX, Tps40215SEDEX10,
+  TACBrTpServico = (Tps04510PAC, Tps04014SEDEX, Tps40215SEDEX10,
     Tps40290SEDEXHOJE, Tps81019eSEDEX, Tps44105MALOTE,
     Tps85480AEROGRAMA, Tps10030CARTASIMPLES, Tps10014CARTAREGISTRADA,
     Tps16012CARTAOPOSTAL, Tps20010IMPRESSO, Tps14010MALADIRETA,
-    Tps40010SEDEXVarejo, Tps40045SEDEXaCobrarVarejo, Tps40215SEDEX10Varejo,
-    Tps40290SEDEXHojeVarejo, Tps41106PACVarejo);
+    Tps04014SEDEXVarejo, Tps40045SEDEXaCobrarVarejo, Tps40215SEDEX10Varejo,
+    Tps40290SEDEXHojeVarejo, Tps04510PACVarejo);
 
   TACBrTpFormato = (TpfCaixaPacote, TpfRoloPrisma, TpfEnvelope);
 
@@ -96,7 +96,9 @@ type
   end;
 
   { TACBrSedex }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrSedex = class(TACBrHTTP)
   private
     fsCodContrato: String;
@@ -127,12 +129,15 @@ type
     fErro: Integer;
     fMsgErro: String;
     fRastreio: TACBrRastreioClass;
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     function Consultar: Boolean;
     procedure Rastrear(const CodRastreio: String);
+
+    function LerArqIni(const AIniSedex: String): Boolean;
 
     property retCodigoServico: String read fCodigoServico write fCodigoServico;
     property retValor: Double read fValor write fValor;
@@ -225,7 +230,7 @@ begin
   fsMaoPropria := False;
   fnVlValorDeclarado := 0;
   fsAvisoRecebimento := False;
-  fnCdServico := Tps41106PAC;
+  fnCdServico := Tps04510PAC;
   fUrlConsulta := CURL_SEDEX;
 
   fCodigoServico := '';
@@ -252,10 +257,10 @@ var
   TpServico, TpFormato, TpMaoPropria, TpAvisoRecebimento, Buffer: string;
 begin
   case fnCdServico of
-    Tps41106PAC :
-      TpServico := '41106';
-    Tps40010SEDEX :
-      TpServico := '40010';
+    Tps04510PAC :
+      TpServico := '04510';
+    Tps04014SEDEX :
+      TpServico := '04014';
     Tps40215SEDEX10 :
       TpServico := '40215';
     Tps40290SEDEXHOJE :
@@ -276,16 +281,16 @@ begin
       TpServico := '20010';
     Tps14010MALADIRETA :
       TpServico := '14010';
-    Tps40010SEDEXVarejo :
-      TpServico := '40010';
+    Tps04014SEDEXVarejo :
+      TpServico := '04014';
     Tps40045SEDEXaCobrarVarejo :
       TpServico := '40045';
     Tps40215SEDEX10Varejo :
       TpServico := '40215';
     Tps40290SEDEXHojeVarejo :
       TpServico := '40290';
-    Tps41106PACVarejo :
-      TpServico := '41106';
+    Tps04510PACVarejo :
+      TpServico := '04510';
     else
       raise EACBrSedexException.CreateACBrStr('Tipo de Serviço Inválido');
   end;
@@ -416,7 +421,7 @@ procedure TACBrSedex.Rastrear(const CodRastreio: String);
 var
   SL: TStringList;
   I, Cont: integer;
-  vObs, Erro: String;
+  vObs, Erro, vData, vLocal: String;
 
   function CopyDeAte(Texto, TextIni, TextFim: string): string;
   var
@@ -438,7 +443,7 @@ begin
 
   try
     Self.HTTPGet(
-      'http://websro.correios.com.br/sro_bin/txect01$.QueryList?P_LINGUA=001&P_TIPO=001&P_COD_UNI='
+      'http://www.websro.com.br//detalhes.php?P_COD_UNI='
       + CodRastreio);
   except
     on E: Exception do
@@ -469,24 +474,69 @@ begin
 
     for I := cont downto 0 do
     begin
-      if Pos('colspan', SL[I]) > 0 then
-        vObs := CopyDeAte(SL[I], 'colspan=2>', '</td></tr>')
-
-      else if Pos('rowspan', SL[I]) > 0 then
+      if Pos('<tr><td valign=', SL[I]) > 0 then
       begin
+        vData :=  Copy(SL[I], 31, 10) + ' ' + Copy(SL[I], 45, 5) + ':00';
         with retRastreio.New do
         begin
-          DataHora   := StrToDateTime(Copy(SL[I], 19, 16) + ':00');
-          Local      := CopyDeAte(SL[I], '</td><td>', '</td><td><FONT');
-          Situacao   := CopyDeAte(SL[I], '">', '</font>');
+          DataHora   := StrToDateTime(vData);
+          Local      := vLocal;
+          Situacao   := vObs;
           Observacao := vObs;
         end;
-
-        vObs := '';
       end;
+
+      If Pos('</label></td>', SL[I]) > 0 Then
+  		Begin
+        vLocal :=(CopyDeAte(SL[I], '<label>', '</label>')) + ' -> ' + vObs;
+      End;
+
+
+     If Pos('<td><strong>', SL[I]) > 0 Then
+		 Begin
+       vObs := CopyDeAte(SL[I], '<td><strong>', '</strong>');
+       //vLocal := vObs;
+     End;
+
     end;
   finally
     SL.Free;
+  end;
+end;
+
+function TACBrSedex.LerArqIni(const AIniSedex: String): Boolean;
+var
+  IniSedex: TMemIniFile;
+  Sessao: String;
+  MemFormatada: String;
+begin
+  Result   := False;
+
+  IniSedex := TMemIniFile.Create('');
+  try
+    LerIniArquivoOuString(AIniSedex, IniSedex);
+    with Self do
+    begin
+      Sessao := 'SEDEX';
+      MemFormatada     := IniSedex.ReadString(Sessao,'Mensagem','') ;
+      MemFormatada     := StringReplace( MemFormatada,'|',sLineBreak, [rfReplaceAll] );
+
+      CepOrigem        := OnlyNumber(IniSedex.ReadString(Sessao,'CepOrigem',''));
+      CepDestino       := OnlyNumber(IniSedex.ReadString(Sessao,'CepDestino',''));
+      Servico          := TACBrTpServico(IniSedex.ReadInteger(Sessao,'Servico',0));
+      Peso             := IniSedex.ReadFloat(Sessao,'Peso',0);
+      Altura           := IniSedex.ReadFloat(Sessao,'Altura',0);
+      Largura          := IniSedex.ReadFloat(Sessao,'Largura',0);
+      Comprimento      := IniSedex.ReadFloat(Sessao,'Comprimento',0);
+      Diametro         := IniSedex.ReadFloat(Sessao,'Diametro',0);
+      ValorDeclarado   := IniSedex.ReadFloat(Sessao,'ValorDeclarado',0);
+      Formato          := TACBrTpFormato(IniSedex.ReadInteger(Sessao,'Formato',0));
+      AvisoRecebimento := IniSedex.ReadBool(Sessao,'AvisoRecebimento',False);
+      MaoPropria       := IniSedex.ReadBool(Sessao,'MaoPropria',False);
+    end;
+  finally
+    IniSedex.free;
+    Result := True;
   end;
 end;
 

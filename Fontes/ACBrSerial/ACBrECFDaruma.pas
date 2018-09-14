@@ -218,7 +218,8 @@ TACBrECFDaruma = class( TACBrECFClass )
     Procedure CancelaItemVendido( NumItem : Integer ) ; override ;
     procedure CancelaItemVendidoParcial( NumItem : Integer;
       Quantidade : Double) ; override ; // Função implementada até o momento apenas para Daruma
-    procedure CancelaDescontoAcrescimoItem( NumItem : Integer) ;override ; // Função implementada até o momento apenas para Daruma
+    procedure CancelaDescontoAcrescimoItem( NumItem : Integer;
+      TipoAcrescimoDesconto: String = 'D') ;override ;
     Procedure LeituraX ; override ;
     Procedure LeituraXSerial( Linhas : TStringList) ; override ;
     Procedure ReducaoZ(DataHora : TDateTime = 0 ) ; override ;
@@ -266,8 +267,9 @@ TACBrECFDaruma = class( TACBrECFClass )
 
 
 
-    Procedure ArquivoMF_DLL(NomeArquivo: AnsiString); override ;
-    Procedure ArquivoMFD_DLL(NomeArquivo: AnsiString); override ;
+    Procedure ArquivoMF_Binario_DLL(NomeArquivo: AnsiString); override;
+    Procedure ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD; NomeArquivo,
+      StrInicial, StrFinal: AnsiString); override;
 
     Procedure IdentificaOperador ( Nome: String); override;
     Procedure IdentificaPAF( NomeVersao, MD5 : String) ; override ;
@@ -320,8 +322,8 @@ TACBrECFDaruma = class( TACBrECFClass )
     procedure LerTotaisComprovanteNaoFiscal; override ;
     Procedure ProgramaComprovanteNaoFiscal( var Descricao: String;
        Tipo : String = ''; Posicao : String = '') ; override ;
-    procedure PafMF_GerarCAT52(const DataInicial: TDateTime;
-      const DataFinal: TDateTime; const DirArquivos: string); override;
+    procedure PafMF_GerarCAT52(const DataInicial, DataFinal: TDateTime;
+      const DirArquivos: String; NumeroSerie: String = ''); override;
 
     Property ComprovantesNaoFiscaisVinculado : TACBrECFComprovantesNaoFiscais
        read GetComprovantesNaoFiscaisVinculado ;
@@ -351,9 +353,11 @@ function DarumaTraduzirTagBloco(const ATag, Conteudo: AnsiString;
 
 
 implementation
-Uses SysUtils, Math,
-    {$IFDEF COMPILER6_UP} DateUtils, StrUtils {$ELSE} ACBrD5, Windows{$ENDIF},
-    ACBrUtil, ACBrECF, ACBrConsts;
+Uses
+    {$IFDEF MSWINDOWS} Windows, {$ENDIF MSWINDOWS}
+    SysUtils, Math,
+    {$IFDEF COMPILER6_UP} DateUtils, StrUtils, {$ELSE} ACBrD5, {$ENDIF}
+    ACBrUtil, ACBrECF, ACBrECFEscECF, ACBrConsts;
 
 { ----------------------------- TACBrECFDaruma ------------------------------ }
 
@@ -940,7 +944,7 @@ function DarumaTraduzirTagBloco(const ATag, Conteudo: AnsiString;
 const
   // bAABCCDDEEEEEEEEEEEEE..EE
   // --------
-  // b = Comando para impressão das barras
+  // ESC b = Comando para impressão das barras
   // A = Tipo de codigo FIXO
   // B = Largura 1..5
   // C = Altura 50..200
@@ -949,36 +953,47 @@ const
   //     01 - Imprime
   // E = Codigo de barra
   // termina o comando com null
-  cEAN8     = ESC + 'b02'; // <ean8></ean8>
-  cEAN13    = ESC + 'b01'; // <ean13></ean13>
-  cSTD25    = ESC + 'b03'; // <std></std>
-  cINTER25  = ESC + 'b04'; // <inter></inter>
-  cCODE11   = ESC + 'b11'; // <code11></code11>
-  cCODE39   = ESC + 'b06'; // <code39></code39>
-  cCODE93   = ESC + 'b07'; // <code93></code93>
-  cCODE128  = ESC + 'b05'; // <code128></code128>
-  cUPCA     = ESC + 'b08'; // <upca></upca>
-  cCODABAR  = ESC + 'b09'; // <codabar></codabar>
-  cMSI      = ESC + 'b10'; // <msi></msi>
-  cBarraFim = NUL;
+  cEAN13    = 01; // <ean13></ean13>
+  cEAN8     = 02; // <ean8></ean8>
+  cSTD25    = 03; // <std></std>
+  cINTER25  = 04; // <inter></inter>
+  cCODE128  = 05; // <code128></code128>
+  cCODE39   = 06; // <code39></code39>
+  cCODE93   = 07; // <code93></code93>
+  cUPCA     = 08; // <upca></upca>
+  cCODABAR  = 09; // <codabar></codabar>
+  cMSI      = 10; // <msi></msi>
+  cCODE11   = 11; // <code11></code11>
+var
+  IsEscECF: Boolean;
 
-  function MontaCodBarras(const ATipo, ACodigo: AnsiString): AnsiString;
+  function MontaCodBarras(const ATipo: Byte; ACodigo: AnsiString): AnsiString;
   var
-    Largura: AnsiString;
-    Altura: AnsiString;
-    Mostrar: AnsiString;
+    Largura, Altura, Mostrar: Byte;
   begin
     with AECFClass do
     begin
-      Largura := IntToStrZero( max( min( ConfigBarras.LarguraLinha, 5), 2) , 1);
-      Altura  := IntToStrZero( max( min( ConfigBarras.Altura, 99), 5), 2);
-      Mostrar := IfThen(ConfigBarras.MostrarCodigo, '01', '00');
+      Largura := max( min( ConfigBarras.LarguraLinha, 5), 2);
+      if ConfigBarras.Altura = 0 then
+        Altura := ifthen(IsEscECF, 50, 5)
+      else
+        Altura  := max( min( ConfigBarras.Altura, 99), 5);
+
+      Mostrar := IfThen(ConfigBarras.MostrarCodigo, 1, 0);
     end;
 
-    Result := ATipo + Largura + Altura + Mostrar + ACodigo + cBarraFim;
+    if IsEscECF then
+      Result := ESC + 'b' + AnsiChr(ATipo) + AnsiChr(Largura) + AnsiChr(Altura) +
+                            AnsiChr(Mostrar) + ACodigo + NUL + SYN + DC2
+    else
+      Result := ESC + 'b' + IntToStrZero(ATipo,2)  + IntToStr(Largura) +
+                            IntToStrZero(Altura,2) + IntToStrZero(Mostrar,2) +
+                            ACodigo + NUL;
   end;
 
 begin
+  IsEscECF := (AECFClass is TACBrECFEscECF);
+
   if ATag = cTagBarraEAN8 then
     Result := MontaCodBarras(cEAN8, Conteudo)
   else if ATag = cTagBarraEAN13 then
@@ -1329,8 +1344,8 @@ begin
     Result := ErrosEstendidos[AErro];
 end;
 
-procedure TACBrECFDaruma.PafMF_GerarCAT52(const DataInicial: TDateTime;
-   const DataFinal: TDateTime; const DirArquivos: string);
+procedure TACBrECFDaruma.PafMF_GerarCAT52(const DataInicial,
+  DataFinal: TDateTime; const DirArquivos: String; NumeroSerie: String);
 begin
   Self.ArquivoMFD_DLL(DataInicial, DataFinal, DirArquivos, [docTodos], finNFPTDM);
 end;
@@ -1922,14 +1937,16 @@ end;
 }
 function TACBrECFDaruma.GetEstado: TACBrECFEstado;
 Var RetCmd1,RetCmd2 : AnsiString ;
-    Flag1, Flag2 : Byte ; 
+    Flag1, Flag2, Flag3, I: Byte ;
 begin
-  Result := fpEstado ;  // Suprimir Warning
-  try
-    fpEstado := estNaoInicializada ;
-    if (not fpAtivo) then
-      exit ;
+  fpEstado := estNaoInicializada ;
+  if (not fpAtivo) then
+  begin
+    Result := fpEstado ;
+    Exit ;
+  end;
 
+  try
     fpEstado := estDesconhecido ;
 
     if fsNumVersao = '2000' then
@@ -1980,12 +1997,20 @@ begin
       else
         begin
            fpEstado := estLivre;
+           Flag3 := 255;
+           I := 0;
+           while (Flag3 = 255) and (I < 3) do
+           begin
+             RetCmd1 := EnviaComando( GS + ACK, 1);
+             Flag3 := StrToIntDef('$'+RetCmd1[5], 255);
+             if (Flag3 = 255) then
+               Sleep(200);
+             Inc(I);
+           end;
 
-           RetCmd1 := EnviaComando( GS + ACK, 1) ;
-
-           if TestBit(StrToInt('$'+RetCmd1[5]),3) then
+           if TestBit(Flag3,3) then
              fpEstado := estBloqueada
-           else if TestBit(StrToInt('$'+RetCmd1[5]),2) then
+           else if TestBit(Flag3,2) then
               fpEstado := estRequerZ ;
 //  TODO: Daruma FS600 continua informando Bit Requer X mesmo apos emitir a LeituraX
 //         else if not TestBit(StrToInt('$'+RetCmd1[4]),0) then
@@ -2341,7 +2366,8 @@ begin
   end;
 end;
 
-procedure TACBrECFDaruma.CancelaDescontoAcrescimoItem(NumItem: Integer);
+procedure TACBrECFDaruma.CancelaDescontoAcrescimoItem(NumItem: Integer;
+  TipoAcrescimoDesconto: String);
 begin
   if fpMFD then
     EnviaComando(FS + 'F' + #205 +  IntToStrZero(NumItem,3));
@@ -2811,7 +2837,7 @@ begin
         ValAliq := RoundTo( StrToIntDef( copy(AliquotaStr,2,4) ,0) / 100, -2) ;
 
         Aliquota          := TACBrECFAliquota.create ;
-        Aliquota.Indice   := IntToStrZero(fpAliquotas.Count+1,2);
+        Aliquota.Indice   := IntToStrZero(Cont, 2);
         Aliquota.Aliquota := ValAliq ;
         if AliquotaStr[1] = '0' then // Isso pode não estar certo!!!!  verificar com Daruma
           Aliquota.Tipo     := 'T'
@@ -4794,7 +4820,9 @@ begin
 end;
 
 function TACBrECFDaruma.RetornaInfoECF(Registrador : String) : AnsiString ;
- Var Indice : Integer ;
+Var
+  Indice , I: Integer ;
+  OK: Boolean;
 begin
   Result := '' ;
   
@@ -4809,8 +4837,19 @@ begin
       raise EACBrECFERRO.create( ACBrStr('Não existe nenhum Informação com o Registrador: '+Registrador+'('+IntToStr(Indice)+')')) ;
 
     Registrador := IntToStrZero(Indice, 3);
-    Result := EnviaComando( FS + 'R' + #200 + Registrador);
-    Result  :=  Trim(LimpaChr0(Copy(Result, 6, Length(Result) - 6)));
+
+    I := 0;
+    OK := False;
+    while (not OK) and (I < 3) do
+    begin
+      Inc(I);
+      Result := EnviaComando( FS + 'R' + #200 + Registrador);
+      OK := (LeftStr(Result, 5) =  ':' + #200 + Registrador);
+      if not OK then
+        Sleep(200)
+      else
+        Result :=  Trim(LimpaChr0(Copy(Result, 6, Length(Result) - 6)));
+    end;
   end;
 end;
 
@@ -5359,7 +5398,7 @@ begin
     Ativo := OldAtivo;
 
     if AnsiUpperCase(PathDest) <> AnsiUpperCase(NomeArquivo) then
-      DeleteFile(PathDest);
+      SysUtils.DeleteFile(PathDest);
   end;
 end;
 
@@ -5400,30 +5439,39 @@ begin
     Ativo := OldAtivo;
 
     if AnsiUpperCase(PathDest) <> AnsiUpperCase(NomeArquivo) then
-      DeleteFile(PathDest);
+      SysUtils.DeleteFile(PathDest);
   end;
 end;
 
-procedure TACBrECFDaruma.ArquivoMFD_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFDaruma.ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD;
+  NomeArquivo, StrInicial, StrFinal: AnsiString);
 var
   Resp: Integer;
-  DirDest: AnsiString;
-  ArqDest: AnsiString;
+  DirDest, ArqDest, TipoDaruma: AnsiString;
   OldAtivo: Boolean;
 begin
   OldAtivo := Ativo;
   DirDest  := ExtractFilePath( NomeArquivo );
   ArqDest  := ExtractFileName( NomeArquivo );
 
+  case Tipo of
+    tdmfdData : TipoDaruma := 'DATAM';
+    tdmfdCOO  : TipoDaruma := 'COO';
+  else
+    TipoDaruma := 'COO';
+    StrInicial := '000001';
+    StrFinal   := '999999';
+  end;
+
   LoadDLLFunctions;
   ConfigurarDLL(DirDest);
 
   Ativo := False;
   try
-     DeleteFile( NomeArquivo );
+     SysUtils.DeleteFile( NomeArquivo );
 
      GravaLog( '   xrEfetuarDownloadMFD_ECF_Daruma' );
-     Resp := xrEfetuarDownloadMFD_ECF_Daruma( 'COO', '000001', '999999', ArqDest ) ;
+     Resp := xrEfetuarDownloadMFD_ECF_Daruma( TipoDaruma, StrInicial, StrFinal, ArqDest ) ;
 
      if (Resp <> 1) then
         raise EACBrECFErro.Create( ACBrStr( 'Erro ao executar rEfetuarDownloadMFD_ECF_Daruma.'+sLineBreak+
@@ -5434,7 +5482,7 @@ begin
   end;
 end;
 
-procedure TACBrECFDaruma.ArquivoMF_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFDaruma.ArquivoMF_Binario_DLL(NomeArquivo: AnsiString);
 var
   Resp: Integer;
   DirDest: AnsiString;
@@ -5450,7 +5498,7 @@ begin
 
   Ativo := False;
   try
-     DeleteFile( NomeArquivo );
+     SysUtils.DeleteFile( NomeArquivo );
 
      GravaLog( '   xrEfetuarDownloadMF_ECF_Daruma' );
      Resp := xrEfetuarDownloadMF_ECF_Daruma( ArqDest ) ;
@@ -5538,7 +5586,7 @@ begin
     Ativo := OldAtivo;
 
     if AnsiUpperCase(PathDest) <> AnsiUpperCase(NomeArquivo) then
-      DeleteFile(PathDest);
+      SysUtils.DeleteFile(PathDest);
   end;
 end;
 
@@ -5623,7 +5671,7 @@ begin
     Ativo := OldAtivo;
 
     if AnsiUpperCase(PathDest) <> AnsiUpperCase(NomeArquivo) then
-      DeleteFile(PathDest);
+      SysUtils.DeleteFile(PathDest);
   end;
 end;
 

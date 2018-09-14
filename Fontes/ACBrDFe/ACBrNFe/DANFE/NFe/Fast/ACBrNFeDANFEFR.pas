@@ -54,12 +54,14 @@ unit ACBrNFeDANFEFR;
 interface
 
 uses
-  Forms, SysUtils, Classes, Graphics, ACBrNFeDANFEClass, ACBrNFeDANFEFRDM,
+  SysUtils, Classes, ACBrNFeDANFEClass, ACBrNFeDANFEFRDM,
   pcnNFe, pcnConversao, frxClass;
 
 type
   EACBrNFeDANFEFR = class(Exception);
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrNFeDANFEFR = class( TACBrNFeDANFEClass )
    private
     FdmDanfe: TACBrNFeFRClass;
@@ -76,13 +78,16 @@ type
     FDetalhado: Boolean;
     FURLConsultaPublica:String;
     FDescricaoViaEstabelec: string;
-    FImprimirUnQtVlComercial: boolean;
+    FImprimirUnQtVlComercial: TImprimirUnidQtdeValor;
     FExpandirDadosAdicionaisAuto: boolean;
     FImprimirDadosArma: Boolean;
     fQuebraLinhaEmDetalhamentoEspecifico : Boolean;
     FIncorporarFontesPdf: Boolean;
     FIncorporarBackgroundPdf: Boolean;
     FFastFileInutilizacao: String;
+    FImprimirDadosDocReferenciados: Boolean;
+    FPrintMode: TfrxPrintMode;
+    FPrintOnSheet: Integer;
     function GetPreparedReport: TfrxReport;
     function GetPreparedReportEvento: TfrxReport;
 		function GetPreparedReportInutilizacao: TfrxReport;
@@ -117,7 +122,7 @@ type
     property TributosPercentual: TpcnPercentualTributos read FTributosPercentual write setTributosPercentual;
     property TributosPercentualPersonalizado: double read FTributosPercentualPersonalizado write setTributosPercentualPersonalizado;
     property MarcaDaguaMSG: string read FMarcaDaguaMSG write FMarcaDaguaMSG;
-    property ImprimirUnQtVlComercial: boolean read FImprimirUnQtVlComercial write FImprimirUnQtVlComercial;
+    property ImprimirUnQtVlComercial: TImprimirUnidQtdeValor read FImprimirUnQtVlComercial write FImprimirUnQtVlComercial;
     property Detalhado: Boolean read FDetalhado write FDetalhado;
     property URLConsultaPublica:String read FURLConsultaPublica write FURLConsultaPublica;
     property DescricaoViaEstabelec: string read FDescricaoViaEstabelec write FDescricaoViaEstabelec;
@@ -126,6 +131,9 @@ type
     property QuebraLinhaEmDetalhamentoEspecifico : Boolean  read fQuebraLinhaEmDetalhamentoEspecifico Write fQuebraLinhaEmDetalhamentoEspecifico;
     property IncorporarBackgroundPdf: Boolean read FIncorporarBackgroundPdf write FIncorporarBackgroundPdf;
     property IncorporarFontesPdf: Boolean read FIncorporarFontesPdf write FIncorporarFontesPdf;
+    property ImprimirDadosDocReferenciados: Boolean read FImprimirDadosDocReferenciados write FImprimirDadosDocReferenciados;
+    property PrintMode: TfrxPrintMode read FPrintMode write FPrintMode default pmDefault;
+    property PrintOnSheet: Integer read FPrintOnSheet write FPrintOnSheet default 0;
   end;
 
 implementation
@@ -144,7 +152,7 @@ begin
   FTributosPercentual := ptValorProdutos;
   FTributosPercentualPersonalizado := 0;
   FMarcaDaguaMSG:='';
-  FImprimirUnQtVlComercial:=false;
+  FImprimirUnQtVlComercial:=iuComercial;
   ExpandirDadosAdicionaisAuto:=false;
   { NFC-e }
   FvTroco := 0;
@@ -155,6 +163,7 @@ begin
   fQuebraLinhaEmDetalhamentoEspecifico  := True;
   FIncorporarFontesPdf := True;
   FIncorporarBackgroundPdf := True;
+  FImprimirDadosDocReferenciados := True;
 end;
 
 destructor TACBrNFeDANFEFR.Destroy;
@@ -231,6 +240,7 @@ begin
   FdmDanfe.QuebraLinhaEmDetalhamentoEspecifico := fQuebraLinhaEmDetalhamentoEspecifico;
   FdmDanfe.IncorporarBackgroundPdf := FIncorporarFontesPdf;
   FdmDanfe.IncorporarFontesPdf := FIncorporarBackgroundPdf;
+  FdmDanfe.ImprimirDadosDocReferenciados := FImprimirDadosDocReferenciados;
 
   FdmDanfe.SetDataSetsToFrxReport;
   if Trim(FastFile) <> '' then
@@ -255,11 +265,10 @@ begin
 
   FdmDanfe.frxReport.PrintOptions.Copies := FNumCopias;
   FdmDanfe.frxReport.PrintOptions.ShowDialog := FShowDialog;
+  FdmDanfe.frxReport.PrintOptions.PrintMode := FPrintMode; //Precisamos dessa propriedade porque impressoras não fiscais cortam o papel quando há muitos itens. O ajuste dela deve ser necessariamente após a carga do arquivo FR3 pois, antes da carga o componente é inicializado
+  FdmDanfe.frxReport.PrintOptions.PrintOnSheet := FPrintOnSheet; //Essa propriedade pode trabalhar em conjunto com a printmode
   FdmDanfe.frxReport.ShowProgress := FMostrarStatus;
-
-//  if Assigned(ACBrNFe) then
-//   if(TACBrNFe(ACBrNFe).Configuracoes.Geral.ModeloDF = moNFCe)then
-//     FdmDanfe.frxReport.PrintOptions.PrintMode := pmSplit; 
+  FdmDanfe.frxReport.PreviewOptions.AllowEdit := False;
 
   // Define a impressora
   if Length(Impressora) > 0 then
@@ -291,6 +300,23 @@ begin
     else
       raise EACBrNFeDANFEFR.Create('Propriedade ACBrNFe não assinalada.');
   end;
+
+  if Assigned(FdmDanfe.NFe) and
+    (FdmDanfe.NFe.Ide.modelo = 55) then
+//  if(TACBrNFe(ACBrNFe).Configuracoes.Geral.ModeloDF = moNFe)then
+    for i := 0 to FdmDanfe.frxReport.PreviewPages.Count - 1 do
+    begin
+      Page := FdmDanfe.frxReport.PreviewPages.Page[i];
+      if MargemSuperior > 0 then
+        Page.TopMargin    := MargemSuperior * 10;
+      if MargemInferior > 0 then
+        Page.BottomMargin := MargemInferior * 10;
+      if MargemEsquerda > 0 then
+        Page.LeftMargin   := MargemEsquerda * 10;
+      if MargemDireita > 0 then
+        Page.RightMargin  := MargemDireita * 10;
+      FdmDanfe.frxReport.PreviewPages.ModifyPage(i, Page);
+    end;
 end;
 
 function TACBrNFeDANFEFR.PrepareReportEvento: Boolean;

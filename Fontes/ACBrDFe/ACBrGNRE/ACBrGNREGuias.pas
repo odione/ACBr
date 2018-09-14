@@ -98,6 +98,7 @@ type
     function ValidarRegrasdeNegocios: Boolean;
 
     function LerXML(AXML: AnsiString): Boolean;
+    function LerArqIni(const AIniString: String): Boolean;
 
     function GerarXML: String;
     function GravarXML(NomeArquivo: String = ''; PathArquivo: String = ''): Boolean;
@@ -159,6 +160,8 @@ type
     function LoadFromFile(CaminhoArquivo: String; AGerarGNRE: Boolean = True): Boolean;
     function LoadFromStream(AStream: TStringStream; AGerarGNRE: Boolean = True): Boolean;
     function LoadFromString(AXMLString: String; AGerarGNRE: Boolean = True): Boolean;
+    function LoadFromIni(AIniString: String): Boolean;
+
     function GravarXML(PathNomeArquivo: String = ''): Boolean;
 
     property ACBrGNRE: TComponent read FACBrGNRE;
@@ -167,7 +170,7 @@ type
 implementation
 
 uses
-  ACBrGNRE2, ACBrUtil, pgnreConversao, synautil;
+  ACBrGNRE2, ACBrUtil, pgnreConversao, synautil, IniFiles;
 
 { Guia }
 
@@ -177,29 +180,6 @@ begin
   FGNRE := TGNRE.Create;
   FGNREW := TGNREW.Create(FGNRE);
   FGNRER := TGNRER.Create(FGNRE);
-  (*
-  with TACBrGNRE(TGuias(Collection).ACBrGNRE) do
-  begin
-    FGNRE.Ide.modelo := StrToInt(ModeloDFToStr(Configuracoes.Geral.ModeloDF));
-    FGNRE.infGNRE.Versao := VersaoDFToDbl(Configuracoes.Geral.VersaoDF);
-
-    FGNRE.Ide.tpNF := tnSaida;
-    FGNRE.Ide.indPag := ipVista;
-    FGNRE.Ide.verProc := 'ACBrGNRE';
-    FGNRE.Ide.tpAmb := Configuracoes.WebServices.Ambiente;
-    FGNRE.Ide.tpEmis := Configuracoes.Geral.FormaEmissao;
-
-    if Assigned(FGNREGuia) then
-      FGNRE.Ide.tpImp := FGNREGuia.TipoDANFE;
-
-    FGNRE.Emit.EnderEmit.xPais := 'BRASIL';
-    FGNRE.Emit.EnderEmit.cPais := 1058;
-    FGNRE.Emit.EnderEmit.nro := 'SEM NUMERO';
-
-    FGNRE.Dest.EnderDest.xPais := 'BRASIL';
-    FGNRE.Dest.EnderDest.cPais := 1058;
-  end;
-  *)
 end;
 
 destructor Guia.Destroy;
@@ -248,18 +228,13 @@ begin
 
   with TACBrGNRE(TGuias(Collection).ACBrGNRE) do
   begin
-    FXMLAssinado := SSL.Assinar(String(XMLUTF8), 'GNRE', 'infGNRE');
+    // FXMLAssinado := SSL.Assinar(String(XMLUTF8), 'GNRE', 'infGNRE');
+    FXMLAssinado := String(XMLUTF8);
     FXMLOriginal := FXMLAssinado;
 
     Leitor := TLeitor.Create;
     try
       leitor.Grupo := FXMLAssinado;
-      (*
-      GNRE.signature.URI := Leitor.rAtributo('Reference URI=');
-      GNRE.signature.DigestValue := Leitor.rCampo(tcStr, 'DigestValue');
-      GNRE.signature.SignatureValue := Leitor.rCampo(tcStr, 'SignatureValue');
-      GNRE.signature.X509Certificate := Leitor.rCampo(tcStr, 'X509Certificate');
-      *)
     finally
       Leitor.Free;
     end;
@@ -334,11 +309,114 @@ begin
   Result := True; // Não Implementado
 end;
 
+function Guia.LerArqIni(const AIniString: String): Boolean;
+var
+  IniGuia: TMemIniFile;
+  sSecao: String;
+begin
+  Result := False;
+
+  IniGuia := TMemIniFile.Create('');
+  try
+    LerIniArquivoOuString(AIniString, IniGuia);
+
+    with FGNRe do
+    begin
+      sSecao := 'Emitente';
+
+      if IniGuia.SectionExists(sSecao) then
+      begin
+        c27_tipoIdentificacaoEmitente := IniGuia.ReadInteger(sSecao,'tipo',0);//[1,2] INscrito na uf ou nao /////1 CNPJ - 2 CPF
+        //Se inscrito na UF Destino
+        c17_inscricaoEstadualEmitente := IniGuia.ReadString(sSecao,'IE','');  //IE inscrito na uf destino
+        //Se nao Inscrito na uf Destino
+        c03_idContribuinteEmitente    := IniGuia.ReadString(sSecao,'id','cnpjcpf'); //numero do cnpj ou cpf
+        c16_razaoSocialEmitente       := IniGuia.ReadString(sSecao,'RazaoSocial','nome');
+        c18_enderecoEmitente          := IniGuia.ReadString(sSecao,'Endereco','');
+        c19_municipioEmitente         := IniGuia.ReadString(sSecao,'Cidade','');
+        c20_ufEnderecoEmitente        := IniGuia.ReadString(sSecao,'UF','');
+        c21_cepEmitente               := IniGuia.ReadString(sSecao,'Cep','');
+        c22_telefoneEmitente          := IniGuia.ReadString(sSecao,'Telefone','');
+      end;
+
+      //Complementes da Recita
+      sSecao := 'Complemento';
+
+      if IniGuia.SectionExists(sSecao) then
+      begin
+        c42_identificadorGuia   := IniGuia.ReadString(sSecao,'IdentificadorGuia','');
+        ///Exige Doc Origem
+        c28_tipoDocOrigem       := IniGuia.ReadInteger(sSecao,'tipoDocOrigem',0);
+        c04_docOrigem           := IniGuia.ReadString(sSecao,'DocOrigem','');
+        ///Exige Detalhamento Receita
+        c25_detalhamentoReceita := IniGuia.ReadInteger(sSecao,'detalhamentoReceita',0);
+        ///Exige Produto
+        c26_produto             := IniGuia.ReadInteger(sSecao,'produto',0);
+      end;
+
+      //Referencias Da Receita
+      sSecao := 'Referencia';
+
+      if IniGuia.SectionExists(sSecao) then
+      begin
+        c15_convenio       := IniGuia.ReadString(sSecao,'convenio','');
+        c02_receita        := IniGuia.ReadInteger(sSecao,'receita',0);
+        c01_UfFavorecida   := IniGuia.ReadString(sSecao,'ufFavorecida','');
+        c14_dataVencimento := StringToDateTime(IniGuia.ReadString(sSecao,'dataVencimento',''));
+        c33_dataPagamento  := StringToDateTime(IniGuia.ReadString(sSecao,'dataPagamento',''));
+        referencia.ano     := IniGuia.ReadInteger(sSecao,'referenciaAno',0);
+        referencia.mes     := IniGuia.ReadString(sSecao,'referenciaMes','');
+        referencia.parcela := IniGuia.ReadInteger(sSecao,'referenciaParcela',1);
+        referencia.periodo := IniGuia.ReadInteger(sSecao,'referenciaPeriodo',0);
+        c10_valorTotal     := StringToFloatDef(IniGuia.ReadString(sSecao,'ValorTotal',''),0);
+        c06_valorPrincipal := StringToFloatDef(IniGuia.ReadString(sSecao,'ValorPrincipal',''),0);
+      end;
+
+      //Destinatario
+      sSecao := 'Destinatario';
+
+      if IniGuia.SectionExists(sSecao) then
+      begin
+        c34_tipoIdentificacaoDestinatario := IniGuia.ReadInteger(sSecao,'tipo',0);/// 1 CNPJ - 2 CPF
+        //Se inscrito
+        c36_inscricaoEstadualDestinatario := IniGuia.ReadString(sSecao,'ie','');
+        //Se nao inscrito
+        c35_idContribuinteDestinatario    := IniGuia.ReadString(sSecao,'id','cnpjcpf');
+        c37_razaoSocialDestinatario       := IniGuia.ReadString(sSecao,'razaosocial','nome');
+        c38_municipioDestinatario         := IniGuia.ReadString(sSecao,'cidade','');
+      end;
+
+      //Outras Informacoes
+      sSecao := 'CampoExtra';
+
+      if IniGuia.SectionExists(sSecao) then
+      begin
+        camposExtras.Clear;
+
+        with camposExtras.Add do
+        begin
+          CampoExtra.codigo := IniGuia.ReadInteger(sSecao,'codigo',0);
+          CampoExtra.tipo   := IniGuia.ReadString(sSecao,'tipo','');
+          CampoExtra.valor  := IniGuia.ReadString(sSecao,'valor','');
+        end;
+      end;
+
+    end;
+
+    GerarXML;
+
+    Result := True;
+  finally
+    IniGuia.Free;
+  end;
+end;
+
 function Guia.LerXML(AXML: AnsiString): Boolean;
 begin
   Result := False;
   FGNRER.Leitor.Arquivo := AXML;
-  FGNRER.LerXml;
+
+  Result := FGNRER.LerXML;
 
   XMLOriginal := string(AXML);
 
@@ -417,6 +495,7 @@ begin
     FGNREW.Gerador.Opcoes.FormatoAlerta := Configuracoes.Geral.FormatoAlerta;
     FGNREW.Gerador.Opcoes.RetirarAcentos := Configuracoes.Geral.RetirarAcentos;
     FGNREW.Gerador.Opcoes.RetirarEspacos := Configuracoes.Geral.RetirarEspacos;
+    FGNREW.Gerador.Opcoes.IdentarXML := Configuracoes.Geral.IdentarXML;
     pcnAuxiliar.TimeZoneConf.Assign( Configuracoes.WebServices.TimeZoneConf );
   end;
 
@@ -488,18 +567,7 @@ begin
   DecodeDate(GNRE.c14_dataVencimento, wAno, wMes, wDia);
 
   chaveGNRE := 'GNRE' + OnlyNumber(GNRE.c42_identificadorGuia);
-  (*
-  Result := not
-    ((Copy(chaveGNRE, 4, 2) <> IntToStrZero(GNRE., 2)) or
-    (Copy(chaveGNRE, 6, 2)  <> Copy(FormatFloat('0000', wAno), 3, 2)) or
-    (Copy(chaveGNRE, 8, 2)  <> FormatFloat('00', wMes)) or
-    (Copy(chaveGNRE, 10, 14)<> PadLeft(OnlyNumber(GNRE.Emit.CNPJCPF), 14, '0')) or
-    (Copy(chaveGNRE, 24, 2) <> IntToStrZero(GNRE.Ide.modelo, 2)) or
-    (Copy(chaveGNRE, 26, 3) <> IntToStrZero(GNRE.Ide.serie, 3)) or
-    (Copy(chaveGNRE, 29, 9) <> IntToStrZero(GNRE.Ide.nNF, 9)) or
-    (Copy(chaveGNRE, 38, 1) <> TpEmisToStr(GNRE.Ide.tpEmis)) or
-    (Copy(chaveGNRE, 39, 8) <> IntToStrZero(GNRE.Ide.cNF, 8)));
-  *)
+
   Result := True;
 end;
 
@@ -696,6 +764,14 @@ begin
     for i := l to Self.Count - 1 do
       Self.Items[i].NomeArq := CaminhoArquivo;
   end;
+end;
+
+function TGuias.LoadFromIni(AIniString: String): Boolean;
+begin
+  with Self.Add do
+    LerArqIni(AIniString);
+
+  Result := Self.Count > 0;
 end;
 
 function TGuias.LoadFromStream(AStream: TStringStream;

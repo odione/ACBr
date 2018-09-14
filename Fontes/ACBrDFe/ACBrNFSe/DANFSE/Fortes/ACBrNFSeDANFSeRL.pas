@@ -61,13 +61,14 @@ type
   { TfrlDANFSeRL }
 
   TfrlDANFSeRL = class(TForm)
-    dsItens: TDatasource;
     RLNFSe: TRLReport;
     RLPDFFilter1: TRLPDFFilter;
-    procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure RLNFSeNeedData(Sender: TObject; var MoreData: Boolean);
   private
     { Private declarations }
+    FMoreData: Boolean;
   protected    
     FACBrNFSe       : TACBrNFSe;
     FNFSe           : TNFSe;
@@ -104,36 +105,37 @@ type
     FT_Endereco      : String;
     FT_Complemento   : String;
     FT_Email         : String;
+    FImprimeCanhoto  : Boolean;
+    FDetalharServico : Boolean;
 
 		cdsItens:  {$IFDEF BORLAND} TClientDataSet {$ELSE} TBufDataset{$ENDIF};
-		procedure ConfigDataSet;
 	
     procedure frlSemValorFiscalPrint(sender: TObject; var Value: String);    
   public
     { Public declarations }
     class procedure Imprimir(AOwner: TComponent;
-														 ANFSe           : TNFSe;
-                             ALogo           : String  = '';
-                             AEmail          : String  = '';
-                             AFax            : String  = '';
-                             ANumCopias      : Integer = 1;
-                             ASistema        : String  = '';
-                             ASite           : String  = '';
-                             AUsuario        : String  = '' ;
-                             APreview        : Boolean = True;
-                             AMargemSuperior : Double  = 0.8;
-                             AMargemInferior : Double  = 0.8;
-                             AMargemEsquerda : Double  = 0.6;
-                             AMargemDireita  : Double  = 0.51;
-                             AImpressora     : String  = '';
-                             APrestLogo      : String  = '';
-                             APrefeitura     : String  = '';
-                             ARazaoSocial    : String  = '';
-                             AEndereco       : String  = '';
-                             AComplemento    : String  = '';
-                             AFone           : String  = '';
-                             AMunicipio      : String  = '';
-                             AInscMunicipal  : String  = '';
+                             ANFSe                  : TNFSe;
+                             ALogo                  : String  = '';
+                             AEmail                 : String  = '';
+                             AFax                   : String  = '';
+                             ANumCopias             : Integer = 1;
+                             ASistema               : String  = '';
+                             ASite                  : String  = '';
+                             AUsuario               : String  = '' ;
+                             APreview               : Boolean = True;
+                             AMargemSuperior        : Double  = 0.8;
+                             AMargemInferior        : Double  = 0.8;
+                             AMargemEsquerda        : Double  = 0.6;
+                             AMargemDireita         : Double  = 0.51;
+                             AImpressora            : String  = '';
+                             APrestLogo             : String  = '';
+                             APrefeitura            : String  = '';
+                             ARazaoSocial           : String  = '';
+                             AEndereco              : String  = '';
+                             AComplemento           : String  = '';
+                             AFone                  : String  = '';
+                             AMunicipio             : String  = '';
+                             AInscMunicipal         : String  = '';
                              AEMail_Prestador       : String = '';
                              AUF                    : String = '';
                              AT_InscEstadual        : String = '';
@@ -143,41 +145,45 @@ type
                              AT_Fone                : String = '';
                              AT_Endereco            : String = '';
                              AT_Complemento         : String = '';
-                             AT_Email               : String = '';                             
-                             APrintDialog    : Boolean = True);
+                             AT_Email               : String = '';
+                             APrintDialog           : Boolean = True;
+                             AImprimeCanhoto        : Boolean = True;
+                             ADetalharServico       : Boolean = False);
 
     class procedure SavePDF(AOwner: TComponent;
-														AFile           : String;
-                            ANFSe           : TNFSe;
-                            ALogo           : String  = '';
-                            AEmail          : String  = '';
-                            AFax            : String  = '';
-                            ANumCopias      : Integer = 1;
-                            ASistema        : String  = '';
-                            ASite           : String  = '';
-                            AUsuario        : String  = '';
-                            AMargemSuperior : Double  = 0.8;
-                            AMargemInferior : Double  = 0.8;
-                            AMargemEsquerda : Double  = 0.6;
-                            AMargemDireita  : Double  = 0.51;
-                            APrestLogo      : String  = '';
-                            APrefeitura     : String  = '';
-                            ARazaoSocial    : String  = '';
-                            AEndereco       : String  = '';
-                            AComplemento    : String  = '';
-                            AFone           : String  = '';
-                            AMunicipio      : String  = '';
-                            AInscMunicipal  : String  = '';
-                            AEMail_Prestador : String  = '';
-                            AUF              : String  = '';
-                            AT_InscEstadual : String = '';
-                            AT_InscMunicipal : String = '';
+                            AFile                  : String;
+                            ANFSe                  : TNFSe;
+                            ALogo                  : String  = '';
+                            AEmail                 : String  = '';
+                            AFax                   : String  = '';
+                            ANumCopias             : Integer = 1;
+                            ASistema               : String  = '';
+                            ASite                  : String  = '';
+                            AUsuario               : String  = '';
+                            AMargemSuperior        : Double  = 0.8;
+                            AMargemInferior        : Double  = 0.8;
+                            AMargemEsquerda        : Double  = 0.6;
+                            AMargemDireita         : Double  = 0.51;
+                            APrestLogo             : String  = '';
+                            APrefeitura            : String  = '';
+                            ARazaoSocial           : String  = '';
+                            AEndereco              : String  = '';
+                            AComplemento           : String  = '';
+                            AFone                  : String  = '';
+                            AMunicipio             : String  = '';
+                            AInscMunicipal         : String  = '';
+                            AEMail_Prestador       : String  = '';
+                            AUF                    : String  = '';
+                            AT_InscEstadual        : String = '';
+                            AT_InscMunicipal       : String = '';
                             AOutrasInformacaoesImp : String = '';
                             AAtividade             : String = '';
                             AT_Fone                : String = '';
                             AT_Endereco            : String = '';
                             AT_Complemento         : String = '';
-                            AT_Email               : String = '');
+                            AT_Email               : String = '';
+                            AImprimeCanhoto        : Boolean = True;
+                            ADetalharServico       : Boolean = False);
   end;
 
 var
@@ -193,86 +199,19 @@ implementation
 
 procedure TfrlDANFSeRL.FormCreate(Sender: TObject);
 begin
- ConfigDataSet;
+  FMoreData := True;
 end;
 
 procedure TfrlDANFSeRL.FormDestroy(Sender: TObject);
 begin
- FreeAndNil( cdsItens );
-end;
-
-procedure TfrlDANFSeRL.ConfigDataSet;
-begin
- if not Assigned( cdsItens ) then
- cdsItens:=  {$IFDEF BORLAND}  TClientDataSet.create(nil)  {$ELSE}  TBufDataset.create(nil) {$ENDIF};
-
-  if cdsItens.Active then
- begin
- {$IFDEF BORLAND}
-  if cdsItens is TClientDataSet then
-  TClientDataSet(cdsItens).EmptyDataSet;
- {$ENDIF}
-  cdsItens.Active := False;
- end;
-
- {$IFDEF BORLAND}
- if cdsItens is TClientDataSet then
-  begin
-  TClientDataSet(cdsItens).StoreDefs := False;
-  TClientDataSet(cdsItens).IndexDefs.Clear;
-  TClientDataSet(cdsItens).IndexFieldNames := '';
-  TClientDataSet(cdsItens).IndexName := '';
-  TClientDataSet(cdsItens).Aggregates.Clear;
-  TClientDataSet(cdsItens).AggFields.Clear;
-  end;
- {$ELSE}
- if cdsItens is TBufDataset then
-  begin
-  TBufDataset(cdsItens).IndexDefs.Clear;
-  TBufDataset(cdsItens).IndexFieldNames:='';
-  TBufDataset(cdsItens).IndexName:='';
-  end;
- {$ENDIF}
-
- with cdsItens do
-  if FieldCount = 0 then
-  begin
-    FieldDefs.Clear;
-    Fields.Clear;
-    FieldDefs.Add('DISCRIMINACAO',ftString,60);
-
-   {$IFDEF BORLAND}
-    if cdsItens is TClientDataSet then
-    TClientDataSet(cdsItens).CreateDataSet;
-   {$ELSE}
-    if cdsItens is TBufDataset then
-    TBufDataset(cdsItens).CreateDataSet;
-   {$ENDIF}
-   end;
-
- {$IFDEF BORLAND}
-  if cdsItens is TClientDataSet then
-  TClientDataSet(cdsItens).StoreDefs := False;
- {$ENDIF}
-
-   if not cdsItens.Active then
-   cdsItens.Active := True;
-
-  {$IFDEF BORLAND}
-   if cdsItens is TClientDataSet then
-   if cdsItens.Active then
-   TClientDataSet(cdsItens).LogChanges := False;
- {$ENDIF}
-
- dsItens.dataset := cdsItens;
-
+  FreeAndNil( cdsItens );
 end;
 
 procedure TfrlDANFSeRL.frlSemValorFiscalPrint(sender: TObject;
   var Value: String);
 begin
- if FSemValorFiscal
-  then Value := '';
+  if FSemValorFiscal then
+    Value := '';
 end;
 
 class procedure TfrlDANFSeRL.Imprimir(AOwner: TComponent; ANFSe: TNFSe; ALogo, AEmail, AFax: String;
@@ -281,59 +220,66 @@ class procedure TfrlDANFSeRL.Imprimir(AOwner: TComponent; ANFSe: TNFSe; ALogo, A
   AImpressora, APrestLogo, APrefeitura, ARazaoSocial, AEndereco,
   AComplemento, AFone, AMunicipio, AInscMunicipal, AEMail_Prestador, AUF,
   AT_InscEstadual, AT_InscMunicipal, AOutrasInformacaoesImp, AAtividade, AT_Fone,
-  AT_Endereco, AT_Complemento, AT_Email : String; APrintDialog: Boolean);
+  AT_Endereco, AT_Complemento, AT_Email : String; APrintDialog, AImprimeCanhoto, ADetalharServico: Boolean);
 begin
- with Create ( AOwner ) do
-  try
-   FNFSe                  := ANFSe;
-   FLogo                  := ALogo;
-   FEmail                 := AEmail;
-   FFax                   := AFax;
-   FNumCopias             := ANumCopias;
-   FSistema               := ASistema;
-   FSite                  := ASite;
-   FUsuario               := AUsuario;
-   FMargemSuperior        := AMargemSuperior;
-   FMargemInferior        := AMargemInferior;
-   FMargemEsquerda        := AMargemEsquerda;
-   FMargemDireita         := AMargemDireita;
-   FImpressora            := AImpressora;
-   FPrestLogo             := APrestLogo;
-   FPrefeitura            := APrefeitura;
-   FRazaoSocial           := ARazaoSocial;
-   FUF                    := AUF;
-   FEndereco              := AEndereco;
-   FComplemento           := AComplemento;
-   FFone                  := AFone;
-   FMunicipio             := AMunicipio;
-   FOutrasInformacaoesImp := AOutrasInformacaoesImp;
-   FInscMunicipal         := AInscMunicipal;
-   FEMail_Prestador       := AEMail_Prestador;
-   FT_InscEstadual        := AT_InscEstadual;
-   FT_InscMunicipal       := AT_InscMunicipal;
-   FAtividade             := AAtividade;
-   FT_Fone                := AT_Fone; 
-   FT_Endereco            := AT_Endereco;
-   FT_Complemento         := AT_Complemento;
-   FT_Email               := AT_Email;
+  with Create ( AOwner ) do
+    try
+      FNFSe                  := ANFSe;
+      FLogo                  := ALogo;
+      FEmail                 := AEmail;
+      FFax                   := AFax;
+      FNumCopias             := ANumCopias;
+      FSistema               := ASistema;
+      FSite                  := ASite;
+      FUsuario               := AUsuario;
+      FMargemSuperior        := AMargemSuperior;
+      FMargemInferior        := AMargemInferior;
+      FMargemEsquerda        := AMargemEsquerda;
+      FMargemDireita         := AMargemDireita;
+      FImpressora            := AImpressora;
+      FPrestLogo             := APrestLogo;
+      FPrefeitura            := APrefeitura;
+      FRazaoSocial           := ARazaoSocial;
+      FUF                    := AUF;
+      FEndereco              := AEndereco;
+      FComplemento           := AComplemento;
+      FFone                  := AFone;
+      FMunicipio             := AMunicipio;
+      FOutrasInformacaoesImp := AOutrasInformacaoesImp;
+      FInscMunicipal         := AInscMunicipal;
+      FEMail_Prestador       := AEMail_Prestador;
+      FT_InscEstadual        := AT_InscEstadual;
+      FT_InscMunicipal       := AT_InscMunicipal;
+      FAtividade             := AAtividade;
+      FT_Fone                := AT_Fone;
+      FT_Endereco            := AT_Endereco;
+      FT_Complemento         := AT_Complemento;
+      FT_Email               := AT_Email;
+      FImprimeCanhoto        := AImprimeCanhoto;
+      FDetalharServico       := ADetalharServico;
 
-   if FImpressora > '' then
-     RLPrinter.PrinterName := FImpressora;
+      if FImpressora > '' then
+        RLPrinter.PrinterName := FImpressora;
 
-   if FNumCopias > 0 then
-     RLPrinter.Copies := FNumCopias
-   else
-     RLPrinter.Copies := 1;
-   
-   RLNFSe.PrintDialog := APrintDialog;
-   if APreview = True then
-     RLNFSe.PreviewModal
-   else
-     RLNFSe.Print;
+      if FNumCopias > 0 then
+        RLPrinter.Copies := FNumCopias
+      else
+        RLPrinter.Copies := 1;
 
-  finally
-   Free ;
-  end ;
+      RLNFSe.PrintDialog := APrintDialog;
+      if APreview = True then
+        RLNFSe.PreviewModal
+      else
+        RLNFSe.Print;
+    finally
+      Free;
+    end;
+end;
+
+procedure TfrlDANFSeRL.RLNFSeNeedData(Sender: TObject; var MoreData: Boolean);
+begin
+  MoreData := FMoreData;
+  FMoreData := False;
 end;
 
 class procedure TfrlDANFSeRL.SavePDF(AOwner: TComponent; AFile: String; ANFSe: TNFSe; ALogo, AEmail,
@@ -342,43 +288,44 @@ class procedure TfrlDANFSeRL.SavePDF(AOwner: TComponent; AFile: String; ANFSe: T
   APrestLogo, APrefeitura, ARazaoSocial, AEndereco, AComplemento, AFone, AMunicipio,
   AInscMunicipal, AEMail_Prestador, AUF, AT_InscEstadual, AT_InscMunicipal,
   AOutrasInformacaoesImp, AAtividade, AT_Fone,
-  AT_Endereco, AT_Complemento, AT_Email : String);
+  AT_Endereco, AT_Complemento, AT_Email : String; AImprimeCanhoto, ADetalharServico: Boolean);
 begin
   with Create ( AOwner ) do
-   try
-    FNFSe           := ANFSe;
-    FLogo           := ALogo;
-    FEmail          := AEmail;
-    FFax            := AFax;
-    FNumCopias      := ANumCopias;
-    FSistema        := ASistema;
-    FSite           := ASite;
-    FUsuario        := AUsuario;
-    FMargemSuperior := AMargemSuperior;
-    FMargemInferior := AMargemInferior;
-    FMargemEsquerda := AMargemEsquerda;
-    FMargemDireita  := AMargemDireita;
-    FPrestLogo      := APrestLogo;
-    FPrefeitura     := APrefeitura;
-    FRazaoSocial    := ARazaoSocial;
-    FUF             := AUF;
-    FEndereco       := AEndereco;
-    FComplemento    := AComplemento;
-    FFone           := AFone;
-    FMunicipio      := AMunicipio;
-    FOutrasInformacaoesImp := AOutrasInformacaoesImp;
-    FInscMunicipal  := AInscMunicipal;
-    FEMail_Prestador := AEMail_Prestador;
-    FT_InscEstadual        := AT_InscEstadual;
-    FT_InscMunicipal       := AT_InscMunicipal;
-    FAtividade             := AAtividade;
-    FT_Fone                := AT_Fone;
+    try
+      FNFSe           := ANFSe;
+      FLogo           := ALogo;
+      FEmail          := AEmail;
+      FFax            := AFax;
+      FNumCopias      := ANumCopias;
+      FSistema        := ASistema;
+      FSite           := ASite;
+      FUsuario        := AUsuario;
+      FMargemSuperior := AMargemSuperior;
+      FMargemInferior := AMargemInferior;
+      FMargemEsquerda := AMargemEsquerda;
+      FMargemDireita  := AMargemDireita;
+      FPrestLogo      := APrestLogo;
+      FPrefeitura     := APrefeitura;
+      FRazaoSocial    := ARazaoSocial;
+      FUF             := AUF;
+      FEndereco       := AEndereco;
+      FComplemento    := AComplemento;
+      FFone           := AFone;
+      FMunicipio      := AMunicipio;
+      FOutrasInformacaoesImp := AOutrasInformacaoesImp;
+      FInscMunicipal         := AInscMunicipal;
+      FEMail_Prestador       := AEMail_Prestador;
+      FT_InscEstadual        := AT_InscEstadual;
+      FT_InscMunicipal       := AT_InscMunicipal;
+      FAtividade             := AAtividade;
+      FT_Fone                := AT_Fone;
+      FT_Endereco            := AT_Endereco;
+      FT_Complemento         := AT_Complemento;
+      FT_Email               := AT_Email;
+      FImprimeCanhoto := AImprimeCanhoto;
+      FDetalharServico:= ADetalharServico;
 
-    FT_Endereco            := AT_Endereco;
-    FT_Complemento         := AT_Complemento;
-    FT_Email               := AT_Email;
-
-    with RLPDFFilter1.DocumentInfo do
+      with RLPDFFilter1.DocumentInfo do
       begin
         Title := 'NFSe - ' + FNFSe.Numero;
         KeyWords := 'Número:' + FNFSe.Numero +
@@ -389,9 +336,9 @@ begin
       end;
 
       RLNFSe.SaveToFile(AFile);
-   finally
-    Free;
-   end;
+    finally
+     Free;
+    end;
 end;
 
 end.

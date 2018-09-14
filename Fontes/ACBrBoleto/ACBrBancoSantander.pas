@@ -933,7 +933,7 @@ begin
 
   ACBrBanco.ACBrBoleto.NumeroArquivo := StrToIntDef(Copy(ARetorno[0],158,6),0);
 
-//  ACBrBanco.TamanhoMaximoNossoNum := 13;
+  ACBrBanco.TamanhoMaximoNossoNum := 13;
 
   for iLinha := 1 to ARetorno.Count - 2 do
   begin

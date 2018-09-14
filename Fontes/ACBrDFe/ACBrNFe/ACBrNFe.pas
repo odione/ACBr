@@ -41,7 +41,7 @@ unit ACBrNFe;
 interface
 
 uses
-  Classes, SysUtils,
+  Classes, SysUtils, ACBrBase,
   ACBrDFe, ACBrDFeException, ACBrDFeConfiguracoes,
   ACBrNFeConfiguracoes, ACBrNFeWebServices, ACBrNFeNotasFiscais,
   ACBrNFeDANFEClass,
@@ -60,8 +60,10 @@ type
   EACBrNFeException = class(EACBrDFeException);
 
   {Carta de Correção}
-
-  TCartaCorrecao = class(TComponent)
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
+  TCartaCorrecao = class(TACBrComponent)
   private
     FCCe: TCCeNFe;
   public
@@ -72,8 +74,10 @@ type
   end;
 
   {Download}
-
-  TDownload = class(TComponent)
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
+  TDownload = class(TACBrComponent)
   private
     FDownload: TDownloadNFe;
   public
@@ -84,7 +88,9 @@ type
   end;
 
   { TACBrNFe }
-
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrNFe = class(TACBrDFe)
   private
     FDANFE: TACBrNFeDANFEClass;
@@ -99,6 +105,9 @@ type
     FWebServices: TWebServices;
 
     function GetConfiguracoes: TConfiguracoesNFe;
+    function Distribuicao(AcUFAutor: integer; ACNPJCPF, AultNSU, ANSU,
+      chNFe: String): Boolean;
+
     procedure SetConfiguracoes(AValue: TConfiguracoesNFe);
     procedure SetDANFE(const Value: TACBrNFeDANFEClass);
   protected
@@ -106,6 +115,7 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
 
     function GetAbout: String; override;
+    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -115,7 +125,7 @@ type
       StreamNFe: TStream = nil; NomeArq: String = ''; sReplyTo: TStrings = nil); override;
 
     function Enviar(ALote: integer; Imprimir: Boolean = True;
-      Sincrono: Boolean = False): Boolean; overload;
+      Sincrono: Boolean = False; Zipado: Boolean = False): Boolean; overload;
 
     function GetNomeModeloDFe: String; override;
     function GetNameSpaceURI: String; override;
@@ -127,7 +137,7 @@ type
     function CstatCancelada(AValue: integer): Boolean;
 
     function Enviar(ALote: String; Imprimir: Boolean = True;
-      Sincrono: Boolean = False): Boolean; overload;
+      Sincrono: Boolean = False; Zipado: Boolean = False): Boolean; overload;
     function Cancelamento(AJustificativa: String; ALote: integer = 0): Boolean;
     function Consultar( AChave: String = ''): Boolean;
     function EnviarCartaCorrecao(idLote: integer): Boolean;
@@ -136,9 +146,8 @@ type
       IndEmi: TpcnIndicadorEmissor; ultNSU: String): Boolean;
     function Download: Boolean;
 
-    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
     procedure LerServicoDeParams(LayOutServico: TLayOut; var Versao: Double;
-      var URL: String); reintroduce; overload;
+      var URL: String; var Servico: String; var SoapAction: String); reintroduce; overload;
     function LerVersaoDeParams(LayOutServico: TLayOut): String; reintroduce; overload;
 
     function AjustarVersaoQRCode( AVersaoQRCode: TpcnVersaoQrCode;
@@ -174,13 +183,20 @@ type
 
     function AdministrarCSC(ARaizCNPJ: String; AIndOP: TpcnIndOperacao;
       AIdCSC: integer; ACodigoCSC: String): Boolean;
-    function DistribuicaoDFe(AcUFAutor: integer;
-      ACNPJCPF, AultNSU, ANSU: String): Boolean;
+    function DistribuicaoDFe(AcUFAutor: integer; ACNPJCPF, AultNSU,
+      ANSU: String; AchNFe: String = ''): Boolean;
+    function DistribuicaoDFePorUltNSU(AcUFAutor: integer; ACNPJCPF,
+      AultNSU: String): Boolean;
+    function DistribuicaoDFePorNSU(AcUFAutor: integer; ACNPJCPF,
+      ANSU: String): Boolean;
+    function DistribuicaoDFePorChaveNFe(AcUFAutor: integer; ACNPJCPF,
+      AchNFe: String): Boolean;
     function Inutilizar(ACNPJ, AJustificativa: String;
       AAno, ASerie, ANumInicial, ANumFinal: Integer): Boolean;
 
     procedure EnviarEmailEvento(sPara, sAssunto: String;
-      sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil);
+      sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil;
+      sReplyTo: TStrings = nil);
 
   published
     property Configuracoes: TConfiguracoesNFe
@@ -510,7 +526,8 @@ begin
 end;
 
 procedure TACBrNFe.LerServicoDeParams(LayOutServico: TLayOut;
-  var Versao: Double; var URL: String);
+  var Versao: Double; var URL: String; var Servico: String;
+  var SoapAction: String);
 var
   AUF: String;
 begin
@@ -524,9 +541,12 @@ begin
 
   Versao := VersaoDFToDbl(Configuracoes.Geral.VersaoDF);
   URL := '';
+  Servico := '';
+  SoapAction := '';
+
   LerServicoDeParams(GetNomeModeloDFe, AUF,
     Configuracoes.WebServices.Ambiente, LayOutToServico(LayOutServico),
-    Versao, URL);
+    Versao, URL, Servico, SoapAction);
 end;
 
 function TACBrNFe.GetURLConsultaNFCe(const CUF: integer;
@@ -554,7 +574,10 @@ var
   VersaoQrCode: TpcnVersaoQrCode;
   ok: Boolean;
 begin
-  urlUF := LerURLDeParams('NFCe', CUFtoUF(CUF), TipoAmbiente, 'URL-QRCode', 0);
+  VersaoDFe := DblToVersaoDF(ok, Versao);
+  VersaoQrCode := AjustarVersaoQRCode(Configuracoes.Geral.VersaoQRCode, VersaoDFe);
+
+  urlUF := LerURLDeParams('NFCe', CUFtoUF(CUF), TipoAmbiente, 'URL-QRCode', VersaoQrCodeToDbl(VersaoQrCode));
   idNFe := OnlyNumber(AChaveNFe);
   cDest := Trim(Destinatario);
 
@@ -581,8 +604,8 @@ begin
     cIdCSC := IntToStrZero(StrToIntDef(Configuracoes.Geral.IdCSC,0),6);
 
   sCSC := cIdCSC + cCSC;
-  sNF := StringReplace(FormatFloat('0.00', ValorTotalNF), ',', '.', [rfReplaceAll]);
-  sICMS := StringReplace(FormatFloat('0.00', ValorTotalICMS), ',', '.', [rfReplaceAll]);
+  sNF := FloatToString( ValorTotalNF, '.', FloatMask(2, False));
+  sICMS := FloatToString( ValorTotalICMS, '.', FloatMask(2, False));
 
   if VersaoQrCode >= veqr200 then
   begin
@@ -590,7 +613,7 @@ begin
       TpAmbToStr(TipoAmbiente) + '|';
 
     if ExtrairTipoEmissaoChaveAcesso(idNFe) = 9 then
-      sEntrada := sEntrada + IntToStr(DayOf(DataHoraEmissao)) + '|' +
+      sEntrada := sEntrada + Format('%.2d',[DayOf(DataHoraEmissao)]) + '|' +
                            sNF + '|' + sdigVal_HEX + '|';
   end
   else
@@ -693,12 +716,13 @@ begin
 end;
 
 function TACBrNFe.Enviar(ALote: integer; Imprimir: Boolean = True;
-  Sincrono: Boolean = False): Boolean;
+  Sincrono: Boolean = False; Zipado: Boolean = False): Boolean;
 begin
-  Result := Enviar(IntToStr(ALote), Imprimir, Sincrono);
+  Result := Enviar(IntToStr(ALote), Imprimir, Sincrono, Zipado);
 end;
 
-function TACBrNFe.Enviar(ALote: String; Imprimir: Boolean; Sincrono: Boolean): Boolean;
+function TACBrNFe.Enviar(ALote: String; Imprimir: Boolean; Sincrono: Boolean;
+  Zipado: Boolean): Boolean;
 var
   i: integer;
 begin
@@ -715,7 +739,7 @@ begin
   NotasFiscais.Assinar;
   NotasFiscais.Validar;
 
-  Result := WebServices.Envia(ALote, Sincrono);
+  Result := WebServices.Envia(ALote, Sincrono, Zipado);
 
   if DANFE <> nil then
   begin
@@ -840,6 +864,11 @@ end;
 function TACBrNFe.ConsultaNFeDest(CNPJ: String; IndNFe: TpcnIndicadorNFe;
   IndEmi: TpcnIndicadorEmissor; ultNSU: String): Boolean;
 begin
+  // Desativar o acesso a esse serviço após 02/05/2017
+  Result := False;
+  GerarException('Após 02/05/2017 o Web Service ConsultaNFeDest foi desativado pela SEFAZ.'+#13+
+                 'Favor utilizar o método DistribuicaoDFe.');
+  (*
   WebServices.ConsNFeDest.CNPJ := CNPJ;
   WebServices.ConsNFeDest.indNFe := IndNFe;
   WebServices.ConsNFeDest.indEmi := IndEmi;
@@ -849,14 +878,21 @@ begin
 
   if not Result then
     GerarException( WebServices.ConsNFeDest.Msg );
+  *)
 end;
 
 function TACBrNFe.Download: Boolean;
 begin
+  // Desativar o acesso a esse serviço após 02/05/2017
+  Result := False;
+  GerarException('Após 02/05/2017 o Web Service DownloadNFe foi desativado pela SEFAZ.'+#13+
+                 'Favor utilizar o método DistribuicaoDFe.');
+  (*
   Result := WebServices.DownloadNFe.Executar;
 
   if not Result then
     GerarException( WebServices.DownloadNFe.Msg );
+  *)
 end;
 
 function TACBrNFe.NomeServicoToNomeSchema(const NomeServico: String): String;
@@ -917,18 +953,43 @@ begin
     GerarException( WebServices.AdministrarCSCNFCe.Msg );
 end;
 
-function TACBrNFe.DistribuicaoDFe(AcUFAutor: integer;
-  ACNPJCPF, AultNSU, ANSU: String): Boolean;
+function TACBrNFe.Distribuicao(AcUFAutor: integer; ACNPJCPF, AultNSU, ANSU,
+  chNFe: String): Boolean;
 begin
   WebServices.DistribuicaoDFe.cUFAutor := AcUFAutor;
   WebServices.DistribuicaoDFe.CNPJCPF := ACNPJCPF;
   WebServices.DistribuicaoDFe.ultNSU := AultNSU;
   WebServices.DistribuicaoDFe.NSU := ANSU;
+  WebServices.DistribuicaoDFe.chNFe := chNFe;
 
   Result := WebServices.DistribuicaoDFe.Executar;
 
   if not Result then
     GerarException( WebServices.DistribuicaoDFe.Msg );
+end;
+
+function TACBrNFe.DistribuicaoDFe(AcUFAutor: integer;
+  ACNPJCPF, AultNSU, ANSU: String; AchNFe: String = ''): Boolean;
+begin
+  Result := Distribuicao(AcUFAutor, ACNPJCPF, AultNSU, ANSU, AchNFe);
+end;
+
+function TACBrNFe.DistribuicaoDFePorUltNSU(AcUFAutor: integer; ACNPJCPF,
+  AultNSU: String): Boolean;
+begin
+  Result := Distribuicao(AcUFAutor, ACNPJCPF, AultNSU, '', '');
+end;
+
+function TACBrNFe.DistribuicaoDFePorNSU(AcUFAutor: integer; ACNPJCPF,
+  ANSU: String): Boolean;
+begin
+  Result := Distribuicao(AcUFAutor, ACNPJCPF, '', ANSU, '');
+end;
+
+function TACBrNFe.DistribuicaoDFePorChaveNFe(AcUFAutor: integer; ACNPJCPF,
+  AchNFe: String): Boolean;
+begin
+  Result := Distribuicao(AcUFAutor, ACNPJCPF, '', '', AchNFe);
 end;
 
 function TACBrNFe.Inutilizar(ACNPJ, AJustificativa: String; AAno, ASerie,
@@ -941,7 +1002,8 @@ begin
 end;
 
 procedure TACBrNFe.EnviarEmailEvento(sPara, sAssunto: String;
-  sMensagem: TStrings; sCC: TStrings; Anexos: TStrings);
+  sMensagem: TStrings; sCC: TStrings; Anexos: TStrings;
+  sReplyTo: TStrings);
 var
   NomeArq: String;
   AnexosEmail: TStrings;
@@ -958,7 +1020,7 @@ begin
     NomeArq := PathWithDelim(DANFE.PathPDF) + NomeArq + '-procEventoNFe.pdf';
     AnexosEmail.Add(NomeArq);
 
-    EnviarEmail(sPara, sAssunto, sMensagem, sCC, AnexosEmail, nil, '');
+    EnviarEmail(sPara, sAssunto, sMensagem, sCC, AnexosEmail, nil, '', sReplyTo);
   finally
     AnexosEmail.Free;
   end;

@@ -475,11 +475,12 @@ begin
             FdocZip.Items[i].FresEvento.FnProt      := oLeitorInfZip.rCampo(tcStr, 'nProt');
           end;
           *)
-          if (oLeitorInfZip.rExtrai(1, 'cteProc') <> '') then
+          if (oLeitorInfZip.rExtrai(1, 'cteProc') <> '') or
+             (oLeitorInfZip.rExtrai(1, 'cteOSProc') <> '') then
           begin
             FdocZip.Items[i].XML := IIF(Pos(ENCODING_UTF8, oLeitorInfZip.Grupo) > 0, '', '<' + ENCODING_UTF8 + '>') + oLeitorInfZip.Grupo;
 
-            oLeitorInfZip.rExtrai(1, 'infCTe');
+            oLeitorInfZip.rExtrai(1, 'infCte');
             FdocZip.Items[i].FresCTe.chCTe := copy(oLeitorInfZip.Grupo, pos('Id="CTe', oLeitorInfZip.Grupo)+7, 44);
 
             oLeitorInfZip.rExtrai(1, 'emit');
@@ -492,12 +493,14 @@ begin
 
             oLeitorInfZip.rExtrai(1, 'ide');
             FdocZip.Items[i].FresCTe.FdhEmi := oLeitorInfZip.rCampo(tcDatHor, 'dhEmi');
+
             (*
             FdocZip.Items[i].FresCTe.FtpNF := StrToTpNF(ok, oLeitorInfZip.rCampo(tcStr, 'tpNF'));
-
-            oLeitorInfZip.rExtrai(1, 'total');
-            FdocZip.Items[i].FresCTe.FvNF := oLeitorInfZip.rCampo(tcDe2, 'vNF');
             *)
+
+            oLeitorInfZip.rExtrai(1, 'vPrest');
+            FdocZip.Items[i].FresCTe.FvNF := oLeitorInfZip.rCampo(tcDe2, 'vTPrest');
+
             oLeitorInfZip.rExtrai(1, 'infProt');
             FdocZip.Items[i].FresCTe.digVal    := oLeitorInfZip.rCampo(tcStr, 'digVal');
             FdocZip.Items[i].FresCTe.FdhRecbto := oLeitorInfZip.rCampo(tcDatHor, 'dhRecbto');
@@ -548,7 +551,7 @@ begin
               end;
             end;
 
-            if (oLeitorInfZip.rExtrai(2, 'retEvento') <> '') then
+            if (oLeitorInfZip.rExtrai(2, 'retEventoCTe') <> '') then
             begin
               FdocZip.Items[i].FprocEvento.RetinfEvento.FId          := oLeitorInfZip.rAtributo('Id', 'retEvento');
               FdocZip.Items[i].FprocEvento.RetinfEvento.FtpAmb       := StrToTpAmb(ok, oLeitorInfZip.rCampo(tcStr, 'tpAmb'));

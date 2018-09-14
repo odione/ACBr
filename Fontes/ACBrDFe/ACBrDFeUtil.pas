@@ -42,7 +42,7 @@ interface
 
 uses
   Classes, StrUtils, SysUtils,
-  IniFiles, pcnAuxiliar;
+  IniFiles, ACBrDFeSSL, pcnAuxiliar;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
 function FormatarNumeroDocumentoFiscalNFSe(AValue: String): String;
@@ -63,7 +63,9 @@ function ValidaRECOPI(AValue: String): Boolean;
 function ValidaNVE(AValue: string): Boolean;
 
 function XmlEstaAssinado(const AXML: String): Boolean;
-function ExtraiURI(const AXML: String): String;
+function SignatureElement(const URI: String; AddX509Data: Boolean;
+    IdSignature: String = ''; const Digest: TSSLDgst = dgstSHA1): String;
+function ExtraiURI(const AXML: String; IdAttr: String = ''): String;
 function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
                               const APathArqMun: String): String;
 function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String ): Integer;
@@ -305,14 +307,72 @@ begin
   Result := True;
 end;
 
-function ExtraiURI(const AXML: String): String;
+function XmlEstaAssinado(const AXML: String): Boolean;
+begin
+  Result := (pos('<signature', lowercase(AXML)) > 0);
+end;
+
+function SignatureElement(const URI: String; AddX509Data: Boolean;
+  IdSignature: String; const Digest: TSSLDgst): String;
+var
+  MethodAlgorithm, DigestAlgorithm: String;
+begin
+  case Digest of
+    dgstSHA256:
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+        DigestAlgorithm := 'http://www.w3.org/2001/04/xmlenc#sha256';
+      end;
+    dgstSHA512:
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+        DigestAlgorithm := 'http://www.w3.org/2001/04/xmlenc#sha512';
+      end;
+    else
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+        DigestAlgorithm := 'http://www.w3.org/2000/09/xmldsig#sha1';
+      end;
+  end;
+
+  {(*}
+  Result :=
+  '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"' + IdSignature + '>' +
+    '<SignedInfo>' +
+      '<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />' +
+      '<SignatureMethod Algorithm="'+MethodAlgorithm+'" />' +
+      '<Reference URI="' + IfThen(URI = '', '', '#' + URI) + '">' +
+        '<Transforms>' +
+          '<Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />' +
+          '<Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />' +
+        '</Transforms>' +
+        '<DigestMethod Algorithm="'+DigestAlgorithm+'" />' +
+        '<DigestValue></DigestValue>' +
+      '</Reference>' +
+    '</SignedInfo>' +
+    '<SignatureValue></SignatureValue>' +
+    '<KeyInfo>' +
+    IfThen(AddX509Data,
+      '<X509Data>' +
+        '<X509Certificate></X509Certificate>'+
+      '</X509Data>',
+      '')+
+    '</KeyInfo>'+
+  '</Signature>';
+  {*)}
+end;
+
+function ExtraiURI(const AXML: String; IdAttr: String): String;
 var
   I, J: integer;
 begin
   Result := '';
-  I := PosEx('Id=', AXML, 6);
+  if IdAttr = '' then
+    IdAttr := 'Id';
+
+  I := PosEx(IdAttr+'=', AXML);
   if I = 0 then       // XML não tem URI
-    exit ;
+    Exit;
 
   I := PosEx('"', AXML, I + 2);
   if I = 0 then
@@ -324,12 +384,6 @@ begin
 
   Result := copy(AXML, I + 1, J - I - 1);
 end;
-
-function XmlEstaAssinado(const AXML: String): Boolean;
-begin
-  Result := (pos('<signature', lowercase(AXML)) > 0);
-end;
-
 
 function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
   const APathArqMun: String): String;

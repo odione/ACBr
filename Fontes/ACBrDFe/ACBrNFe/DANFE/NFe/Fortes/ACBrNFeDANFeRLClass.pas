@@ -45,7 +45,7 @@ uses SysUtils, Classes,
   {$ELSE}
   Forms, Dialogs,
   {$ENDIF}
-  Graphics, RLConsts, pcnNFe, ACBrNFeDANFEClass, pcnConversao;
+  Graphics, pcnNFe, ACBrNFeDANFEClass, pcnConversao;
 
 type
   TNomeFonte = (nfTimesNewRoman, nfCourierNew, nfArial);
@@ -62,8 +62,12 @@ type
   TDetMedicamentos = set of TDetMedicamento;
   TDetArmamentos = set of TDetArmamento;
   TDetCombustiveis = set of TDetCombustivel;
+  TObjectArray = array of TObject;
+  PObjectArray = ^TObjectArray;
 
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TFonte = class(TComponent)
   protected
     FNome: TNomeFonte;
@@ -81,12 +85,13 @@ type
                                               write FTamanhoFonte_RazaoSocial
                                               default 8;
   end;
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrNFeDANFeRL = class( TACBrNFeDANFEClass )
   private
     FMarcadagua: string;
     FLarguraCodProd: Integer;
-    FPosCanhoto: TPosRecibo;
     fExibeCampoFatura: Boolean;
     FFonte: TFonte;
     FExibirEAN: Boolean;
@@ -100,13 +105,17 @@ type
     fEspacoEntreProdutos: Integer;
     fAlternaCoresProdutos: Boolean;
     fCorDestaqueProdutos: TColor;
+    fImprimirUnQtVlComercial: TImprimirUnidQtdeValor;
+    fExibirBandInforAdicProduto : Boolean;
+    FImprimirDadosDocReferenciados: Boolean;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure ImprimirDANFE(NFE : TNFe = nil); override ;
-    procedure ImprimirDANFEPDF(NFE : TNFe = nil); override ;
-    procedure ImprimirEVENTO(NFE : TNFe = nil); override ;
-    procedure ImprimirEVENTOPDF(NFE : TNFe = nil); override ;
+    procedure ImprimirDANFECancelado(NFE: TNFe = nil); override;
+    procedure ImprimirDANFEPDF(NFE : TNFe = nil); override;
+    procedure ImprimirEVENTO(NFE : TNFe = nil); override;
+    procedure ImprimirEVENTOPDF(NFE : TNFe = nil); override;
     procedure ImprimirINUTILIZACAO(NFe: TNFe = nil); override;
     procedure ImprimirINUTILIZACAOPDF(NFe: TNFe = nil); override;
     procedure SetExibirEAN(Value: Boolean); virtual;
@@ -114,7 +123,6 @@ type
   published
     property MarcadAgua : String read FMarcadagua write FMarcadagua ;
     property LarguraCodProd: Integer read FLarguraCodProd write FLarguraCodProd;
-    property PosCanhoto: TPosRecibo read FPosCanhoto write FPosCanhoto default prCabecalho;
     property Fonte: TFonte read FFonte;
     property ExibirEAN: Boolean read FExibirEAN write SetExibirEAN;
     property DetVeiculos: TDetVeiculos read FDetVeiculos write FDetVeiculos default
@@ -127,11 +135,15 @@ type
                             [dc_cProdANP, dc_CODIF, dc_qTemp, dc_UFCons, dc_CIDE, dc_qBCProd, dc_vAliqProd, dc_vCIDE];
     property QuebraLinhaEmDetalhamentoEspecifico : Boolean  read fQuebraLinhaEmDetalhamentoEspecifico write fQuebraLinhaEmDetalhamentoEspecifico;
     property ExibeCampoFatura: Boolean        read fExibeCampoFatura      write fExibeCampoFatura;
-    property MostraDadosISSQN: Boolean read FMostraDadosISSQN write FMostraDadosISSQN default True; // Oculta o campo ISSQN mesmo possuindo inscrição municipal
+    property MostraDadosISSQN: Boolean read FMostraDadosISSQN write FMostraDadosISSQN default False; // Oculta o campo ISSQN mesmo possuindo inscrição municipal
     property AltLinhaComun: Integer read FAltLinhaComun write FAltLinhaComun default 30; // Alturas das linhas mais comuns do Danfe
     property EspacoEntreProdutos: Integer read FEspacoEntreProdutos write FEspacoEntreProdutos default 7; // Altura dos espaços entre os produtos
     property AlternaCoresProdutos: Boolean read FAlternaCoresProdutos write FAlternaCoresProdutos default False; // Alterna as cores de fundo dos produtos para destaca-los
     property CorDestaqueProdutos: TColor read FCorDestaqueProdutos write FCorDestaqueProdutos default clWhite; // Cor usada para destacar produtos na lista alternando entre fundo coloridos e não colorido
+    property ImprimirUnQtVlComercial: TImprimirUnidQtdeValor read fImprimirUnQtVlComercial write fImprimirUnQtVlComercial;
+    property ExibirBandInforAdicProduto : Boolean  read fExibirBandInforAdicProduto write fExibirBandInforAdicProduto default False; // Exibir a banda de informação Adicionais do produto.
+    property ImprimirDadosDocReferenciados : Boolean  read FImprimirDadosDocReferenciados write FImprimirDadosDocReferenciados;
+
   end;
 
 implementation
@@ -176,18 +188,20 @@ begin
   FProdutosPorPagina := 0;
   FExibirEAN := False;
   FTipoDANFE := tiRetrato;
-  FPosCanhoto := prCabecalho;
   FDetVeiculos := [dv_chassi, dv_xCor, dv_nSerie, dv_tpComb, dv_nMotor, dv_anoMod, dv_anoFab];
   FDetMedicamentos := [dm_nLote, dm_qLote, dm_dFab, dm_dVal, dm_vPMC];
   FDetArmamentos := [da_tpArma, da_nSerie, da_nCano, da_descr];
   FDetCombustiveis := [dc_cProdANP, dc_CODIF, dc_qTemp, dc_UFCons, dc_CIDE, dc_qBCProd, dc_vAliqProd, dc_vCIDE];
   fQuebraLinhaEmDetalhamentoEspecifico  := True;
-  fExibeCampoFatura       := False;
-  fMostraDadosISSQN     := True;
+  fExibeCampoFatura     := False;
+  fMostraDadosISSQN     := False;
   fAltLinhaComun        := 30;
   fEspacoEntreProdutos  := 7;
   fAlternaCoresProdutos := False;
   fCorDestaqueProdutos  := clWhite;
+  fImprimirUnQtVlComercial  := iuComercial;
+  fExibirBandInforAdicProduto := False;    
+  FImprimirDadosDocReferenciados := True;
 end;
 
 destructor TACBrNFeDANFeRL.Destroy;
@@ -199,6 +213,7 @@ end;
 procedure TACBrNFeDANFeRL.ImprimirDANFE(NFE: TNFe = nil);
 var
  i : Integer;
+ ReportArray : TObjectArray; 
 begin
 try
   case TipoDANFE of
@@ -233,7 +248,17 @@ try
           fAltLinhaComun,
           fEspacoEntreProdutos,
           fAlternaCoresProdutos,
-          fCorDestaqueProdutos);
+          fCorDestaqueProdutos,
+	  fImprimirDadosDocReferenciados,
+          fTamanhoLogoHeight,
+          fTamanhoLogoWidth,
+          fRecuoEndereco,
+          fRecuoEmpresa,
+          fLogoEmCima,
+          fTamanhoFonteEndereco,
+          fRecuoLogo,
+          i = Pred(TACBrNFe(ACBrNFe).NotasFiscais.Count),
+          @ReportArray);
         end;
     end
   else
@@ -258,7 +283,17 @@ try
       fAltLinhaComun,
       fEspacoEntreProdutos,
       fAlternaCoresProdutos,
-      fCorDestaqueProdutos );
+      fCorDestaqueProdutos,
+      fImprimirDadosDocReferenciados,
+      fTamanhoLogoHeight,
+      fTamanhoLogoWidth,
+      fRecuoEndereco,
+      fRecuoEmpresa,
+      fLogoEmCima,
+      fTamanhoFonteEndereco,
+      fRecuoLogo,
+      True,
+      @ReportArray);
     end;
 
   finally
@@ -266,8 +301,13 @@ try
   end;
 end;
 
+procedure TACBrNFeDANFeRL.ImprimirDANFECancelado(NFE: TNFe = nil);
+begin
+   NFeCancelada := True;
+   ImprimirDANFE(NFE);
+end;
+
 procedure TACBrNFeDANFeRL.ImprimirDANFEPDF(NFE : TNFe = nil);
-var sFile: String;
 var
   i : Integer;
 begin
@@ -287,13 +327,13 @@ begin
 //          sFile := TACBrNFe(ACBrNFe).DANFE.PathPDF +
 //                   Copy(TACBrNFe(ACBrNFe).NotasFiscais.Items[i].NFe.infNFe.ID,
 //                   4, 44) + '-nfe.pdf';
-          sFile := TACBrNFe(ACBrNFe).DANFE.PathPDF +
-                   StringReplace(TACBrNFe(ACBrNFe).NotasFiscais.Items[i].NFe.infNFe.ID,'NFe', '', [rfIgnoreCase])
-                   + '-nfe.pdf';
+          FPArquivoPDF := TACBrNFe(ACBrNFe).DANFE.PathPDF +
+                          StringReplace(TACBrNFe(ACBrNFe).NotasFiscais.Items[i].NFe.infNFe.ID,'NFe', '', [rfIgnoreCase]) +
+                          '-nfe.pdf';
 
           frlDANFeRL.SavePDF(Self, TACBrNFe(ACBrNFe).NotasFiscais.Items[i].NFe,
           FLogo, FMarcaDagua, FLarguraCodProd, FEmail, FExibeResumoCanhoto, FFax,
-          FNumCopias, FSistema, FSite, FUsuario, sFile, FPosCanhoto, FFormularioContinuo,
+          FNumCopias, FSistema, FSite, FUsuario, FPArquivoPDF, FPosCanhoto, FFormularioContinuo,
           FExpandirLogoMarca, FMostrarStatus, FFonte.FNome, FFonte.FNegrito, FMargemSuperior,
           FMargemInferior, FMargemEsquerda, FMargemDireita, FCasasDecimais._qCom,
           FCasasDecimais._vUnCom, FProdutosPorPagina, FImpressora,
@@ -310,19 +350,27 @@ begin
           fAltLinhaComun,
           fEspacoEntreProdutos,
           fAlternaCoresProdutos,
-          fCorDestaqueProdutos );
+          fCorDestaqueProdutos,
+          fImprimirDadosDocReferenciados,
+          FTamanhoLogoHeight,
+          FTamanhoLogoWidth,
+          FRecuoEndereco,
+          FRecuoEmpresa,
+          FLogoEmCima,
+          FTamanhoFonteEndereco,
+          FRecuoLogo);
         end;
     end
   else
     begin
 //      sFile := Self.PathPDF + Copy(NFe.infNFe.ID, 4, 44) + '-nfe.pdf';
-      sFile := Self.PathPDF +
-               StringReplace(NFe.infNFe.ID,'NFe', '', [rfIgnoreCase]) +
-               '-nfe.pdf';
+      FPArquivoPDF := Self.PathPDF +
+                      StringReplace(NFe.infNFe.ID,'NFe', '', [rfIgnoreCase]) +
+                      '-nfe.pdf';
 
       frlDANFeRL.SavePDF(Self, NFe,
       FLogo, FMarcaDagua, FLarguraCodProd, FEmail, FExibeResumoCanhoto, FFax,
-      FNumCopias, FSistema, FSite, FUsuario, sFile, FPosCanhoto, FFormularioContinuo,
+      FNumCopias, FSistema, FSite, FUsuario, FPArquivoPDF, FPosCanhoto, FFormularioContinuo,
       FExpandirLogoMarca, FMostrarStatus, FFonte.FNome, FFonte.FNegrito, FMargemSuperior,
       FMargemInferior, FMargemEsquerda, FMargemDireita, FCasasDecimais._qCom,
       FCasasDecimais._vUnCom, FProdutosPorPagina, FImpressora,
@@ -339,7 +387,15 @@ begin
       fAltLinhaComun,
       fEspacoEntreProdutos,
       fAlternaCoresProdutos,
-      fCorDestaqueProdutos );
+      fCorDestaqueProdutos,
+      fImprimirDadosDocReferenciados,
+      FTamanhoLogoHeight,
+      FTamanhoLogoWidth,
+      FRecuoEndereco,
+      FRecuoEmpresa,
+      FLogoEmCima,
+      FTamanhoFonteEndereco,
+      FRecuoLogo);
     end;
  finally
    FreeAndNil(frlDANFeRL);
@@ -423,9 +479,9 @@ try
 end;
 
 procedure TACBrNFeDANFeRL.ImprimirEVENTOPDF(NFE: TNFe);
-var sFile: String;
-Impresso: Boolean;
-I, J : Integer;
+var
+  Impresso: Boolean;
+  I, J : Integer;
 begin
 try
   case TipoDANFE of
@@ -439,7 +495,7 @@ try
     begin
       for i := 0 to (TACBrNFe(ACBrNFe).EventoNFe.Evento.Count - 1) do
         begin
-          sFile := TACBrNFe(ACBrNFe).DANFE.PathPDF +
+          FPArquivoPDF := TACBrNFe(ACBrNFe).DANFE.PathPDF +
                    StringReplace(TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i].InfEvento.id, 'ID', '', [rfIgnoreCase]) +
                    '-procEventoNFe.pdf';
 
@@ -452,7 +508,7 @@ try
               if StringReplace(TACBrNFe(ACBrNFe).NotasFiscais.Items[j].NFe.infNFe.ID,'NFe', '', [rfIgnoreCase]) = TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i].InfEvento.chNFe then
                 begin
                   frlDANFeEventoRL.SavePDF(Self, TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i],
-                  FLogo, FMarcadagua, sFile, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
+                  FLogo, FMarcadagua, FPArquivoPDF, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
                   FMargemSuperior, FMargemInferior, FMargemEsquerda, FMargemDireita,
                   TACBrNFe(ACBrNFe).NotasFiscais.Items[j].NFe);
                   Impresso := True;
@@ -463,7 +519,7 @@ try
           if Impresso = False then
             begin
               frlDANFeEventoRL.SavePDF(Self, TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i],
-              FLogo, FMarcadagua, sFile, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
+              FLogo, FMarcadagua, FPArquivoPDF, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
               FMargemSuperior, FMargemInferior, FMargemEsquerda, FMargemDireita);
             end;
         end; // for i := 0 to (TACBrNFe(ACBrNFe).EventoNFe.Evento.Count - 1)
@@ -472,13 +528,13 @@ try
     begin
       for i := 0 to (TACBrNFe(ACBrNFe).EventoNFe.Evento.Count - 1) do
         begin
-          sFile := TACBrNFe(ACBrNFe).DANFE.PathPDF +
-                   StringReplace(TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i].InfEvento.id, 'ID', '', [rfIgnoreCase]) +
-                   '-procEventoNFe.pdf';
+          FPArquivoPDF := TACBrNFe(ACBrNFe).DANFE.PathPDF +
+                          StringReplace(TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i].InfEvento.id, 'ID', '', [rfIgnoreCase]) +
+                          '-procEventoNFe.pdf';
 //          Copy(TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i].InfEvento.id, 3, 52) + 'evento.pdf';
 
           frlDANFeEventoRL.SavePDF(Self, TACBrNFe(ACBrNFe).EventoNFe.Evento.Items[i],
-          FLogo, FMarcadagua, sFile, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
+          FLogo, FMarcadagua, FPArquivoPDF, FSistema, FUsuario, FFonte.FNome, FFonte.FNegrito,
           FMargemSuperior, FMargemInferior, FMargemEsquerda, FMargemDireita);
         end;
     end;
@@ -501,18 +557,16 @@ begin
 end;
 
 procedure TACBrNFeDANFErl.ImprimirINUTILIZACAOPDF(NFe: TNFe);
-var
- NomeArq: String;
 begin
   frmNFeDAInutRL := TfrmNFeDAInutRLRetrato.Create(Self);
 
-  NomeArq := StringReplace(TACBrNFe(ACBrNFe).InutNFe.ID, 'ID', '', [rfIgnoreCase]);
-  if NomeArq = '' then
-    NomeArq := StringReplace(TACBrNFe(ACBrNFe).InutNFe.ID, 'ID', '', [rfIgnoreCase]);
-  NomeArq := PathWithDelim(Self.PathPDF) + NomeArq + '-procInutNFe.pdf';
+  FPArquivoPDF := StringReplace(TACBrNFe(ACBrNFe).InutNFe.ID, 'ID', '', [rfIgnoreCase]);
+  if FPArquivoPDF = '' then
+    FPArquivoPDF := StringReplace(TACBrNFe(ACBrNFe).InutNFe.ID, 'ID', '', [rfIgnoreCase]);
+  FPArquivoPDF := PathWithDelim(Self.PathPDF) + FPArquivoPDF + '-procInutNFe.pdf';
 
   frmNFeDAInutRL.SavePDF(TACBrNFe(ACBrNFe),
-                         FLogo, NomeArq, FSistema, FUsuario,
+                         FLogo, FPArquivoPDF, FSistema, FUsuario,
                          FMargemSuperior, FMargemInferior,
                          FMargemEsquerda, FMargemDireita);
 

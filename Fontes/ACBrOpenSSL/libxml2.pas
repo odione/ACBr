@@ -14,7 +14,7 @@ procedure Init;
 
 const
 {$IFDEF MSWINDOWS}
-  {$IFDEF CPU64}
+  {$IFDEF USE_MINGW}
     LIBXML2_SO = 'libxml2-2.dll';
   {$ELSE}
     LIBXML2_SO = 'libxml2.dll';
@@ -29,6 +29,15 @@ const
   
 type
 
+      {$IFNDEF FPC}
+        {$IFDEF CPU64}
+          SizeInt = Int64;
+        {$ELSE}
+          SizeInt = LongInt;
+        {$ENDIF}
+        PSizeInt = ^SizeInt;
+        TLibHandle = THandle;
+      {$ENDIF}
 
       PFILE = Pointer;
       iconv_t = Cardinal;
@@ -1363,6 +1372,12 @@ type
           XPATH_LOCATIONSET = 7,
           XPATH_USERS = 8,
           XPATH_XSLT_TREE = 9);
+
+     xmlC14NMode = (
+          XML_C14N_1_0 = 0,           // : Original C14N 1.0 spec
+          XML_C14N_EXCLUSIVE_1_0 = 1, // : Exclusive C14N 1.0 spec
+          XML_C14N_1_1 = 2            //: C14N 1.1 spec
+      );
 
        htmlElemDescPtr = ^htmlElemDesc;
        htmlEntityDescPtr = ^htmlEntityDesc;
@@ -4429,7 +4444,7 @@ uses
   SysUtils;
 
 var
-  libHandle: THandle;
+  libHandle: TLibHandle;
 
 // Utility function to make sure procedure entry points are not null
 

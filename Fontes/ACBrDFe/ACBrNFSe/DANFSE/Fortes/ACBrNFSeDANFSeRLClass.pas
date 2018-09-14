@@ -42,6 +42,9 @@ uses
   Forms, SysUtils, Classes, pnfsNFSe, ACBrNFSeDANFSeClass;
 
 type
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrNFSeDANFSeRL = class(TACBrNFSeDANFSeClass)
   private
 
@@ -117,7 +120,9 @@ begin
           , T_Endereco
           , T_Complemento
           , T_Email
-          , PrintDialog);
+          , PrintDialog
+          , ImprimeCanhoto
+          , DetalharServico);
 			  end;
 		  end
 		  else
@@ -154,7 +159,9 @@ begin
           , T_Endereco
           , T_Complemento
           , T_Email
-          , PrintDialog);
+          , PrintDialog
+          , ImprimeCanhoto
+          , DetalharServico);
 	 finally
 		  frlDANFSeRLRetrato.Free;
 	 end;
@@ -206,14 +213,16 @@ begin
           , T_Fone
           , T_Endereco
           , T_Complemento
-          , T_Email);
+          , T_Email
+          , ImprimeCanhoto
+          , DetalharServico);
       end;
 	  end
 	  else
 	  begin
       NomeArq := PathWithDelim(Self.PathPDF) + TACBrNFSe(ACBrNFSe).NumID[NFSe] + '-nfse.pdf';
 
-		   frlDANFSeRLRetrato.SavePDF(Self
+		  frlDANFSeRLRetrato.SavePDF(Self
         , NomeArq
         , NFSe
         , Logo
@@ -244,7 +253,9 @@ begin
         , T_Fone
         , T_Endereco
         , T_Complemento
-        , T_Email);
+        , T_Email
+        , ImprimeCanhoto
+        , DetalharServico);
 	  end;
   finally
 	  frlDANFSeRLRetrato.Free;

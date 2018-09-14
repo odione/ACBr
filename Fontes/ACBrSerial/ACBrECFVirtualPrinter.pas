@@ -38,7 +38,7 @@ unit ACBrECFVirtualPrinter ;
 interface
 uses
   Classes, SysUtils,
-  ACBrDevice, ACBrECFVirtualBuffer, ACBrECFClass, ACBrUtil, ACBrConsts,
+  ACBrDevice, ACBrECFVirtualBuffer, ACBrECFClass, ACBrUtil,
   ACBrPosPrinter ;
 
 const
@@ -58,6 +58,19 @@ TACBrECFVirtualPrinter = class( TACBrECFVirtualBuffer )
     procedure AtivarPosPrinter;
   published
     property PosPrinter : TACBrPosPrinter read FPosPrinter write SetPosPrinter;
+
+    property Colunas ;
+    property NomeArqINI ;
+    property NumSerie ;
+    property NumECF ;
+    property NumCRO ;
+    property CNPJ ;
+    property IE ;
+    property IM ;
+
+    property Cabecalho ;
+    property CabecalhoItem ;
+    property MascaraItem ;
   end ;
 
 { TACBrECFVirtualPrinterClass }

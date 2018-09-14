@@ -41,7 +41,8 @@ unit ACBrMDFeConfiguracoes;
 interface
 
 uses
-  Classes, SysUtils, ACBrDFeConfiguracoes, pcnConversao, pmdfeConversaoMDFe;
+  Classes, SysUtils, IniFiles,
+  ACBrDFeConfiguracoes, pcnConversao, pmdfeConversaoMDFe;
 
 type
 
@@ -55,6 +56,8 @@ type
   public
     constructor Create(AOwner: TConfiguracoes); override;
     procedure Assign(DeGeralConfMDFe: TGeralConfMDFe); reintroduce;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
   published
     property VersaoDF: TVersaoMDFe read FVersaoDF write SetVersaoDF default ve100;
@@ -80,13 +83,17 @@ type
   private
     FEmissaoPathMDFe: boolean;
     FSalvarApenasMDFeProcessados: boolean;
+    FNormatizarMunicipios: Boolean;
     FPathMDFe: String;
     FPathEvento: String;
+    FPathArquivoMunicipios: String                                           ;
     FDownloadMDFe: TDownloadConfMDFe;
   public
     constructor Create(AOwner: TConfiguracoes); override;
     destructor Destroy; override;
     procedure Assign(DeArquivosConfMDFe: TArquivosConfMDFe); reintroduce;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
     function GetPathMDFe(Data: TDateTime = 0; CNPJ: String = ''): String;
     function GetPathEvento(tipoEvento: TpcnTpEvento; CNPJ: String = ''; Data: TDateTime = 0): String;
@@ -96,8 +103,10 @@ type
       write FEmissaoPathMDFe default False;
     property SalvarApenasMDFeProcessados: boolean
       read FSalvarApenasMDFeProcessados write FSalvarApenasMDFeProcessados default False;
+    property NormatizarMunicipios: boolean read FNormatizarMunicipios write FNormatizarMunicipios default False;
     property PathMDFe: String read FPathMDFe write FPathMDFe;
     property PathEvento: String read FPathEvento write FPathEvento;
+    property PathArquivoMunicipios: String read FPathArquivoMunicipios write FPathArquivoMunicipios;
     property DownloadMDFe: TDownloadConfMDFe read FDownloadMDFe write FDownloadMDFe;
   end;
 
@@ -129,11 +138,11 @@ uses
 
 { TConfiguracoesMDFe }
 
-
 constructor TConfiguracoesMDFe.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
+  FPSessaoIni := 'MDFe';
   WebServices.ResourceName := 'ACBrMDFeServicos';
 end;
 
@@ -181,6 +190,20 @@ begin
   FVersaoDF := ve100;
 end;
 
+procedure TGeralConfMDFe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF));
+end;
+
+procedure TGeralConfMDFe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  VersaoDF := TVersaoMDFe(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF)));
+end;
+
 procedure TGeralConfMDFe.SetVersaoDF(const Value: TVersaoMDFe);
 begin
   FVersaoDF := Value;
@@ -194,8 +217,10 @@ begin
 
   FEmissaoPathMDFe             := DeArquivosConfMDFe.EmissaoPathMDFe;
   FSalvarApenasMDFeProcessados := DeArquivosConfMDFe.SalvarApenasMDFeProcessados;
+  FNormatizarMunicipios        := DeArquivosConfMDFe.NormatizarMunicipios;
   FPathMDFe                    := DeArquivosConfMDFe.PathMDFe;
   FPathEvento                  := DeArquivosConfMDFe.PathEvento;
+  FPathArquivoMunicipios       := DeArquivosConfMDFe.PathArquivoMunicipios;
   FDownloadMDFe.Assign(DeArquivosConfMDFe.DownloadMDFe);
 end;
 
@@ -206,8 +231,11 @@ begin
   FDownloadMDFe := TDownloadConfMDFe.Create;
   FEmissaoPathMDFe := False;
   FSalvarApenasMDFeProcessados := False;
+  FNormatizarMunicipios := False;
   FPathMDFe := '';
   FPathEvento := '';
+  FPathArquivoMunicipios := '';
+
 end;
 
 destructor TArquivosConfMDFe.Destroy;
@@ -234,7 +262,7 @@ end;
 
 function TArquivosConfMDFe.GetPathMDFe(Data: TDateTime = 0; CNPJ: String = ''): String;
 begin
-  Result := GetPath(FPathMDFe, 'MDFe', CNPJ, Data);
+  Result := GetPath(FPathMDFe, 'MDFe', CNPJ, Data, 'MDFe');
 end;
 
 function TArquivosConfMDFe.GetPathDownload(xNome: String = ''; CNPJ: String = ''; Data: TDateTime = 0): String;
@@ -246,11 +274,39 @@ begin
      FDownloadMDFe.PathDownload := PathSalvar;
 
   if (FDownloadMDFe.SepararPorNome) and (NaoEstaVazio(xNome)) then
-     rPathDown := rPathDown + PathWithDelim(FDownloadMDFe.PathDownload) + TiraAcentos(xNome)
+     rPathDown := rPathDown + PathWithDelim(FDownloadMDFe.PathDownload) + OnlyAlphaNum(xNome)
   else
      rPathDown := FDownloadMDFe.PathDownload;
 
   Result := GetPath(rPathDown, 'Down', CNPJ, Data);
+end;
+
+procedure TArquivosConfMDFe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SalvarApenasMDFeProcessados', SalvarApenasMDFeProcessados);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'EmissaoPathMDFe', EmissaoPathMDFe);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathMDFe', PathMDFe);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadMDFe.PathDownload);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadMDFe.SepararPorNome);
+end;
+
+procedure TArquivosConfMDFe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  SalvarApenasMDFeProcessados := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SalvarApenasMDFeProcessados', SalvarApenasMDFeProcessados);
+  EmissaoPathMDFe := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'EmissaoPathMDFe', EmissaoPathMDFe);
+  NormatizarMunicipios := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  PathMDFe := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathMDFe', PathMDFe);
+  PathEvento := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  PathArquivoMunicipios := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  DownloadMDFe.PathDownload := AIni.ReadString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadMDFe.PathDownload);
+  DownloadMDFe.SepararPorNome := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadMDFe.SepararPorNome);
 end;
 
 { TDownloadConfMDFe }

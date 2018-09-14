@@ -198,17 +198,25 @@ type
   private
     FIdentarXML: Boolean;
     FSSLLib: TSSLLib;
+    FSSLCryptLib: TSSLCryptLib;
+    FSSLHttpLib: TSSLHttpLib;
     FFormaEmissao: TpcnTipoEmissao;
     FSalvar: Boolean;
     FExibirErroSchema: Boolean;
     FFormatoAlerta: String;
     FRetirarAcentos: Boolean;
     FRetirarEspacos: Boolean;
+    FSSLXmlSignLib: TSSLXmlSignLib;
     FValidarDigest: Boolean;
     FCalcSSLLib: Boolean;
 
     function GetFormaEmissaoCodigo: integer;
     procedure SetSSLLib(AValue: TSSLLib);
+    procedure SetSSLCryptLib(AValue: TSSLCryptLib);
+    procedure SetSSLHttpLib(AValue: TSSLHttpLib);
+    procedure SetSSLXmlSignLib(AValue: TSSLXmlSignLib);
+    procedure CalcSSLLib;
+
     function GetFormatoAlerta: String;
   protected
     fpConfiguracoes: TConfiguracoes;
@@ -221,6 +229,10 @@ type
 
   published
     property SSLLib: TSSLLib read FSSLLib write SetSSLLib;
+    property SSLCryptLib: TSSLCryptLib read FSSLCryptLib write SetSSLCryptLib;
+    property SSLHttpLib: TSSLHttpLib read FSSLHttpLib write SetSSLHttpLib;
+    property SSLXmlSignLib: TSSLXmlSignLib read FSSLXmlSignLib write SetSSLXmlSignLib;
+
     property FormaEmissao: TpcnTipoEmissao read FFormaEmissao
       write FFormaEmissao default teNormal;
     property FormaEmissaoCodigo: integer read GetFormaEmissaoCodigo;
@@ -439,15 +451,9 @@ begin
   inherited Create(AConfiguracoes);
 
   fpConfiguracoes := AConfiguracoes;
-  {$IFNDEF MSWINDOWS}
-   FSSLLib := libOpenSSL;
-  {$ELSE}
-   {$IFDEF FPC}
-    FSSLLib := libCapicom;
-   {$ELSE}
-    FSSLLib := libCapicomDelphiSoap;
-   {$ENDIF}
-  {$ENDIF}
+  FSSLLib := libNone;
+  FSSLCryptLib := cryNone;
+  FSSLHttpLib := httpNone;
   FFormaEmissao := teNormal;
   FSalvar := True;
   FExibirErroSchema := True;
@@ -468,6 +474,9 @@ end;
 procedure TGeralConf.Assign(DeGeralConf: TGeralConf);
 begin
   SSLLib           := DeGeralConf.SSLLib;
+  SSLCryptLib      := DeGeralConf.SSLCryptLib;
+  SSLHttpLib       := DeGeralConf.SSLHttpLib;
+  SSLXmlSignLib    := DeGeralConf.SSLXmlSignLib;
   FormaEmissao     := DeGeralConf.FormaEmissao;
   Salvar           := DeGeralConf.Salvar;
   ExibirErroSchema := DeGeralConf.ExibirErroSchema;
@@ -479,12 +488,40 @@ end;
 
 procedure TGeralConf.GravarIni(const AIni: TCustomIniFile);
 begin
+  AIni.WriteInteger(CDFeSessaoIni, 'SSLCryptLib', Integer(SSLCryptLib));
+  AIni.WriteInteger(CDFeSessaoIni, 'SSLHttpLib', Integer(SSLHttpLib));
+  AIni.WriteInteger(CDFeSessaoIni, 'SSLXmlSignLib', Integer(SSLXmlSignLib));
 
+  if NaoEstaVazio(fpConfiguracoes.SessaoIni) then
+  begin
+    AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'FormaEmissao', Integer(FormaEmissao));
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'ExibirErroSchema', ExibirErroSchema);
+    AIni.WriteString(fpConfiguracoes.SessaoIni, 'FormatoAlerta', FormatoAlerta);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'RetirarAcentos', RetirarAcentos);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'RetirarEspacos', RetirarEspacos);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'IdentarXML', IdentarXML);
+    AIni.WriteBool(fpConfiguracoes.SessaoIni, 'ValidarDigest', ValidarDigest);
+  end;
 end;
 
 procedure TGeralConf.LerIni(const AIni: TCustomIniFile);
 begin
+  SSLCryptLib := TSSLCryptLib(AIni.ReadInteger(CDFeSessaoIni, 'SSLCryptLib', Integer(SSLCryptLib)));
+  SSLHttpLib := TSSLHttpLib(AIni.ReadInteger(CDFeSessaoIni, 'SSLHttpLib', Integer(SSLHttpLib)));
+  SSLXmlSignLib := TSSLXmlSignLib(AIni.ReadInteger(CDFeSessaoIni, 'SSLXmlSignLib', Integer(SSLXmlSignLib)));
 
+  if NaoEstaVazio(fpConfiguracoes.SessaoIni) then
+  begin
+    FormaEmissao := TpcnTipoEmissao(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'FormaEmissao', Integer(FormaEmissao)));
+    Salvar := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Salvar', Salvar);
+    ExibirErroSchema := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'ExibirErroSchema', ExibirErroSchema);
+    FormatoAlerta := AIni.ReadString(fpConfiguracoes.SessaoIni, 'FormatoAlerta', FormatoAlerta);
+    RetirarAcentos := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'RetirarAcentos', RetirarAcentos);
+    RetirarEspacos := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'RetirarEspacos', RetirarEspacos);
+    IdentarXML := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'IdentarXML', IdentarXML);
+    ValidarDigest := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'ValidarDigest', ValidarDigest);
+  end;
 end;
 
 function TGeralConf.GetFormatoAlerta: String;
@@ -500,22 +537,112 @@ end;
 
 procedure TGeralConf.SetSSLLib(AValue: TSSLLib);
 begin
-  {$IFNDEF MSWINDOWS}
-  FSSLLib := libOpenSSL;  // Linux, Mac, apenas OpenSSL é suportado
-  {$ELSE}
+  FCalcSSLLib := False;
+  try
+    case AValue of
+      libNone:
+      begin
+        SSLCryptLib := cryNone;
+        SSLHttpLib := httpNone;
+        SSLXmlSignLib := xsNone;
+      end;
+
+      libOpenSSL:
+      begin
+        SSLCryptLib := cryOpenSSL;
+        SSLHttpLib := httpOpenSSL;
+        SSLXmlSignLib := xsXmlSec;
+      end;
+
+      libCapicom:
+      begin
+        SSLCryptLib := cryCapicom;
+        SSLHttpLib := httpWinINet;
+        SSLXmlSignLib := xsMsXmlCapicom;
+      end;
+
+      libCapicomDelphiSoap:
+      begin
+        SSLCryptLib := cryCapicom;
+        SSLHttpLib := httpIndy;
+        SSLXmlSignLib := xsMsXmlCapicom;
+      end;
+
+      libWinCrypt:
+      begin
+        SSLCryptLib := cryWinCrypt;
+        SSLHttpLib := httpWinHttp;
+        {$IfNDef DFE_SEM_LIBXML2}
+         SSLXmlSignLib := xsLibXml2;
+        {$Else}
+         SSLXmlSignLib := xsMsXml;
+        {$EndIf}
+
+      end;
+    end;
+  finally
+    FCalcSSLLib := True;
+  end;
+
   FSSLLib := AValue;
-  {$IFDEF FPC}
-  if AValue = libCapicomDelphiSoap then
-    FSSLLib := libCapicom;
-  {$ENDIF}
-  {$ENDIF}
-  TACBrDFe(fpConfiguracoes.Owner).SSL.SSLLib := FSSLLib;
 end;
 
 function TGeralConf.GetFormaEmissaoCodigo: integer;
 begin
   Result := StrToInt(TpEmisToStr(FFormaEmissao));
 end;
+
+procedure TGeralConf.SetSSLCryptLib(AValue: TSSLCryptLib);
+begin
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.SSLCryptLib := AValue;
+
+  FSSLCryptLib := AValue;
+  CalcSSLLib;
+end;
+
+procedure TGeralConf.SetSSLHttpLib(AValue: TSSLHttpLib);
+begin
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.SSLHttpLib := AValue;
+
+  FSSLHttpLib := AValue;
+  CalcSSLLib;
+end;
+
+procedure TGeralConf.SetSSLXmlSignLib(AValue: TSSLXmlSignLib);
+begin
+  if Assigned(fpConfiguracoes.Owner) then
+    TACBrDFe(fpConfiguracoes.Owner).SSL.SSLXmlSignLib := AValue;
+
+  FSSLXmlSignLib := AValue;
+  CalcSSLLib;
+end;
+
+
+procedure TGeralConf.CalcSSLLib;
+begin
+  if not FCalcSSLLib then Exit;
+
+  if (SSLCryptLib = cryOpenSSL) and (SSLHttpLib = httpOpenSSL) and (SSLXmlSignLib = xsXmlSec) then
+    FSSLLib := libOpenSSL
+
+  else if (SSLCryptLib = cryNone) and (SSLHttpLib = httpNone) and (SSLXmlSignLib = xsNone)then
+    FSSLLib := libNone
+
+  else if (SSLCryptLib = cryCapicom) and (SSLHttpLib = httpWinINet) and (SSLXmlSignLib = xsMsXmlCapicom) then
+    FSSLLib := libCapicom
+
+  else if (SSLCryptLib = cryCapicom) and (SSLHttpLib = httpIndy) and (SSLXmlSignLib = xsMsXmlCapicom) then
+    FSSLLib := libCapicomDelphiSoap
+
+  else if (SSLCryptLib = cryWinCrypt) and (SSLHttpLib = httpWinHttp) and (SSLXmlSignLib = xsLibXml2) then
+    FSSLLib := libWinCrypt
+
+  else
+    FSSLLib := libCustom;
+end;
+
 
 { TWebServicesConf }
 
@@ -569,7 +696,13 @@ begin
   IntervaloTentativas      := DeWebServicesConf.IntervaloTentativas;
   AjustaAguardaConsultaRet := DeWebServicesConf.AjustaAguardaConsultaRet;
   Salvar                   := DeWebServicesConf.Salvar;
+  QuebradeLinha            := DeWebServicesConf.QuebradeLinha;
+  SSLType                  := DeWebServicesConf.SSLType;
+  TimeOut                  := DeWebServicesConf.TimeOut;
+  TimeOutPorThread         := DeWebServicesConf.TimeOutPorThread;
+
   Params.Assign(DeWebServicesConf.Params);
+  TimeZoneConf.Assign(DeWebServicesConf.TimeZoneConf);
 end;
 
 procedure TWebServicesConf.GravarIni(const AIni: TCustomIniFile);
@@ -1007,48 +1140,85 @@ function TArquivosConf.GetPath(APath: String; ALiteral: String; CNPJ: String;
   
 var
   wDia, wMes, wAno: word;
-  Dir, Modelo, AnoMes: String;
-  LenLiteral: integer;
+  Dir, Modelo, sAno, sMes, sDia: String;
+  LenLiteral, i: integer;
 begin
   if EstaVazio(APath) then
     Dir := PathSalvar
   else
     Dir := APath;
 
-  if SepararPorCNPJ then
+  //se nao foi informada nenhuma ordenação, cria ordenação na ordem anterior (compatibilidade)
+  if (FOrdenacaoPath.Count = 0) then
   begin
-    CNPJ := OnlyNumber(CNPJ);
-
-    if EstaVazio(CNPJ) then
-      CNPJ := OnlyNumber(TACBrDFe(fpConfiguracoes.Owner).SSL.CertCNPJ);
-
-    if NaoEstaVazio(CNPJ) then
-      Dir := PathWithDelim(Dir) + CNPJ;
+    AddPathOrder(SepararPorCNPJ, opCNPJ);
+    AddPathOrder(SepararPorModelo, opModelo);
+    AddPathOrder((SepararPorAno or SepararPorMes or SepararPorDia), opData);
+    AddPathOrder(AdicionarLiteral, opLiteral);
   end;
 
-  if SepararPorModelo then
+  for i := 0 to FOrdenacaoPath.Count - 1 do
   begin
-    Modelo := TACBrDFe(fpConfiguracoes.Owner).GetNomeModeloDFe;
-    Dir := PathWithDelim(Dir) + Modelo;
-  end;
+    case FOrdenacaoPath[i].Item of
+      opCNPJ:
+        begin
+          CNPJ := OnlyNumber(CNPJ);
 
-  if SepararPorMes then
-  begin
-    if Data = 0 then
-      Data := Now;
+          if EstaVazio(CNPJ) then
+            if Assigned(fpConfiguracoes.Owner) then
+              CNPJ := OnlyNumber(TACBrDFe(fpConfiguracoes.Owner).SSL.CertCNPJ);
 
-    DecodeDate(Data, wAno, wMes, wDia);
-    AnoMes := IntToStr(wAno) + IntToStrZero(wMes, 2);
+          if NaoEstaVazio(CNPJ) then
+            Dir := PathWithDelim(Dir) + CNPJ;
+        end;
 
-    if Pos(AnoMes, Dir) <= 0 then
-      Dir := PathWithDelim(Dir) + AnoMes;
-  end;
+      opModelo:
+        begin
+          if (ModeloDescr = '') and Assigned(fpConfiguracoes.Owner) then
+            Modelo := TACBrDFe(fpConfiguracoes.Owner).GetNomeModeloDFe
+          else
+            Modelo := ModeloDescr;
 
-  LenLiteral := Length(ALiteral);
-  if AdicionarLiteral and (LenLiteral > 0) then
-  begin
-    if RightStr(Dir, LenLiteral) <> ALiteral then
-      Dir := PathWithDelim(Dir) + ALiteral;
+          Dir := PathWithDelim(Dir) + Modelo;
+
+        end;
+
+      opData:
+        begin
+          if Data = 0 then
+            Data := Now;
+
+          DecodeDate(Data, wAno, wMes, wDia);
+          sDia := IntToStrZero(wDia, 2);
+          sMes := IntToStrZero(wMes, 2);
+          sAno := IntToStrZero(wAno, 4);
+
+          if SepararPorAno then
+            Dir := PathWithDelim(Dir) + sAno;
+
+          if SepararPorMes then
+          begin
+            if SepararPorAno then
+              Dir := PathWithDelim(Dir) + sMes
+            else
+              Dir := PathWithDelim(Dir) + sAno + sMes;
+
+            if SepararPorDia then
+              Dir := PathWithDelim(Dir) + sDia;
+          end;
+        end;
+
+      opLiteral:
+        begin
+          LenLiteral := Length(ALiteral);
+
+          if (LenLiteral > 0) then
+          begin
+            if RightStr(Dir, LenLiteral) <> ALiteral then
+              Dir := PathWithDelim(Dir) + ALiteral;
+          end;
+        end;
+    end;
   end;
 
   if not DirectoryExists(Dir) then
