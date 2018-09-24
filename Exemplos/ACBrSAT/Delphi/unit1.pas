@@ -5,9 +5,9 @@ interface
 uses
   Classes, SysUtils, Forms,
   Controls, Graphics, Dialogs, StdCtrls, ActnList, Menus, ExtCtrls, Buttons,
-  ComCtrls, Spin, RLPDFFilter, ACBrSAT, ACBrSATClass, ACBrSATExtratoESCPOS,
-  dateutils, ACBrSATExtratoFortesFr, ACBrBase, ACBrPosPrinter, ACBrDFeSSL,
-  RLFilters, ACBrSATExtratoReportClass, ACBrSATExtratoClass, OleCtrls,
+  ComCtrls, Spin, ACBrSAT, ACBrSATClass,
+  dateutils, ACBrBase, ACBrPosPrinter, ACBrDFeSSL,
+  ACBrSATExtratoReportClass, ACBrSATExtratoClass, OleCtrls,
   SHDocVw, ACBrIntegrador;
 
 const
@@ -24,8 +24,6 @@ type
   TForm1 = class(TForm)
     ACBrPosPrinter1: TACBrPosPrinter;
     ACBrSAT1 : TACBrSAT ;
-    ACBrSATExtratoESCPOS1 : TACBrSATExtratoESCPOS ;
-    ACBrSATExtratoFortes1: TACBrSATExtratoFortes;
     bImpressora: TButton;
     bInicializar : TButton ;
     btLerParams: TButton;
@@ -148,7 +146,6 @@ type
     PrintDialog1: TPrintDialog;
     rgRedeTipoInter: TRadioGroup;
     rgRedeTipoLan: TRadioGroup;
-    RLPDFFilter1: TRLPDFFilter;
     SaveDialog1: TSaveDialog;
     sbNomeDLL: TSpeedButton;
     sbSchemaVendaAPL: TSpeedButton;
@@ -325,7 +322,7 @@ implementation
 
 Uses
   math, typinfo, ACBrUtil, pcnConversao, pcnRede, synacode, IniFiles, configuraserial,
-  RLPrinters, Printers, ACBrSATMFe_integrador, pcnVFPe;
+  Printers, ACBrSATMFe_integrador, pcnVFPe;
 
 {$R *.dfm}
 
@@ -491,7 +488,8 @@ procedure TForm1.bInicializarClick(Sender : TObject) ;
 begin
   AjustaACBrSAT;
 
-  ACBrSAT1.Inicializado := not ACBrSAT1.Inicializado ;
+//  ACBrSAT1.Inicializado := not ACBrSAT1.Inicializado ;
+  ACBrSAT1.Inicializar;
 
   if ACBrSAT1.Inicializado then
     bInicializar.Caption := 'DesInicializar'
@@ -552,12 +550,6 @@ begin
 
     cbUsarFortes.Checked   := INI.ReadBool('Fortes','UsarFortes', True) ;
     cbUsarEscPos.Checked   := not cbUsarFortes.Checked;
-    seLargura.Value        := INI.ReadInteger('Fortes','Largura',ACBrSATExtratoFortes1.LarguraBobina);
-    seMargemTopo.Value     := INI.ReadInteger('Fortes','MargemTopo',ACBrSATExtratoFortes1.Margens.Topo);
-    seMargemFundo.Value    := INI.ReadInteger('Fortes','MargemFundo',ACBrSATExtratoFortes1.Margens.Fundo);
-    seMargemEsquerda.Value := INI.ReadInteger('Fortes','MargemEsquerda',ACBrSATExtratoFortes1.Margens.Esquerda);
-    seMargemDireita.Value  := INI.ReadInteger('Fortes','MargemDireita',ACBrSATExtratoFortes1.Margens.Direita);
-    cbPreview.Checked      := INI.ReadBool('Fortes','Preview',True);
 
     lImpressora.Caption    := INI.ReadString('Printer','Name', '');
     if EstaVazio(lImpressora.Caption) then
@@ -684,8 +676,7 @@ Begin
         NumerodeAprovacao := '1234';
         Bandeira := 'VISA';
         Adquirente := 'STONE';
-        if Assigned(ACBrSAT1.CFe) then
-          ImpressaoFiscal := '<![CDATA['+ACBrSATExtratoESCPOS1.GerarImpressaoFiscalMFe+']]>';
+
         NumeroDocumento := '1674068';
         CNPJ:= edtEmitCNPJ.Text;
       end;
@@ -948,8 +939,6 @@ begin
   ACBrSAT1.CFe.Clear;
   ACBrSAT1.CFeCanc.Clear;
 
-  ACBrSATExtratoESCPOS1.ImprimeChaveEmUmaLinha := rSim;
-
   mVendaEnviar.Lines.LoadFromFile('C:\Pascal\Comp\ACBr\trunk2\Exemplos\ACBrSAT\Lazarus\Vendas\11111111111111\201509\AD35150911111111111111591234567890001757849146.xml');
   ACBrSAT1.CFe.AsXMLString := mVendaEnviar.Lines.Text;
 
@@ -966,7 +955,6 @@ var
 begin
   PrepararImpressao;
   tini := now;
-  mLog.Lines.Add(ACBrSATExtratoESCPOS1.GerarImpressaoFiscalMFe);
   tfim := now;
   mLog.Lines.Add('Inciado em: '+DateTimeToStr(tini)) ;
   mLog.Lines.Add('Finalizado em: '+DateTimeToStr(tFim)) ;
@@ -1595,37 +1583,37 @@ end;
 
 procedure TForm1.PrepararImpressao;
 begin
-  if ACBrSAT1.Extrato = ACBrSATExtratoESCPOS1 then
-  begin
-    ACBrPosPrinter1.Desativar;
-    ACBrPosPrinter1.Modelo := TACBrPosPrinterModelo( cbxModeloPosPrinter.ItemIndex );
-    ACBrPosPrinter1.PaginaDeCodigo := TACBrPosPaginaCodigo( cbxPagCodigo.ItemIndex );
-    ACBrPosPrinter1.Porta := cbxPorta.Text;
-    ACBrPosPrinter1.ColunasFonteNormal := seColunas.Value;
-    ACBrPosPrinter1.LinhasEntreCupons := seLinhasPular.Value;
-    ACBrPosPrinter1.EspacoEntreLinhas := seEspLinhas.Value;
-    ACBrSATExtratoESCPOS1.ImprimeQRCode := True;
-    ACBrSATExtratoESCPOS1.ImprimeEmUmaLinha := cbImprimir1Linha.Checked;
-    if cbImprimirChaveUmaLinha.Checked then
-      ACBrSATExtratoESCPOS1.ImprimeChaveEmUmaLinha := rSim
-    else
-      ACBrSATExtratoESCPOS1.ImprimeChaveEmUmaLinha := rAuto;
-  end
-  else
-  begin
-    ACBrSATExtratoFortes1.LarguraBobina    := seLargura.Value;
-    ACBrSATExtratoFortes1.Margens.Topo     := seMargemTopo.Value ;
-    ACBrSATExtratoFortes1.Margens.Fundo    := seMargemFundo.Value ;
-    ACBrSATExtratoFortes1.Margens.Esquerda := seMargemEsquerda.Value ;
-    ACBrSATExtratoFortes1.Margens.Direita  := seMargemDireita.Value ;
-    ACBrSATExtratoFortes1.MostrarPreview   := cbPreview.Checked;
-
-    try
-      if lImpressora.Caption <> '' then
-        ACBrSATExtratoFortes1.PrinterName := lImpressora.Caption;
-    except
-    end;
-  end;
+//  if ACBrSAT1.Extrato = ACBrSATExtratoESCPOS1 then
+//  begin
+//    ACBrPosPrinter1.Desativar;
+//    ACBrPosPrinter1.Modelo := TACBrPosPrinterModelo( cbxModeloPosPrinter.ItemIndex );
+//    ACBrPosPrinter1.PaginaDeCodigo := TACBrPosPaginaCodigo( cbxPagCodigo.ItemIndex );
+//    ACBrPosPrinter1.Porta := cbxPorta.Text;
+//    ACBrPosPrinter1.ColunasFonteNormal := seColunas.Value;
+//    ACBrPosPrinter1.LinhasEntreCupons := seLinhasPular.Value;
+//    ACBrPosPrinter1.EspacoEntreLinhas := seEspLinhas.Value;
+//    ACBrSATExtratoESCPOS1.ImprimeQRCode := True;
+//    ACBrSATExtratoESCPOS1.ImprimeEmUmaLinha := cbImprimir1Linha.Checked;
+//    if cbImprimirChaveUmaLinha.Checked then
+//      ACBrSATExtratoESCPOS1.ImprimeChaveEmUmaLinha := rSim
+//    else
+//      ACBrSATExtratoESCPOS1.ImprimeChaveEmUmaLinha := rAuto;
+//  end
+//  else
+//  begin
+//    ACBrSATExtratoFortes1.LarguraBobina    := seLargura.Value;
+//    ACBrSATExtratoFortes1.Margens.Topo     := seMargemTopo.Value ;
+//    ACBrSATExtratoFortes1.Margens.Fundo    := seMargemFundo.Value ;
+//    ACBrSATExtratoFortes1.Margens.Esquerda := seMargemEsquerda.Value ;
+//    ACBrSATExtratoFortes1.Margens.Direita  := seMargemDireita.Value ;
+//    ACBrSATExtratoFortes1.MostrarPreview   := cbPreview.Checked;
+//
+//    try
+//      if lImpressora.Caption <> '' then
+//        ACBrSATExtratoFortes1.PrinterName := lImpressora.Caption;
+//    except
+//    end;
+//  end;
 end;
 
 
@@ -1654,13 +1642,11 @@ end;
 procedure TForm1.cbUsarEscPosClick(Sender: TObject);
 begin
   cbUsarFortes.Checked := False;
-  ACBrSAT1.Extrato := ACBrSATExtratoESCPOS1;
 end;
 
 procedure TForm1.cbUsarFortesClick(Sender: TObject);
 begin
   cbUsarEscPos.Checked := False;
-  ACBrSAT1.Extrato := ACBrSATExtratoFortes1
 end;
 
 end.

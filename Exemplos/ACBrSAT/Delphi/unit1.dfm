@@ -22,7 +22,7 @@ object Form1: TForm1
   object Splitter1: TSplitter
     Left = 0
     Top = 242
-    Width = 914
+    Width = 922
     Height = 6
     Cursor = crVSplit
     Align = alTop
@@ -30,8 +30,8 @@ object Form1: TForm1
   object PageControl1: TPageControl
     Left = 0
     Top = 248
-    Width = 914
-    Height = 189
+    Width = 922
+    Height = 194
     ActivePage = tsLog
     Align = alClient
     TabOrder = 0
@@ -39,8 +39,8 @@ object Form1: TForm1
       Caption = 'Log de Comandos'
       object mLog: TMemo
         Left = 0
-        Top = 0
-        Width = 906
+        Top = 5
+        Width = 914
         Height = 161
         Align = alBottom
         Anchors = [akLeft, akTop, akRight, akBottom]
@@ -157,7 +157,7 @@ object Form1: TForm1
   object Panel1: TPanel
     Left = 0
     Top = 0
-    Width = 914
+    Width = 922
     Height = 242
     Align = alTop
     TabOrder = 2
@@ -221,7 +221,7 @@ object Form1: TForm1
     object GroupBox1: TGroupBox
       Left = 170
       Top = 1
-      Width = 743
+      Width = 751
       Height = 240
       Align = alClient
       Caption = 'Configura'#231#227'o'
@@ -229,15 +229,15 @@ object Form1: TForm1
       object PageControl2: TPageControl
         Left = 2
         Top = 15
-        Width = 739
+        Width = 747
         Height = 223
-        ActivePage = Impressao
+        ActivePage = tsDadosSAT
         Align = alClient
         TabOrder = 0
         object tsDadosSAT: TTabSheet
           Caption = 'Dados do SAT CFe'
           DesignSize = (
-            731
+            739
             195)
           object Label9: TLabel
             Left = 21
@@ -651,7 +651,7 @@ object Form1: TForm1
         object tsDadosSwHouse: TTabSheet
           Caption = 'Dados Sw.House'
           DesignSize = (
-            731
+            739
             195)
           object Label2: TLabel
             Left = 10
@@ -1440,7 +1440,7 @@ object Form1: TForm1
         object TabSheet1: TTabSheet
           Caption = 'Valida'#231#227'o'
           DesignSize = (
-            731
+            739
             195)
           object Label33: TLabel
             Left = 25
@@ -1522,8 +1522,8 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 437
-    Width = 914
+    Top = 442
+    Width = 922
     Height = 23
     Panels = <
       item
@@ -1696,7 +1696,7 @@ object Form1: TForm1
     Top = 280
   end
   object ACBrSAT1: TACBrSAT
-    Extrato = ACBrSATExtratoFortes1
+    Integrador = ACBrIntegrador1
     NomeDLL = 'c:\sat\SAT.DLL'
     ValidarNumeroSessaoResposta = True
     NumeroTentativasValidarSessao = 2
@@ -1732,38 +1732,6 @@ object Form1: TForm1
     Left = 64
     Top = 224
   end
-  object ACBrSATExtratoESCPOS1: TACBrSATExtratoESCPOS
-    Mask_qCom = '0.0000'
-    Mask_vUnCom = '0.000'
-    SoftwareHouse = 'Projeto ACBr'
-    Site = 'http://www.projetoacbr.com.br'
-    MsgAppQRCode = 
-      'Consulte o QR Code pelo aplicativo  "De olho na nota", dispon'#237've' +
-      'l na AppStore (Apple) e PlayStore (Android)'
-    ImprimeDescAcrescItem = False
-    PosPrinter = ACBrPosPrinter1
-    Left = 64
-    Top = 280
-  end
-  object ACBrSATExtratoFortes1: TACBrSATExtratoFortes
-    ACBrSAT = ACBrSAT1
-    Mask_qCom = '0.000'
-    Mask_vUnCom = '0.000'
-    MostrarPreview = True
-    NomeArquivo = 'satcfe.pdf'
-    SoftwareHouse = 'Projeto ACBr - http://acbr.sf.net'
-    Site = 'http://www.projetoacbr.com.br'
-    MsgAppQRCode = 
-      'Consulte o QR Code pelo aplicativo  "De olho na nota", dispon'#237've' +
-      'l na AppStore (Apple) e PlayStore (Android)'
-    Margens.Topo = 50
-    Margens.Fundo = 400
-    EspacoFinal = 50
-    LogoWidth = 100
-    LogoHeigth = 70
-    Left = 64
-    Top = 344
-  end
   object PrintDialog1: TPrintDialog
     Left = 608
     Top = 256
@@ -1787,14 +1755,6 @@ object Form1: TForm1
     ArqLOG = 'c:\temp\posprinter.log'
     Left = 103
     Top = 279
-  end
-  object RLPDFFilter1: TRLPDFFilter
-    DocumentInfo.Creator = 
-      'FortesReport Community Edition v4.0 \251 Copyright ?1999-2016 Fo' +
-      'rtes Inform?ca'
-    DisplayName = 'Documento PDF'
-    Left = 484
-    Top = 179
   end
   object ACBrIntegrador1: TACBrIntegrador
     OnGravarLog = ACBrSAT1GravarLog

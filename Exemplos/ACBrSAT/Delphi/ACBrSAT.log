@@ -20,3 +20,4 @@
 14/09/18 16:06:02:416 - NumeroSessao: 816370 - Comando: ConsultarSAT
 14/09/18 16:06:02:426 - Sessão: 816370, Dados: <Integrador><Identificador><Valor>816370</Valor></Identificador><Componente Nome="MF-e"><Metodo Nome="ConsultarMFe"><Parametros><Parametro><Nome>numeroSessao</Nome><Valor>816370</Valor></Parametro></Parametros></Metodo></Componente></Integrador>
 14/09/18 16:06:02:426 - Criando arquivo: c:\Integrador\Input\consultarmfe-20180914160602-816370.tmp
+18/09/18 11:36:00:354 - ACBrSAT.Inicializado

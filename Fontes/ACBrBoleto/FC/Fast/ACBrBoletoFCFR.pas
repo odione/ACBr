@@ -268,6 +268,7 @@ begin
     FieldDefs.Add('Sacado_Avalista', ftString, 100);
     FieldDefs.Add('Sacado_Avalista_CNPJCPF', ftString, 18);
     FieldDefs.Add('Sacado_Fone', ftString, 100);
+    FieldDefs.Add('UsoBanco', ftString, 200);
     CreateDataSet;
   end;
 end;
