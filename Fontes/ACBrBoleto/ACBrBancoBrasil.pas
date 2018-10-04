@@ -725,7 +725,7 @@ begin
             '9'                                                        + //Tipo do registro: Registro trailer do arquivo
             space(9)                                                   + //Uso exclusivo FEBRABAN/CNAB}
             '000001'                                                   + //Quantidade de lotes do arquivo}
-            IntToStrZero(((ARemessa.Count-1)* 4)+4, 6)                 + //Quantidade de registros do arquivo, inclusive este registro que está sendo criado agora}
+            IntToStrZero(((ARemessa.Count-1)* 3)+4, 6)                 + //Quantidade de registros do arquivo, inclusive este registro que está sendo criado agora}
             space(6)                                                   + //Uso exclusivo FEBRABAN/CNAB}
             space(205);                                                  //Uso exclusivo FEBRABAN/CNAB}
 end;
