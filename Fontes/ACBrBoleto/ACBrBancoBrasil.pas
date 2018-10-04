@@ -706,7 +706,7 @@ begin
             '5'                                                        + //Tipo do registro: Registro trailer do lote
             Space(9)                                                   + //Uso exclusivo FEBRABAN/CNAB
             //IntToStrZero(ARemessa.Count-1, 6)                        + //Quantidade de Registro da Remessa
-            IntToStrZero((4 * ARemessa.Count-1), 6)                    + //Quantidade de Registro da Remessa
+            IntToStrZero((4 * (ARemessa.Count-1)), 6)                    + //Quantidade de Registro da Remessa
             PadRight('', 6, '0')                                           + //Quantidade títulos em cobrança
             PadRight('',17, '0')                                           + //Valor dos títulos em carteiras}
             PadRight('', 6, '0')                                           + //Quantidade títulos em cobrança
