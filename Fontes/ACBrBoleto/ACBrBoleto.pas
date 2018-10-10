@@ -2062,12 +2062,12 @@ begin
       if PercentualMulta <> 0 then   
       begin
         if DataMulta <> 0 then
-          AStringList.Add(ACBrStr('Cobrar Multa de ' + FormatCurr('R$ #,##0.00',
+          AStringList.Add(ACBrStr('Multa de ' + FormatCurr('R$ #,##0.00',
             IfThen(MultaValorFixo, PercentualMulta, ValorDocumento*( 1+ PercentualMulta/100)-ValorDocumento)) +
                          ' a partir '+FormatDateTime('dd/mm/yyyy',ifthen(Vencimento = DataMulta,
                                                                 IncDay(DataMulta,1),DataMulta))))
         else
-          AStringList.Add(ACBrStr('Cobrar Multa de ' + FormatCurr('R$ #,##0.00',
+          AStringList.Add(ACBrStr('Multa de ' + FormatCurr('R$ #,##0.00',
             IfThen(MultaValorFixo, PercentualMulta, ValorDocumento*( 1+ PercentualMulta/100)-ValorDocumento)) +
                          ' após o vencimento.'));
       end;
@@ -2654,7 +2654,7 @@ begin
       end
       else
       begin
-        if (not LeCedenteRetorno) and ((AAgencia <> OnlyNumber(Cedente.Agencia)) or
+        if (not LeCedenteRetorno) and ((StrToIntDef(AAgencia,0) <> StrToIntDef(OnlyNumber(Cedente.Agencia),0)) or
                (StrToIntDef(AContaCedente,0) <> StrToIntDef(OnlyNumber( Cedente.CodigoCedente),0))) then
         begin
           Result:= False;
