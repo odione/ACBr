@@ -42,28 +42,30 @@ interface
 
 uses
   Classes, StrUtils, SysUtils,
-  IniFiles, pcnAuxiliar;
+  {IniFiles,} ACBrDFeSSL, pcnAuxiliar;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
 function FormatarNumeroDocumentoFiscalNFSe(AValue: String): String;
 
 function GerarCodigoNumerico(numero: integer): integer;
-function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; ACNPJ:String;
+function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; const ACNPJ:String;
                           ASerie, ANumero, AtpEmi, ACodigo: Integer; AModelo: Integer = 55): String;
 function FormatarChaveAcesso(AValue: String): String;
 
 function ValidaUFCidade(const UF, Cidade: integer): Boolean; overload;
 procedure ValidaUFCidade(const UF, Cidade: integer; const AMensagem: String); overload;
 function ValidaDIDSI(AValue: String): Boolean;
-function ValidaDIRE(AValue: String): Boolean;
-function ValidaRE(AValue: String): Boolean;
+function ValidaDIRE(const AValue: String): Boolean;
+function ValidaRE(const AValue: String): Boolean;
 function ValidaDrawback(AValue: String): Boolean;
 function ValidaSUFRAMA(AValue: String): Boolean;
 function ValidaRECOPI(AValue: String): Boolean;
-function ValidaNVE(AValue: string): Boolean;
+function ValidaNVE(const AValue: string): Boolean;
 
 function XmlEstaAssinado(const AXML: String): Boolean;
-function ExtraiURI(const AXML: String): String;
+function SignatureElement(const URI: String; AddX509Data: Boolean;
+    const IdSignature: String = ''; const Digest: TSSLDgst = dgstSHA1): String;
+function ExtraiURI(const AXML: String; IdAttr: String = ''): String;
 function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
                               const APathArqMun: String): String;
 function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String ): Integer;
@@ -72,7 +74,7 @@ implementation
 
 uses
   Variants, DateUtils,
-  ACBrDFeException, ACBrConsts, ACBrUtil, ACBrValidador;
+  ACBrDFeException, ACBrUtil, ACBrValidador;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
 begin
@@ -116,7 +118,7 @@ begin
   Result := StrToInt(copy(s, 1, 8));
 end;
 
-function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; ACNPJ: String;
+function GerarChaveAcesso(AUF: Integer; ADataEmissao: TDateTime; const ACNPJ: String;
                           ASerie, ANumero, AtpEmi, ACodigo: Integer; AModelo: Integer): String;
 var
   vUF, vDataEmissao, vSerie, vNumero, vCodigo, vModelo, vCNPJ, vtpEmi: String;
@@ -194,7 +196,7 @@ begin
   end;
 end;
 
-function ValidaDIRE(AValue: String): Boolean;
+function ValidaDIRE(const AValue: String): Boolean;
 var
   AnoData, AnoValue: integer;
 begin
@@ -213,7 +215,7 @@ begin
   end;
 end;
 
-function ValidaRE(AValue: String): Boolean;
+function ValidaRE(const AValue: String): Boolean;
 var
   AnoData, AnoValue, SerieRE: integer;
 begin
@@ -299,20 +301,84 @@ begin
     Result := copy(AValue, 20, 1) = Modulo11(copy(AValue, 1, 19), 1, 19);
 end;
 
-function ValidaNVE(AValue: string): Boolean;
+function ValidaNVE(const AValue: string): Boolean;
 begin
-  //TODO:
-  Result := True;
+  //TODO: A NVE (Nomenclatura de Valor Aduaneiro e Estatística) é baseada no NCM,
+  // mas formada de 2 letras (atributos) e 4 números (especificações). Ex: AA0001
+  Result := ( (Length(AValue) = 6) and ( CharIsAlpha(AValue[1]) and
+                                         CharIsAlpha(AValue[2]) and
+                                         CharIsNum(AValue[3])   and
+                                         CharIsNum(AValue[4])   and
+                                         CharIsNum(AValue[5])   and
+                                         CharIsNum(AValue[6]) ));
 end;
 
-function ExtraiURI(const AXML: String): String;
+function XmlEstaAssinado(const AXML: String): Boolean;
+begin
+  Result := (pos('<signature', lowercase(AXML)) > 0);
+end;
+
+function SignatureElement(const URI: String; AddX509Data: Boolean;
+  const IdSignature: String; const Digest: TSSLDgst): String;
+var
+  MethodAlgorithm, DigestAlgorithm: String;
+begin
+  case Digest of
+    dgstSHA256:
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+        DigestAlgorithm := 'http://www.w3.org/2001/04/xmlenc#sha256';
+      end;
+    dgstSHA512:
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+        DigestAlgorithm := 'http://www.w3.org/2001/04/xmlenc#sha512';
+      end;
+    else
+      begin
+        MethodAlgorithm := 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+        DigestAlgorithm := 'http://www.w3.org/2000/09/xmldsig#sha1';
+      end;
+  end;
+
+  {(*}
+  Result :=
+  '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"' + IdSignature + '>' +
+    '<SignedInfo>' +
+      '<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />' +
+      '<SignatureMethod Algorithm="'+MethodAlgorithm+'" />' +
+      '<Reference URI="' + IfThen(URI = '', '', '#' + URI) + '">' +
+        '<Transforms>' +
+          '<Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />' +
+          '<Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />' +
+        '</Transforms>' +
+        '<DigestMethod Algorithm="'+DigestAlgorithm+'" />' +
+        '<DigestValue></DigestValue>' +
+      '</Reference>' +
+    '</SignedInfo>' +
+    '<SignatureValue></SignatureValue>' +
+    '<KeyInfo>' +
+    IfThen(AddX509Data,
+      '<X509Data>' +
+        '<X509Certificate></X509Certificate>'+
+      '</X509Data>',
+      '')+
+    '</KeyInfo>'+
+  '</Signature>';
+  {*)}
+end;
+
+function ExtraiURI(const AXML: String; IdAttr: String): String;
 var
   I, J: integer;
 begin
   Result := '';
-  I := PosEx('Id=', AXML, 6);
+  if IdAttr = '' then
+    IdAttr := 'Id';
+
+  I := PosEx(IdAttr+'=', AXML);
   if I = 0 then       // XML não tem URI
-    exit ;
+    Exit;
 
   I := PosEx('"', AXML, I + 2);
   if I = 0 then
@@ -324,12 +390,6 @@ begin
 
   Result := copy(AXML, I + 1, J - I - 1);
 end;
-
-function XmlEstaAssinado(const AXML: String): Boolean;
-begin
-  Result := (pos('<signature', lowercase(AXML)) > 0);
-end;
-
 
 function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
   const APathArqMun: String): String;

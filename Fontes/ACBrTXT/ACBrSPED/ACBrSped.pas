@@ -51,14 +51,16 @@ type
   EACBrSPEDException = class(Exception);
 
   { TACBrSPED }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrSPED = class(TACBrTXTClass)
   private
     FDT_INI: TDateTime;  /// Data inicial das informações contidas no arquivo
     FDT_FIN: TDateTime;  /// Data final das informações contidas no arquivo
     FGravado: Boolean;
-    procedure CriaRegistros;virtual;
-    procedure LiberaRegistros;virtual;
+    procedure CriaRegistros; virtual;
+    procedure LiberaRegistros; virtual;
   public
     procedure LimpaRegistros;virtual;
     property DT_INI : TDateTime read FDT_INI  write FDT_INI;

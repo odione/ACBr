@@ -47,7 +47,9 @@ unit ACBrSEF2_BlocoE;
 
 interface
 
-Uses Classes, SysUtils, Controls, ACBrSEF2Conversao;
+Uses
+  Classes, SysUtils,
+  ACBrSEF2Conversao;
 
 type
   TRegistroSEFE003List = class;
@@ -164,7 +166,7 @@ type
     fRegistroE025: TRegistroSEFE025List;
     fCOP: String;
   public
-    constructor Create(AOwner: TRegistroSEFE001); virtual;
+    constructor Create(); virtual;
     destructor Destroy; override;
 
     property IND_OPER   : TIndiceOperacao  read	fIND_OPER write fIND_OPER;           //Indicador de operação: 0- Entrada ou aquisição1- Saída ou prestação
@@ -273,7 +275,7 @@ type
     fVL_ICMS     : Double;
     fVL_ISNT_ICMS: Double;
     fVL_OUT_ICMS : Double;
-    fDT_DOC      : TDate;
+    fDT_DOC      : TDateTime;
     fRegistroE055: TRegistroSEFE055List;
     fCOP: String;
   public
@@ -287,7 +289,7 @@ type
     property SUB         : Integer read fSUB          write fSUB;          // Subsérie dos documentos fiscais
     property NUM_DOC_INI : Integer read fNUM_DOC_INI  write fNUM_DOC_INI;  // Número do primeiro documento fiscal emitido no dia
     property NUM_DOC_FIN : Integer read fNUM_DOC_FIN  write fNUM_DOC_FIN;  // Número do último documento fiscal emitido no dia
-    property DT_DOC      : TDate   read fDT_DOC       write fDT_DOC;       // Data da emissão dos documentos fiscais
+    property DT_DOC      : TDateTime read fDT_DOC     write fDT_DOC;       // Data da emissão dos documentos fiscais
     property CFOP        : String  read fCFOP         write fCFOP;         // Código da classe da operação ou prestação, conforme a tabela indicada no item 4.2.2.1
     property COP         : String  read fCOP          write fCOP;          // Código da classe da operação ou prestação, conforme a tabela indicada no item 4.2.2.1
     property VL_CONT     : Double  read fVL_CONT      write fVL_CONT;      // Valor contábil (valor dos documentos)
@@ -549,7 +551,7 @@ type
     fVL_BC_ICMS: Currency;
     fRegistroE105: TRegistroSEFE105List;
   public
-    constructor Create(AOwner: TRegistroSEFE001); virtual;
+    constructor Create(); virtual;
     destructor Destroy; override;
 
     property IND_OPER     : TIndiceOperacao read	fIND_OPER     write fIND_OPER;           //Indicador de operação: 0- Entrada ou aquisição1- Saída ou prestação
@@ -1230,8 +1232,9 @@ begin
   Add(Result);
 end;
 
-constructor TRegistroSEFE020.Create(AOwner: TRegistroSEFE001);
+constructor TRegistroSEFE020.Create();
 begin
+  inherited Create;
   FRegistroE025 := TRegistroSEFE025List.Create;
 end;
 
@@ -1248,7 +1251,7 @@ end;
 
 destructor TRegistroSEFE120.Destroy;
 begin
-
+  inherited;
 end;
 
 
@@ -1505,7 +1508,7 @@ end;
 
 function TRegistroSEFE020List.New(AOwner: TRegistroSEFE001): TRegistroSEFE020;
 begin
-   Result := TRegistroSEFE020.Create(AOwner);
+   Result := TRegistroSEFE020.Create();
    Add(Result);
 end;
 
@@ -1624,6 +1627,7 @@ end;
 
 constructor TRegistroSEFE001.Create;
 begin
+   inherited Create;
    fRegistroE003 := TRegistroSEFE003List.Create;
    fRegistroE020 := TRegistroSEFE020List.Create;
    fRegistroE050 := TRegistroSEFE050List.Create;
@@ -1747,7 +1751,7 @@ end;
 
 { TRegistroSEFE100 }
 
-constructor TRegistroSEFE100.Create(AOwner: TRegistroSEFE001);
+constructor TRegistroSEFE100.Create();
 begin
   inherited Create;
 
@@ -1769,7 +1773,7 @@ end;
 
 function TRegistroSEFE100List.New(AOwner: TRegistroSEFE001): TRegistroSEFE100;
 begin
-   Result := TRegistroSEFE100.Create(AOwner);
+   Result := TRegistroSEFE100.Create();
    Add(Result);
 end;
 

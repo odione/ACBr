@@ -1,43 +1,43 @@
 {******************************************************************************}
 { Projeto: Componentes ACBr                                                    }
-{  Biblioteca multiplataforma de componentes Delphi para intera√ß√£o com equipa- }
-{ mentos de Automa√ß√£o Comercial utilizados no Brasil                           }
+{  Biblioteca multiplataforma de componentes Delphi para interaÁ„o com equipa- }
+{ mentos de AutomaÁ„o Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2016 Elias C√©sar Vieira                     }
+{ Direitos Autorais Reservados (c) 2016 Elias CÈsar Vieira                     }
 {                                                                              }
-{ Colaboradores nesse arquivo: Daniel Sim√µes de Almeida                        }
+{ Colaboradores nesse arquivo: Daniel Simıes de Almeida                        }
 {                                                                              }
-{  Voc√™ pode obter a √∫ltima vers√£o desse arquivo na pagina do  Projeto ACBr    }
+{  VocÍ pode obter a ˙ltima vers„o desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
 { Esse arquivo usa a classe  SynaSer   Copyright (c)2001-2003, Lukas Gebauer   }
 {  Project : Ararat Synapse     (Found at URL: http://www.ararat.cz/synapse/)  }
 {                                                                              }
-{  Esta biblioteca √© software livre; voc√™ pode redistribu√≠-la e/ou modific√°-la }
-{ sob os termos da Licen√ßa P√∫blica Geral Menor do GNU conforme publicada pela  }
-{ Free Software Foundation; tanto a vers√£o 2.1 da Licen√ßa, ou (a seu crit√©rio) }
-{ qualquer vers√£o posterior.                                                   }
+{  Esta biblioteca È software livre; vocÍ pode redistribuÌ-la e/ou modific·-la }
+{ sob os termos da LicenÁa P˙blica Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a vers„o 2.1 da LicenÁa, ou (a seu critÈrio) }
+{ qualquer vers„o posterior.                                                   }
 {                                                                              }
-{  Esta biblioteca √© distribu√≠da na expectativa de que seja √∫til, por√©m, SEM   }
-{ NENHUMA GARANTIA; nem mesmo a garantia impl√≠cita de COMERCIABILIDADE OU      }
-{ ADEQUA√á√ÉO A UMA FINALIDADE ESPEC√çFICA. Consulte a Licen√ßa P√∫blica Geral Menor}
-{ do GNU para mais detalhes. (Arquivo LICEN√áA.TXT ou LICENSE.TXT)              }
+{  Esta biblioteca È distribuÌda na expectativa de que seja ˙til, porÈm, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implÌcita de COMERCIABILIDADE OU      }
+{ ADEQUA«√O A UMA FINALIDADE ESPECÕFICA. Consulte a LicenÁa P˙blica Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICEN«A.TXT ou LICENSE.TXT)              }
 {                                                                              }
-{  Voc√™ deve ter recebido uma c√≥pia da Licen√ßa P√∫blica Geral Menor do GNU junto}
-{ com esta biblioteca; se n√£o, escreva para a Free Software Foundation, Inc.,  }
-{ no endere√ßo 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
-{ Voc√™ tamb√©m pode obter uma copia da licen√ßa em:                              }
+{  VocÍ deve ter recebido uma cÛpia da LicenÁa P˙blica Geral Menor do GNU junto}
+{ com esta biblioteca; se n„o, escreva para a Free Software Foundation, Inc.,  }
+{ no endereÁo 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ VocÍ tambÈm pode obter uma copia da licenÁa em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Sim√µes de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Pra√ßa Anita Costa, 34 - Tatu√≠ - SP - 18270-410                  }
+{ Daniel Simıes de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
+{              PraÁa Anita Costa, 34 - TatuÌ - SP - 18270-410                  }
 {                                                                              }
 {******************************************************************************}
 
 {******************************************************************************
 |* Historico
 |*
-|* 17/05/2016: Elias C√©sar Vieira
+|* 17/05/2016: Elias CÈsar Vieira
 |*  - Primeira Versao ACBrMTerPMTG
 ******************************************************************************}
 
@@ -56,7 +56,7 @@ type
 
   TACBrMTerPMTG = class(TACBrMTerClass)
   private
-    function PrepararCmd(aCmd: Integer; aParams: AnsiString = ''): AnsiString;
+    function PrepararCmd(aCmd: Integer; const aParams: AnsiString = ''): AnsiString;
   public
     constructor Create(aOwner: TComponent);
 
@@ -65,23 +65,23 @@ type
     function ComandoBeep: AnsiString; override;
     function ComandoDeslocarCursor(aValue: Integer): AnsiString; override;
     function ComandoDeslocarLinha(aValue: Integer): AnsiString; override;
-    function ComandoEco(aValue: AnsiString): AnsiString; override;
-    function ComandoEnviarParaParalela(aDados: AnsiString): AnsiString; override;
-    function ComandoEnviarParaSerial(aDados: AnsiString; aSerial: Byte = 0): AnsiString; override;
-    function ComandoEnviarTexto(aTexto: AnsiString): AnsiString; override;
+    function ComandoEco(const aValue: AnsiString): AnsiString; override;
+    function ComandoEnviarParaParalela(const aDados: AnsiString): AnsiString; override;
+    function ComandoEnviarParaSerial(const aDados: AnsiString; aSerial: Byte = 0): AnsiString; override;
+    function ComandoEnviarTexto(const aTexto: AnsiString): AnsiString; override;
     function ComandoLimparDisplay: AnsiString; override;
     function ComandoLimparLinha(aLinha: Integer): AnsiString; override;
     function ComandoOnline: AnsiString; override;
     function ComandoPosicionarCursor(aLinha, aColuna: Integer): AnsiString; override;
 
-    function InterpretarResposta(aRecebido: AnsiString): AnsiString; override;
+    function InterpretarResposta(const aRecebido: AnsiString): AnsiString; override;
   end;
 
 implementation
 
 { TACBrMTerPMTG }
 
-function TACBrMTerPMTG.PrepararCmd(aCmd: Integer; aParams: AnsiString): AnsiString;
+function TACBrMTerPMTG.PrepararCmd(aCmd: Integer; const aParams: AnsiString): AnsiString;
 var
   wTamParams: Integer;
 begin
@@ -125,34 +125,35 @@ begin
   Result := PrepararCmd(43, PadRight(IntToLEStr(aValue, 1), 3, NUL));
 end;
 
-function TACBrMTerPMTG.ComandoEco(aValue: AnsiString): AnsiString;
+function TACBrMTerPMTG.ComandoEco(const aValue: AnsiString): AnsiString;
 var
   I: Integer;
   C: AnsiChar;
+  S: AnsiString;
 begin
   Result := '';
+  S := LimparConteudoParaEnviar(aValue);
 
-  for I := 1 to Length(aValue) do
+  for I := 1 to Length(S) do
   begin
-    C := aValue[I];
+    C := S[I];
     case C of
-      BS: Result := Result + ComandoBackSpace; // √â backspace ?
+      BS: Result := Result + ComandoBackSpace; // … backspace ?
     else
       Result := Result + ComandoEnviarTexto(C);
     end;
   end;
 end;
 
-function TACBrMTerPMTG.ComandoEnviarParaParalela(aDados: AnsiString): AnsiString;
+function TACBrMTerPMTG.ComandoEnviarParaParalela(const aDados: AnsiString): AnsiString;
 begin
   { Apenas GE750 possui porta Paralela }
   Result := PrepararCmd(73, aDados);
 end;
 
-function TACBrMTerPMTG.ComandoEnviarParaSerial(aDados: AnsiString;
-  aSerial: Byte): AnsiString;
+function TACBrMTerPMTG.ComandoEnviarParaSerial(const aDados: AnsiString; aSerial: Byte): AnsiString;
 begin
-  { Portas COM dispon√≠veis:
+  { Portas COM disponÌveis:
     - GE750: 1 e 2;
     - GE760: 1;
     - MT740: 1, 2, 3 e 4;
@@ -160,7 +161,7 @@ begin
   Result := PrepararCmd(63, AnsiChr(aSerial-1) + aDados);
 end;
 
-function TACBrMTerPMTG.ComandoEnviarTexto(aTexto: AnsiString): AnsiString;
+function TACBrMTerPMTG.ComandoEnviarTexto(const aTexto: AnsiString): AnsiString;
 begin
   Result := PrepararCmd(51, PadRight(aTexto, 29, NUL));
 end;
@@ -190,7 +191,7 @@ begin
   Result := PrepararCmd(41, wLinhaStr + wColunaStr);
 end;
 
-function TACBrMTerPMTG.InterpretarResposta(aRecebido: AnsiString): AnsiString;
+function TACBrMTerPMTG.InterpretarResposta(const aRecebido: AnsiString): AnsiString;
 var
   wCmd, wLenParams, wLen, wPosCmd: Integer;
 begin

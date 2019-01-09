@@ -63,7 +63,7 @@ private
    fsFisco: Byte;
    fsRET: AnsiString;
    fsSPR: Byte;
-   procedure SetRET(AValue: AnsiString);
+   procedure SetRET(const AValue: AnsiString);
  public
     constructor Create;
     property ECF        : Byte read fsECF write fsECF;
@@ -101,11 +101,11 @@ TACBrECFEscECFComando = class
     property Comando : AnsiString  read GetComando ;
     property Params  : TStringList read fsParams ;
 
-    Procedure AddParamString(AString : AnsiString) ;
+    Procedure AddParamString(const AString : AnsiString) ;
     Procedure AddParamInteger(AInteger : Integer) ;
     Procedure AddParamDouble(ADouble : Double; Decimais: Byte = 2) ;
     Procedure AddParamDateTime( ADateTime: TDateTime; Tipo : Char = 'D';
-                                FlagHV : String = '' ) ;
+                                const FlagHV : String = '' ) ;
  end ;
 
 { TACBrECFEscECFResposta }
@@ -137,7 +137,7 @@ TACBrECFEscECFResposta = class
     property EXT      : Byte        read fsEXT ;
     property CAT      : Byte        read fsCAT write fsCAT;
     property RET      : TACBrECFEscECFRET read fsRET ;
-    property TBR      : Integer     read fsTBR ;
+    property TBR      : Integer     read fsTBR write fsTBR;
     property BRS      : AnsiString  read fsBRS write fsBRS;
     property CHK      : Byte        read fsCHK ;
  end ;
@@ -161,7 +161,7 @@ TACBrECFEscECFProtocolo = class
   protected
     fpECFEscECF: TACBrECFEscECF;
 
-    function PreparaCmd(CmdExtBcd: AnsiString): AnsiString;
+    function PreparaCmd(const CmdExtBcd: AnsiString): AnsiString;
   public
     constructor Create(AECFEscECF: TACBrECFEscECF); virtual;
     procedure Ativar ; virtual;
@@ -182,6 +182,8 @@ TACBrECFEscECFProtocoloEpsonDLL = class( TACBrECFEscECFProtocolo )
      xEPSON_Send_From_FileEX : function (pszLineIn:AnsiString;
         pszLineOut:PAnsiChar ) : Integer;
         {$IFDEF LINUX} cdecl {$ELSE} stdcall {$ENDIF} ;
+
+     BufferOut : array [0..65536] of AnsiChar;  // 64kb
 
      procedure LoadDLLFunctions;
   public
@@ -213,12 +215,8 @@ TACBrECFEscECF = class( TACBrECFClass )
     fsArqMemoria     : String ;
     fsDeviceParams   : String;
 
-    function IsBematech: Boolean;
-    function IsEpson: Boolean;
-    function IsDaruma: Boolean;
-
     procedure EnviaConsumidor;
-    Function AjustaDescricao( ADescricao: String ): String;
+    Function AjustaDescricao( const ADescricao: String ): String;
 
     Procedure SalvaRespostasMemoria( AtualizaVB: Boolean = True );
     Procedure LeRespostasMemoria;
@@ -227,6 +225,7 @@ TACBrECFEscECF = class( TACBrECFClass )
     procedure DestruirECFClass( AECFClass: TACBrECFClass );
 
     procedure AjustaComandosControleImpressao(var Linha: AnsiString);
+    procedure AjustaLinhasColunas(var Linhas: AnsiString; MaxLin: Integer = 0);
 
  protected
     procedure AtivarDevice;
@@ -292,6 +291,7 @@ TACBrECFEscECF = class( TACBrECFClass )
     function GetNumUltimoItem: Integer; override ;
 
     function GetDadosUltimaReducaoZ: String; override ;
+    procedure BematechObtemDadosUltimaReducaoZDeLeituraMemoriaFiscal(ANumCRZ: Integer);
 
     function GetEstado: TACBrECFEstado; override ;
     function GetGavetaAberta: Boolean; override ;
@@ -381,7 +381,8 @@ TACBrECFEscECF = class( TACBrECFClass )
     Procedure CancelaCupom( NumCOOCancelar: Integer = 0 ) ; override ;
     Procedure CancelaItemVendido( NumItem : Integer ) ; override ;
     procedure CancelaItemVendidoParcial( NumItem : Integer; Quantidade : Double) ; override ;
-    procedure CancelaDescontoAcrescimoItem( NumItem : Integer) ; override ;
+    procedure CancelaDescontoAcrescimoItem( NumItem : Integer;
+      TipoAcrescimoDesconto: String = 'D') ; override ;
 
     { Procedimentos de Cupom Não Fiscal }
     Procedure AbreNaoFiscal( CPF_CNPJ: String = ''; Nome: String = '';
@@ -397,7 +398,7 @@ TACBrECFEscECF = class( TACBrECFClass )
        DescricaoCNF: String; DescricaoFPG: String; IndiceBMP: Integer ) ; override ;
 
     Function EstornaCCD( const Todos: Boolean = True) : Integer; overload; override;
-    Function EstornaCCD( NumCupomFiscal: Integer; ADiante: Boolean = True ) : Integer; overload;
+    Function EstornaCCD( NumCupomFiscal: Integer; ADiante: Boolean = True ) : Integer; reintroduce; overload;
 
     { Gaveta de dinheiro }
     Procedure AbreGaveta  ; override ;
@@ -449,22 +450,23 @@ TACBrECFEscECF = class( TACBrECFClass )
        Linhas : TStringList; Documentos : TACBrECFTipoDocumentoSet = [docTodos] ) ; overload ; override ;
 
     Procedure EspelhoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; override ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; override ;
     Procedure EspelhoMFD_DLL( COOInicial, COOFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; override ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; override ;
     Procedure ArquivoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD  ) ; overload ; override ;
     Procedure ArquivoMFD_DLL( ContInicial, ContFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD;
        TipoContador: TACBrECFTipoContador = tpcCOO ) ; overload ; override ;
 
     procedure PafMF_GerarCAT52(const DataInicial, DataFinal: TDateTime;
-      const DirArquivos: String); override;
+      const DirArquivos: String; NumeroSerie: String = ''); override;
 
-    Procedure ArquivoMF_DLL(  NomeArquivo : AnsiString  ) ; overload ; override ;
-    Procedure ArquivoMFD_DLL(NomeArquivo: AnsiString); overload ; override ;
+    Procedure ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString); override;
+    Procedure ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD; const NomeArquivo: AnsiString;
+      StrInicial, StrFinal: AnsiString); override;
 
     Procedure IdentificaOperador(Nome : String); override;
     Procedure IdentificaPAF( NomeVersao, MD5 : String) ; override ;
@@ -474,15 +476,21 @@ TACBrECFEscECF = class( TACBrECFClass )
 
     Function RetornaInfoECF( Registrador: String) : AnsiString; override ;
 
-    Function CapturaXMLCupom( Inicial, Final: String; Tipo: Integer = 2 ): AnsiString;
+    Function CapturaXMLCupom( const Inicial, Final: String; Tipo: Integer = 2 ): AnsiString;
+
+    function IsBematech: Boolean;
+    function IsEpson: Boolean;
+    function IsDaruma: Boolean;
+
+    property MarcaECF: String read fsMarcaECF;
  end ;
 
 implementation
-Uses SysUtils, Math,
-    {$IFDEF COMPILER6_UP} DateUtils, StrUtils {$ELSE} ACBrD5, Windows{$ENDIF},
-    synautil,
-    ACBrECF, ACBrECFBematech, ACBrECFEpson, ACBrConsts, ACBrUtil,
-  ACBrECFDaruma;
+Uses
+  SysUtils, Math,
+  {$IFDEF COMPILER6_UP} DateUtils, StrUtils {$ELSE} ACBrD5, Windows{$ENDIF},
+  synautil,
+  ACBrECF, ACBrECFBematech, ACBrECFEpson, ACBrECFDaruma, ACBrConsts, ACBrUtil;
 
 { TACBrECFEscECFProtocoloEpsonDLL }
 
@@ -535,7 +543,6 @@ function TACBrECFEscECFProtocoloEpsonDLL.EnviaComando_ECF(ACmd: AnsiString
   ): AnsiString;
 var
   I: Integer;
-  aLineOut : array [0..4096] of AnsiChar;
   Resp : Integer ;
   CmdResp: AnsiString;
   SL: TStringList;
@@ -554,14 +561,15 @@ begin
     For I := 0 to EscECFComando.Params.Count-1 do
       ACmd := ACmd + StringToBinaryString( AnsiString(EscECFComando.Params[I]) ) + '|';
 
-    aLineOut[0] := #0; // Zera Buffer de Saida
+    BufferOut[0] := #0; // Zera Buffer de Saida
     ACmd := ReplaceString(ACmd, NUL, '[NULL]');
+    //ACmd := ChangeLineBreak(ACmd, LF);
 
     GravaLog( '   xEPSON_Send_From_FileEX -> '+ACmd, True );
-    Resp := xEPSON_Send_From_FileEX( ACmd, aLineOut ) ;
+    Resp := xEPSON_Send_From_FileEX( ACmd, BufferOut ) ;
 
     ComandoEnviado  := ACmd ;
-    RespostaComando := TrimRight( aLineOut );
+    RespostaComando := TrimRight( BufferOut );
     CmdResp := RespostaComando;
     Result  := RespostaComando;
 
@@ -572,16 +580,7 @@ begin
 
     SL := TStringList.Create;
     try
-      SL.Delimiter := '|';
-      {$IFDEF FPC}
-       SL.StrictDelimiter := True;
-       SL.DelimitedText := CmdResp;
-      {$ELSE}
-       SL.DelimitedText := '"' + StringReplace(CmdResp, SL.Delimiter,
-                                '"' + SL.Delimiter + '"', [rfReplaceAll]) +
-                           '"';
-      {$ENDIF}
-
+      AddDelimitedTextToList( CmdResp, '|', SL, #0);
       if SL.Count < 5 then
         raise EACBrECFCMDInvalido.Create('Resposta Inválida de EPSON_Send_From_FileEX');
 
@@ -594,6 +593,8 @@ begin
       I := PosAt('|',CmdResp,5);
       if I > 0 then
         EscECFResposta.BRS := copy(CmdResp, I+1, Length(CmdResp));
+
+      EscECFResposta.TBR := Length(EscECFResposta.BRS);
 
       if SL.Count > 5 then
       begin
@@ -711,7 +712,7 @@ begin
   end;
 end;
 
-function TACBrECFEscECFProtocolo.PreparaCmd(CmdExtBcd: AnsiString): AnsiString;
+function TACBrECFEscECFProtocolo.PreparaCmd(const CmdExtBcd: AnsiString): AnsiString;
 Var
   CMD, EXT : Byte ;
   BCD : AnsiString ;
@@ -819,7 +820,18 @@ begin
             GravaLog( '    Falha SYN - RX <- '+EscECFResposta.Resposta, True);
             fsSincronizou       := False;  // Força a sincronização
             fsTentouSincronizar := True;   // Evita loop infinito, no caso de ocorrer o mesmo erro
-            Self.EnviaComando_ECF();           // Gera chamada recursiva
+            Self.EnviaComando_ECF();       // Gera chamada recursiva
+            exit;
+          end;
+
+          if (not fsTentouSincronizar) and IsDaruma and
+             (EscECFResposta.CAT = 16) and (EscECFResposta.RET.ECF = 140) then // 140-Relógio está travado
+          begin
+            GravaLog( '    Daruma Erro:140 - RX <- '+EscECFResposta.Resposta, True);
+            Sleep(200);
+            fsSincronizou       := False;  // Força a sincronização
+            fsTentouSincronizar := True;   // Evita loop infinito, no caso de ocorrer o mesmo erro
+            Self.EnviaComando_ECF();       // Gera chamada recursiva
             exit;
           end;
 
@@ -871,13 +883,13 @@ begin
 
       case Byte1 of
         SOH :
-           begin
-              if LenRet >= 11 then
-              begin
-                 TBR    := LEStrToInt( copy(Retorno,10,2) ) ;
-                 Result := ( LenRet >=  (11 + TBR + 1) ) ;
-              end ;
-           end;
+          begin
+            if LenRet >= 11 then
+            begin
+              TBR    := LEStrToInt( copy(Retorno,10,2) ) ;
+              Result := ( LenRet >=  (11 + TBR + 1) ) ;
+            end ;
+          end;
 
         ACK :
           begin
@@ -901,7 +913,6 @@ begin
               Result      := False;
               TempoLimite := IncSecond(now, TimeOut);
             end ;
-
           end ;
 
         NAK :
@@ -910,67 +921,71 @@ begin
 
       if Result then
       begin
-         try
-            { Esta atribuição, Já verifica o ChkSum, em caso de erro gera exception }
-            EscECFResposta.Resposta := Retorno ;
+        try
+          { Esta atribuição, Já verifica o ChkSum, em caso de erro gera exception }
+          EscECFResposta.Resposta := Retorno ;
 
-            if (Byte1 = SOH) and
-               (EscECFResposta.SEQ <> EscECFComando.SEQ) then  // Despreza esse Bloco
+          if (Byte1 = SOH) and
+             (EscECFResposta.SEQ <> EscECFComando.SEQ) then  // Despreza esse Bloco
+          begin
+            raise EACBrECFCMDInvalido.Create(
+                 'Sequencia de Resposta ('+IntToStr(EscECFResposta.SEQ)+')'+
+                 'diferente da enviada ('+IntToStr(EscECFComando.SEQ)+
+                 '). Bloco Desprezado' ) ;
+          end;
+        except
+          on E : EACBrECFCMDInvalido do
+          begin
+            GravaLog( '              Erro <- '+E.Message + ' - ' + Retorno  , True ) ;
+            Result  := False ;
+            Retorno := '' ;
+            Inc( fsFalhas ) ;
+            GravaLog('         Falha: '+IntToStr(fsFalhas));
+            if fsFalhas <= cNumFalhasMax then
             begin
-               raise EACBrECFCMDInvalido.Create(
-                  'Sequencia de Resposta ('+IntToStr(EscECFResposta.SEQ)+')'+
-                  'diferente da enviada ('+IntToStr(EscECFComando.SEQ)+
-                  '). Bloco Desprezado' ) ;
+              Device.Serial.Purge;
+              PedeStatus
             end;
-         except
-            on E : EACBrECFCMDInvalido do
-             begin
-               GravaLog( '              Erro <- '+E.Message + ' - ' + Retorno  , True ) ;
-               Result  := False ;
-               Retorno := '' ;
-               Inc( fsFalhas ) ;
-               GravaLog('         Falha: '+IntToStr(fsFalhas));
-               if fsFalhas <= cNumFalhasMax then
-               begin
-                 Device.Serial.Purge;
-                 PedeStatus
-               end;
-             end
-            else
-               raise ;
-         end ;
+          end
+          else
+            raise ;
+        end ;
       end ;
     end;
 
     if Result then
     begin
-       if (Byte1 = WAK) then // Ocupado, aguarde e solicite novo Status
+      if (Byte1 = WAK) then // Ocupado, aguarde e solicite novo Status
+      begin
+        if (fsWAKCounter > 0) and                // Já esteve ocupada antes ?
+           (EscECFComando.fsCMD in [22,26]) and  // Foi um comando de "Leitura de Informações" ?
+           (IsBematech or IsDaruma) and
+           (( fsWAKCounter * cEsperaWAK ) >= (TimeOut*1000)) then  // Atingiu o TimeOut ?
         begin
-          if (fsWAKCounter > 0) and                // Já esteve ocupada antes ?
-             (EscECFComando.fsCMD in [22,26]) and  // Foi um comando de "Leitura de Informações" ?
-             IsBematech and
-             (( fsWAKCounter * cEsperaWAK ) >= (TimeOut*1000)) then  // Atingiu o TimeOut ?
-          begin
-             // Muitos pedidos de Status... Bematech entrou em Loop... envie o comando novamente...
-            GravaLog('*** Bematech em possível loop: '+IntToStr(fsWAKCounter)+
-                     ' respostas de Ocupada. Reenviando o último comando');
-            GravaLog('        Reenvio TX -> ' + ComandoEnviado, True);
-            Device.EnviaString(ComandoEnviado);
-            Retorno := '';
-            fsWAKCounter := 0;
-            TempoLimite := IncSecond(Now, TimeOut);
-          end
-          else
-          begin
-            Inc( fsWAKCounter );
-            GravaLog('                RX <- '+Retorno+ ' ('+IntToStr(fsWAKCounter)+')', True);
-            Sleep( cEsperaWAK );
-            PedeStatus;
-          end;
-
-          Result := False;
+          // Muitos pedidos de Status... Bematech entrou em Loop... envie o comando novamente...
+          GravaLog('*** ECF em possível loop infinito: '+IntToStr(fsWAKCounter)+
+                   ' respostas de ocupado. Reenviando o último comando');
+          GravaLog('        Reenvio TX -> ' + ComandoEnviado, True);
+          Device.EnviaString(ComandoEnviado);
+          Retorno := '';
+          fsWAKCounter := 0;
+          TempoLimite := IncSecond(Now, TimeOut);
         end
-       else if (Byte1 = SOH) and (EscECFResposta.CAT = 0) then
+        else
+        begin
+          Inc( fsWAKCounter );
+          GravaLog('                RX <- '+Retorno+ ' ('+IntToStr(fsWAKCounter)+')', True);
+          Sleep( cEsperaWAK );
+          PedeStatus;
+        end;
+
+        Result := False;
+      end
+      else
+      begin
+        fsWAKCounter := 0;
+
+        if (Byte1 = SOH) and (EscECFResposta.CAT = 0) then
         begin
           if not TestBit( EscECFResposta.RET.ECF, 0 ) then // Existem mais dados ?
           begin
@@ -980,6 +995,7 @@ begin
             Result := False;
           end;
         end;
+      end;
     end
     else
     begin
@@ -1052,7 +1068,7 @@ begin
   Clear;
 end;
 
-procedure TACBrECFEscECFRET.SetRET(AValue: AnsiString);
+procedure TACBrECFEscECFRET.SetRET(const AValue: AnsiString);
 begin
    if fsRET=AValue then Exit;
 
@@ -1129,7 +1145,7 @@ begin
   Result := SOH + Buffer + AnsiChr( CHK ) ;
 end;
 
-procedure TACBrECFEscECFComando.AddParamString(AString: AnsiString);
+procedure TACBrECFEscECFComando.AddParamString(const AString: AnsiString);
 var
   Buf : AnsiString ;
 begin
@@ -1142,7 +1158,8 @@ end;
 
 procedure TACBrECFEscECFComando.AddParamDouble(ADouble: Double; Decimais: Byte);
 begin
-  AddParamInteger( Round( ADouble * power(10, Decimais) ) ) ;
+  ADouble := ADouble * power(10, Decimais);
+  AddParamInteger( TruncFix( ADouble ) ) ;
 end;
 
 procedure TACBrECFEscECFComando.AddParamInteger(AInteger: Integer);
@@ -1151,7 +1168,7 @@ begin
 end;
 
 procedure TACBrECFEscECFComando.AddParamDateTime(ADateTime: TDateTime;
-   Tipo : Char = 'D'; FlagHV : String = ''  ) ;
+   Tipo : Char = 'D'; const FlagHV : String = ''  ) ;
 Var
   Formato : String ;
 begin
@@ -1202,7 +1219,7 @@ end;
 procedure TACBrECFEscECFResposta.SetResposta(const AValue: AnsiString);
 Var
   Soma, I, F, LenCmd : Integer ;
-  CHK  : Byte ;
+  vCHK  : Byte ;
 begin
   Clear( False ) ;    // Não Zera Params, pois pode acumular 2 retornos
 
@@ -1234,13 +1251,13 @@ begin
 
   Soma := 0 ;
   LenCmd := fsTBR+11;
-  For I := 2 to LenCmd do  
+  For I := 2 to LenCmd do
      Soma := Soma + ord( AValue[I] ) ;
-  CHK := Soma mod 256  ;
+  vCHK := Soma mod 256  ;
 
-  if CHK <> fsCHK then
+  if vCHK <> fsCHK then
      raise EACBrECFSemResposta.Create(ACBrStr('Erro CHK Resposta. '+
-        'Calculado:'+IntToStr(CHK)+' Recebido:'+IntToStr(fsCHK)));
+        'Calculado:'+IntToStr(vCHK)+' Recebido:'+IntToStr(fsCHK)));
 
   { Quebrando Parametros Separados por '|' e inserindo-os em fsParams }
   I := 1;
@@ -1264,8 +1281,8 @@ constructor TACBrECFEscECF.create( AOwner : TComponent ) ;
 begin
   inherited create( AOwner ) ;
 
-  fsEscECFComando  := TACBrECFEscECFComando.create ;
-  fsEscECFResposta := TACBrECFEscECFResposta.create ;
+  fsEscECFComando  := TACBrECFEscECFComando.Create;
+  fsEscECFResposta := TACBrECFEscECFResposta.Create;
   fsEscECFProtocolo := TACBrECFEscECFProtocolo.Create(Self);
 
   fpDevice.HandShake := hsDTR_DSR ;
@@ -1365,16 +1382,25 @@ begin
         fsArqMemoria := ExtractFilePath( ParamStr(0) )+'ACBrECFEscECF'+
                         Poem_Zeros( fsNumECF, 3 )+'.txt';
 
-     if IsEpson then
+     if IsBematech then
+     begin
+       if MaxLinhasBuffer = 0 then  // Bematech congela se receber um Buffer muito grande
+         MaxLinhasBuffer := 5;
+
+       if (CompareVersions(fsNumVersao, '01.00.02') >= 0) then
+       begin
+         // http://partners.bematech.com.br/bemacast/paginas/post.aspx?title=edicao-241---o-ecf-bematech-mp-4200-th-fi-ii&id=6220
+         fpNumMaxLinhasRodape := 20;
+       end;
+     end
+     else if IsEpson then
      begin
        fpPaginaDeCodigo := 850;
        fpColunas := 57;
-     end;
-
-     if IsBematech and (CompareVersions(fsNumVersao, '01.00.02') >= 0) then
+     end
+     else if IsDaruma then
      begin
-       // http://partners.bematech.com.br/bemacast/paginas/post.aspx?title=edicao-241---o-ecf-bematech-mp-4200-th-fi-ii&id=6220
-       fpNumMaxLinhasRodape := 20;
+       ControlePorta := False;  // Daruma não trabalha bem com Controle de Porta ativo
      end;
 
      LeRespostasMemoria;
@@ -1668,7 +1694,7 @@ begin
       Result := Result + '-'+MsgMotivo;
 end;
 
-function TACBrECFEscECF.AjustaDescricao(ADescricao : String) : String ;
+function TACBrECFEscECF.AjustaDescricao(const ADescricao : String) : String ;
 begin
   { Ajusta uma descrição de acordo com as regras do protocolo EscECF
     Máximo de 15, Mínimo de 4 caracteres ASCII de posição 65 a 90 (letras maiúsculas)
@@ -1749,6 +1775,9 @@ begin
   if fsDeviceParams <> '' then
   begin
      P := pos(':',fsDeviceParams);
+     if fpDevice.Ativo then
+        fpDevice.Desativar;
+
      fpDevice.Porta        := copy(fsDeviceParams,1,P-1);
      fpDevice.ParamsString := copy(fsDeviceParams,P+1,Length(fsDeviceParams));
      fsDeviceParams := '';
@@ -1762,7 +1791,7 @@ var
   P: Integer;
   EhControle: Boolean;
 begin
-  if (IsEpson and (not fpDevice.IsDLLPort)) then
+  if IsDaruma or (IsEpson and (not fpDevice.IsDLLPort)) then
     Exit;
 
   P := pos(LF, Linha);
@@ -1788,6 +1817,15 @@ begin
   end;
 end;
 
+procedure TACBrECFEscECF.AjustaLinhasColunas(var Linhas: AnsiString;
+  MaxLin: Integer);
+begin
+  Linhas := AjustaLinhas(Linhas, fpColunas, MaxLin, IsBematech);
+
+  if RightStr(Linhas, 1) = #10 then
+    Linhas := LeftStr(Linhas, Length(Linhas)-1) + #0;
+end;
+
 procedure TACBrECFEscECF.AtivarDevice;
 begin
   inherited Ativar;
@@ -1807,7 +1845,7 @@ begin
      Delete( Result, Length(Result), 1 );
 end;
 
-function TACBrECFEscECF.CapturaXMLCupom(Inicial, Final : String ; Tipo : Integer
+function TACBrECFEscECF.CapturaXMLCupom(const Inicial, Final : String ; Tipo : Integer
    ) : AnsiString ;
 Var
   I: Integer;
@@ -1842,9 +1880,22 @@ begin
 end;
 
 function TACBrECFEscECF.GetNumCupom: String;
+var
+  I: Integer;
 begin
-  RetornaInfoECF( '1|1' ) ;
-  Result := EscECFResposta.Params[1] ;
+  I := 0;
+  Result := '';
+  while (I < cNumFalhasMax) and (Result = '') do
+  begin
+    RetornaInfoECF( '1|1' );
+    if EscECFResposta.Params.Count > 1 then
+    begin
+      if EscECFResposta.Params[0] = '1' then
+        Result := EscECFResposta.Params[1] ;
+    end;
+
+    Inc( I );
+  end;
 end;
 
 function TACBrECFEscECF.GetNumECF: String;
@@ -1942,14 +1993,15 @@ function TACBrECFEscECF.GetEstado: TACBrECFEstado;
 Var
   FlagEst : Integer ;
 begin
-  try
-    if (not fpAtivo) then
-    begin
-      fpEstado := estNaoInicializada;
-      Exit;
-    end;
+  fpEstado := estNaoInicializada ;
+  if (not fpAtivo) then
+  begin
+    Result := fpEstado ;
+    Exit ;
+  end;
 
-    fpEstado := estDesconhecido ;
+  try
+   fpEstado := estDesconhecido ;
 
     FlagEst := StrToIntDef( RetornaInfoECF( '16|5' ), -1 );
     Case FlagEst of
@@ -1958,6 +2010,20 @@ begin
       11..13, 21..23 : fpEstado := estPagamento;
       20 :             fpEstado := estNaoFiscal;
       30..32 :         fpEstado := estRelatorio;
+    end;
+
+    if (fpEstado = estLivre) and IsDaruma then  // Daruma sinaliza estados em Byte 3 de RET
+    begin
+      if TestBit(EscECFResposta.RET.Fabricante, 4) then
+      begin
+        fpEstado := estBloqueada;
+        Exit;
+      end
+      else if TestBit(EscECFResposta.RET.Fabricante, 5) then
+      begin
+        fpEstado := estRequerZ;
+        Exit;
+      end;
     end;
 
     if (fpEstado = estVenda) and fsEmPagamento then   // Já Subtotalizou ?
@@ -2098,6 +2164,7 @@ begin
    end;
 
   EscECFComando.AddParamInteger(0); // Imprime no ECF
+  EscECFComando.TimeOut := max(TimeOut, 120); // TimeOut de no mínimo 2 minutos
 
   try
      EnviaComando ;
@@ -2136,10 +2203,13 @@ begin
   EnviaComando;
 
   RespostasComando.Clear;
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
   SalvaRespostasMemoria(False);
 end;
 
@@ -2153,7 +2223,7 @@ begin
   Linha := ReplaceString(Linha, ESC+CR, ESC+#213);
   Linha := ReplaceString(Linha, ESC+LF, ESC+#210);
 
-  Linha := AjustaLinhas( Linha, Colunas, 0, IsBematech );  { Formata as Linhas de acordo com "Coluna" }
+  AjustaLinhasColunas( Linha, 0);  { Formata as Linhas de acordo com "Coluna" }
 
   Linha := ReplaceString(Linha, ESC+#213, ESC+CR);
   Linha := ReplaceString(Linha, ESC+#210, ESC+LF);
@@ -2172,6 +2242,11 @@ begin
         P := Trunc( LenMaxBuffer / Colunas ) * Colunas;
 
      Buffer := copy( Linha, 1, P);
+
+     { ignora a quebra de linha se sua posição for igual ao LenMaxBuffer }
+     if (Length(Buffer) = LenMaxBuffer) and (Buffer[P] = LF) then
+       Delete( Buffer, P, 1 );
+
      Espera := Trunc( CountStr( Buffer, LF ) / 4);
 
      EscECFComando.CMD := 9;
@@ -2184,7 +2259,7 @@ begin
         (copy( Linha, P+1, 1) = LF) then
         P := P + 1 ;
 
-     Linha  := copy( Linha, P+1, Length(Linha) ) ;   // O Restante
+     Linha := copy( Linha, P+1, Length(Linha) ) ;   // O Restante
   end ;
 end;
 
@@ -2260,14 +2335,17 @@ begin
   EnviaComando;
 
   //RespostasComando.Clear;
-  RespostasComando.AddField( 'Pagto'+IntToStr(I), APagto );
-  RespostasComando.AddField( 'COO',            EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',       EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta',     EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',       EscECFResposta.Params[3] );
-  RespostasComando.AddField( 'SeqPagto',       EscECFResposta.Params[4] );
-  RespostasComando.AddField( 'NumParcela',     EscECFResposta.Params[5] );
-  RespostasComando.AddField( 'NumParcelaFalta',EscECFResposta.Params[6] );
+  if (EscECFResposta.Params.Count > 6) then
+  begin
+    RespostasComando.AddField( 'Pagto'+IntToStr(I), APagto );
+    RespostasComando.AddField( 'COO',            EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',       EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta',     EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',       EscECFResposta.Params[3] );
+    RespostasComando.AddField( 'SeqPagto',       EscECFResposta.Params[4] );
+    RespostasComando.AddField( 'NumParcela',     EscECFResposta.Params[5] );
+    RespostasComando.AddField( 'NumParcelaFalta',EscECFResposta.Params[6] );
+  end;
 
   Consumidor.Enviado := True ;
   fsEmPagamento := false ;
@@ -2419,14 +2497,17 @@ begin
 end;
 
 procedure TACBrECFEscECF.EspelhoMFD_DLL(DataInicial, DataFinal: TDateTime;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
 var
   ECFClass: TACBrECFClass;
 begin
   ECFClass := CriarECFClassPorMarca;
 
   if ECFClass = nil then
+  begin
     inherited;
+    Exit;
+  end;
 
   try
     Self.Desativar;
@@ -2437,14 +2518,17 @@ begin
 end;
 
 procedure TACBrECFEscECF.EspelhoMFD_DLL(COOInicial, COOFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
 var
   ECFClass: TACBrECFClass;
 begin
   ECFClass := CriarECFClassPorMarca;
 
   if ECFClass = nil then
+  begin
     inherited;
+    Exit;
+  end;
 
   try
     Self.Desativar;
@@ -2455,7 +2539,7 @@ begin
 end;
 
 procedure TACBrECFEscECF.ArquivoMFD_DLL(DataInicial, DataFinal: TDateTime;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD);
 var
   ECFClass: TACBrECFClass;
@@ -2463,7 +2547,10 @@ begin
   ECFClass := CriarECFClassPorMarca;
 
   if ECFClass = nil then
+  begin
     inherited;
+    Exit;
+  end;
 
   try
     Self.Desativar;
@@ -2474,7 +2561,7 @@ begin
 end;
 
 procedure TACBrECFEscECF.ArquivoMFD_DLL(ContInicial, ContFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD; TipoContador: TACBrECFTipoContador);
 var
   ECFClass: TACBrECFClass;
@@ -2482,7 +2569,10 @@ begin
   ECFClass := CriarECFClassPorMarca;
 
   if ECFClass = nil then
+  begin
     inherited;
+    Exit;
+  end;
 
   try
     Self.Desativar;
@@ -2493,24 +2583,30 @@ begin
 end;
 
 procedure TACBrECFEscECF.PafMF_GerarCAT52(const DataInicial,
-  DataFinal: TDateTime; const DirArquivos: String);
+  DataFinal: TDateTime; const DirArquivos: String; NumeroSerie: String);
 var
   ECFClass: TACBrECFClass;
 begin
+  if NumeroSerie = '' then
+    NumeroSerie := GetNumSerie;
+
   ECFClass := CriarECFClassPorMarca;
 
   if ECFClass = nil then
+  begin
     inherited;
+    Exit;
+  end;
 
   try
     Self.Desativar;
-    ECFClass.PafMF_GerarCAT52(DataInicial, DataFinal, DirArquivos);
+    ECFClass.PafMF_GerarCAT52(DataInicial, DataFinal, DirArquivos, NumeroSerie);
   finally
     DestruirECFClass( ECFClass );
   end;
 end;
 
-procedure TACBrECFEscECF.ArquivoMF_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFEscECF.ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString);
 var
   ECFClass: TACBrECFClass;
 begin
@@ -2521,13 +2617,14 @@ begin
 
   try
     Self.Desativar;
-    ECFClass.ArquivoMF_DLL(NomeArquivo);
+    ECFClass.ArquivoMF_Binario_DLL(NomeArquivo);
   finally
     DestruirECFClass( ECFClass );
   end;
 end;
 
-procedure TACBrECFEscECF.ArquivoMFD_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFEscECF.ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD;
+  const NomeArquivo: AnsiString; StrInicial, StrFinal: AnsiString);
 var
   ECFClass: TACBrECFClass;
 begin
@@ -2538,17 +2635,40 @@ begin
 
   try
     Self.Desativar;
-    ECFClass.ArquivoMFD_DLL(NomeArquivo);
+    ECFClass.ArquivoMFD_Binario_DLL(Tipo, NomeArquivo, StrInicial, StrFinal);
   finally
     DestruirECFClass( ECFClass );
   end;
 end;
 
 procedure TACBrECFEscECF.IdentificaOperador(Nome: String);
+var
+  aOperAtual : String;
 begin
-  EscECFComando.CMD := 154;
-  EscECFComando.AddParamString(LeftStr(Nome,20)) ;
-  EnviaComando;
+  aOperAtual := '';
+  Nome := LeftStr( Nome, 20 );
+
+  try
+    if IsBematech then
+    begin
+      RetornaInfoECF( '99|05' );
+      aOperAtual := EscECFResposta.fsParams[2];
+    end
+
+    else if IsDaruma then
+      aOperAtual := RetornaInfoECF( '130' )
+
+    else if IsEpson then
+      aOperAtual := RetornaInfoECF( '99|17' );
+  except
+  end;
+
+  if (aOperAtual <> Nome) then
+  begin
+    EscECFComando.CMD := 154;
+    EscECFComando.AddParamString( Nome );
+    EnviaComando;
+  end;
 end;
 
 procedure TACBrECFEscECF.IdentificaPAF(NomeVersao, MD5: String);
@@ -2591,8 +2711,11 @@ begin
     Result := inherited TraduzirTagBloco(ATag, Conteudo) ;
 
   // Carcateres de Controle, devem ser precedidos de ESC //
-  Result := ReplaceString( Result, NUL, ESC+NUL);
-  Result := ReplaceString( Result, LF , ESC+LF);
+  if not IsDaruma then
+  begin
+    Result := ReplaceString( Result, NUL, ESC+NUL);
+    Result := ReplaceString( Result, LF , ESC+LF);
+  end;
 
   if IsEpson then
     Result := ReplaceString( Result, CR , ESC+CR);
@@ -2607,10 +2730,13 @@ begin
   EnviaComando;
 
   RespostasComando.Clear;
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
 
   Consumidor.Enviado := True ;
   fsEmPagamento := false ;
@@ -2644,9 +2770,13 @@ begin
 
   EnviaComando ;
 
-  RespostasComando.AddField( 'NumUltItem', EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[2] );
+  if (EscECFResposta.Params.Count > 2) then
+  begin
+    RespostasComando.AddField( 'NumUltItem', EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[2] );
+  end;
+
   fsEmPagamento := false ;
 
   SalvaRespostasMemoria(True);
@@ -2673,8 +2803,12 @@ begin
 
   EnviaComando ;
 
-  RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  if (EscECFResposta.Params.Count > 1) then
+  begin
+    RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -2684,7 +2818,8 @@ var
    Est: TACBrECFEstado;
    TipoUltDocto: TACBrECFTipoDocumento;
    EhUltimoCupom: Boolean;
-   TentarEstornarCCDAnteriores, TentarEstornarCCDSeguintes: Boolean;
+   TentarEstornarCCDAnteriores, TentarEstornarCCDSeguintes,
+     ErroGenericoCancelamenetoBematech: Boolean;
 begin
   RespostasComando.Clear;
   Est := TACBrECF( fpOwner ).Estado;
@@ -2737,10 +2872,14 @@ begin
                          ((EscECFResposta.CAT = 05) and (EscECFResposta.RET.ECF = 10)) or
              (IsEpson and (EscECFResposta.CAT = 16) and (EscECFResposta.RET.ECF = 21));
 
+          ErroGenericoCancelamenetoBematech :=
+            (IsBematech and (EscECFResposta.CAT = 02) and (EscECFResposta.RET.ECF = 02));
+
           TentarEstornarCCDAnteriores :=  // Erro genérico de Cancelamento //
              (not TentarEstornarCCDSeguintes) and
-             ((IsBematech and (EscECFResposta.CAT = 02) and (EscECFResposta.RET.ECF = 02)) or
-              (IsEpson    and (EscECFResposta.CAT = 16) and (EscECFResposta.RET.ECF = 18)));
+             ( ErroGenericoCancelamenetoBematech or
+              (IsEpson    and (EscECFResposta.CAT = 16) and (EscECFResposta.RET.ECF = 18)) or
+              (IsDaruma   and (EscECFResposta.CAT = 16) and (EscECFResposta.RET.ECF = 146)));
 
           if TentarEstornarCCDAnteriores then
           begin
@@ -2762,7 +2901,12 @@ begin
           if NumCCDEstornado > 0 then
             CancelaCupom(UltimoCOO)
           else
-            raise;
+          begin
+            if ErroGenericoCancelamenetoBematech then
+              raise EACBrECFERRO.Create(ACBrStr('Cancelamento não permitido'))
+            else
+              raise;
+          end;
         end;
       end ;
     end;
@@ -2778,7 +2922,9 @@ begin
   EscECFComando.AddParamInteger( NumItem );
   EnviaComando;
 
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[0] );
+  if (EscECFResposta.Params.Count > 0) then
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[0] );
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -2794,24 +2940,33 @@ begin
 
   EnviaComando ;
 
-  RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  if (EscECFResposta.Params.Count > 1) then
+  begin
+    RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
-procedure TACBrECFEscECF.CancelaDescontoAcrescimoItem(NumItem: Integer);
+procedure TACBrECFEscECF.CancelaDescontoAcrescimoItem(NumItem: Integer;
+  TipoAcrescimoDesconto: String);
 begin
   with EscECFComando do
   begin
      CMD := 28 ;
-     AddParamInteger( 0 );
+     AddParamInteger( ifthen(TipoAcrescimoDesconto='D',0,1) );
      AddParamInteger( NumItem )
   end ;
 
   EnviaComando ;
 
-  RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  if (EscECFResposta.Params.Count > 1) then
+  begin
+    RespostasComando.AddField( 'TotalItem',  EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -2830,10 +2985,13 @@ begin
   EnviaComando;
 
   RespostasComando.Clear;
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
 
   fsEmPagamento := false ;
   SalvaRespostasMemoria(False);
@@ -2847,8 +3005,12 @@ begin
   EscECFComando.AddParamDouble( Valor ) ;
   EnviaComando;
 
-  RespostasComando.AddField( 'NumUltItem', EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  if (EscECFResposta.Params.Count > 1) then
+  begin
+    RespostasComando.AddField( 'NumUltItem', EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'SubTotal',   EscECFResposta.Params[1] );
+  end;
+
   fsEmPagamento := false ;
   SalvaRespostasMemoria(True);
 end;
@@ -2922,10 +3084,14 @@ begin
 
   EnviaComando ;
 
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -2945,9 +3111,13 @@ begin
   end ;
   EnviaComando ;
 
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  if (EscECFResposta.Params.Count > 2) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  end;
+
   fsEmPagamento := false ;
 
   SalvaRespostasMemoria(False);
@@ -2968,7 +3138,9 @@ begin
   end ;
   EnviaComando ;
 
-  RespostasComando.AddField( 'SubTotal', EscECFResposta.Params[0] );
+  if (EscECFResposta.Params.Count > 0) then
+    RespostasComando.AddField( 'SubTotal', EscECFResposta.Params[0] );
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -2982,7 +3154,9 @@ begin
   end ;
   EnviaComando ;
 
-  RespostasComando.AddField( 'SubTotal', EscECFResposta.Params[0] );
+  if (EscECFResposta.Params.Count > 0) then
+    RespostasComando.AddField( 'SubTotal', EscECFResposta.Params[0] );
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -3016,7 +3190,7 @@ begin
        Aliquota.Aliquota  := StrToIntDef( OnlyNumber(EscECFResposta.Params[ 4*I + 2 ]), 0 ) / 100 ;
 
        { IMPORTANTE: MP4200TH-FI retorna o Valor do Imposto e não a BASE DE CALCULO, como esperado }
-       Aliquota.Total     := StrToIntDef( EscECFResposta.Params[ 4*I + 3 ], 0 ) / 100 ;
+       Aliquota.Total     := StrToFloatDef( EscECFResposta.Params[ 4*I + 3 ], 0 ) / 100 ;
 
        fpAliquotas.Add(Aliquota);
      end;
@@ -3125,7 +3299,7 @@ begin
   begin
     FPG := AchaFPGIndice( IntToStr(StrToIntDef(EscECFResposta.Params[ 2*I ], 0)) ) ;
     if Assigned( FPG ) then
-       FPG.Total := StrToIntDef( EscECFResposta.Params[ 2*I + 1 ], 0 ) / 100;
+       FPG.Total := StrToFloatDef( EscECFResposta.Params[ 2*I + 1 ], 0 ) / 100;
   end;
 end;
 
@@ -3287,7 +3461,7 @@ begin
     if Assigned( CNF ) then
     begin
        CNF.Contador := StrToIntDef( EscECFResposta.Params[ 3*I + 1 ], 0 ) ;
-       CNF.Total    := StrToIntDef( EscECFResposta.Params[ 3*I + 2 ], 0 ) / 100 ;
+       CNF.Total    := StrToFloatDef( EscECFResposta.Params[ 3*I + 2 ], 0 ) / 100 ;
     end;
   end;
 end;
@@ -3356,9 +3530,13 @@ begin
   EscECFComando.AddParamInteger( 1 );  // Aciona a Guilhotina
   EnviaComando;
 
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  if (EscECFResposta.Params.Count > 2) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  end;
+
   fsEmPagamento := false ;
   SalvaRespostasMemoria(False);
 end;
@@ -3394,7 +3572,7 @@ var
 begin
   RetornaInfoECF( '4|1' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 function TACBrECFEscECF.GetNumCCF: String;
@@ -3458,8 +3636,8 @@ end;
 
 function TACBrECFEscECF.GetDadosUltimaReducaoZ : String ;
 var
-  DataStr, ECFCRZ, Reg : String ;
-  I, J, N : Integer;
+  DataStr, Reg : String ;
+  I, J, N, ECFCRZ, RZCRZ, Tentativas: Integer;
   AliqZ : TACBrECFAliquota ;
   ValReg: Double;
 
@@ -3512,211 +3690,581 @@ begin
 
   with TACBrECF(fpOwner) do
   begin
-    ECFCRZ := Trim(NumCRZ);
+    ECFCRZ := StrToIntDef(Trim(NumCRZ), -1);
+    if ECFCRZ < 0 then
+      raise EACBrECFERRO.Create('Erro ao obter CRZ atual') ;
   end;
 
-  RetornaInfoECF( '17|'+ECFCRZ ) ;
+  Tentativas := 0;
+  repeat
+    RetornaInfoECF( '17|'+IntToStr(ECFCRZ) ) ;
+    // DEBUG
+    //WriteToTXT('C:\TEMP\REDZ.TXT', EscECFResposta.Params.Text, False, False);
+    if (UpperCase(copy(EscECFResposta.Params.Text, 0, 5)) = 'ERRO:')  then
+      raise EACBrECFERRO.Create(ACBrStr(EscECFResposta.Params.Text)) ;
+    Inc( Tentativas );
+  until (EscECFResposta.TBR > 0) or (Tentativas > 2);
 
-  // DEBUG
-  //WriteToTXT('C:\TEMP\REDZ.TXT', EscECFResposta.Params.Text, False, False);
-  if (UpperCase(copy(EscECFResposta.Params.Text, 0, 5)) = 'ERRO:')  then
+  if (EscECFResposta.TBR = 0) then
+    raise EACBrECFERRO.Create(ACBrStr('Erro ao obter Dados da Redução Z: '+IntToStr(ECFCRZ))) ;
+
+  RZCRZ := StrToIntDef( EscECFResposta.Params[0], 0) ;
+
+  if IsBematech and (ECFCRZ <> RZCRZ) then
   begin
-    raise EACBrECFERRO.Create(ACBrStr(EscECFResposta.Params.Text)) ;
+    { Bematech MP4200 TH-FI II, versões até 01.00.02 e inferiores, tem problemas
+      para ler dados da Ultima Redução Z, se o CRZ for maior que 256.
+      Se o CRZ lido for difernte do solicitado, é porque o problema ocorreu...
+      Nesse caso, vamos capturar as informações de uma LeituraMemoriaFiscalSerial }
+    BematechObtemDadosUltimaReducaoZDeLeituraMemoriaFiscal( ECFCRZ );
+    RetornaInfoECF( '8' ) ;
+    fpDadosReducaoZClass.ValorGrandeTotal := RoundTo( StrToFloatDef(EscECFResposta.Params[3],0)/100, -2);
+  end
+  else
+  begin
+    { Alimenta a class com os dados atuais do ECF }
+    with fpDadosReducaoZClass do
+    begin
+      CRZ              := RZCRZ;
+      DataStr          := EscECFResposta.Params[1];
+      DataDoMovimento  := EncodeDate( StrToInt(copy(DataStr,5,4)),   // Ano
+                                      StrToInt(copy(DataStr,3,2)),   // Mes
+                                      StrToInt(copy(DataStr,1,2)) ); // Dia
+
+      DataStr := EscECFResposta.Params[2];
+      DataHoraEmissao := EncodeDateTime(StrToInt(copy(DataStr, 5,4)),   // Ano
+                                        StrToInt(copy(DataStr, 3,2)),   // Mes
+                                        StrToInt(copy(DataStr, 1,2)),   // Dia
+                                        StrToInt(copy(DataStr, 9,2)),   // Hora
+                                        StrToInt(copy(DataStr, 11,2)),   // Min
+                                        StrToInt(copy(DataStr, 13,2)),   // Seg
+                                        0 );
+
+      CRO              := StrToIntDef( EscECFResposta.Params[3], 0) ;
+      NumeroCOOInicial := EscECFResposta.Params[4];
+      COO              := StrToIntDef( EscECFResposta.Params[5], 0) ;
+      ValorVendaBruta  := RoundTo( StrToFloatDef(EscECFResposta.Params[07],0)/100, -2);
+      DescontoICMS     := RoundTo( StrToFloatDef(EscECFResposta.Params[08],0)/100, -2);
+      AcrescimoICMS    := RoundTo( StrToFloatDef(EscECFResposta.Params[09],0)/100, -2);
+      CancelamentoICMS := RoundTo( StrToFloatDef(EscECFResposta.Params[10],0)/100, -2);
+      DescontoISSQN    := RoundTo( StrToFloatDef(EscECFResposta.Params[11],0)/100, -2);
+      AcrescimoISSQN   := RoundTo( StrToFloatDef(EscECFResposta.Params[12],0)/100, -2);
+      CancelamentoISSQN:= RoundTo( StrToFloatDef(EscECFResposta.Params[13],0)/100, -2);
+
+      {Aliquotas}
+      {Percorrendo as aliquotas cadastradas no ECF para procurar por todas}
+      for I := 0 to Aliquotas.Count - 1 do
+      begin
+        AliqZ := TACBrECFAliquota.Create ;
+        AliqZ.Assign( fpAliquotas[I] );
+        {Procura pela aliquota no formato T/Snnnn na string}
+        ValReg := AchaValorRegistrador( AliqZ.Tipo, AliqZ.Aliquota ) ;
+        if ValReg >= 0 then
+          AliqZ.Total := ValReg;
+
+        AdicionaAliquota( AliqZ );
+      end ;
+
+      ValReg := AchaValorRegistrador('F1');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := ValReg;
+
+      ValReg := AchaValorRegistrador('F2');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('F3');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
+
+
+      ValReg := AchaValorRegistrador('N1');
+      if ValReg >= 0 then
+        NaoTributadoICMS := ValReg;
+
+      ValReg := AchaValorRegistrador('N2');
+      if ValReg >= 0 then
+        NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('N3');
+      if ValReg >= 0 then
+        NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
+
+
+      ValReg := AchaValorRegistrador('I1');
+      if ValReg >= 0 then
+        IsentoICMS := ValReg;
+
+      ValReg := AchaValorRegistrador('I2');
+      if ValReg >= 0 then
+        IsentoICMS := max(IsentoICMS,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('I3');
+      if ValReg >= 0 then
+        IsentoICMS := max(IsentoICMS,0) + ValReg;
+
+
+      ValReg := AchaValorRegistrador('FS1');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := ValReg;
+
+      ValReg := AchaValorRegistrador('FS2');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('FS3');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
+
+
+      ValReg := AchaValorRegistrador('NS1');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := ValReg;
+
+      ValReg := AchaValorRegistrador('NS2');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('NS3');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
+
+
+      ValReg := AchaValorRegistrador('IS1');
+      if ValReg >= 0 then
+        IsentoISSQN := ValReg;
+
+      ValReg := AchaValorRegistrador('IS2');
+      if ValReg >= 0 then
+        IsentoISSQN := max(IsentoISSQN,0) + ValReg;
+
+      ValReg := AchaValorRegistrador('IS3');
+      if ValReg >= 0 then
+        IsentoISSQN := max(IsentoISSQN,0) + ValReg;
+
+      { Epson não retorna Totalizadores não tributados no comando padrão, usando
+        comando específico do Fabricante }
+      if IsEpson then
+      begin
+        RetornaInfoECF('99|30&'+IntToStr(ECFCRZ));
+
+        // Calculando a posição do "Total de alíquotas não tributadas"
+        I := 4 + (StrToIntDef( EscECFResposta.Params[4], 0) * 3) + 1;
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 2) + 2;
+
+        GNF := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 3;
+        CCF := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 1;
+        CFD := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 1;
+        CCDC := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 1;
+        GRG := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 2;
+        CFC := StrToIntDef( EscECFResposta.Params[I], 0) ;
+        I := I + 3;
+        ValorGrandeTotal := RoundTo( StrToFloatDef(EscECFResposta.Params[I],0)/100, -2);
+        I := I + 14;
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 3;
+
+        N := StrToIntDef( EscECFResposta.Params[I], 0);
+        for J := 1 to N do
+        begin
+          Reg    := Copy( EscECFResposta.Params[I+J], 1, 1);
+          ValReg := RoundTo( StrToFloatDef(EscECFResposta.Params[I+J+N],0)/100, -2);
+
+          if (Reg = 'F') then
+            SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg
+          else if (Reg = 'N') then
+            NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg
+          else if (Reg = 'I') then
+            IsentoICMS := max(IsentoICMS,0) + ValReg
+        end ;
+
+        I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 2) + 1;
+
+        N := StrToIntDef( EscECFResposta.Params[I], 0);
+        for J := 1 to N do
+        begin
+          Reg    := Copy( EscECFResposta.Params[I+J], 1, 2);
+          ValReg := RoundTo( StrToFloatDef(EscECFResposta.Params[I+J+N],0)/100, -2);
+
+          if (Reg = 'FS') then
+            SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg
+          else if (Reg = 'NS') then
+            NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg
+          else if (Reg = 'IS') then
+            IsentoISSQN := max(IsentoISSQN,0) + ValReg
+        end ;
+      end
+      else
+      begin
+        { EscESC não retorna o GT em leitura de Dados da Ultima Reducao Z,
+          Usando o GTInicial deste movimento }
+
+        RetornaInfoECF( '8' ) ;
+        ValorGrandeTotal := RoundTo( StrToFloatDef(EscECFResposta.Params[3],0)/100, -2);
+      end;
+    end;
   end;
 
-  { Alimenta a class com os dados atuais do ECF }
   with fpDadosReducaoZClass do
   begin
-    CRZ              := StrToIntDef( EscECFResposta.Params[0], 0) ;
-    DataStr          := EscECFResposta.Params[1];
-    DataDoMovimento  := EncodeDate( StrToInt(copy(DataStr,5,4)),   // Ano
-                                    StrToInt(copy(DataStr,3,2)),   // Mes
-                                    StrToInt(copy(DataStr,1,2)) ); // Dia
-
-    DataStr := EscECFResposta.Params[2];
-    DataHoraEmissao := EncodeDateTime(StrToInt(copy(DataStr, 5,4)),   // Ano
-                                      StrToInt(copy(DataStr, 3,2)),   // Mes
-                                      StrToInt(copy(DataStr, 1,2)),   // Dia
-                                      StrToInt(copy(DataStr, 9,2)),   // Hora
-                                      StrToInt(copy(DataStr, 11,2)),   // Min
-                                      StrToInt(copy(DataStr, 13,2)),   // Seg
-                                      0 );
-
-    CRO              := StrToIntDef( EscECFResposta.Params[3], 0) ;
-    NumeroCOOInicial := EscECFResposta.Params[4];
-    COO              := StrToIntDef( EscECFResposta.Params[5], 0) ;
-    ValorVendaBruta  := RoundTo( StrToFloatDef(EscECFResposta.Params[07],0)/100, -2);
-    DescontoICMS     := RoundTo( StrToFloatDef(EscECFResposta.Params[08],0)/100, -2);
-    AcrescimoICMS    := RoundTo( StrToFloatDef(EscECFResposta.Params[09],0)/100, -2);
-    CancelamentoICMS := RoundTo( StrToFloatDef(EscECFResposta.Params[10],0)/100, -2);
-    DescontoISSQN    := RoundTo( StrToFloatDef(EscECFResposta.Params[11],0)/100, -2);
-    AcrescimoISSQN   := RoundTo( StrToFloatDef(EscECFResposta.Params[12],0)/100, -2);
-    CancelamentoISSQN:= RoundTo( StrToFloatDef(EscECFResposta.Params[13],0)/100, -2);
-
-    {Aliquotas}
-    {Percorrendo as aliquotas cadastradas no ECF para procurar por todas}
-    for I := 0 to Aliquotas.Count - 1 do
-    begin
-      AliqZ := TACBrECFAliquota.Create ;
-      AliqZ.Assign( fpAliquotas[I] );
-      {Procura pela aliquota no formato T/Snnnn na string}
-      ValReg := AchaValorRegistrador( AliqZ.Tipo, AliqZ.Aliquota ) ;
-      if ValReg >= 0 then
-        AliqZ.Total := ValReg;
-
-      AdicionaAliquota( AliqZ );
-    end ;
-
-    ValReg := AchaValorRegistrador('F1');
-    if ValReg >= 0 then
-      SubstituicaoTributariaICMS := ValReg;
-
-    ValReg := AchaValorRegistrador('F2');
-    if ValReg >= 0 then
-      SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('F3');
-    if ValReg >= 0 then
-      SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
-
-
-    ValReg := AchaValorRegistrador('N1');
-    if ValReg >= 0 then
-      NaoTributadoICMS := ValReg;
-
-    ValReg := AchaValorRegistrador('N2');
-    if ValReg >= 0 then
-      NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('N3');
-    if ValReg >= 0 then
-      NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
-
-
-    ValReg := AchaValorRegistrador('I1');
-    if ValReg >= 0 then
-      IsentoICMS := ValReg;
-
-    ValReg := AchaValorRegistrador('I2');
-    if ValReg >= 0 then
-      IsentoICMS := max(IsentoICMS,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('I3');
-    if ValReg >= 0 then
-      IsentoICMS := max(IsentoICMS,0) + ValReg;
-
-
-    ValReg := AchaValorRegistrador('FS1');
-    if ValReg >= 0 then
-      SubstituicaoTributariaISSQN := ValReg;
-
-    ValReg := AchaValorRegistrador('FS2');
-    if ValReg >= 0 then
-      SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('FS3');
-    if ValReg >= 0 then
-      SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
-
-
-    ValReg := AchaValorRegistrador('NS1');
-    if ValReg >= 0 then
-      NaoTributadoISSQN := ValReg;
-
-    ValReg := AchaValorRegistrador('NS2');
-    if ValReg >= 0 then
-      NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('NS3');
-    if ValReg >= 0 then
-      NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
-
-
-    ValReg := AchaValorRegistrador('IS1');
-    if ValReg >= 0 then
-      IsentoISSQN := ValReg;
-
-    ValReg := AchaValorRegistrador('IS2');
-    if ValReg >= 0 then
-      IsentoISSQN := max(IsentoISSQN,0) + ValReg;
-
-    ValReg := AchaValorRegistrador('IS3');
-    if ValReg >= 0 then
-      IsentoISSQN := max(IsentoISSQN,0) + ValReg;
-
-
-    { Epson não retorna Totalizadores não tributados no comando padrão, usando
-      comando específico do Fabricante }
-    if IsEpson then
-    begin
-      RetornaInfoECF('99|30&'+ECFCRZ);
-
-      // Calculando a posição do "Total de alíquotas não tributadas"
-      I := 4 + (StrToIntDef( EscECFResposta.Params[4], 0) * 3) + 1;
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 2) + 2;
-
-      GNF := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 3;
-      CCF := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 1;
-      CFD := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 1;
-      CCDC := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 1;
-      GRG := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 2;
-      CFC := StrToIntDef( EscECFResposta.Params[I], 0) ;
-      I := I + 3;
-      ValorGrandeTotal := RoundTo( StrToFloatDef(EscECFResposta.Params[I],0)/100, -2);
-      I := I + 14;
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 2;
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 3) + 3;
-
-      N := StrToIntDef( EscECFResposta.Params[I], 0);
-      for J := 1 to N do
-      begin
-        Reg    := Copy( EscECFResposta.Params[I+J], 1, 1);
-        ValReg := RoundTo( StrToFloatDef(EscECFResposta.Params[I+J+N],0)/100, -2);
-
-        if (Reg = 'F') then
-          SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg
-        else if (Reg = 'N') then
-          NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg
-        else if (Reg = 'I') then
-          IsentoICMS := max(IsentoICMS,0) + ValReg
-      end ;
-
-      I := I + (StrToIntDef( EscECFResposta.Params[I], 0) * 2) + 1;
-
-      N := StrToIntDef( EscECFResposta.Params[I], 0);
-      for J := 1 to N do
-      begin
-        Reg    := Copy( EscECFResposta.Params[I+J], 1, 2);
-        ValReg := RoundTo( StrToFloatDef(EscECFResposta.Params[I+J+N],0)/100, -2);
-
-        if (Reg = 'FS') then
-          SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg
-        else if (Reg = 'NS') then
-          NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg
-        else if (Reg = 'IS') then
-          IsentoISSQN := max(IsentoISSQN,0) + ValReg
-      end ;
-    end
-    else
-    begin
-      { EscESC não retorna o GT em leitura de Dados da Ultima Reducao Z,
-        Usando o GTInicial deste movimento }
-
-      RetornaInfoECF( '8' ) ;
-      ValorGrandeTotal := RoundTo( StrToFloatDef(EscECFResposta.Params[3],0)/100, -2);
-    end;
-
     CalculaValoresVirtuais;
     Result := MontaDadosReducaoZ;
   end;
 end ;
+
+{ Bematech MP4200 TH-FI II, versões até 01.00.02 e inferiores, tem problemas
+  para ler dados da Ultima Redução Z, se o CRZ for maior que 256.
+  Nesse caso, vamos capturar as informações de uma LeituraMemoriaFiscalSerial }
+procedure TACBrECFEscECF.BematechObtemDadosUltimaReducaoZDeLeituraMemoriaFiscal(
+  ANumCRZ: Integer);
+var
+  SL, Totalizadores: TStringList;
+  I, J: Integer;
+  AStr, NomeTotalizador: String;
+  AliqZ: TACBrECFAliquota;
+  ValReg: Double;
+
+  function EncontrarInicioLinha(StringEncontrar: String): Boolean;
+  var
+    wTamanho: Integer;
+  begin
+    Result   := False;
+    wTamanho := Length(StringEncontrar);
+
+    while (I < SL.Count) do
+    begin
+      Result := (Copy(SL[I], 1, wTamanho) = StringEncontrar);
+      if Result then
+        Break;
+
+      Inc(I);
+    end;
+  end;
+
+  function ValorStrToFloat(AString: String): Double;
+  begin
+    AString := StringReplace(Trim(AString), '.', '', [rfReplaceAll]);  // Remove pontos
+    Result  := StringToFloatDef(AString, -1 ) ;
+  end;
+
+  procedure AdicionarTotalizador(Linha: String);
+  var
+    P: Integer;
+    NomeTot: String;
+    ValorTot: Double;
+  begin
+    P := pos('=', Linha);
+    if P = 0  then
+      exit;
+
+    NomeTot  := Trim(copy(Linha, 1, P-1));
+    ValorTot := ValorStrToFloat(copy(Linha, P+1, Length(Linha)));
+
+    Totalizadores.Add(NomeTot + '=' + FloatToStr(ValorTot));
+  end;
+
+  procedure ExtrairTotalizadores;
+  var
+    LinhaTracejada: String;
+  begin
+    LinhaTracejada := StringOfChar('-',40);
+    Totalizadores.Clear;
+    while (I < SL.Count) do
+    begin
+      if (pos(LinhaTracejada , SL[I] ) > 0) then
+        Break;
+
+      AdicionarTotalizador( copy( SL[I], 1, 24) );
+      AdicionarTotalizador( copy( SL[I],25, 24) );
+
+      Inc(I);
+    end;
+  end;
+
+  function AcharValorTotalizador(NomeTot: String): Double;
+  var
+    P: Integer;
+  begin
+    Result := -1;
+    P := Totalizadores.IndexOfName(NomeTot);
+    if P >= 0 then
+    begin
+      Result := StrToFloatDef(Totalizadores.ValueFromIndex[P], -1);
+      Totalizadores.Delete(P);  // Remove para não achar novamente
+    end;
+  end;
+
+begin
+{
+------------------------------------------------
+                   RAZÃO SOCIAL
+                  NOME FANTASIA
+                 EMDEREÇO E BAIRRO
+            CEP: 99999-999 CIDADE - UF
+     CNPJ: 99.999.999/9999-99 IE: ISENTO
+------------------------------------------------
+19/08/2016 19:03:07V               COO:000005080
+
+             LEITURA MEMÓRIA FISCAL
+              REDUÇÃO: 0192 a 0192
+
+Geral de Operação Não-Fiscal:          000001884
+Contador de Reduções Z:                     0194
+Contador de Reinício de Operação:            001
+Contador de Fita-Detalhe:                 000000
+Contador Geral de CF Cancelado              0558
+Tentativas Mal Suced. de Sub. SB            0000
+------------------INTERVENÇÕES------------------
+CRO  TIPO  DATA       HORA       CRZ   COO
+001  L     10/07/2013 11:34:57   0000  000000003
+-----------IMPRESSÃO DE FITA DETALHE------------
+CFD      DATA       HORA        COOi     COOf
+---------------REDUÇÕES Z DIÁRIAS---------------
+CRZ    TR   CRO   COO      DATA       HORA
+CFC                       VENDA BRUTA DIÁRIA(R$)
+DT = desconto ICMS      DS = desconto ISSQN
+AT = acréscimo ICMS     AS = acréscimo ISSQN
+CT = canc. ICMS         CS = canc. ISSQN
+ONE = Operação não-fiscal de entrada
+ONS = Operação não-fiscal de saída
+------------------------------------------------
+CRZ    TR   CRO   COO      DATA       HORA
+0192   0   001  000005067  04/07/2016 08:32:35V
+CFC                       VENDA BRUTA DIÁRIA(R$)
+000005                                     51,66
+DT = 0,00               DS = 0,00
+AT = 0,00               AS = 0,00
+CT = 49,66              CS = 0,00
+T18,00% = 2,00          T18,00% = 0,00
+T07,00% = 0,00          T12,00% = 0,00
+T25,00% = 0,00          T17,00% = 0,00
+T03,20% = 0,00          T05,20% = 0,00
+T12,00% = 0,00          T07,00% = 0,00
+T25,00% = 0,00          T04,00% = 0,00
+F1 = 0,00               I1 = 0,00
+N1 = 0,00               S05,00% = 0,00
+S12,00% = 0,00          S08,00% = 0,00
+FS1 = 0,00              IS1 = 0,00
+NS1 = 0,00
+ONE = 0,00              ONS = 0,00
+------------------------------------------------
+-----------TOTAL DO MES JULHO DE 2016-----------
+Venda Bruta(R$)                            51,66
+DT = 0,00               DS = 0,00
+AT = 0,00               AS = 0,00
+CT = 49,66              CS = 0,00
+T03,20% = 0,00          T04,00% = 0,00
+T05,20% = 0,00          T07,00% = 0,00
+T12,00% = 0,00          T17,00% = 0,00
+T18,00% = 2,00          T25,00% = 0,00
+F1 = 0,00               I1 = 0,00
+N1 = 0,00               S05,00% = 0,00
+S08,00% = 0,00          S12,00% = 0,00
+FS1 = 0,00              IS1 = 0,00
+NS1 = 0,00
+ONE = 0,00              ONS = 0,00
+-----------TOTAL DO PERÍODO DA LEITURA----------
+Venda Bruta(R$)                            51,66
+DT = 0,00               DS = 0,00
+AT = 0,00               AS = 0,00
+CT = 49,66              CS = 0,00
+T03,20% = 0,00          T04,00% = 0,00
+T05,20% = 0,00          T07,00% = 0,00
+T12,00% = 0,00          T17,00% = 0,00
+T18,00% = 2,00          T25,00% = 0,00
+F1 = 0,00               I1 = 0,00
+N1 = 0,00               S05,00% = 0,00
+S08,00% = 0,00          S12,00% = 0,00
+FS1 = 0,00              IS1 = 0,00
+NS1 = 0,00
+ONE = 0,00              ONS = 0,00
+------------------DADOS GERAIS------------------
+Quantidade de Reduções Restantes            3456
+MOEDA: R$                   19/06/2013 14:00:06
+-----------------SOFTWARE BÁSICO----------------
+01.00.00                    19/06/2013 14:00:02
+--------TENTATIVAS DE SUBSTITUIÇÃO DO SB--------
+----------------CODIFICAÇÃO DO GT---------------
+        a partir de: 19/06/2013 14:00:06
+0=Q, 1=W, 2=E, 3=R, 4=T, 5=Y, 6=U, 7=I, 8=O, 9=P
+------------------------------------------------
+MD-5:5AA6AEFF751859376631060EF2A86125
+DJPDV 1.4.3e
+------------------------------------------------
+  DUn6OqqRcrrxj5+x67ool9l4quiUhb6x3vWwwdOLXCU=
+MARCA: BEMATECH MOD: MP-4200 TH FI ECF-IF  VERSÃO
+: 01.00.00
+ECF: 001 LJ:      OPR: SUPER USUÃRIO (ALTE
+QQQQQQQQQWWQWERYYP          19/08/2016 19:03:08V
+FAB: BE101310100700000348                    BR
+---------------------------------
+  }
+
+  Totalizadores := TStringList.Create;
+  SL := TStringList.Create;
+  try
+    LeituraMemoriaFiscalSerial(ANumCRZ, ANumCRZ, SL);
+
+    //DEBUG
+    //SL.SaveToFile('C:\TEMP\LeituraMemoriaFiscal'+IntToStrZero(ANumCRZ,4)+'.txt');
+
+    with fpDadosReducaoZClass do
+    begin
+      I := 0;
+      // Achando a linha de inicio //
+      if not EncontrarInicioLinha('CRZ') then
+        Exit;
+
+      if not EncontrarInicioLinha(IntToStrZero(ANumCRZ, 4)) then
+        Exit;
+
+      CRZ  := StrToIntDef( copy(SL[I],1 ,4), -1 ) ;
+      CRO  := StrToIntDef( copy(SL[I],12,3), -1 ) ;
+      COO  := StrToIntDef( copy(SL[I],17,9), -1 ) ;
+      AStr := copy(SL[I],28,19);
+      try
+        DataDoMovimento := EncodeDate(StrToInt(copy(AStr, 7,4)),   // Ano
+                                      StrToInt(copy(AStr, 4,2)),   // Mes
+                                      StrToInt(copy(AStr, 1,2)));  // Dia
+      except
+        DataDoMovimento := 0;
+      end;
+
+      Inc(I, 2);
+      CFC              := StrToIntDef( copy(SL[I],1, 6), -1 ) ;
+      ValorVendaBruta  := ValorStrToFloat( copy(SL[I],8,Length(SL[I])) ) ;
+
+      Inc(I);
+      ExtrairTotalizadores;
+
+      ValReg := AcharValorTotalizador( 'DT' );
+      if ValReg >= 0 then
+        DescontoICMS := ValReg;
+
+      ValReg := AcharValorTotalizador( 'DS' );
+      if ValReg >= 0 then
+        DescontoISSQN := ValReg;
+
+      ValReg := AcharValorTotalizador( 'AT' );
+      if ValReg >= 0 then
+        AcrescimoICMS := ValReg;
+
+      ValReg := AcharValorTotalizador( 'AS' );
+      if ValReg >= 0 then
+        AcrescimoISSQN := ValReg;
+
+      ValReg := AcharValorTotalizador( 'CT' );
+      if ValReg >= 0 then
+        CancelamentoICMS := ValReg;
+
+      ValReg := AcharValorTotalizador( 'CS' );
+      if ValReg >= 0 then
+        CancelamentoISSQN := ValReg;
+
+      {Aliquotas}
+      {Percorrendo as aliquotas cadastradas no ECF para procurar por todas}
+      for J := 0 to fpAliquotas.Count - 1 do
+      begin
+        AliqZ := TACBrECFAliquota.Create ;
+        AliqZ.Assign( fpAliquotas[J] );
+
+        NomeTotalizador := fpAliquotas[J].Tipo+FormatFloat('00.00',fpAliquotas[J].Aliquota)+'%';
+        ValReg := AcharValorTotalizador( NomeTotalizador ) ;
+        if ValReg >= 0 then
+          AliqZ.Total := ValReg;
+
+        AdicionaAliquota( AliqZ );
+      end ;
+
+      ValReg := AcharValorTotalizador('F1');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := ValReg;
+
+      ValReg := AcharValorTotalizador('F2');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('F3');
+      if ValReg >= 0 then
+        SubstituicaoTributariaICMS := max(SubstituicaoTributariaICMS,0) + ValReg;
+
+
+      ValReg := AcharValorTotalizador('N1');
+      if ValReg >= 0 then
+        NaoTributadoICMS := ValReg;
+
+      ValReg := AcharValorTotalizador('N2');
+      if ValReg >= 0 then
+        NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('N3');
+      if ValReg >= 0 then
+        NaoTributadoICMS := max(NaoTributadoICMS,0) + ValReg;
+
+
+      ValReg := AcharValorTotalizador('I1');
+      if ValReg >= 0 then
+        IsentoICMS := ValReg;
+
+      ValReg := AcharValorTotalizador('I2');
+      if ValReg >= 0 then
+        IsentoICMS := max(IsentoICMS,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('I3');
+      if ValReg >= 0 then
+        IsentoICMS := max(IsentoICMS,0) + ValReg;
+
+
+      ValReg := AcharValorTotalizador('FS1');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := ValReg;
+
+      ValReg := AcharValorTotalizador('FS2');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('FS3');
+      if ValReg >= 0 then
+        SubstituicaoTributariaISSQN := max(SubstituicaoTributariaISSQN,0) + ValReg;
+
+
+      ValReg := AcharValorTotalizador('NS1');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := ValReg;
+
+      ValReg := AcharValorTotalizador('NS2');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('NS3');
+      if ValReg >= 0 then
+        NaoTributadoISSQN := max(NaoTributadoISSQN,0) + ValReg;
+
+
+      ValReg := AcharValorTotalizador('IS1');
+      if ValReg >= 0 then
+        IsentoISSQN := ValReg;
+
+      ValReg := AcharValorTotalizador('IS2');
+      if ValReg >= 0 then
+        IsentoISSQN := max(IsentoISSQN,0) + ValReg;
+
+      ValReg := AcharValorTotalizador('IS3');
+      if ValReg >= 0 then
+        IsentoISSQN := max(IsentoISSQN,0) + ValReg;
+    end;
+  finally
+    SL.Free;
+    Totalizadores.Free;
+  end
+end;
 
 function TACBrECFEscECF.GetVendaBruta: Double;
 var
@@ -3724,15 +4272,16 @@ var
 begin
   RetornaInfoECF( '4|2' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 procedure TACBrECFEscECF.FechaNaoFiscal(Observacao: AnsiString;
    IndiceBMP: Integer);
 var
-  Obs: String;
+  Obs: AnsiString;
 begin
   Obs := Observacao ;
+  AjustaLinhasColunas(Obs, 8);
 
   if not Consumidor.Enviado then
      EnviaConsumidor;
@@ -3745,9 +4294,13 @@ begin
   end ;
   EnviaComando ;
 
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  if (EscECFResposta.Params.Count > 2) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+  end;
+
   fsEmPagamento := false ;
   SalvaRespostasMemoria(False);
 end;
@@ -3760,6 +4313,8 @@ end;
 procedure TACBrECFEscECF.Sangria(const Valor: Double; Obs: AnsiString;
    DescricaoCNF: String; DescricaoFPG: String; IndiceBMP: Integer);
 begin
+  AjustaLinhasColunas(Obs, 8);
+
   EscECFComando.CMD := 23;
   EscECFComando.AddParamInteger( 2 ) ;  // Sangria
   EscECFComando.AddParamDouble( Valor ) ;
@@ -3767,16 +4322,22 @@ begin
   EnviaComando;
 
   RespostasComando.Clear;
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
 procedure TACBrECFEscECF.Suprimento(const Valor: Double; Obs: AnsiString;
    DescricaoCNF: String; DescricaoFPG: String; IndiceBMP: Integer);
 begin
+  AjustaLinhasColunas(Obs, 8);
+
   EscECFComando.CMD := 23;
   EscECFComando.AddParamInteger( 1 ) ;  // Fundo de Troco
   EscECFComando.AddParamDouble( Valor ) ;
@@ -3784,10 +4345,14 @@ begin
   EnviaComando;
 
   RespostasComando.Clear;
-  RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
-  RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
-  RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
-  RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  if (EscECFResposta.Params.Count > 3) then
+  begin
+    RespostasComando.AddField( 'COO',        EscECFResposta.Params[0] );
+    RespostasComando.AddField( 'DataHora',   EscECFResposta.Params[1] );
+    RespostasComando.AddField( 'VendaBruta', EscECFResposta.Params[2] );
+    RespostasComando.AddField( 'NumSerie',   EscECFResposta.Params[3] );
+  end;
+
   SalvaRespostasMemoria(False);
 end;
 
@@ -3821,15 +4386,19 @@ begin
         AddParamString(LeftStr(Consumidor.Nome,30)) ;
         AddParamString(LeftStr(Consumidor.Endereco,79)) ;
       end;
-      EnviaComando;
 
+      EnviaComando;
       RespostasComando.Clear;
-      RespostasComando.AddField( 'COO',            EscECFResposta.Params[0] );
-      RespostasComando.AddField( 'DataHora',       EscECFResposta.Params[1] );
-      RespostasComando.AddField( 'VendaBruta',     EscECFResposta.Params[2] );
-      RespostasComando.AddField( 'NumSerie',       EscECFResposta.Params[3] );
-      RespostasComando.AddField( 'SeqPagto',       EscECFResposta.Params[4] );
-      RespostasComando.AddField( 'NumParcela',     EscECFResposta.Params[5] );
+
+      if (EscECFResposta.Params.Count > 5) then
+      begin
+        RespostasComando.AddField( 'COO',            EscECFResposta.Params[0] );
+        RespostasComando.AddField( 'DataHora',       EscECFResposta.Params[1] );
+        RespostasComando.AddField( 'VendaBruta',     EscECFResposta.Params[2] );
+        RespostasComando.AddField( 'NumSerie',       EscECFResposta.Params[3] );
+        RespostasComando.AddField( 'SeqPagto',       EscECFResposta.Params[4] );
+        RespostasComando.AddField( 'NumParcela',     EscECFResposta.Params[5] );
+      end;
 
       FechaRelatorio;
 
@@ -3852,7 +4421,7 @@ var
 begin
   RetornaInfoECF( '4|8' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 function TACBrECFEscECF.GetTotalCancelamentos: Double;
@@ -3861,7 +4430,7 @@ var
 begin
   RetornaInfoECF( '4|3' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 function TACBrECFEscECF.GetTotalDescontos: Double;
@@ -3870,7 +4439,7 @@ var
 begin
   RetornaInfoECF( '4|4' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 function TACBrECFEscECF.GetTotalTroco: Double;
@@ -3879,7 +4448,7 @@ var
 begin
   RetornaInfoECF( '7|21' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end;
 
 function TACBrECFEscECF.GetTotalIsencao: Double;
@@ -3894,7 +4463,7 @@ var
 begin
   RetornaInfoECF( '4|9' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end ;
 
 function TACBrECFEscECF.GetTotalCancelamentosISSQN : Double ;
@@ -3903,7 +4472,7 @@ var
 begin
   RetornaInfoECF( '4|5' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end ;
 
 function TACBrECFEscECF.GetTotalDescontosISSQN : Double ;
@@ -3912,7 +4481,7 @@ var
 begin
   RetornaInfoECF( '4|6' ) ;
   StrValue := EscECFResposta.Params[1] ;
-  Result   := StrToIntDef( StrValue, 0 ) / 100;
+  Result   := StrToFloatDef( StrValue, 0 ) / 100;
 end ;
 
 function TACBrECFEscECF.GetTotalIsencaoISSQN : Double ;
@@ -4016,13 +4585,14 @@ end;
 function TACBrECFEscECF.AchaICMSAliquota(var AliquotaICMS: String
    ): TACBrECFAliquota;
 begin
-  if (upcase(AliquotaICMS[1]) = 'T') then
-    AliquotaICMS := 'TT'+PadLeft(copy(AliquotaICMS,2,2),2,'0') ; {Indice}
+  { EscECF usa a letra T/S no Indice, e ACBrECFClass.AchaICMSAliquota(), que é
+   chamada logo abaixo, irá remove-lo, portanto vamos adicionar um T/S extra }
+  if CharInSet(upcase(AliquotaICMS[1]) , ['T','S']) then
+    AliquotaICMS := AliquotaICMS[1]+AliquotaICMS[1]+PadLeft(copy(AliquotaICMS,2,2),2,'0') ; {Indice T01, T1, T02}
 
   Result := inherited AchaICMSAliquota( AliquotaICMS );
 end;
 
-end.
 
 { Observaçoes:
 
@@ -4034,5 +4604,8 @@ end.
 -- Total Cancelamentos OPNF
 -- Total Descontos OPNF
 }
+
+end.
+
 
 

@@ -35,9 +35,11 @@ interface
 
 uses
   SysUtils, Classes,
-  pcnAuxiliar, pcnConversao, pcnGerador;
+  pcnAuxiliar, pcnConversao, pcnGerador, pcnConsts;
 
 type
+
+  { TDistDFeInt }
 
   TDistDFeInt = class(TPersistent)
   private
@@ -48,11 +50,11 @@ type
     FCNPJCPF: String;
     FultNSU: String;
     FNSU: String;
+    FchCTe: String;
   public
     constructor Create;
     destructor Destroy; override;
     function GerarXML: boolean;
-    function ObterNomeArquivo: string;
   published
     property Gerador: TGerador       read FGerador  write FGerador;
     property Versao: String          read FVersao   write FVersao;
@@ -63,6 +65,7 @@ type
     // Usado no Grupo de informações para consultar um DF-e a partir de um
     // NSU específico.
     property NSU: String             read FNSU      write FNSU;
+    property chCTe: String           read FchCTe    write FchCTe;
   end;
 
 implementation
@@ -80,36 +83,35 @@ begin
   inherited;
 end;
 
-function TDistDFeInt.ObterNomeArquivo: string;
-var
-  DataHora: TDateTime;
-  Year, Month, Day, Hour, Min, Sec, Milli: Word;
-  AAAAMMDDTHHMMSS: string;
-begin
-  Datahora := now;
-  DecodeTime(DataHora, Hour, Min, Sec, Milli);
-  DecodeDate(DataHora, Year, Month, Day);
-  AAAAMMDDTHHMMSS := IntToStrZero(Year, 4) + IntToStrZero(Month, 2) + IntToStrZero(Day, 2) +
-    IntToStrZero(Hour, 2) + IntToStrZero(Min, 2) + IntToStrZero(Sec, 2);
-  Result := AAAAMMDDTHHMMSS + '-con-dist-dfe.xml';
-end;
-
 function TDistDFeInt.GerarXML: boolean;
 var
  sNSU: String;
 begin
   Gerador.ArquivoFormatoXML := '';
-  Gerador.wGrupo('distDFeInt ' + NAME_SPACE + ' versao="' + Versao + '"');
+  Gerador.wGrupo('cteDadosMsg');
+  Gerador.wGrupo('distDFeInt ' + NAME_SPACE_CTE + ' versao="' + Versao + '"');
   Gerador.wCampo(tcStr, 'A03', 'tpAmb   ', 01, 01, 1, tpAmbToStr(FtpAmb), DSC_TPAMB);
   Gerador.wCampo(tcInt, 'A04', 'cUFAutor', 02, 02, 1, FcUFAutor, '***');
   Gerador.wCampoCNPJCPF('A05', 'A06', FCNPJCPF);
 
   if FNSU = '' then
   begin
-    sNSU := IntToStrZero(StrToIntDef(FultNSU,0),15);
-    Gerador.wGrupo('distNSU');
-    Gerador.wCampo(tcStr, 'A08', 'ultNSU', 01, 15, 1, sNSU, DSC_ULTNSU);
-    Gerador.wGrupo('/distNSU');
+    if FchCTe = '' then
+    begin
+      sNSU := IntToStrZero(StrToIntDef(FultNSU,0),15);
+      Gerador.wGrupo('distNSU');
+      Gerador.wCampo(tcStr, 'A08', 'ultNSU', 01, 15, 1, sNSU, DSC_ULTNSU);
+      Gerador.wGrupo('/distNSU');
+    end
+    else begin
+      Gerador.wGrupo('consChCTe');
+      Gerador.wCampo(tcStr, 'A12', 'chCTe', 44, 44, 1, FchCTe, DSC_CHAVE);
+
+      if not ValidarChave(FchCTe) then
+        Gerador.wAlerta('A12', 'chCTe', '', 'Chave de CTe inválida');
+
+      Gerador.wGrupo('/consChCTe');
+    end;
   end
   else
   begin
@@ -120,6 +122,7 @@ begin
   end;
 
   Gerador.wGrupo('/distDFeInt');
+  Gerador.wGrupo('/cteDadosMsg');
 
   Result := (Gerador.ListaDeAlertas.Count = 0);
 end;

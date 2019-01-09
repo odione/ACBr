@@ -1,8 +1,6 @@
 object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Left = 106
-  Top = 6
   Height = 341
   Width = 539
   object frxPDFExport: TfrxPDFExport
@@ -61,7 +59,7 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
       ''
       'end.')
     StoreInDFM = False
-    OnBeforePrint = frxReportBeforePrint
+    OnProgressStart = frxReportProgressStart
     Left = 50
     Top = 36
   end
@@ -105,5 +103,12 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     BCDToCurrency = False
     Left = 192
     Top = 160
+  end
+  object frxJPEGExport: TfrxJPEGExport
+    UseFileCache = True
+    ShowProgress = True
+    OverwritePrompt = False
+    Left = 40
+    Top = 248
   end
 end

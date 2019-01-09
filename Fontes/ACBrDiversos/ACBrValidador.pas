@@ -107,6 +107,9 @@ type
   end;
 
   { TACBrValidador }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrValidador = class( TACBrComponent )
   private
     { Propriedades do Componente ACBrValidador }
@@ -131,7 +134,7 @@ type
     
     Procedure ValidarCPF  ;
     Procedure ValidarCNPJ ;
-    Procedure ValidarUF( UF : String) ;
+    Procedure ValidarUF(const UF : String) ;
     Procedure ValidarIE ;
     Procedure ValidarCheque ;
     Procedure ValidarPIS  ;
@@ -186,23 +189,23 @@ function ValidarPrefixoGTIN( const Documento : String ) : String ;
 function ValidarRenavam( const Documento : String ) : String ;
 function ValidarEmail (const Documento : string ) : String;
 function ValidarCEP(const ACEP, AUF: String): String; overload;
-function ValidarCEP(const ACEP: Integer; AUF: String): String; overload;
+function ValidarCEP(const ACEP: Integer; const AUF: String): String; overload;
 function ValidarCNH(const Documento: String) : String ;
 function ValidarUF(const AUF: String): String;
 
-Function FormatarFone( const AValue : String; DDDPadrao: String = '' ): String;
+Function FormatarFone( const AValue : String; const DDDPadrao: String = '' ): String;
 Function FormatarCPF( const AValue : String )    : String ;
 Function FormatarCNPJ( const AValue : String )   : String ;
 function FormatarCNPJouCPF(const AValue: String)    : String;
 function FormatarPlaca(const AValue: string): string;
-Function FormatarIE( const AValue: String; UF : String ) : String ;
+Function FormatarIE( const AValue: String; const UF : String ) : String ;
 Function FormatarCheque( const AValue : String ) : String ;
 Function FormatarPIS( const AValue : String )    : String ;
 Function FormatarCEP( const AValue: String )     : String ; overload;
 Function FormatarCEP( const AValue: Integer )    : String ; overload;
 function FormatarSUFRAMA( const AValue: String ) : String ;
 
-Function FormatarMascaraNumerica(ANumValue, Mascara: String): String;
+Function FormatarMascaraNumerica(ANumValue: string; const Mascara: String): String;
 
 Function OnlyCNPJorCPF( const Documento : String ) : String ;
 
@@ -212,7 +215,7 @@ function FormatarDocumento( const TipoDocto : TACBrValTipoDocto;
   const Documento : String) : String ;
 
 function Modulo11(const Documento: string; const Peso: Integer = 2; const Base: Integer = 9): String;
-function MascaraIE(AValue : String; UF : String) : String;
+function MascaraIE(const AValue : String; UF : String) : String;
 
 implementation
 uses
@@ -288,9 +291,9 @@ begin
   Result := ValidarDocumento( docCEP, ACEP, AUF);
 end;
 
-function ValidarCEP(const ACEP: Integer; AUF: String): String;
+function ValidarCEP(const ACEP: Integer; const AUF: String): String;
 begin
-  ValidarCEP( FormatarCEP(ACEP), AUF );
+  Result := ValidarCEP( FormatarCEP(ACEP), AUF );
 end;
 
 function ValidarCNH(const Documento: String): String ;
@@ -349,7 +352,7 @@ begin
   end;
 end;
 
-function FormatarFone(const AValue : String; DDDPadrao: String = '') : String ;
+function FormatarFone(const AValue : String; const DDDPadrao: String = '') : String ;
 var
   FoneNum, Mascara : string;
   ComecaComZero: Boolean;
@@ -436,7 +439,7 @@ begin
  Result := Copy(S, 1, 3) + '-' + Copy(S, 4, 4);
 end;
 
-function MascaraIE(AValue : String; UF : String) : String;
+function MascaraIE(const AValue : String; UF : String) : String;
 var
  LenDoc : Integer;
  Mascara : String;
@@ -477,7 +480,7 @@ begin
 
 end;
 
-function FormatarIE(const AValue: String; UF: String): String;
+function FormatarIE(const AValue: String; const UF: String): String;
 Var
   Mascara : String ;
 Begin
@@ -530,7 +533,7 @@ begin
   Result := AValue;
 end;
 
-function FormatarMascaraNumerica(ANumValue, Mascara: String): String;
+function FormatarMascaraNumerica(ANumValue: string; const Mascara: String): String;
 var
   LenMas, LenDoc: Integer;
   I, J: Integer;
@@ -1389,7 +1392,7 @@ begin
 
   OK := (Tamanho > 0) and (Length(fsDocto) = Tamanho) ;
   if not OK then
-     fsMsgErro := 'Tamanho Inválido' ;
+     fsMsgErro := Format('Tamanho Inválido, esperado %d caracteres, foram digitados somente %d caracteres, verique', [Tamanho, Length(fsDocto)]) ;
 
   { Verificando os digitos nas posicoes são permitidos }
   fsDocto := PadLeft(fsDocto,14) ;
@@ -1505,7 +1508,7 @@ begin
 
 end;
 
-Procedure TACBrValidador.ValidarUF(UF: String) ;
+Procedure TACBrValidador.ValidarUF(const UF: String) ;
 begin
  if pos( ','+UF+',', cUFsValidas) = 0 then
     fsMsgErro := 'UF inválido: '+UF ;
@@ -1701,7 +1704,9 @@ begin
       fsMsgErro := 'Prefixo do código GTIN inválido!'
     else
     begin
+{$IFNDEF COMPILER23_UP}
       bEncontrado := False;
+{$ENDIF}
       for I := Low(ARRAY_PREFIX_GTIN) to High(ARRAY_PREFIX_GTIN) do
       begin
         bEncontrado :=
@@ -2023,5 +2028,47 @@ begin
   fsFormulaDigito := frModulo11 ;
 end;
 
+(*{$IfDef HAS_REGEXPR}
+const
+  cEmailRegex = '^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}' +
+                '\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\' +
+                '.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$';
+
+Uses
+  {$IfDef HAS_REGEXPR}
+   {$IfDef FPC} RegExpr, {$Else} RegularExpressions,{$EndIf}
+  {$EndIf}
+
+Implementation
+
+{$IfDef FPC}
+procedure TACBrValidador.ValidarEmail;
+var
+  vRegex: TRegExpr;
+begin
+  vRegex := TRegExpr.Create;
+  try
+    vRegex.Expression := cEmailRegex;
+    if not vRegex.Exec(Documento) then
+      fsMsgErro := 'e-mail inválido!'
+    else
+      fsMsgErro := '';
+  finally
+    vRegex.Free;
+  end;
+end;
+{$Else}
+procedure TACBrValidador.ValidarEmail;
+var
+  vRegex: TRegEx;
+begin
+  if not vRegex.IsMatch(Documento, cEmailRegex) then
+    fsMsgErro := 'e-mail inválido!'
+  else
+    fsMsgErro := '';
+end;
+{$EndIf}
+{$EndIf}
+*)
 end.
 

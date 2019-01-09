@@ -220,7 +220,7 @@ begin
                'REMESSA'                                          + // Literal de Remessa
                '01'                                               + // Código do Tipo de Serviço
                PadRight('COBRANCA', 15 )                          +
-               PadLeft(OnlyNumber(Copy(Trim(Conta),1,11)), 11,'0')+ // Codigo da Empresa no Banco
+               PadLeft(OnlyNumber(Copy(Trim(Conta),2,11)+trim(ContaDigito)), 11,'0')+ // Codigo da Empresa no Banco
                space(9)                                           + // COMPLEMENTO DO REGISTRO
                PadRight(Nome, 30)                                 + // Nome da Empresa
                IntToStrzero(Numero,3)                             +
@@ -334,7 +334,7 @@ begin
         wLinha := '1'                                                         +  // ID Registro
                   ATipoInscricao                                              +  // TIPO INSCRICAO EMPRESA(CNPJ, CPF);
                   PadRight(OnlyNumber(Cedente.CNPJCPF), 14, '0')              +
-                  PadLeft(OnlyNumber(Copy(Trim(Cedente.Conta),1,11)), 11, '0')+ // Codigo da Empresa no Banco
+                  PadLeft(OnlyNumber(Copy(Trim(Cedente.Conta),2,11)+trim(cedente.ContaDigito)), 11, '0')+ // Codigo da Empresa no Banco
                   Space(9)                                                    +
                   PadRight(SeuNumero,25)                                       +  // identificacao da operacao na empresa
                   PadRight(Copy(NossoNumero, 1, 8) +
@@ -433,15 +433,15 @@ begin
           (rConta <> RightStr(OnlyNumber(Cedente.Conta), Length(rConta))) then
          raise Exception.Create(ACBrStr('Agencia\Conta do arquivo inválido'));
 
-      Cedente.Nome    := rCedente;
-      Cedente.CNPJCPF := rCNPJCPF;
-      Cedente.Conta   := rConta;
-
       case StrToIntDef(Copy(ARetorno[1],2,2),0) of
          01: Cedente.TipoInscricao:= pFisica;
          else
             Cedente.TipoInscricao:= pJuridica;
       end;
+
+      Cedente.Nome    := rCedente;
+      Cedente.CNPJCPF := rCNPJCPF;
+      Cedente.Conta   := rConta;
 
       ACBrBanco.ACBrBoleto.ListadeBoletos.Clear;
    end;

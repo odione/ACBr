@@ -51,6 +51,9 @@ uses
   SysUtils, Classes, ACBrBase, ACBrUtil;
 
 type
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrCMC7 = class(TACBrComponent)
   private
     { Private declarations }
@@ -70,7 +73,7 @@ type
     FC1          : Integer;
     FC2          : Integer;
     FC3          : Integer;
-    function DigitosaIgnorarConta(Banco: String) : integer;
+    function DigitosaIgnorarConta(const Banco: String) : integer;
     procedure SetCMC7(Banda: String);
     procedure ZeraCampos ;
   protected
@@ -79,8 +82,8 @@ type
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     Destructor Destroy  ; override ;
-    Procedure MontaCMC7(pBanco,pAgencia,pConta,pNrCheque,
-       pCamaraCompesacao : String; pTipificacao : String = '5') ; overload ;
+    Procedure MontaCMC7(pBanco, pAgencia, pConta, pNrCheque, pCamaraCompesacao: string;
+      const pTipificacao : String = '5') ; overload ;
     Procedure MontaCMC7(Bloco1, Bloco2, Bloco3 : String) ; overload ;
   published
     { Published declarations }
@@ -104,12 +107,15 @@ type
 
 function ValidaCMC7(CMC7: String) : Boolean;
 function FormataCMC7(const ACMC7: String): String;
-function CalculaC1(Chave: String): Integer;
-function CalculaC2(Chave: String): Integer;
-function CalculaC3(Chave: String): Integer;
-function CalcDigitoCMC7(Documento : String; Inicial, Final : integer) : String;
+function CalculaC1(const Chave: String): Integer;
+function CalculaC2(const Chave: String): Integer;
+function CalculaC3(const Chave: String): Integer;
+function CalcDigitoCMC7(const Documento : String; Inicial, Final : integer) : String;
 
 implementation
+
+uses
+  ACBrValidador;
 
 function FormataCMC7(const ACMC7: String): String;
 var
@@ -126,65 +132,31 @@ begin
     Copy(CMC7, 19, 12) + ':';
 end;
 
-function CalculaC1(Chave: String): Integer;
-var
-  I, Soma, Mult: integer;
+function CalculaC1(const Chave: String): Integer;
 begin
   if Length(Chave) <> 10 then
     raise Exception.Create('Parâmetros inválidos para o cálculo do C1.');
-  Mult := 8;
-  Soma := 0;
-  for I := 1 to Length(Chave) do
-  begin
-    Soma := Soma + (StrToInt(Chave[I]) * Mult);
-    Inc(Mult);
-    if Mult = 10 then
-      Mult := 2;
-  end;
-  Result := Soma mod 11;
+
+  Result := StrToInt( Modulo11(Chave) );
 end;
 
-function CalculaC2(Chave: String): Integer;
-var
-  I, Soma, Mult: integer;
+function CalculaC2(const Chave: String): Integer;
 begin
   if Length(Chave) <> 10 then
     raise Exception.Create('Parâmetros inválidos para o cálculo do C2.');
-  Mult := 11;
-  Soma := 0;
-  for I := 1 to Length(Chave) do
-  begin
-    Soma := Soma + (StrToInt(Chave[I]) * Mult);
-    Dec(Mult);
-  end;
-  Soma := Soma mod 11;
-  if (Soma = 0) or (Soma = 1) then
-    Result := 0
-  else
-    Result := 11 - Soma;
+
+  Result := StrToInt( Modulo11(Chave) );
 end;
 
-function CalculaC3(Chave: String): Integer;
-var
-  I, Soma, Mult: integer;
+function CalculaC3(const Chave: String): Integer;
 begin
   if Length(Chave) <> 6 then
     raise Exception.Create('Parâmetros inválidos para o cálculo do C3.');
-  Mult := 7;
-  Soma := 0;
-  for I := 1 to Length(Chave) do
-  begin
-    Soma := Soma + (StrToInt(Chave[I]) * Mult);
-    Dec(Mult);
-  end;
-  Soma := Soma mod 11;
-  if (Soma = 0) or (Soma = 1) then
-    Result := 0
-  else
-    Result := 11 - Soma;
+
+  Result := StrToInt( Modulo11(Chave) );
 end;
 
-function CalcDigitoCMC7(Documento : String; Inicial, Final : integer) : String;
+function CalcDigitoCMC7(const Documento : String; Inicial, Final : integer) : String;
 var
   I: Integer;
   vVal1, vVal2, vVal3, vSoma, vPeso : Real;
@@ -290,14 +262,14 @@ begin
   inherited Destroy ;
 end;
 
-function TACBrCMC7.DigitosaIgnorarConta(Banco: String) : integer;
+function TACBrCMC7.DigitosaIgnorarConta(const Banco: String) : integer;
 var
   CodBanco : Integer;
 begin
   CodBanco := StrToIntDef(Banco,0);
   case CodBanco of
       1: Result := 2;    // 001 - Banco do Brasil
-     33: Result := 4;    // 033 - Santander / Banespa
+     33: Result := 2;    // 033 - Santander / Banespa
      41: Result := 0;    // 041 - Banrisul Obs: Este banco utiliza todo o campo para o número da conta
     104: Result := 0;    // 104 - CEF. Utiliza apenas 7, mas os 3 primeiros são necessários para calcular o dv
 //  237: Result := 3;    // 237 - Bradesco
@@ -377,7 +349,8 @@ begin
 end;
 
 
-Procedure TACBrCMC7.MontaCMC7(pBanco,pAgencia,pConta,pNrCheque,pCamaraCompesacao,pTipificacao : String) ;
+Procedure TACBrCMC7.MontaCMC7(pBanco, pAgencia, pConta, pNrCheque, pCamaraCompesacao: string;
+      const pTipificacao : String = '5') ;
 // Dica retirada do site http://www.ramosdainformatica.com.br/art_recentes01.php?CDA=297 e ajustado conforme necessidade
 var
   vDv1, vDv2, vDv3 : string;

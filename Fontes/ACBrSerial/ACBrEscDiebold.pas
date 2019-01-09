@@ -1,40 +1,40 @@
 {******************************************************************************}
 { Projeto: Componentes ACBr                                                    }
-{  Biblioteca multiplataforma de componentes Delphi para intera√ß√£o com equipa- }
-{ mentos de Automa√ß√£o Comercial utilizados no Brasil                           }
+{  Biblioteca multiplataforma de componentes Delphi para interaÁ„o com equipa- }
+{ mentos de AutomaÁ„o Comercial utilizados no Brasil                           }
 
 { Direitos Autorais Reservados (c) 2004 Daniel Simoes de Almeida               }
 
 { Colaboradores nesse arquivo:                                                 }
 
-{  Voc√™ pode obter a √∫ltima vers√£o desse arquivo na pagina do  Projeto ACBr    }
+{  VocÍ pode obter a ˙ltima vers„o desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 
-{  Esta biblioteca √© software livre; voc√™ pode redistribu√≠-la e/ou modific√°-la }
-{ sob os termos da Licen√ßa P√∫blica Geral Menor do GNU conforme publicada pela  }
-{ Free Software Foundation; tanto a vers√£o 2.1 da Licen√ßa, ou (a seu crit√©rio) }
-{ qualquer vers√£o posterior.                                                   }
+{  Esta biblioteca È software livre; vocÍ pode redistribuÌ-la e/ou modific·-la }
+{ sob os termos da LicenÁa P˙blica Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a vers„o 2.1 da LicenÁa, ou (a seu critÈrio) }
+{ qualquer vers„o posterior.                                                   }
 
-{  Esta biblioteca √© distribu√≠da na expectativa de que seja √∫til, por√©m, SEM   }
-{ NENHUMA GARANTIA; nem mesmo a garantia impl√≠cita de COMERCIABILIDADE OU      }
-{ ADEQUA√á√ÉO A UMA FINALIDADE ESPEC√çFICA. Consulte a Licen√ßa P√∫blica Geral Menor}
-{ do GNU para mais detalhes. (Arquivo LICEN√áA.TXT ou LICENSE.TXT)              }
+{  Esta biblioteca È distribuÌda na expectativa de que seja ˙til, porÈm, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implÌcita de COMERCIABILIDADE OU      }
+{ ADEQUA«√O A UMA FINALIDADE ESPECÕFICA. Consulte a LicenÁa P˙blica Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICEN«A.TXT ou LICENSE.TXT)              }
 
-{  Voc√™ deve ter recebido uma c√≥pia da Licen√ßa P√∫blica Geral Menor do GNU junto}
-{ com esta biblioteca; se n√£o, escreva para a Free Software Foundation, Inc.,  }
-{ no endere√ßo 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
-{ Voc√™ tamb√©m pode obter uma copia da licen√ßa em:                              }
+{  VocÍ deve ter recebido uma cÛpia da LicenÁa P˙blica Geral Menor do GNU junto}
+{ com esta biblioteca; se n„o, escreva para a Free Software Foundation, Inc.,  }
+{ no endereÁo 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ VocÍ tambÈm pode obter uma copia da licenÁa em:                              }
 { http://www.opensource.org/licenses/gpl-license.php                           }
 
-{ Daniel Sim√µes de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Pra√ßa Anita Costa, 34 - Tatu√≠ - SP - 18270-410                  }
+{ Daniel Simıes de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
+{              PraÁa Anita Costa, 34 - TatuÌ - SP - 18270-410                  }
 
 {******************************************************************************}
 
 {******************************************************************************
 |* Historico
 |*
-|* 20/04/2013:  Daniel Sim√µes de Almeida
+|* 20/04/2013:  Daniel Simıes de Almeida
 |*   Inicio do desenvolvimento
 ******************************************************************************}
 
@@ -56,11 +56,10 @@ type
   public
     constructor Create(AOwner: TACBrPosPrinter);
 
-    function ComandoCodBarras(const ATag: String; ACodigo: AnsiString): AnsiString;
+    function ComandoCodBarras(const ATag: String; const ACodigo: AnsiString): AnsiString;
       override;
-    function ComandoQrCode(ACodigo: AnsiString): AnsiString; override;
+    function ComandoQrCode(const ACodigo: AnsiString): AnsiString; override;
     function ComandoLogo: AnsiString; override;
-    function ComandoFonte(TipoFonte: TACBrPosTipoFonte; Ligar: Boolean): AnsiString; override;
 
     function LerInfo: String; override;
   end;
@@ -93,48 +92,26 @@ begin
 end;
 
 function TACBrEscDiebold.ComandoCodBarras(const ATag: String;
-  ACodigo: AnsiString): AnsiString;
-var
-  P: Integer;
-  BTag: String;
+  const ACodigo: AnsiString): AnsiString;
 begin
-  // EscDiebold n√£o suporta Code128C
-  if (ATag = cTagBarraCode128a) or
-     (ATag = cTagBarraCode128b) or
-     (ATag = cTagBarraCode128c) then
-    BTag := cTagBarraCode128
-  else
-    BTag := ATag;
-
-  Result := inherited ComandoCodBarras(BTag, ACodigo);
-
-  // EscDiebold n√£o suporta nota√ß√£o para COD128 A, B e C do padr√£o EscPos
-  if (BTag = cTagBarraCode128) then
+  with fpPosPrinter.ConfigBarras do
   begin
-    P := pos('{',Result);
-    if P > 0 then
-    begin
-      Delete(Result,P,2);
-      //Alterando o caracter que cont√©m o tamanho do c√≥digo de barras
-      Result[P-1] := AnsiChr(Length(ACodigo));
-    end;
-  end;
+    Result := ComandoCodBarrasEscPosNo128ABC(ATag, ACodigo, MostrarCodigo, Altura, LarguraLinha);
+  end ;
 end;
 
-function TACBrEscDiebold.ComandoQrCode(ACodigo: AnsiString): AnsiString;
+function TACBrEscDiebold.ComandoQrCode(const ACodigo: AnsiString): AnsiString;
 begin
   with fpPosPrinter.ConfigQRCode do
   begin
-    if fpPosPrinter.Alinhamento = alEsquerda then
-      Result := GS + '(k' + #3 + #0 + '1B0'   // A esquerda
-    else
-      Result := GS + '(k' + #3 + #0 + '1B1';  // Centralizar
+    Result := ESC + '(k' + #3 + #0 + '1B' +
+              ifthen(fpPosPrinter.Alinhamento = alEsquerda, '0', '1'); // 0 - A esquerda, 1 - Centralizar
 
-     Result := Result +
-               GS + '(k' + #3 + #0 + '1C' + AnsiChr(LarguraModulo) +   // Largura Modulo
-               GS + '(k' + #3 + #0 + '1E' + IntToStr(ErrorLevel) + // Error Level
-               GS + '(k' + IntToLEStr(length(ACodigo)+3)+'1P0' + ACodigo +  // Codifica
-               GS + '(k' + #3 + #0 +'1Q0';  // Imprime
+    Result := Result +
+              ESC + '(k' + #3 + #0 + '1C' + AnsiChr(LarguraModulo) +   // Largura Modulo
+              ESC + '(k' + #3 + #0 + '1E' + IntToStr(ErrorLevel) + // Error Level
+              ESC + '(k' + IntToLEStr(length(ACodigo)+3)+'1P0' + ACodigo +  // Codifica
+              ESC + '(k' + #3 + #0 +'1Q0';  // Imprime
   end;
 end;
 
@@ -144,49 +121,6 @@ begin
   begin
     Result := GS + '09' + AnsiChr( min(StrToIntDef( chr(KeyCode1) + chr(KeyCode2), 0), 9));
   end;
-end;
-
-function TACBrEscDiebold.ComandoFonte(TipoFonte: TACBrPosTipoFonte;
-  Ligar: Boolean): AnsiString;
-var
-  NovoFonteStatus: TACBrPosFonte;
-  AByte: Byte;
-begin
-  Result := '';
-  NovoFonteStatus := fpPosPrinter.FonteStatus;
-  if Ligar then
-    NovoFonteStatus := NovoFonteStatus + [TipoFonte]
-  else
-    NovoFonteStatus := NovoFonteStatus - [TipoFonte];
-
-  if TipoFonte in [ftCondensado, ftNegrito, ftExpandido, ftSublinhado] then
-  begin
-    AByte := 0;
-
-    if ftCondensado in NovoFonteStatus then
-      AByte := AByte + 1;
-
-    if ftNegrito in NovoFonteStatus then
-      AByte := AByte + 8;
-
-    if ftExpandido in NovoFonteStatus then
-      AByte := AByte + 32;
-
-    if ftSublinhado in NovoFonteStatus then
-      AByte := AByte + 128;
-
-    Result := ESC + '!' + AnsiChr(AByte);
-
-    // ESC ! desliga Invertido, enviando o comando novamente
-    if ftInvertido in NovoFonteStatus then
-      Result := Result + Cmd.LigaInvertido;
-
-    if ftItalico in NovoFonteStatus then
-      Result := Result + Cmd.LigaItalico;
-  end
-  else
-    Result := inherited ComandoFonte(TipoFonte, Ligar);
-
 end;
 
 function TACBrEscDiebold.LerInfo: String;
@@ -205,7 +139,7 @@ begin
 
   AddInfo('Fabricante', 'Diebold');
 
-  // Aparentemente, Diebold n√£o tem comandos para retornar Informa√ß√µes sobre o equipamento
+  // Aparentemente, Diebold n„o tem comandos para retornar InformaÁıes sobre o equipamento
   //
   //Ret := fpPosPrinter.TxRx( GS + 'IA', 0, 500, True );
   //AddInfo('Firmware', Ret);

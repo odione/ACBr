@@ -62,7 +62,8 @@ uses ACBrBase, ACBrDevice, ACBrDISClass,  {Units da ACBr}
 type
 
 TACBrDISModelo = ( disNenhum, disGertecSerial, disGertecTeclado,
-                   disKeytecTeclado, disSmakTeclado, disGertec65Lib ) ;
+                   disKeytecTeclado, disSmakTeclado, disGertec65Lib,
+                   disSmakTecladoLib, disSmakSerial) ;
 TACBrDISAlinhamento = (alEsquerda, alDireita, alCentro, alJustificado) ;
 
 TACBrDISEfeitoExibir = (efeEsquerda_Direita, efeDireita_Esquerda) ;
@@ -128,7 +129,9 @@ TACBrDISLinhas = class(TObjectList)
 { Componente ACBrDIS }
 
 { TACBrDIS }
-
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
 TACBrDIS = class( TACBrComponent )
   private
     fsDevice  : TACBrDevice ;   { SubComponente ACBrDevice }
@@ -155,7 +158,7 @@ TACBrDIS = class( TACBrComponent )
 
     procedure AtualizaLinhas(Sender: TObject);
     procedure DoOnAtualizar(Linha : Integer );
-    Function AjustaTexto( Texto : String; Alin : TACBrDISAlinhamento ) : String ;
+    Function AjustaTexto( const Texto : String; Alin : TACBrDISAlinhamento ) : String ;
 
     procedure SetModelo(const Value: TACBrDISModelo);
     procedure SetPorta(const Value: String);
@@ -197,7 +200,7 @@ TACBrDIS = class( TACBrComponent )
     procedure PosicionarCursor( Linha, Coluna: Integer ) ;
     procedure Escrever( AText : String ) ;
     procedure ExibirLinha( Linha : Integer ; AText : String ) ; overload ;
-    procedure ExibirLinha( Linha : Integer ; AText : String;
+    procedure ExibirLinha( Linha : Integer ; const AText : String;
        Alinhamento : TACBrDISAlinhamento ) ; overload ;
     procedure ExibirLinha( Linha : Integer ; AText : String;
        Efeito : TACBrDISEfeitoExibir ) ; overload ;
@@ -235,7 +238,8 @@ end ;
 
 implementation
 Uses ACBrUtil, ACBrDISGertecSerial, ACBrDISGertecTeclado, ACBrDISKeytecTeclado,
-     ACBrDISSmakTeclado, ACBrDISGertecTEC65lib,
+     ACBrDISSmakTeclado, ACBrDISGertecTEC65lib, ACBrDISSmakTecladoLib,
+     ACBrDISSmakSerial,
      {$IFDEF COMPILER6_UP} StrUtils {$ELSE} ACBrD5{$ENDIF},
      Math;
 
@@ -396,6 +400,8 @@ begin
      disKeytecTeclado   : fsDIS := TACBrDISKeytecTeclado.Create( Self );
      disSmakTeclado     : fsDIS := TACBrDISSmakTeclado.Create( Self );
      disGertec65Lib     : fsDIS := TACBrDISGertecTEC65lib.Create( Self );
+     disSmakTecladoLib  : fsDIS := TACBrDISSmakTecladoLib.Create( Self );
+     disSmakSerial      : fsDIS := TACBrDISSmakSerial.Create( Self );
   else
      fsDIS := TACBrDISClass.create( Self ) ;
   end;
@@ -498,7 +504,7 @@ begin
   fsDIS.LinhasCount := Value ;
 end;
 
-Function TACBrDIS.AjustaTexto(Texto: String;
+Function TACBrDIS.AjustaTexto(const Texto: String;
   Alin: TACBrDISAlinhamento) : String ;
 begin
   Result := Texto ;
@@ -554,7 +560,7 @@ begin
   end ;
 end;
 
-procedure TACBrDIS.ExibirLinha(Linha: Integer; AText: String;
+procedure TACBrDIS.ExibirLinha(Linha: Integer; const AText: String;
   Alinhamento: TACBrDISAlinhamento);
 Var wAlinhamento : TACBrDISAlinhamento ;
 begin
@@ -721,7 +727,7 @@ begin
      if Length(TextoComp)  < (Colunas - 4) then
      begin
         try
-           if Trim(Linhas[ Cursor.X-1 ].Texto) <> '' then ;
+           if Trim(Linhas[ Cursor.X-1 ].Texto) <> '' then
               LimparLinha( Cursor.X );
 
            PosicionarCursor( Cursor.X, (Colunas - Length(TrimLeft(AText)) + 1));

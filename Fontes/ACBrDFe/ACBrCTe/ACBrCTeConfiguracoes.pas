@@ -42,7 +42,8 @@ unit ACBrCTeConfiguracoes;
 interface
 
 uses
-  Classes, Sysutils, ACBrDFeConfiguracoes, pcnConversao, pcteConversaoCTe;
+  Classes, Sysutils, IniFiles,
+  ACBrDFeConfiguracoes, pcnConversao, pcteConversaoCTe;
 
 type
 
@@ -50,14 +51,21 @@ type
 
   TGeralConfCTe = class(TGeralConf)
   private
+    FModeloDF: TModeloCTe;
+    FModeloDFCodigo: integer;
     FVersaoDF: TVersaoCTe;
 
     procedure SetVersaoDF(const Value: TVersaoCTe);
+    procedure SetModeloDF(const Value: TModeloCTe);
   public
     constructor Create(AOwner: TConfiguracoes); override;
     procedure Assign(DeGeralConfCTe: TGeralConfCTe); reintroduce;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
   published
+    property ModeloDF: TModeloCTe read FModeloDF write SetModeloDF default moCTe;
+    property ModeloDFCodigo: integer read FModeloDFCodigo;
     property VersaoDF: TVersaoCTe read FVersaoDF write SetVersaoDF default ve200;
   end;
 
@@ -81,25 +89,31 @@ type
   private
     FEmissaoPathCTe: Boolean;
     FSalvarApenasCTeProcessados: Boolean;
+    FNormatizarMunicipios: Boolean;
     FPathCTe: String;
     FPathInu: String;
     FPathEvento: String;
+    FPathArquivoMunicipios: String;
     FDownloadCTe: TDownloadConfCTe;
   public
     constructor Create(AOwner: TConfiguracoes); override;
     procedure Assign(DeArquivosConfCTe: TArquivosConfCTe); reintroduce;
     destructor Destroy; override;
+    procedure GravarIni(const AIni: TCustomIniFile); override;
+    procedure LerIni(const AIni: TCustomIniFile); override;
 
-    function GetPathCTe(Data: TDateTime = 0; CNPJ: String = ''): String;
+    function GetPathCTe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 0): String;
     function GetPathInu(Data: TDateTime = 0; CNPJ: String = ''): String;
     function GetPathEvento(tipoEvento: TpcnTpEvento; CNPJ: String = ''; Data: TDateTime = 0): String;
     function GetPathDownload(xNome: String = ''; CNPJ: String = ''; Data: TDateTime = 0): String;
   published
     property EmissaoPathCTe: Boolean     read FEmissaoPathCte write FEmissaoPathCTe default False;
     property SalvarApenasCTeProcessados: Boolean read FSalvarApenasCTeProcessados write FSalvarApenasCTeProcessados default False;
+    property NormatizarMunicipios: boolean read FNormatizarMunicipios write FNormatizarMunicipios default False;
     property PathCTe: String             read FPathCTe        write FPathCTe;
     property PathInu: String             read FPathInu        write FPathInu;
     property PathEvento: String          read FPathEvento     write FPathEvento;
+    property PathArquivoMunicipios: String read FPathArquivoMunicipios write FPathArquivoMunicipios;
     property DownloadCTe: TDownloadConfCTe read FDownloadCTe write FDownloadCTe;
   end;
 
@@ -127,7 +141,7 @@ type
 implementation
 
 uses
-  ACBrUtil, DateUtils;
+  ACBrUtil, ACBrCTe, DateUtils;
 
 { TConfiguracoesCTe }
 
@@ -135,6 +149,7 @@ constructor TConfiguracoesCTe.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
+  FPSessaoIni := 'CTe';
   WebServices.ResourceName := 'ACBrCTeServicos';
 end;
 
@@ -172,6 +187,7 @@ procedure TGeralConfCTe.Assign(DeGeralConfCTe: TGeralConfCTe);
 begin
   inherited Assign(DeGeralConfCTe);
 
+  ModeloDF := DeGeralConfCTe.ModeloDF;
   FVersaoDF := DeGeralConfCTe.VersaoDF;
 end;
 
@@ -179,7 +195,31 @@ constructor TGeralConfCTe.Create(AOwner: TConfiguracoes);
 begin
   Inherited Create(AOwner);
 
+  FModeloDF := moCTe;
+  FModeloDFCodigo := StrToInt(ModeloCTeToStr(FModeloDF));
   FVersaoDF := ve200;
+end;
+
+procedure TGeralConfCTe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'ModeloDF', Integer(ModeloDF));
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF));
+end;
+
+procedure TGeralConfCTe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  ModeloDF := TModeloCTe(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'ModeloDF', Integer(ModeloDF)));
+  VersaoDF := TVersaoCTe(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'VersaoDF', Integer(VersaoDF)));
+end;
+
+procedure TGeralConfCTe.SetModeloDF(const Value: TModeloCTe);
+begin
+  FModeloDF := Value;
+  FModeloDFCodigo := StrToInt(ModeloCTeToStr(FModeloDF));
 end;
 
 procedure TGeralConfCTe.SetVersaoDF(const Value: TVersaoCTe);
@@ -195,9 +235,11 @@ begin
 
   FEmissaoPathCTe := DeArquivosConfCTe.EmissaoPathCTe;
   FSalvarApenasCTeProcessados := DeArquivosConfCTe.SalvarApenasCTeProcessados;
+  FNormatizarMunicipios        := DeArquivosConfCTe.NormatizarMunicipios;
   FPathCTe := DeArquivosConfCTe.PathCTe;
   FPathInu := DeArquivosConfCTe.PathInu;
   FPathEvento := DeArquivosConfCTe.PathEvento;
+  FPathArquivoMunicipios := DeArquivosConfCTe.PathArquivoMunicipios;
 
   FDownloadCTe.Assign(DeArquivosConfCTe.DownloadCTe);
 end;
@@ -209,9 +251,11 @@ begin
   FDownloadCTe := TDownloadConfCTe.Create;
   FEmissaoPathCTe := False;
   FSalvarApenasCTeProcessados := False;
+  FNormatizarMunicipios := False;
   FPathCTe := '';
   FPathInu := '';
   FPathEvento := '';
+  FPathArquivoMunicipios := '';
 end;
 
 destructor TArquivosConfCTe.Destroy;
@@ -221,9 +265,25 @@ begin
   inherited;
 end;
 
-function TArquivosConfCTe.GetPathCTe(Data: TDateTime = 0; CNPJ: String = ''): String;
+function TArquivosConfCTe.GetPathCTe(Data: TDateTime = 0; CNPJ: String = ''; Modelo: Integer = 0): String;
+var
+  DescricaoModelo: String;
 begin
-  Result := GetPath(FPathCTe, 'CTe', CNPJ, Data);
+  case Modelo of
+     0:
+       begin
+         if Assigned(fpConfiguracoes.Owner) then
+           DescricaoModelo := TACBrCTe(fpConfiguracoes.Owner).GetNomeModeloDFe
+         else
+           DescricaoModelo := 'CTe';
+       end;
+    57:
+      DescricaoModelo := 'CTe';
+    67:
+      DescricaoModelo := 'CTeOS';
+  end;
+
+  Result := GetPath(FPathCTe, DescricaoModelo, CNPJ, Data, DescricaoModelo);
 end;
 
 function TArquivosConfCTe.GetPathInu(Data: TDateTime = 0; CNPJ: String = ''): String;
@@ -256,11 +316,41 @@ begin
      FDownloadCTe.PathDownload := PathSalvar;
 
   if (FDownloadCTe.SepararPorNome) and (NaoEstaVazio(xNome)) then
-     rPathDown := rPathDown + PathWithDelim(FDownloadCTe.PathDownload) + TiraAcentos(xNome)
+     rPathDown := rPathDown + PathWithDelim(FDownloadCTe.PathDownload) + OnlyAlphaNum(xNome)
   else
      rPathDown := FDownloadCTe.PathDownload;
 
   Result := GetPath(rPathDown, 'Down', CNPJ, Data);
+end;
+
+procedure TArquivosConfCTe.GravarIni(const AIni: TCustomIniFile);
+begin
+  inherited GravarIni(AIni);
+
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'SalvarApenasCTeProcessados', SalvarApenasCTeProcessados);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'EmissaoPathCTe', EmissaoPathCTe);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathCTe', PathCTe);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathInu', PathInu);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  AIni.WriteString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadCTe.PathDownload);
+  AIni.WriteBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadCTe.SepararPorNome);
+end;
+
+procedure TArquivosConfCTe.LerIni(const AIni: TCustomIniFile);
+begin
+  inherited LerIni(AIni);
+
+  SalvarApenasCTeProcessados := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'SalvarApenasCTeProcessados', SalvarApenasCTeProcessados);
+  EmissaoPathCTe := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'EmissaoPathCTe', EmissaoPathCTe);
+  NormatizarMunicipios := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'NormatizarMunicipios', NormatizarMunicipios);
+  PathCTe := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathCTe', PathCTe);
+  PathInu := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathInu', PathInu);
+  PathEvento := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathEvento', PathEvento);
+  PathArquivoMunicipios := AIni.ReadString(fpConfiguracoes.SessaoIni, 'PathArquivoMunicipios', PathArquivoMunicipios);
+  DownloadCTe.PathDownload := AIni.ReadString(fpConfiguracoes.SessaoIni, 'Download.PathDownload', DownloadCTe.PathDownload);
+  DownloadCTe.SepararPorNome := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'Download.SepararPorNome', DownloadCTe.SepararPorNome);
 end;
 
 { TDownloadConfCTe }

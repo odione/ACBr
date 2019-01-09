@@ -38,7 +38,7 @@ uses
   {$IFNDEF VER130}
     Variants,
   {$ENDIF}
-  pnfsConversao, pnfsSignature;
+  pnfsConversao;
 
 type
 
@@ -67,6 +67,10 @@ type
  TemailCollection                   = class;
  TemailCollectionItem               = class;
  TDadosTransportadora               = class;
+ TDespesaCollectionItem             = class;
+ TDespesaCollection                 = class;
+ TAssinaComChaveParamsCollectionItem = class;
+ TAssinaComChaveParamsCollection     = class;
 
  TNFSe                              = class;
 
@@ -113,6 +117,7 @@ type
     FInscricaoPrestador: String;
     FNumero: String;
     FCodigoVerificacao: String;
+    FLink: String;
     FNumeroRPS: String;
     FSerieRPS: String;
   public
@@ -120,6 +125,7 @@ type
     // NFS-e
     property Numero: String             read FNumero             write FNumero;
     property CodigoVerificacao: String  read FCodigoVerificacao  write FCodigoVerificacao;
+    property Link: String               read FLink               write FLink;
     // RPS
     property SerieRPS: String           read FSerieRPS           write FSerieRPS;
     property NumeroRPS: String          read FNumeroRPS          write FNumeroRPS;
@@ -185,11 +191,13 @@ type
     FOutrasRetencoes: Currency;
     FBaseCalculo: Currency;
     FAliquota: Currency;
+    FAliquotaSN: Currency; // mauroasl : Aliquota usada pelo Provedor conam
     FAliquotaPis: Currency;
     FAliquotaCofins: Currency;
     FAliquotaInss: Currency;
     FAliquotaIr: Currency;
     FAliquotaCsll: Currency;
+    FOutrosDescontos: Currency;
     FValorLiquidoNfse: Currency;
     FValorIssRetido: Currency;
     FDescontoCondicionado: Currency;
@@ -198,6 +206,8 @@ type
     FvalorOutrasRetencoes: Currency;
     FDescricaoOutrasRetencoes: String;
     FvalorRepasse: Currency; //Governa
+    FValorDespesasNaoTributaveis: Currency; //Governa
+    FValorTotalRecebido: Currency;
   published
     property ValorServicos: Currency read FValorServicos write FValorServicos;
     property ValorDeducoes: Currency read FValorDeducoes write FValorDeducoes;
@@ -211,12 +221,18 @@ type
     property OutrasRetencoes: Currency read FOutrasRetencoes write FOutrasRetencoes;
     property BaseCalculo: Currency read FBaseCalculo write FBaseCalculo;
     property Aliquota: Currency read FAliquota write FAliquota;
+    // mauroasl : Aliquota usada pelo Provedor conam
+    property AliquotaSN: Currency read FAliquotaSN write FAliquotaSN;
+
     // Aliquotas usadas pelo Provedor IssDsf
     property AliquotaPis: Currency read FAliquotaPis write FAliquotaPis;
     property AliquotaCofins: Currency read FAliquotaCofins write FAliquotaCofins;
     property AliquotaInss: Currency read FAliquotaInss write FAliquotaInss;
     property AliquotaIr: Currency read FAliquotaIr write FAliquotaIr;
     property AliquotaCsll: Currency read FAliquotaCsll write FAliquotaCsll;
+
+    // Gumercino 16/01/2018 - Provedor EL
+    property OutrosDescontos: Currency read FOutrosDescontos write FOutrosDescontos;
 
     property ValorLiquidoNfse: Currency read FValorLiquidoNfse write FValorLiquidoNfse;
     property ValorIssRetido: Currency read FValorIssRetido write FValorIssRetido;
@@ -228,6 +244,10 @@ type
     property valorOutrasRetencoes: Currency read FvalorOutrasRetencoes write FvalorOutrasRetencoes;
     property DescricaoOutrasRetencoes: String read FDescricaoOutrasRetencoes write FDescricaoOutrasRetencoes;
     property ValorRepasse: Currency read FValorRepasse write FValorRepasse;
+    //Provedor Infisc V 11
+    property ValorDespesasNaoTributaveis: Currency read FValorDespesasNaoTributaveis write FValorDespesasNaoTributaveis;
+    //Recife
+    property ValorTotalRecebido: Currency read FValorTotalRecebido write FValorTotalRecebido;
   end;
 
   TItemServicoCollection = class(TCollection)
@@ -262,6 +282,8 @@ type
     FValorCofins: Currency;
     FValorInss: Currency;
     FValorIr: Currency;
+    FQuantidadeDiaria: Currency;
+    FValorTaxaTurismo: Currency;
     //Provedor: Infisc
     FCodigo: String;
     // Provedor Infisc Versão XML 1.1
@@ -308,6 +330,8 @@ type
     property ValorInss: Currency read FValorInss write FValorInss;
     property ValorIr: Currency read FValorIr write FValorIr;
     property ValorCsll: Currency read FValorCsll write FValorCsll;
+    property QuantidadeDiaria: Currency read FQuantidadeDiaria write FQuantidadeDiaria;
+    property ValorTaxaTurismo: Currency read FValorTaxaTurismo write FValorTaxaTurismo;
     // Provedor Infisc Versão XML 1.1
     property CodServ     : String read FCodServ write FCodServ;
     property CodLCServ   : String read FCodLCServ write FCodLCServ;
@@ -326,7 +350,6 @@ type
     property pRetCSLL: currency read FpRetCSLL write FpRetCSLL;
     property vBCPISPASEP: currency read FvBCPISPASEP write FvBCPISPASEP;
     property pRetPISPASEP: currency read FpRetPISPASEP write FpRetPISPASEP;
-
   end;
 
  TDeducaoCollection = class(TCollection)
@@ -378,8 +401,16 @@ type
     FItemServico: TItemServicoCollection;
     FResponsavelRetencao: TnfseResponsavelRetencao;
     FDescricao: String;
-    FDeducao : TDeducaoCollection;
-    FUFPrestacao: String; //Governa
+    // Provedor IssDsf
+    FDeducao: TDeducaoCollection;
+    FOperacao: TOperacao;
+    FTributacao: TTributacao;
+    // Provedor Governa
+    FUFPrestacao: String;
+    // Provedor SP
+    FValorCargaTributaria: currency;
+    FPercentualCargaTributaria: currency;
+    FFonteCargaTributaria: String;
 
     procedure SetItemServico(Value: TItemServicoCollection);
   public
@@ -400,9 +431,16 @@ type
     property ItemServico: TItemServicoCollection read FItemServico write SetItemServico;
     property ResponsavelRetencao: TnfseResponsavelRetencao read FResponsavelRetencao write FResponsavelRetencao;
     property Descricao: String read FDescricao write FDescricao;
-    // Deducao usada pelo Provedor IssDsf
-    property Deducao : TDeducaoCollection read FDeducao write FDeducao;
-    property UFPrestacao: String read FUFPrestacao write FUFPrestacao; //Governa
+    // Provedor IssDsf
+    property Deducao: TDeducaoCollection read FDeducao write FDeducao;
+    property Operacao: TOperacao read FOperacao write FOperacao;
+    property Tributacao: TTributacao read FTributacao write FTributacao;
+    // Provedor Governa
+    property UFPrestacao: String read FUFPrestacao write FUFPrestacao;
+    // Provedor SP
+    property ValorCargaTributaria: currency read FValorCargaTributaria write FValorCargaTributaria;
+    property PercentualCargaTributaria: currency read FPercentualCargaTributaria write FPercentualCargaTributaria;
+    property FonteCargaTributaria: String read FFonteCargaTributaria write FFonteCargaTributaria;
   end;
 
  TIdentificacaoPrestador = class(TPersistent)
@@ -428,6 +466,7 @@ type
 
  TEndereco = class(TPersistent)
   private
+    FEnderecoInformado: Boolean;
     FTipoLogradouro: String;
     FEndereco: String;
     FNumero: String;
@@ -441,6 +480,7 @@ type
     FCodigoPais: Integer;
     FxPais: String;
   published
+    property EnderecoInformado: Boolean read FEnderecoInformado write FEnderecoInformado;
     property TipoLogradouro: String read FTipoLogradouro write FTipoLogradouro;
     property Endereco: String read FEndereco write FEndereco;
     property Numero: String read FNumero write FNumero;
@@ -459,9 +499,13 @@ type
   private
     FTelefone: String;
     FEmail: String;
+    FDDD: String;
+    FTipoTelefone: string;
   published
     property Telefone: String read FTelefone write FTelefone;
     property Email: String read FEmail write FEmail;
+    property DDD: String read FDDD write FDDD;
+    property TipoTelefone: string read FTipoTelefone write FTipoTelefone;
   end;
 
  TDadosPrestador = class(TPersistent)
@@ -551,6 +595,7 @@ type
     FnCei: string;
     FnProj: string;
     FnMatri: string;
+    FnNumeroEncapsulamento : string;
   published
     property CodigoObra: String read FCodigoObra write FCodigoObra;
     property Art: String read FArt write FArt;
@@ -566,6 +611,7 @@ type
     property nCei: String read FnCei write FnCei;
     property nProj: String read FnProj write FnProj;
     property nMatri: String read FnMatri write FnMatri;
+    property nNumeroEncapsulamento : string read FnNumeroEncapsulamento write FnNumeroEncapsulamento;
   end;
 
   TParcelasCollectionItem = class(TCollectionItem)
@@ -652,6 +698,49 @@ type
     property vTipoFreteTrans: TnfseFrete read FvTipoFreteTrans write FvTipoFreteTrans;
   end;
 
+  TDespesaCollection = class(TCollection)
+  private
+    function GetItem(Index: Integer): TDespesaCollectionItem;
+    procedure SetItem(Index: Integer; Value: TDespesaCollectionItem);
+  public
+    constructor Create(AOwner: TNFSe);
+    function Add: TDespesaCollectionItem;
+    property Items[Index: Integer]: TDespesaCollectionItem read GetItem write SetItem;
+  end;
+
+  TDespesaCollectionItem = class(TCollectionItem)
+  private
+    FnItemDesp: String;
+    FxDesp: String;
+    FdDesp: TDateTime;
+    FvDesp: Currency;
+  published
+    property nItemDesp: String read FnItemDesp write FnItemDesp;
+    property xDesp: String read FxDesp write FxDesp;
+    property dDesp: TDateTime read FdDesp write FdDesp;
+    property vDesp: Currency read FvDesp write FvDesp;
+  end;
+
+  TAssinaComChaveParamsCollectionItem = class(TCollectionItem)
+  private
+    FParam: String;
+    FConteudo: String;
+  published
+    property Param: String read FParam write FParam;
+    property Conteudo: String read FConteudo write FConteudo;
+  end;
+
+  TAssinaComChaveParamsCollection = class(TCollection)
+  private
+    function GetItem(Index: Integer): TAssinaComChaveParamsCollectionItem;
+    procedure SetItem(Index: Integer; Const Value: TAssinaComChaveParamsCollectionItem);
+  public
+    constructor Create(AOwner: TNFSe);
+
+    function Add: TAssinaComChaveParamsCollectionItem;
+    property Items[Index: Integer]: TAssinaComChaveParamsCollectionItem read GetItem write SetItem; default;
+  end;
+
  TNFSe = class(TPersistent)
   private
     // RPS e NFSe
@@ -665,7 +754,7 @@ type
     FOptanteSimplesNacional: TnfseSimNao;
     //Provedor Conam
     FDataOptanteSimplesNacional: TDateTime;
-    FLogradouroLocalPrestacaoServico:TnfseLogradouroLocalPrestacaoServico;
+    FLogradouroLocalPrestacaoServico: TnfseLogradouroLocalPrestacaoServico;
     FIncentivadorCultural: TnfseSimNao;
     FProducao: TnfseSimNao;
     FStatus: TnfseStatusRps;
@@ -691,7 +780,7 @@ type
     FAutenticador: String; // para provedor EGoverneISS
     FLink: String; // para provedor EGoverneISS
     // RPS e NFSe
-    FSignature: TSignature;
+    FDespesa: TDespesaCollection;
 
     FNumeroLote: String;
     FProtocolo: String;
@@ -719,8 +808,12 @@ type
     FFrmRec: TnfseFrmRec; //String;
     FTipoTributacaoRPS: TnfseTTributacaoRPS;
     FAssinatura: String;
+    FInformacoesComplementares: String;
+
+    FAssinaComChaveParams: TAssinaComChaveParamsCollection;
 
     procedure Setemail(const Value: TemailCollection);
+    procedure SetInformacoesComplementares(const Value: String);
 
   public
     constructor Create;
@@ -737,7 +830,7 @@ type
     property OptanteSimplesNacional: TnfseSimNao read FOptanteSimplesNacional write FOptanteSimplesNacional;
     //Provedor Conam
     property DataOptanteSimplesNacional: TDateTime read FDataOptanteSimplesNacional write FDataOptanteSimplesNacional;
-    property LogradouLocalPrestacaoServico:TnfseLogradouroLocalPrestacaoServico read FLogradouroLocalPrestacaoServico write FLogradouroLocalPrestacaoServico;
+    property LogradouLocalPrestacaoServico: TnfseLogradouroLocalPrestacaoServico read FLogradouroLocalPrestacaoServico write FLogradouroLocalPrestacaoServico;
     property IncentivadorCultural: TnfseSimNao read FIncentivadorCultural write FIncentivadorCultural;
     property Producao: TnfseSimNao read FProducao write FProducao;
     property Status: TnfseStatusRps read FStatus write FStatus;
@@ -757,6 +850,7 @@ type
     property Competencia: String read FCompetencia write FCompetencia;
     property NfseSubstituida: String read FNfseSubstituida write FNfseSubstituida;
     property OutrasInformacoes: String read FOutrasInformacoes write FOutrasInformacoes;
+    property InformacoesComplementares: String read FInformacoesComplementares write SetInformacoesComplementares;
     property ValorCredito: Currency read FValorCredito write FValorCredito;
     property PrestadorServico: TDadosPrestador read FPrestadorServico write FPrestadorServico;
     property OrgaoGerador: TIdentificacaoOrgaoGerador read FOrgaoGerador write FOrgaoGerador;
@@ -764,9 +858,6 @@ type
     // propriedades para provedor EGoverneISS
     property Autenticador: String read FAutenticador write FAutenticador;
     property Link: String read FLink write FLink;
-    // RPS e NFSe
-    property signature: Tsignature read Fsignature write Fsignature;
-
     property NumeroLote: String read FNumeroLote write FNumeroLote;
     property Protocolo: String read FProtocolo write FProtocolo;
     property dhRecebimento: TDateTime read FdhRecebimento write FdhRecebimento;
@@ -783,13 +874,16 @@ type
     property Cancelada: TnfseSimNao read FCancelada write FCancelada;
     property Canhoto: TnfseCanhoto read FCanhoto Write FCanhoto;
     property Transportadora: TDadosTransportadora read FTransportadora write FTransportadora;
-
+    property Despesa: TDespesaCollection read FDespesa write FDespesa;
     // propriedade para provedor Governa
     property TipoRecolhimento: String read FTipoRecolhimento write FTipoRecolhimento;
 
     property email: TemailCollection read Femail write Setemail;
 
     property TipoTributacaoRPS: TnfseTTributacaoRPS read FTipoTributacaoRPS write FTipoTributacaoRPS;
+
+    property AssinaComChaveParams: TAssinaComChaveParamsCollection read FAssinaComChaveParams write FAssinaComChaveParams;
+
     // Provedor SP
     property Assinatura: String read FAssinatura write FAssinatura;
     property RegRec: TnfseRegRec read FRegRec write FRegRec; //Governa
@@ -803,7 +897,6 @@ type
     FCnpj: String;
     FInscricaoMunicipal: String;
     FQuantidadeRps: String;
-    FSignature: TSignature;
   public
     constructor Create;
     destructor Destroy; override;
@@ -813,7 +906,6 @@ type
     property Cnpj: String read FCnpj write FCnpj;
     property InscricaoMunicipal: String read FInscricaoMunicipal write FInscricaoMunicipal;
     property QuantidadeRps: String read FQuantidadeRps write FQuantidadeRps;
-    property signature: Tsignature read Fsignature write Fsignature;
   end;
 
  TPedidoCancelamento = class(TPersistent)
@@ -821,7 +913,6 @@ type
     FInfID: TInfID;
     FIdentificacaoNfse: TIdentificacaoNfse;
     FCodigoCancelamento: String;
-    FSignature: TSignature;
   public
     constructor Create;
     destructor Destroy; override;
@@ -829,7 +920,6 @@ type
     property InfID: TInfID read FInfID write FInfID;
     property IdentificacaoNfse: TIdentificacaoNfse read FIdentificacaoNfse write FIdentificacaoNfse;
     property CodigoCancelamento: String read FCodigoCancelamento write FCodigoCancelamento;
-    property signature: Tsignature read Fsignature write Fsignature;
   end;
 
  TConfirmacaoCancelamento = class(TPersistent)
@@ -837,7 +927,6 @@ type
     FInfID: TInfID;
     FPedido: TPedidoCancelamento;
     FDataHora: TDateTime;
-    FSignature: TSignature;
   public
     constructor Create;
     destructor Destroy; override;
@@ -845,21 +934,18 @@ type
     property InfID: TInfID read FInfID write FInfID;
     property Pedido: TPedidoCancelamento read FPedido write FPedido;
     property DataHora: TDateTime read FDataHora write FDataHora;
-    property signature: Tsignature read Fsignature write Fsignature;
   end;
 
  TSubstituicaoNfse = class(TPersistent)
   private
     FInfID: TInfID;
     FNfseSubstituidora: String;
-    FSignature: TSignature;
   public
     constructor Create;
     destructor Destroy; override;
   published
     property InfID: TInfID read FInfID write FInfID;
     property NfseSubstituidora: String read FNfseSubstituidora write FNfseSubstituidora;
-    property signature: Tsignature read Fsignature write Fsignature;
   end;
 
 const
@@ -895,6 +981,7 @@ begin
    FValorLiquidoNfse       := 0;
    FDescontoIncondicionado := 0;
    FDescontoCondicionado   := 0;
+   FValorDespesasNaoTributaveis := 0;
   end;
 
  FItemServico := TItemServicoCollection.Create(Self);
@@ -996,13 +1083,12 @@ begin
  FCompetencia                  := '';
  FNfseSubstituida              := '';
  FOutrasInformacoes            := '';
+ FInformacoesComplementares    := '';
  FValorCredito                 := 0;
  FPrestadorServico             := TDadosPrestador.Create(self);
  FOrgaoGerador                 := TIdentificacaoOrgaoGerador.Create;
  FValoresNfse                  := TValoresNfse.Create;
  // RPS e NFSe
- Fsignature                    := Tsignature.create;
-
  FNfseCancelamento             := TConfirmacaoCancelamento.Create;
  FNfseCancelamento.DataHora    := 0;
  FNfseSubstituidora            := '';
@@ -1018,6 +1104,9 @@ begin
  FLogradouroLocalPrestacaoServico := llpTomador;
 
  Femail                        := TemailCollection.Create(Self);
+ FDespesa                      := TDespesaCollection.Create(Self);
+
+ FAssinaComChaveParams         := TAssinaComChaveParamsCollection.Create(Self);
 end;
 
 destructor TNFSe.Destroy;
@@ -1037,13 +1126,20 @@ begin
  FOrgaoGerador.Free;
  FValoresNfse.Free;
  // RPS e NFSe
- Fsignature.Free;
  FNfseCancelamento.Free;
  Femail.Free;
+ FDespesa.Free;
+
+ FAssinaComChaveParams.Free;
 
  FTransportadora.Free;
 
  inherited Destroy;
+end;
+
+procedure TNFSe.SetInformacoesComplementares(const Value: String);
+begin
+  FInformacoesComplementares := Value;
 end;
 
 procedure TNFSe.Setemail(const Value: TemailCollection);
@@ -1061,13 +1157,11 @@ begin
  FCnpj               := '';
  FInscricaoMunicipal := '';
  FQuantidadeRps      := '';
- Fsignature          := Tsignature.create;
 end;
 
 destructor TLoteRps.Destroy;
 begin
  FInfID.Free;
- Fsignature.Free;
 
  inherited Destroy;
 end;
@@ -1079,14 +1173,12 @@ begin
  FInfID              := TInfID.Create;
  FIdentificacaoNfse  := TIdentificacaoNfse.Create;
  FCodigoCancelamento := '';
- Fsignature          := Tsignature.create;
 end;
 
 destructor TPedidoCancelamento.Destroy;
 begin
  FInfID.Free;
  FIdentificacaoNfse.Free;
- Fsignature.Free;
 
   inherited;
 end;
@@ -1097,14 +1189,12 @@ constructor TConfirmacaoCancelamento.Create;
 begin
  FInfID     := TInfID.Create;
  FPedido    := TPedidoCancelamento.Create;
- Fsignature := Tsignature.create;
 end;
 
 destructor TConfirmacaoCancelamento.Destroy;
 begin
  FInfID.Free;
  FPedido.Free;
- Fsignature.Free;
 
   inherited;
 end;
@@ -1115,13 +1205,11 @@ constructor TSubstituicaoNfse.Create;
 begin
  FInfID             := TInfID.Create;
  FNfseSubstituidora := '';
- Fsignature         := Tsignature.create;
 end;
 
 destructor TSubstituicaoNfse.Destroy;
 begin
  FInfID.Free;
- Fsignature.Free;
 
   inherited;
 end;
@@ -1277,6 +1365,53 @@ destructor TemailCollectionItem.Destroy;
 begin
 
   inherited;
+end;
+
+{ TDespesaCollection }
+
+function TDespesaCollection.Add: TDespesaCollectionItem;
+begin
+  Result := TDespesaCollectionItem(inherited Add);
+end;
+
+constructor TDespesaCollection.Create(AOwner: TNFSe);
+begin
+  inherited Create(TDespesaCollectionItem);
+end;
+
+function TDespesaCollection.GetItem(Index: Integer): TDespesaCollectionItem;
+begin
+  Result := Inherited GetItem(Index) as TDespesaCollectionItem;
+end;
+
+procedure TDespesaCollection.SetItem(Index: Integer; Value: TDespesaCollectionItem);
+begin
+  Inherited SetItem(Index, Value);
+end;
+
+{ TAssinaComChaveParamsCollection }
+
+function TAssinaComChaveParamsCollection.Add: TAssinaComChaveParamsCollectionItem;
+begin
+  Result := TAssinaComChaveParamsCollectionItem(inherited Add);
+end;
+
+constructor TAssinaComChaveParamsCollection.Create(
+  AOwner: TNFSe);
+begin
+  inherited Create(TAssinaComChaveParamsCollectionItem);
+end;
+
+function TAssinaComChaveParamsCollection.GetItem(
+  Index: Integer): TAssinaComChaveParamsCollectionItem;
+begin
+  Result := TAssinaComChaveParamsCollectionItem(inherited GetItem(Index));
+end;
+
+procedure TAssinaComChaveParamsCollection.SetItem(Index: Integer;
+  const Value: TAssinaComChaveParamsCollectionItem);
+begin
+  inherited SetItem(Index, Value);
 end;
 
 end.

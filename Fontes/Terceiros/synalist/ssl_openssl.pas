@@ -431,7 +431,13 @@ begin
     LT_TLSv1_2:
       Fctx := SslCtxNew(SslMethodTLSV12);
     LT_all:
-      Fctx := SslCtxNew(SslMethodV23);
+      begin
+        //try new call for OpenSSL 1.1.0 first
+        Fctx := SslCtxNew(SslMethodTLS);
+        if Fctx=nil then
+          //callback to previous versions
+          Fctx := SslCtxNew(SslMethodV23);
+      end;
   else
     Exit;
   end;

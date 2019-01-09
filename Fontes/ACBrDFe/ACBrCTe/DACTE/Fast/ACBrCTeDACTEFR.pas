@@ -34,12 +34,13 @@
 {                                                                              }
 {******************************************************************************}
 
-{ *******************************************************************************
+{******************************************************************************
   |* Historico
   |*
   |* 30/03/2011: Jeickson Gobeti
   |*  - Inicio do desenvolvimento Dacte FastReport
-  ******************************************************************************* }
+ ******************************************************************************}
+
 {$I ACBr.inc}
 
 unit ACBrCTeDACTEFR;
@@ -47,25 +48,31 @@ unit ACBrCTeDACTEFR;
 interface
 
 uses
-  SysUtils, Classes, Graphics, ACBrCTeDACTEClass,
+  SysUtils, Classes, ACBrCTeDACTEClass,
   pcteCTe, pcnConversao, frxClass, DBClient, frxDBSet, frxBarcode, frxExportPDF,
-  pcteEnvEventoCTe, ACBrCTe, ACBrUtil, StrUtils, DB, MaskUtils;
+  pcteEnvEventoCTe, pcteInutCTe, pcteRetInutCTe, ACBrCTe, ACBrUtil, StrUtils,
+  DB, MaskUtils;
 
 type
   EACBrCTeDACTEFR = class(Exception);
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrCTeDACTEFR = class(TACBrCTeDACTEClass)
   private
     FDACTEClassOwner: TACBrCTeDACTEClass;
     FCTe            : TCTe;
     FEvento         : TEventoCTe;
+    FInutilizacao   : TRetInutCTe;
     FFastFile       : String;
     FEspessuraBorda : Integer;
     FFastFileEvento : string;
+    FFastFileInutilizacao: String;
 
     procedure CriarDataSetsFrx;
     function GetPreparedReport: TfrxReport;
     function GetPreparedReportEvento: TfrxReport;
+		function GetPreparedReportInutilizacao: TfrxReport;
 
     procedure SetDataSetsToFrxReport;
     procedure frxReportBeforePrint(Sender: TfrxReportComponent);
@@ -89,14 +96,21 @@ type
     procedure CarregaMultiModal;
     procedure CarregaInformacoesAdicionais;
     procedure CarregaDocumentoAnterior;
-    procedure CarregaCTeAnuladoComplementado;
+		procedure CarregaCTeAnuladoComplementado;
+		procedure CarregaProdutosPerigosos;
+		procedure CarregaVeiculosNovos;
+	  procedure CarregaInfServico;
+    procedure CarregaInfTribFed;
+	  procedure CarregaPercurso;
     procedure LimpaDados;
     function ManterCep(iCep: Integer): String;
   protected
     procedure CarregaDados;
     procedure CarregaDadosEventos;
+    procedure CarregaDadosInutilizacao;
     function PrepareReport(ACTE: TCTe = nil): Boolean; virtual;
     function PrepareReportEvento: Boolean; virtual;
+    function PrepareReportInutilizacao: Boolean; virtual;
   public
     frxReport   : TfrxReport;
     frxPDFExport: TfrxPDFExport;
@@ -124,7 +138,13 @@ type
     cdsRodoMotorista        : TClientDataSet;
     cdsDocAnterior          : TClientDataSet;
     cdsAnuladoComple        : TClientDataSet;
-    cdsEventos              : TClientDataSet;
+  	cdsEventos              : TClientDataSet;
+	  cdsProdutosPerigosos    : TClientDataSet;
+  	cdsVeiculosNovos        : TClientDataSet;
+    cdsInutilizacao         : TClientDataSet;
+    cdsInfServico           : TClientDataSet;
+    cdsInfTribFed           : TClientDataSet;
+    cdsPercurso             : TClientDataSet;
 
     // frxDB
     frxIdentificacao        : TfrxDBDataset;
@@ -150,7 +170,13 @@ type
     frxRodoMotorista        : TfrxDBDataset;
     frxDocAnterior          : TfrxDBDataset;
     frxAnuladoComple        : TfrxDBDataset;
-    frxEventos              : TfrxDBDataset;
+  	frxEventos              : TfrxDBDataset;
+	  frxProdutosPerigosos    : TfrxDBDataset;
+  	frxVeiculosNovos        : TfrxDBDataset;
+    frxInutilizacao         : TfrxDBDataset;
+    frxInfServico           : TfrxDBDataset;
+    frxInfTribFed           : TfrxDBDataset;
+    frxPercurso             : TfrxDBDataset;
 
     frxBarCodeObject: TfrxBarCodeObject;
 
@@ -161,16 +187,21 @@ type
     procedure ImprimirDACTEPDF(ACTE: TCTe = nil); override;
     procedure ImprimirEVENTO(ACTE: TCTe = nil); override;
     procedure ImprimirEVENTOPDF(ACTE: TCTe = nil); override;
+    procedure ImprimirINUTILIZACAO(ACTE: TCTe = nil); override;
+    procedure ImprimirINUTILIZACAOPDF(ACTE: TCTe = nil); override;
     property CTE: TCTe read FCTe write FCTe;
     property Evento: TEventoCTe read FEvento write FEvento;
+    property Inutilizacao: TRetInutCTe read FInutilizacao write FInutilizacao;
     property DACTEClassOwner: TACBrCTeDACTEClass read FDACTEClassOwner;
 
   published
     property FastFile            : String read FFastFile write FFastFile;
     property FastFileEvento      : string read FFastFileEvento write FFastFileEvento;
+    property FastFileInutilizacao: String read FFastFileInutilizacao write FFastFileInutilizacao;
     property EspessuraBorda      : Integer read FEspessuraBorda write FEspessuraBorda;
     property PreparedReport      : TfrxReport read GetPreparedReport;
     property PreparedReportEvento: TfrxReport read GetPreparedReportEvento;
+    property PreparedReportInutilizacao: TfrxReport read GetPreparedReportInutilizacao;
   end;
 
 var
@@ -180,86 +211,6 @@ implementation
 
 uses
   pcteConversaoCTe, ACBrDFeUtil, ACBrValidador;
-
-type
-  ArrOfStr     = array of string;
-  TSplitResult = array of string;
-
-function SubstrCount(const ASubString, AString: string): Integer;
-var
-  i: Integer;
-begin
-  Result := -1;
-  i      := 0;
-  repeat
-    Inc(Result);
-    i := PosEx(ASubString, AString, i + 1);
-  until i = 0;
-end;
-
-function Split(const ADelimiter, AString: string): TSplitResult;
-var
-  Step                         : ^string;
-  Chr                          : PChar;
-  iPos, iLast, iDelLen, iLen, x: Integer;
-label
-  EndLoop;
-begin
-  SetLength(Result, SubstrCount(ADelimiter, AString) + 1);
-  if High(Result) = 0 then
-    Result[0] := AString
-  else
-  begin
-    iDelLen := PCardinal(Cardinal(ADelimiter) - SizeOf(Cardinal))^;
-    iLen    := PCardinal(Cardinal(AString) - SizeOf(Cardinal))^;
-    Step    := @Result[0];
-    iLast   := 0;
-    iPos    := 0;
-    repeat
-      if iPos + iDelLen > iLen then
-      begin
-        if iLast <> iPos then
-          iPos := iLen;
-      end
-      else
-        for x := 1 to iDelLen do
-          if AString[iPos + x] <> ADelimiter[x] then
-            goto EndLoop;
-
-      if iPos - iLast > 0 then
-      begin
-        SetLength(Step^, iPos - iLast);
-        Chr   := PChar(Step^);
-        for x := 1 to PCardinal(Cardinal(Step^) - SizeOf(Cardinal))^ do
-        begin
-          Chr^ := AString[iLast + x];
-          Inc(Chr);
-        end;
-      end
-      else
-        Step^ := '';
-
-      Cardinal(Step) := Cardinal(Step) + SizeOf(Cardinal);
-      iLast          := iPos + iDelLen;
-
-    EndLoop:
-      Inc(iPos);
-    until iLast >= iLen;
-  end;
-end;
-
-function Explode(sPart, sInput: string): ArrOfStr;
-begin
-  while Pos(sPart, sInput) <> 0 do
-  begin
-    SetLength(Result, Length(Result) + 1);
-    Result[Length(Result) - 1] := Copy(sInput, 0, Pos(sPart, sInput) - 1);
-    Delete(sInput, 1, Pos(sPart, sInput));
-  end;
-
-  SetLength(Result, Length(Result) + 1);
-  Result[Length(Result) - 1] := sInput;
-end;
 
 function CollateBr(Str: string): string;
 var
@@ -329,6 +280,7 @@ begin
     Background     := True;
     PrintOptimized := True;
     Subject        := 'Exportando DACTe para PDF';
+    ShowProgress   := False;
   end;
   // CDS
   cdsIdentificacao := TClientDataSet.Create(nil);
@@ -360,6 +312,8 @@ begin
     Add('UFEmi', ftString, 2);
     Add('modal', ftString, 2);
     Add('tpServ', ftString, 50);
+    Add('indGlobalizado', ftString, 3);
+    Add('ObsGlobalizado', ftString, 256);
     Add('cMunIni', ftString, 7);
     Add('xMunIni', ftString, 60);
     Add('UFIni', ftString, 2);
@@ -518,6 +472,7 @@ begin
     Add('CEP', ftString, 9);
     Add('CPais', ftString, 4);
     Add('XPais', ftString, 60);
+    Add('Email', ftString, 60);
     CreateDataSet;
   end;
 
@@ -666,6 +621,10 @@ begin
     Add('placa', ftString, 7);
     Add('UF', ftString, 2);
     Add('RNTRC', ftString, 8);
+    Add('RENAVAM', ftString, 11);
+    Add('TAF', ftString, 12);
+    Add('NroRegEstadual', ftString, 25);
+    Add('CPF/CNPJ', ftString, 18);
     CreateDataSet;
   end;
 
@@ -727,7 +686,7 @@ begin
     Add('cTar', ftString, 4);
     Add('vTar', ftCurrency);
     Add('xDime', ftString, 14);
-    Add('cInfManu', ftInteger);
+    Add('cInfManu', ftString, 30);
     Add('cIMP', ftString, 3);
     Add('xOrig',ftString,15);
     Add('xDest',ftString,15);
@@ -803,6 +762,93 @@ begin
     Add('nroItemAlterado', ftInteger);
 
     CreateDataSet;
+  end;
+
+  cdsProdutosPerigosos := TClientDataSet.Create(nil);
+  with cdsProdutosPerigosos, FieldDefs do
+  begin
+   	Close;
+   	Clear;
+		Add('nONU',        ftString, 4);
+		Add('xNomeAE',     ftString, 150);
+		Add('xClaRisco',   ftString, 40);
+		Add('grEmb',       ftString, 6);
+		Add('qTotProd',    ftString, 20);
+		Add('qVolTipo',    ftString, 60);
+		Add('pontoFulgor', ftString, 6);
+
+		CreateDataSet;
+  end;
+  cdsVeiculosNovos := TClientDataSet.Create(nil);
+  with cdsVeiculosNovos, FieldDefs do
+  begin
+   	Close;
+   	Clear;
+		Add('Chassi', ftString, 17);
+		Add('cCor',   ftString, 4);
+		Add('xCor',   ftString, 40);
+		Add('cMod',   ftString, 6);
+        Add('vUnit',  ftFloat);
+        Add('vFrete', ftFloat);
+
+		CreateDataSet;
+  end;
+
+  //Inutilização
+  cdsInutilizacao := TClientDataSet.Create(nil);
+  with cdsInutilizacao, FieldDefs do
+  begin
+   	Close;
+   	Clear;
+    Add('ID', ftString, 44);
+    Add('CNPJ', ftString, 20);
+    Add('nProt', ftString, 20);
+    Add('Modelo', ftInteger);
+    Add('Serie', ftInteger);
+    Add('Ano', ftInteger);
+    Add('nCTIni', ftInteger);
+    Add('nCTFin', ftInteger);
+    Add('xJust', ftString, 50);
+    Add('versao', ftString, 20);
+    Add('TpAmb', ftString, 32);
+    Add('verAplic', ftString, 20);
+    Add('cStat', ftInteger);
+    Add('xMotivo', ftString, 50);
+    Add('cUF', ftString, 2);
+    Add('dhRecbto', ftDateTime);
+		CreateDataSet;
+  end;
+
+  cdsInfServico := TClientDataSet.Create(nil);
+  with cdsInfServico, FieldDefs do
+  begin
+   	Close;
+   	Clear;
+		Add('xDescServ', ftString, 30);
+    Add('qCarga', ftFloat);
+		CreateDataSet;
+  end;
+
+  cdsInfTribFed := TClientDataSet.Create(nil);
+  with cdsInfTribFed, FieldDefs do
+  begin
+    Close;
+    Clear;
+    Add('vPIS', ftFloat);
+    Add('vCOFINS', ftFloat);
+    Add('vIR', ftFloat);
+    Add('vINSS', ftFloat);
+    Add('vCSLL', ftFloat);
+		CreateDataSet;
+  end;
+
+  cdsPercurso := TClientDataSet.Create(nil);
+  with cdsPercurso, FieldDefs do
+  begin
+   	Close;
+   	Clear;
+		Add('UFsPer', ftString, 110);
+		CreateDataSet;
   end;
 
   // frxDB
@@ -998,6 +1044,48 @@ begin
     DataSet        := cdsEventos;
   end;
 
+  frxProdutosPerigosos := TfrxDBDataset.Create(nil);
+  with frxProdutosPerigosos do
+  begin
+		UserName       := 'ProdutosPerigosos';
+  	OpenDataSource := False;
+		DataSet        := cdsProdutosPerigosos;
+  end;
+  frxVeiculosNovos := TfrxDBDataset.Create(nil);
+  with frxVeiculosNovos do
+  begin
+		UserName       := 'VeiculosNovos';
+     	OpenDataSource := False;
+		DataSet        := cdsVeiculosNovos;
+  end;
+  frxInutilizacao  := TfrxDBDataset.Create(nil);
+  with frxInutilizacao do
+  begin
+		UserName       := 'Inutilizacao';
+    OpenDataSource := False;
+		DataSet        := cdsInutilizacao;
+  end;
+  frxInfServico := TfrxDBDataset.Create(nil);
+  with frxInfServico do
+  begin
+		UserName       := 'InfServico';
+    OpenDataSource := False;
+		DataSet        := cdsInfServico;
+  end;
+  frxInfTribFed := TfrxDBDataset.Create(nil);
+  with frxInfTribFed do
+  begin
+		UserName       := 'InfTribFed';
+    OpenDataSource := False;
+		DataSet        := cdsInfTribFed;
+  end;
+  frxPercurso := TfrxDBDataset.Create(nil);
+  with frxPercurso do
+  begin
+    UserName       := 'Percurso';
+    OpenDataSource := False;
+    DataSet        := cdsPercurso;
+  end;
   frxBarCodeObject := TfrxBarCodeObject.Create(nil);
 end;
 
@@ -1030,6 +1118,12 @@ begin
   cdsDocAnterior.Free;
   cdsAnuladoComple.Free;
   cdsEventos.Free;
+  cdsProdutosPerigosos.Free;
+  cdsVeiculosNovos.Free;
+  cdsInutilizacao.Free;
+  cdsInfServico.Free;
+  cdsInfTribFed.Free;
+  cdsPercurso.Free;
 
   // frxDB
   frxIdentificacao.Free;
@@ -1057,6 +1151,12 @@ begin
   frxAnuladoComple.Free;
   frxEventos.Free;
   frxBarCodeObject.Free;
+  frxProdutosPerigosos.Free;
+  frxVeiculosNovos.Free;
+  frxInutilizacao.Free;
+  frxInfServico.Free;
+  frxInfTribFed.Free;
+  frxPercurso.Free;
 
   inherited Destroy;
 end;
@@ -1117,6 +1217,14 @@ begin
         end;
       end;
   end;
+  if cdsModalRodoviario.FieldByName('LOTACAO').AsString = 'Não' then 
+	begin
+    Child := frxReport.FindObject('ChildRodoviarioLotacao') as TfrxChild;
+		if Child <> nil then
+	 	begin
+			Child.Visible := False;
+	 	end;
+  end;
 end;
 
 function TACBrCTeDACTEFR.GetPreparedReport: TfrxReport;
@@ -1145,23 +1253,27 @@ begin
   end;
 end;
 
+function TACBrCTeDACTEFR.GetPreparedReportInutilizacao: TfrxReport;
+begin
+  if Trim(FFastFileInutilizacao) = '' then
+    Result := nil
+  else
+  begin
+    if PrepareReportInutilizacao then
+      Result := frxReport
+    else
+      Result := nil;
+  end;
+end;
+
 procedure TACBrCTeDACTEFR.ImprimirDACTE(ACTE: TCTe);
 begin
   if PrepareReport(ACTE) then
   begin
-    frxReport.PrintOptions.Copies := NumCopias;
-    if MostrarPreview then
+    if MostraPreview then
       frxReport.ShowPreparedReport
     else
-    begin
-      // frxReport.PrepareReport(false);
-      if MostrarStatus then
-        frxReport.PrintOptions.ShowDialog := True
-      else
-        frxReport.PrintOptions.ShowDialog := False;
-      frxReport.PrintOptions.Printer      := Impressora;
       frxReport.Print;
-    end;
   end;
 end;
 
@@ -1169,7 +1281,6 @@ procedure TACBrCTeDACTEFR.ImprimirDACTEPDF(ACTE: TCTe);
 const
   TITULO_PDF = 'Conhecimento de Transporte Eletrônico';
 var
-  i            : Integer;
   OldShowDialog: Boolean;
 begin
   if PrepareReport(ACTE) then
@@ -1183,15 +1294,12 @@ begin
     OldShowDialog         := frxPDFExport.ShowDialog;
     try
       frxPDFExport.ShowDialog := False;
+      frxPDFExport.FileName   := IncludeTrailingPathDelimiter(PathPDF) + OnlyNumber(CTE.infCTe.Id) + '-cte.pdf';
 
-      for i := 0 to TACBrCTe(ACBrCTe).Conhecimentos.Count - 1 do
-      begin
-        frxPDFExport.FileName := IncludeTrailingPathDelimiter(PathPDF) + OnlyNumber(CTE.infCTe.Id) + '-cte.pdf';
+      if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
+         ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
 
-        if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
-          ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
-        frxReport.Export(frxPDFExport);
-      end;
+      frxReport.Export(frxPDFExport);
     finally
       frxPDFExport.ShowDialog := OldShowDialog;
     end;
@@ -1202,7 +1310,7 @@ procedure TACBrCTeDACTEFR.ImprimirEVENTO(ACTE: TCTe);
 begin
   if PrepareReportEvento then
   begin
-    if MostrarPreview then
+    if MostraPreview then
       frxReport.ShowPreparedReport
     else
       frxReport.Print;
@@ -1240,6 +1348,48 @@ begin
   end;
 end;
 
+procedure TACBrCTeDACTEFR.ImprimirINUTILIZACAO(ACTE: TCTe);
+begin
+  if PrepareReportInutilizacao then
+  begin
+    if MostraPreview then
+      frxReport.ShowPreparedReport
+    else
+      frxReport.Print;
+  end;
+end;
+
+procedure TACBrCTeDACTEFR.ImprimirINUTILIZACAOPDF(ACTE: TCTe);
+const
+  TITULO_PDF = 'Inutilização de Numeração';
+var
+  NomeArq      : String;
+  OldShowDialog: Boolean;
+begin
+  if PrepareReportInutilizacao then
+  begin
+    frxPDFExport.Author   := Sistema;
+    frxPDFExport.Creator  := Sistema;
+    frxPDFExport.Producer := Sistema;
+    frxPDFExport.Title    := TITULO_PDF;
+    frxPDFExport.Subject  := TITULO_PDF;
+    frxPDFExport.Keywords := TITULO_PDF;
+    OldShowDialog         := frxPDFExport.ShowDialog;
+    try
+      frxPDFExport.ShowDialog := False;
+      NomeArq                 := OnlyNumber(TACBrCTe(ACBrCTe).InutCTe.RetInutCTe.Id);
+      frxPDFExport.FileName   := PathWithDelim(Self.PathPDF) + NomeArq + '-procInutCTe.pdf';
+
+      if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
+        ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
+
+      frxReport.Export(frxPDFExport);
+    finally
+      frxPDFExport.ShowDialog := OldShowDialog;
+    end;
+  end;
+end;
+
 procedure TACBrCTeDACTEFR.LimpaDados;
 begin
   cdsIdentificacao.EmptyDataSet;
@@ -1266,16 +1416,30 @@ begin
   cdsDocAnterior.EmptyDataSet;
   cdsAnuladoComple.EmptyDataSet;
   cdsEventos.EmptyDataSet;
+  cdsProdutosPerigosos.EmptyDataSet;
+  cdsVeiculosNovos.EmptyDataSet;
+  cdsInfServico.EmptyDataSet;
+  cdsInfTribFed.EmptyDataSet;
+  cdsPercurso.EmptyDataSet;
 end;
 
 function TACBrCTeDACTEFR.PrepareReport(ACTE: TCTe): Boolean;
 var
   i: Integer;
+  Stream: TStringStream;
 begin
   Result := False;
 
   if Trim(FastFile) <> '' then
   begin
+    if not (UpperCase(Copy(FastFile, Length(FastFile)-3, 4)) = '.FR3') then
+    begin
+      Stream := TStringStream.Create(FastFile);
+      frxReport.FileName := '';
+      frxReport.LoadFromStream(Stream);
+      Stream.Free;
+    end
+    else
     if FileExists(FastFile) then
       frxReport.LoadFromFile(FastFile)
     else
@@ -1283,6 +1447,15 @@ begin
   end
   else
     raise EACBrCTeDACTEFR.Create('Caminho do arquivo de impressão do DACTE não assinalado.');
+
+  frxReport.PrintOptions.Copies := NumCopias;
+  frxReport.PrintOptions.ShowDialog := MostraSetup;
+  frxReport.ShowProgress := MostraStatus;
+  frxReport.PreviewOptions.AllowEdit := False;
+
+  // Define a impressora
+  if NaoEstaVazio(frxReport.PrintOptions.Printer) then
+    frxReport.PrintOptions.Printer := Impressora;
 
   if Assigned(ACTE) then
   begin
@@ -1311,9 +1484,18 @@ begin
 end;
 
 function TACBrCTeDACTEFR.PrepareReportEvento: Boolean;
+var Stream: TStringStream;
 begin
   if Trim(FastFileEvento) <> '' then
   begin
+    if not (UpperCase(Copy(FastFileEvento, Length(FastFileEvento)-3, 4)) = '.FR3') then
+    begin
+      Stream := TStringStream.Create(FastFileEvento);
+      frxReport.FileName := '';
+      frxReport.LoadFromStream(Stream);
+      Stream.Free;
+    end
+    else
     if FileExists(FastFileEvento) then
       frxReport.LoadFromFile(FastFileEvento)
     else
@@ -1323,6 +1505,13 @@ begin
     raise EACBrCTeDACTEFR.Create('Caminho do arquivo de impressão do EVENTO não assinalado.');
 
   frxReport.PrintOptions.Copies := NumCopias;
+  frxReport.PrintOptions.ShowDialog := MostraSetup;
+  frxReport.ShowProgress := MostraStatus;
+  frxReport.PreviewOptions.AllowEdit := False;
+
+  // Define a impressora
+  if NaoEstaVazio(frxReport.PrintOptions.Printer) then
+    frxReport.PrintOptions.Printer := Impressora;
 
   // preparar relatorio
   if Assigned(ACBrCTe) then
@@ -1344,7 +1533,46 @@ begin
     Result := frxReport.PrepareReport;
   end
   else
-    raise EACBrCTeDACTEFR.Create('Propriedade ACBrNFe não assinalada.');
+    raise EACBrCTeDACTEFR.Create('Propriedade ACBrCTe não assinalada.');
+end;
+
+function TACBrCTeDACTEFR.PrepareReportInutilizacao: Boolean;
+begin
+  if Trim(FastFileInutilizacao) <> '' then
+  begin
+    if FileExists(FastFileInutilizacao) then
+      frxReport.LoadFromFile(FastFileInutilizacao)
+    else
+      raise EACBrCTeDACTEFR.CreateFmt('Caminho do arquivo de impressão de INUTILIZAÇÃO "%s" inválido.', [FastFileInutilizacao]);
+  end
+  else
+    raise EACBrCTeDACTEFR.Create('Caminho do arquivo de impressão do INUTILIZAÇÃO não assinalado.');
+
+  frxReport.PrintOptions.Copies := NumCopias;
+  frxReport.PrintOptions.ShowDialog := MostraSetup;
+  frxReport.ShowProgress := MostraStatus;
+  frxReport.PreviewOptions.AllowEdit := False;
+
+  // Define a impressora
+  if NaoEstaVazio(frxReport.PrintOptions.Printer) then
+    frxReport.PrintOptions.Printer := Impressora;
+
+  // preparar relatorio
+  if Assigned(ACBrCTe) then
+  begin
+    if assigned(TACBrCTe(ACBrCTe).InutCTe) then
+    begin
+      Inutilizacao := TACBrCTe(ACBrCTe).InutCTe.RetInutCTe;
+      CarregaDadosInutilizacao;
+    end
+    else
+      raise EACBrCTeDACTEFR.Create('INUTILIZAÇÃO não foi assinalada.');
+
+    Result := frxReport.PrepareReport;
+  end
+  else
+    raise EACBrCTeDACTEFR.Create('Propriedade ACBrCTe não assinalada.');
+
 end;
 
 procedure TACBrCTeDACTEFR.SetDataSetsToFrxReport;
@@ -1376,7 +1604,13 @@ begin
     Add(frxRodoMotorista);
     Add(frxDocAnterior);
     Add(frxAnuladoComple);
-    Add(frxEventos);
+  	Add(frxEventos);
+	  Add(frxProdutosPerigosos);
+  	Add(frxVeiculosNovos);
+    Add(frxInutilizacao);
+    Add(frxInfServico);
+    Add(frxInfTribFed);
+    Add(frxPercurso);
   end;
 end;
 
@@ -1558,6 +1792,11 @@ begin
   CarregaModalAquaviario;
   CarregaDocumentoAnterior;
   CarregaCTeAnuladoComplementado;
+  CarregaProdutosPerigosos;
+  CarregaVeiculosNovos;
+  CarregaInfServico;
+  CarregaInfTribFed;
+  CarregaPercurso;
 end;
 
 procedure TACBrCTeDACTEFR.CarregaDadosEventos;
@@ -1580,6 +1819,33 @@ begin
       with Evento.Evento[i] do
       begin
         case Evento.Evento[i].InfEvento.tpEvento of
+          tePrestDesacordo:
+            begin
+              TipoEvento := tePrestDesacordo;
+              Append;
+              FieldByName('DescricaoTipoEvento').AsString := InfEvento.DescricaoTipoEvento(InfEvento.tpEvento);
+              FieldByName('Modelo').AsString              := Copy(InfEvento.chCTe, 21, 2);
+              FieldByName('Serie').AsString               := Copy(InfEvento.chCTe, 23, 3);
+              FieldByName('Numero').AsString              := Copy(InfEvento.chCTe, 26, 9);
+              FieldByName('MesAno').AsString              := Copy(InfEvento.chCTe, 05, 2) + '/' + Copy(InfEvento.chCTe, 03, 2);
+              FieldByName('Barras').AsString              := InfEvento.chCTe;
+              FieldByName('ChaveAcesso').AsString         := FormatarChaveAcesso(InfEvento.chCTe);
+              FieldByName('cOrgao').AsInteger             := InfEvento.cOrgao;
+              FieldByName('nSeqEvento').AsInteger         := InfEvento.nSeqEvento;
+              FieldByName('tpAmb').AsString               := MantertpAmb( InfEvento.tpAmb );
+              FieldByName('dhEvento').AsDateTime          := InfEvento.dhEvento;
+              FieldByName('TipoEvento').AsString          := InfEvento.TipoEvento;
+              FieldByName('DescEvento').AsString          := InfEvento.DescEvento;
+              FieldByName('versaoEvento').AsString        := InfEvento.versaoEvento;
+              FieldByName('cStat').AsInteger              := RetInfEvento.cStat;
+              FieldByName('xMotivo').AsString             := RetInfEvento.xMotivo;
+              FieldByName('nProt').AsString               := RetInfEvento.nProt;
+              FieldByName('dhRegEvento').AsDateTime       := RetInfEvento.dhRegEvento;
+              FieldByName('xJust').AsString               := InfEvento.detEvento.xJust;
+              FieldByName('xCondUso').AsString            := '';
+              frxReport.Variables['HOMOLOGACAO']          := ( InfEvento.tpAmb = taHomologacao);
+              Post;
+            end;
           teCancelamento:
             begin
               TipoEvento := teCancelamento;
@@ -1652,6 +1918,61 @@ begin
   end;
 end;
 
+procedure TACBrCTeDACTEFR.CarregaDadosInutilizacao;
+begin
+
+   with cdsInutilizacao do
+   begin
+      Close;
+      FieldDefs.Clear;
+      FieldDefs.Add('ID', ftString, 44);
+      FieldDefs.Add('CNPJ', ftString, 20);
+      FieldDefs.Add('nProt', ftString, 20);
+      FieldDefs.Add('Modelo', ftInteger);
+      FieldDefs.Add('Serie', ftInteger);
+      FieldDefs.Add('Ano', ftInteger);
+      FieldDefs.Add('nCTIni', ftInteger);
+      FieldDefs.Add('nCTFin', ftInteger);
+      FieldDefs.Add('xJust', ftString, 50);
+      FieldDefs.Add('versao', ftString, 20);
+      FieldDefs.Add('TpAmb', ftString, 32);
+      FieldDefs.Add('verAplic', ftString, 20);
+      FieldDefs.Add('cStat', ftInteger);
+      FieldDefs.Add('xMotivo', ftString, 50);
+      FieldDefs.Add('cUF', ftString, 2);
+      FieldDefs.Add('dhRecbto', ftDateTime);
+      CreateDataSet;
+
+      Append;
+
+      with FInutilizacao do
+      begin
+         FieldByName('ID').AsString         := OnlyNumber(ID);
+         FieldByName('CNPJ').AsString       := FormatarCNPJ(CNPJ);
+         FieldByName('nProt').AsString      := nProt;
+         FieldByName('Modelo').AsInteger    := Modelo;
+         FieldByName('Serie').AsInteger     := Serie;
+         FieldByName('Ano').AsInteger       := Ano;
+         FieldByName('nCTIni').AsInteger    := nCTIni;
+         FieldByName('nCTFin').AsInteger    := nCTFin;
+         FieldByName('xJust').AsString      := xJust;
+         FieldByName('versao').AsString     := versao;
+         FieldByName('verAplic').AsString   := verAplic;
+         FieldByName('cStat').AsInteger     := cStat;
+         FieldByName('xMotivo').AsString    := xMotivo;
+         FieldByName('dhRecbto').AsDateTime := dhRecbto;
+         FieldByName('cUF').AsString        := CUFtoUF(cUF);
+
+         case tpAmb of
+            taProducao:    FieldByName('tpAmb').AsString := ACBrStr('PRODUÇÃO');
+            taHomologacao: FieldByName('tpAmb').AsString := ACBrStr('HOMOLOGAÇÃO - SEM VALOR FISCAL');
+         end;
+
+         Post;
+      end;
+   end;
+end;
+
 procedure TACBrCTeDACTEFR.CarregaDadosNotasFiscais;
 var
   i       : Integer;
@@ -1680,12 +2001,12 @@ begin
       begin
         Append;
         FieldByName('tpDoc').AsString       := 'NF';
-        FieldByName('CNPJCPF').AsString     := FCTe.Rem.CNPJCPF;
+        FieldByName('CNPJCPF').AsString     := DoctoRem;
         FieldByName('Serie').AsString       := serie;
         FieldByName('ChaveAcesso').AsString := '';
         FieldByName('NotaFiscal').AsString  := nDoc;
-        FieldByName('TextoImpressao').AsString := 'NF                  ' + DoctoRem + '                                        ' +
-          serie + '  /  ' + FormatFloat('000000000', StrToInt(nDoc));
+        FieldByName('TextoImpressao').AsString := 'NF              ' + DoctoRem + '                              ' +
+          serie + '  /  ' + FormatFloat('00000000000000000000', StrToInt64(nDoc));
       end;
       Post;
     end;
@@ -1730,6 +2051,8 @@ begin
         FieldByName('NotaFiscal').AsString  := '';
 
         case tpDoc of
+          tdCFeSAT    : FieldByName('TextoImpressao').AsString := 'CF-e SAT            ' + DoctoRem + '                                        ' + nDoc;
+          tdNFCe      : FieldByName('TextoImpressao').AsString := 'NFC-e               ' + DoctoRem + '                                        ' + nDoc;
           tdDeclaracao: FieldByName('TextoImpressao').AsString := 'Declaração          ' + DoctoRem + '                                        ' + nDoc;
           tdOutros    : FieldByName('TextoImpressao').AsString := 'Outros              ' + DoctoRem + '                                        ' + nDoc;
           tdDutoviario: FieldByName('TextoImpressao').AsString := 'Dutoviário          ' + DoctoRem + '                                        ' + nDoc;
@@ -1739,11 +2062,8 @@ begin
       end;
       Post;
     end;
-
-    //
     cdsDadosNotasFiscais.RecordCount;
   end;
-
 end;
 
 procedure TACBrCTeDACTEFR.CarregaDestinatario;
@@ -1823,9 +2143,10 @@ begin
                 daCA    : FieldByName('Tipo').AsString  := 'CA';
                 daTIF   : FieldByName('Tipo').AsString  := 'TIF';
                 daOutros: FieldByName('Tipo').AsString  := 'OUTROS';
+                daBL    : FieldByName('Tipo').AsString  := 'BL';
               end;
               FieldByName('Serie').AsString := idDocAnt.Items[ii].idDocAntPap.Items[iii].serie;
-              FieldByName('nDoc').AsString  := IntToStr(idDocAnt.Items[ii].idDocAntPap.Items[iii].nDoc);
+              FieldByName('nDoc').AsString  := idDocAnt.Items[ii].idDocAntPap.Items[iii].nDoc;
               FieldByName('dEmi').AsString  := FormatDateTime('dd/mm/yyyy', idDocAnt.Items[ii].idDocAntPap.Items[iii].dEmi);
             end;
             Post;
@@ -1834,15 +2155,27 @@ begin
           begin
             Append;
             FieldByName('CNPJCPF').AsString := CNPJCPF;
+            FieldByName('IE').AsString      := IE;
             FieldByName('xNome').AsString   := xNome;
             FieldByName('UF').AsString      := UF;
             with idDocAnt.Items[ii].idDocAntEle.Items[iii] do
             begin
               FieldByName('Tipo').AsString  := 'CT-e';
-              FieldByName('Chave').AsString := chave;
-              FieldByName('Serie').AsString := Copy(chave, 23, 3);
-              FieldByName('nDoc').AsString  := Copy(chave, 26, 9);
-              FieldByName('dEmi').AsString  := Copy(chave, 5, 2) + '/' + Copy(chave, 3, 2);
+
+              if FCTe.infCTe.versao >= 3 then
+              begin
+                FieldByName('Chave').AsString := chCTe;
+                FieldByName('Serie').AsString := Copy(chCTe, 23, 3);
+                FieldByName('nDoc').AsString  := Copy(chCTe, 26, 9);
+                FieldByName('dEmi').AsString  := Copy(chCTe, 5, 2) + '/' + Copy(chCTe, 3, 2);
+              end
+              else
+              begin
+                FieldByName('Chave').AsString := chave;
+                FieldByName('Serie').AsString := Copy(chave, 23, 3);
+                FieldByName('nDoc').AsString  := Copy(chave, 26, 9);
+                FieldByName('dEmi').AsString  := Copy(chave, 5, 2) + '/' + Copy(chave, 3, 2);
+              end;
             end;
             Post;
           end;
@@ -1857,28 +2190,28 @@ begin
   { emitente }
   with cdsEmitente do
   begin
-    Append;
-    with FCTe.Emit do
-    begin
-      FieldByName('CNPJ').AsString  := FormatarCNPJouCPF(CNPJ);
-      FieldByName('XNome').AsString := xNome;
-      FieldByName('XFant').AsString := XFant;
-      with EnderEmit do
-      begin
-        FieldByName('Xlgr').AsString    := XLgr;
-        FieldByName('Nro').AsString     := Nro;
-        FieldByName('XCpl').AsString    := XCpl;
-        FieldByName('XBairro').AsString := XBairro;
-        FieldByName('CMun').AsString    := IntToStr(CMun);
-        FieldByName('XMun').AsString    := CollateBr(XMun);
-        FieldByName('UF').AsString      := UF;
-        FieldByName('CEP').AsString     := ManterCep( CEP );
-        FieldByName('Fone').AsString    := FormatarFone(Fone);
-      end;
-      FieldByName('IE').AsString := IE;
-    end;
+		Append;
+		with FCTe.Emit do
+		begin
+			FieldByName('CNPJ').AsString  := FormatarCNPJouCPF(CNPJ);
+			FieldByName('XNome').AsString := xNome;
+			FieldByName('XFant').AsString := XFant;
+			with EnderEmit do
+			begin
+		  	FieldByName('Xlgr').AsString    := XLgr;
+		  	FieldByName('Nro').AsString     := Nro;
+		  	FieldByName('XCpl').AsString    := XCpl;
+		  	FieldByName('XBairro').AsString := XBairro;
+		  	FieldByName('CMun').AsString    := IntToStr(CMun);
+		  	FieldByName('XMun').AsString    := CollateBr(XMun);
+		  	FieldByName('UF').AsString      := UF;
+		  	FieldByName('CEP').AsString     := ManterCep( CEP );
+		  	FieldByName('Fone').AsString    := FormatarFone(Fone);
+			end;
+			FieldByName('IE').AsString := IE;
+		end;
 
-    Post;
+  	Post;
   end;
 end;
 
@@ -1937,7 +2270,16 @@ begin
         fpOutros: FieldByName('forPag').AsString  := 'Outros';
       end;
 
-      FieldByName('Mod_').AsString    := modelo;
+      if indGlobalizado = tiSim then
+        begin
+          FieldByName('indGlobalizado').AsString  := 'Sim';
+          if (Trim(FCTe.infCTeNorm.infGlobalizado.xObs) <> '') then
+             FieldByName('ObsGlobalizado').AsString  := FCTe.infCTeNorm.infGlobalizado.xObs;
+        end
+      else
+        FieldByName('indGlobalizado').AsString  := 'Não';
+
+      FieldByName('Mod_').AsString    := IntToStr(modelo);
       FieldByName('Serie').AsString   := IntToStr(serie);
       FieldByName('NCT').AsString     := FormatarNumeroDocumentoFiscal(IntToStr(nCT));
       FieldByName('dhEmi').AsDateTime := dhEmi;
@@ -1966,7 +2308,10 @@ begin
         tsSubcontratacao: FieldByName('tpServ').AsString := 'Subcontratação';
         tsRedespacho: FieldByName('tpServ').AsString     := 'Redespacho';
         tsIntermediario: FieldByName('tpServ').AsString  := 'Intermediário';
-        tsMultimodal: FieldByName('tpServ').AsString  := 'Vinc. Multimodal';
+        tsMultimodal: FieldByName('tpServ').AsString  := 'Vinc. a Multimodal';
+        tsTranspPessoas: FieldByName('tpServ').AsString  := 'Transporte de Pessoas';
+        tsTranspValores: FieldByName('tpServ').AsString  := 'Transporte de Valores';
+        tsExcessoBagagem: FieldByName('tpServ').AsString  := 'Excesso de Bagagem';
       end;
 
       FieldByName('cMunIni').AsString := IntToStr(cMunIni);
@@ -2007,7 +2352,6 @@ var
   TmpStr       : string;
   wContingencia: string;
   wObs         : string;
-  wSubstituto  : string;
   i            : Integer;
 begin
   with cdsInformacoesAdicionais do
@@ -2017,44 +2361,24 @@ begin
     begin
       wObs := xObs;
 
-{$IFDEF PL_200}
-      if CTE.ide.tpCTe = tcSubstituto then
+      // Contingencia
+      wContingencia := '';
+      if (FCTe.ide.TpEmis = teContingencia) or (FCTe.ide.TpEmis = teFSDA) or (FCTe.ide.TpEmis = teSCAN) then
+        wContingencia := 'DACTE EM CONTINGÊNCIA, IMPRESSO EM DECORRÊNCIA DE PROBLEMAS TÉCNICOS'
+      else if FCTe.ide.TpEmis = teDPEC then
+        wContingencia := 'DACTE IMPRESSO EM CONTINGÊNCIA - DPEC REGULARMENTE RECEBIDA PELA RECEITA FEDERAL DO BRASIL';
+      if wContingencia <> '' then
       begin
-        wSubstituto := 'Chave do CT-e a ser substituido (Original): ' + CTE.infCTeNorm.infCteSub.chCTe + ';';
-        if Length(CTE.infCTeNorm.infCteSub.tomaICMS.refNFe) > 0 then
-          wSubstituto := wSubstituto + 'Chave da NF-e emitida pelo tomador: ' + CTE.infCTeNorm.infCteSub.tomaICMS.refNFe + ';'
-        else if Length(CTE.infCTeNorm.infCteSub.tomaICMS.refCte) > 0 then
-          wSubstituto := wSubstituto + 'Chave do CT-e emitido pelo tomador: ' + CTE.infCTeNorm.infCteSub.tomaICMS.refCte + ';'
-        else if CTE.infCTeNorm.infCteSub.tomaICMS.refNF.Nro > 0 then
-          wSubstituto := wSubstituto + 'Número/Série da nota emitida pelo tomador: ' + IntToStr(CTE.infCTeNorm.infCteSub.tomaICMS.refNF.Nro) + ' / ' +
-            IntToStr(CTE.infCTeNorm.infCteSub.tomaICMS.refNF.serie) + ';'
-        else if Length(CTE.infCTeNorm.infCteSub.tomaNaoICMS.refCteAnu) > 0 then
-          wSubstituto := wSubstituto + 'Chave do CT-e de anulação: ' + CTE.infCTeNorm.infCteSub.tomaNaoICMS.refCteAnu + ';';
-
         if Length(wObs) > 0 then
           wObs := wObs + ';';
-        wObs   := wObs + wSubstituto;
-
+        wObs   := wObs + wContingencia;
       end;
-{$ENDIF}
-      // Contingencia
-      if FCTe.ide.TpEmis = teNormal then
-        wContingencia := ''
-      else
-      begin
-        if (FCTe.ide.TpEmis = teContingencia) or (FCTe.ide.TpEmis = teFSDA) or (FCTe.ide.TpEmis = teSCAN) then
-          wContingencia := 'DACTE EM CONTINGÊNCIA, IMPRESSO EM DECORRÊNCIA DE PROBLEMAS TÉCNICOS'
-        else if FCTe.ide.TpEmis = teDPEC then
-          wContingencia := 'DACTE IMPRESSO EM CONTINGÊNCIA - DPEC REGULARMENTE RECEBIDA PELA RECEITA FEDERAL DO BRASIL';
-      end;
-      if Length(wObs) > 0 then
-        wObs := wObs + ';';
-      wObs   := wObs + wContingencia;
 
       vTemp := TStringList.Create;
       try
         if Trim(wObs) <> '' then
         begin
+          Campos         := nil;
           Campos         := Split(';', wObs);
           for IndexCampo := 0 to Length(Campos) - 1 do
             vTemp.Add(Campos[IndexCampo]);
@@ -2084,6 +2408,7 @@ begin
       try
         if Trim(wObs) <> '' then
         begin
+          Campos         := nil;
           Campos         := Split(';', wObs);
           for IndexCampo := 0 to Length(Campos) - 1 do
             vTemp.Add(Campos[IndexCampo]);
@@ -2098,7 +2423,7 @@ begin
         vTemp.Free;
       end;
     end;
-    FieldByName('ObsCont').AsString := BufferObs;
+    FieldByName('infAdFisco').AsString := BufferObs;
 
     BufferObs := '';
     if FCTe.compl.ObsCont.Count > 0 then
@@ -2111,6 +2436,7 @@ begin
       try
         if Trim(wObs) <> '' then
         begin
+          Campos         := nil;
           Campos := Split(';', wObs);
           for IndexCampo := 0 to Length(Campos) - 1 do
             vTemp.Add(Campos[IndexCampo]);
@@ -2126,13 +2452,41 @@ begin
       end;
 
     end;
-    FieldByName('infAdFisco').AsString := BufferObs;
+    FieldByName('ObsCont').AsString := BufferObs;
     Post;
   end;
 
 end;
 
+procedure TACBrCTeDACTEFR.CarregaInfServico;
+begin
+  { Informações do Serviço }
+  with cdsInfServico, FCTe.infCTeNorm.infServico do
+  begin
+    Append;
+    FieldByName('xDescServ').AsString := xDescServ;
+    FieldByName('qCarga').AsFloat := qCarga;
+    Post;
+  end;
+end;
+
+procedure TACBrCTeDACTEFR.CarregaInfTribFed;
+begin
+  with cdsInfTribFed, FCTe.imp.infTribFed do
+  begin
+    Append;
+    FieldByName('vPIS').AsFloat := vPIS;
+    FieldByName('vCOFINS').AsFloat := vCOFINS;
+    FieldByName('vIR').AsFloat := vIR;
+    FieldByName('vINSS').AsFloat := vINSS;
+    FieldByName('vCSLL').AsFloat := vCSLL;
+    Post;
+  end;
+end;
+
 procedure TACBrCTeDACTEFR.CarregaModalAereo;
+var
+   i : Integer;
 begin
   if FCTe.ide.modal <> mdAereo then
     Exit;
@@ -2149,7 +2503,20 @@ begin
     FieldByName('cTar').AsString := aereo.tarifa.cTar;
     FieldByName('vTar').AsCurrency := aereo.tarifa.vTar;
     FieldByName('xDime').AsString := aereo.natCarga.xDime;
-    FieldByName('cInfManu').AsInteger := aereo.natCarga.cinfManu;
+
+    for i := 0 to CTe.infCTeNorm.aereo.natCarga.cinfManu.Count - 1 do
+    begin
+      if (i > 0) then
+         FieldByName('cInfManu').AsString := FieldByName('cInfManu').AsString + ', ';
+
+      if FCTe.infCTe.versao >= 3 then
+         FieldByName('cInfManu').AsString := FieldByName('cInfManu').AsString + TpInfManuToStr(CTe.infCTeNorm.aereo.natCarga.cinfManu.Items[i].nInfManu)
+      else
+         FieldByName('cInfManu').AsString := FieldByName('cInfManu').AsString + TpInfManuToStrV2(CTe.infCTeNorm.aereo.natCarga.cinfManu.Items[i].nInfManu);
+    end;
+    if (FieldByName('cInfManu').AsString <> '') then
+      FieldByName('cInfManu').AsString := FieldByName('cInfManu').AsString + '.';
+
     FieldByName('cIMP').AsString := aereo.natCarga.cIMP;
     FieldByName('xOrig').AsString := CTe.compl.fluxo.xOrig;
     FieldByName('xDest').AsString := CTe.compl.fluxo.xDest;
@@ -2221,10 +2588,43 @@ end;
 
 procedure TACBrCTeDACTEFR.CarregaModalRodoviario;
 var
-  i: Integer;
+  i      : Integer;
+  Child  : TfrxChild;
 begin
   if FCTe.ide.modal <> mdRodoviario then
     Exit;
+
+  if FCTe.ide.modelo = 67 then  //67-CTeOS
+  begin
+    with cdsRodoVeiculos do
+    begin
+      Append;
+      with CTE.infCTeNorm.rodoOS.veic do
+      begin
+        FieldByName('placa').AsString := placa;
+        FieldByName('RENAVAM').AsString := RENAVAM;
+        if (Length(Prop.TAF) > 0) or (Length(Prop.NroRegEstadual) > 0) then
+        begin
+          //Terceiro
+          FieldByName('UF').AsString := Prop.UF;
+          FieldByName('TAF').AsString := Prop.TAF;
+          FieldByName('NroRegEstadual').AsString := prop.NroRegEstadual;
+          FieldByName('CPF/CNPJ').AsString := FormatarCNPJouCPF(prop.CNPJCPF);
+        end
+        else
+        begin
+          //Próprio
+          FieldByName('UF').AsString  := CTe.infCTeNorm.rodoOS.veic.UF;
+          FieldByName('TAF').AsString := CTe.infCTeNorm.rodoOS.TAF;
+          FieldByName('NroRegEstadual').AsString := CTe.infCTeNorm.rodoOS.NroRegEstadual;
+          FieldByName('CPF/CNPJ').AsString := FormatarCNPJouCPF(CTe.Emit.CNPJ);
+        end;
+      end;
+      post;
+    end;
+    Exit;
+  end;
+
 
   with cdsModalRodoviario do
   begin
@@ -2269,6 +2669,7 @@ begin
 
     Post;
   end;
+  Child := frxReport.FindObject('ChildRodoLotacao') as TfrxChild;
 
   with cdsRodoVeiculos do
   begin
@@ -2363,31 +2764,36 @@ begin
     Append;
 
     vResumo := '';
-    if DACTEClassOwner.ExibirResumoCanhoto then
-       begin
-          vResumo := 'EMIT: '+ FCTe.Emit.xNome + ' - ' +
-                     'EMISSÃO: ' + FormatDateTime('DD/MM/YYYY',FCTe.Ide.dhEmi) + '  - '+
-                     'TOMADOR: ';
-          if FCTe.Ide.Toma4.xNome = '' then
-             begin
-                case FCTe.Ide.Toma03.Toma of
-                   tmRemetente:    vResumo := vResumo + FCTe.Rem.xNome;
-    	              tmExpedidor:    vResumo := vResumo + FCTe.Exped.xNome;
-                   tmRecebedor:    vResumo := vResumo + FCTe.Receb.xNome;
-    	              tmDestinatario: vResumo := vResumo + FCTe.Dest.xNome;
-                end
-             end
-          else
-             vResumo := vResumo + FCTe.Ide.Toma4.xNome;
+    if DACTEClassOwner.ExibeResumoCanhoto then
+    begin
+      vResumo := 'EMIT: '+ FCTe.Emit.xNome + ' - ' +
+                 'EMISSÃO: ' + FormatDateTime('DD/MM/YYYY',FCTe.Ide.dhEmi) + '  - '+
+                 'TOMADOR: ';
+      if FCTe.Ide.modelo = 67 then
+        vResumo := vResumo + FCTe.toma.xNome
+      else
+      begin
+        if FCTe.Ide.Toma4.xNome = '' then
+        begin
+          case FCTe.Ide.Toma03.Toma of
+            tmRemetente:    vResumo := vResumo + FCTe.Rem.xNome;
+            tmExpedidor:    vResumo := vResumo + FCTe.Exped.xNome;
+            tmRecebedor:    vResumo := vResumo + FCTe.Receb.xNome;
+            tmDestinatario: vResumo := vResumo + FCTe.Dest.xNome;
+          end
+        end
+        else
+          vResumo := vResumo + FCTe.Ide.Toma4.xNome;
+      end;
 
-          vResumo := vResumo + ' - VALOR A RECEBER: R$ ' + FormatFloat('###,###,###,##0.00',FCTe.vPrest.vRec);
-       end;
+      vResumo := vResumo + ' - VALOR A RECEBER: R$ ' + FormatFloat('###,###,###,##0.00',FCTe.vPrest.vRec);
+    end;
     FieldByName('ResumoCanhoto').AsString := vResumo;
 
     if DACTEClassOwner.PosCanhoto = prCabecalho then
-       FieldByName('PrintCanhoto').AsString := '0'
+      FieldByName('PrintCanhoto').AsString := '0'
     else
-       FieldByName('PrintCanhoto').AsString := '1';
+      FieldByName('PrintCanhoto').AsString := '1';
 {$IFDEF PL_103}
     FieldByName('Versao').AsString := '1.03';
 {$ENDIF}
@@ -2395,26 +2801,48 @@ begin
     FieldByName('Versao').AsString := '1.04';
 {$ENDIF}
 {$IFDEF PL_200}
-    FieldByName('Versao').AsString := '2.00';
+    if FCTe.infCTe.versao = 2 then
+      FieldByName('Versao').AsString := '2.00'
+    else
+      FieldByName('Versao').AsString := '3.00';
 {$ENDIF}
     if (FCTe.ide.tpAmb = taHomologacao) then
-      FieldByName('Mensagem0').AsString := 'CTe sem Valor Fiscal - HOMOLOGAÇÃO'
+    begin
+      if FCTe.Ide.modelo = 67 then
+        FieldByName('Mensagem0').AsString := 'CT-e OS sem Valor Fiscal - HOMOLOGAÇÃO'
+      else
+        FieldByName('Mensagem0').AsString := 'CT-e sem Valor Fiscal - HOMOLOGAÇÃO';
+    end
     else
     begin
       if not(FCTe.ide.TpEmis in [teContingencia, teFSDA]) then
       begin
-        if ((EstaVazio(ProtocoloCTE)) and
-          (EstaVazio(FCTe.procCTe.nProt))) then
-          FieldByName('Mensagem0').AsString := 'CTe sem Autorização de Uso da SEFAZ'
+        if ((EstaVazio(Protocolo)) and (EstaVazio(FCTe.procCTe.nProt))) then
+        begin
+          if FCTe.Ide.modelo = 67 then
+            FieldByName('Mensagem0').AsString := 'CT-e OS sem Autorização de Uso da SEFAZ'
+          else
+            FieldByName('Mensagem0').AsString := 'CT-e sem Autorização de Uso da SEFAZ';
+        end
         else
-          if (not((EstaVazio(ProtocoloCTE)) and
+          if (not((EstaVazio(Protocolo)) and
           (EstaVazio(FCTe.procCTe.nProt)))) and
           (FCTe.procCTe.cStat = 101) then
-          FieldByName('Mensagem0').AsString := 'CTe Cancelado'
+          begin
+             if FCTe.Ide.modelo = 67 then
+               FieldByName('Mensagem0').AsString := 'CT-e OS Cancelado'
+             else
+               FieldByName('Mensagem0').AsString := 'CT-e Cancelado';
+          end
         else
         begin
-          if CTeCancelada then
-            FieldByName('Mensagem0').AsString := 'CTe Cancelado'
+          if Cancelada then
+          begin
+            if FCTe.Ide.modelo = 67 then
+              FieldByName('Mensagem0').AsString := 'CT-e OS Cancelado'
+            else
+              FieldByName('Mensagem0').AsString := 'CT-e Cancelado';
+          end
           else
             FieldByName('Mensagem0').AsString := '';
         end;
@@ -2448,37 +2876,45 @@ begin
     end;
 
     FieldByName('Sistema').AsString := Ifthen(Sistema <> '', Sistema, 'Projeto ACBr - http://acbr.sf.net');
-    FieldByName('Usuario').AsString := Ifthen(Usuario <> '', ' - ' + Usuario,'');
+    FieldByName('Usuario').AsString := Ifthen(Usuario <> '', Usuario,'');
     FieldByName('Fax').AsString := Ifthen(Fax <> '',' - FAX ' + Fax,'');
 
     FieldByName('Site').AsString  := Site;
     FieldByName('Email').AsString := Email;
 
-    if ImprimirDescPorc then
+    if ImprimeDescPorc then
       FieldByName('Desconto').AsString := 'DESC %'
     else
       FieldByName('Desconto').AsString := 'V.DESC.';
 
-    if ((FCTe.ide.TpEmis = teNormal) or (FCTe.ide.TpEmis = teSCAN)) then
+    if ((FCTe.ide.TpEmis = teNormal) or (FCTe.ide.TpEmis = teSCAN)) or
+       (FCTe.procCTe.cStat in [100, 101, 110]) then
     begin
       FieldByName('ChaveAcesso_Descricao').AsString := 'CHAVE DE ACESSO';
       FieldByName('Contingencia_ID').AsString       := '';
 
-      if ((CTeCancelada) or (FCTe.procCTe.cStat = 101)) then
+      if ((Cancelada) or (FCTe.procCTe.cStat = 101)) then
         FieldByName('Contingencia_Descricao').AsString := 'PROTOCOLO DE HOMOLOGAÇÃO DO CANCELAMENTO'
+      else if FCTe.procCTe.cStat = 110 then
+        FieldByName('Contingencia_Descricao').AsString := 'PROTOCOLO DE DENEGAÇÃO DE USO'
       else
         FieldByName('Contingencia_Descricao').AsString := 'PROTOCOLO DE AUTORIZAÇÃO DE USO';
 
-      if EstaVazio(ProtocoloCTE) then
+      if EstaVazio(Protocolo) then
       begin
         if not(FCTe.ide.TpEmis in [teContingencia, teFSDA]) and EstaVazio(FCTe.procCTe.nProt) then
-          FieldByName('Contingencia_Valor').AsString := 'CTe sem Autorização de Uso da SEFAZ'
+        begin
+          if FCTe.Ide.modelo = 67 then
+            FieldByName('Contingencia_Valor').AsString := 'CT-e OS sem Autorização de Uso da SEFAZ'
+          else
+            FieldByName('Contingencia_Valor').AsString := 'CT-e sem Autorização de Uso da SEFAZ';
+        end
         else
           FieldByName('Contingencia_Valor').AsString := FCTe.procCTe.nProt + ' ' + IfThen(FCTe.procCTe.dhRecbto <> 0,
             DateTimeToStr(FCTe.procCTe.dhRecbto), '');
       end
       else
-        FieldByName('Contingencia_Valor').AsString := ProtocoloCTE;
+        FieldByName('Contingencia_Valor').AsString := Protocolo;
     end
     else
     begin
@@ -2486,31 +2922,121 @@ begin
       FieldByName('ChaveAcesso_Descricao').AsString := 'CHAVE DE ACESSO';
       FieldByName('Contingencia_ID').AsString       := vChave_Contingencia;
 
-      if ((FCTe.ide.TpEmis = teContingencia) or (FCTe.ide.TpEmis = teFSDA)) then
-      begin
-        FieldByName('Contingencia_Descricao').AsString := 'DADOS DA CT-E';
-        FieldByName('Contingencia_Valor').AsString     := FormatarChaveAcesso(vChave_Contingencia);
-      end
-      else
-        if (FCTe.ide.TpEmis = teDPEC) then
-      begin
-        FieldByName('Contingencia_Descricao').AsString := 'NÚMERO DE REGISTRO DPEC';
+      case FCTe.ide.TpEmis of
+        teContingencia,
+        teFSDA:
+          begin
+            if FCTe.Ide.modelo = 67 then
+              FieldByName('Contingencia_Descricao').AsString := 'DADOS DO CT-E OS'
+            else
+              FieldByName('Contingencia_Descricao').AsString := 'DADOS DO CT-E';
 
-        // precisa testar
-        // if EstaVazio(ProtocoloCTE) then
-        // raise EACBrCTeException.Create('Protocolo de Registro no DPEC não informado.')
-        // else
-        // FieldByName('Contingencia_Valor').AsString := ProtocoloCTe;
-      end
-      else
-        if (FCTe.ide.TpEmis = teSVCSP) or (FCTe.ide.TpEmis = teSVCRS) then
-        begin
-          FieldByName('Contingencia_Descricao').AsString := 'PROTOCOLO DE AUTORIZAÇÃO DE USO';
-          FieldByName('Contingencia_Valor').AsString     := FCTe.procCTe.nProt + ' ' + IfThen(FCTe.procCTe.dhRecbto <> 0,
-            DateTimeToStr(FCTe.procCTe.dhRecbto), '');
-        end;
+            FieldByName('Contingencia_Valor').AsString := FormatarChaveAcesso(vChave_Contingencia);
+          end;
+
+        teDPEC:
+          begin
+            if NaoEstaVazio(FCTe.procCTe.nProt) then // EPEC TRANSMITIDO
+            begin
+              FieldByName('Contingencia_Descricao').AsString := ACBrStr( 'PROTOCOLO DE AUTORIZAÇÃO DE USO');
+              FieldByName('Contingencia_Valor').AsString     := FCTe.procCTe.nProt + ' ' +
+                IfThen(FCTe.procCTe.dhRecbto <> 0, DateTimeToStr(FCTe.procCTe.dhRecbto), '');
+            end
+            else
+            begin
+              FieldByName('Contingencia_Descricao').AsString := ACBrStr('NÚMERO DE REGISTRO EPEC');
+              if NaoEstaVazio(Protocolo) then
+                FieldByName('Contingencia_Valor').AsString := Protocolo;
+            end;
+          end;
+
+        teSVCSP,
+        teSVCRS:
+          begin
+            FieldByName('Contingencia_Descricao').AsString := 'PROTOCOLO DE AUTORIZAÇÃO DE USO';
+            FieldByName('Contingencia_Valor').AsString     := FCTe.procCTe.nProt + ' ' +
+              IfThen(FCTe.procCTe.dhRecbto <> 0, DateTimeToStr(FCTe.procCTe.dhRecbto), '');
+          end;
+      end;
     end;
+
     Post;
+  end;
+end;
+
+procedure TACBrCTeDACTEFR.CarregaPercurso;
+var
+  i : Integer;
+  UfsPercurso : string;
+begin
+ { Percurso }
+  with cdsPercurso do
+  begin
+    if FCTe.ide.infPercurso.Count > 0 then
+    begin
+      for I := 0 to FCTe.ide.infPercurso.Count -1 do
+      begin
+        if i = 0 then
+          UfsPercurso := FCTe.ide.infPercurso.Items[i].UFPer
+        else
+          UfsPercurso := UfsPercurso +' - '+ FCTe.ide.infPercurso.Items[i].UFPer;
+      end;
+      Append;
+      FieldByName('UFsPer').AsString := UfsPercurso;
+      Post;
+    end;
+  end;
+end;
+
+procedure TACBrCTeDACTEFR.CarregaProdutosPerigosos;
+var i : Integer;
+begin
+ { ProdutosPerigosos }
+  with cdsProdutosPerigosos do
+  begin
+
+		with FCTe.infCTeNorm.peri do
+		begin
+			if FCTe.infCTeNorm.peri.Count > 0 then
+				for I := 0 to FCTe.infCTeNorm.peri.Count - 1 do
+				begin
+		  		Append;
+		  		FieldByName('nONU').AsString          := FCTe.infCTeNorm.peri.Items[i].nONU;
+		  		FieldByName('xNomeAE').AsString       := Items[i].xNomeAE;
+		  		FieldByName('xClaRisco').AsString     := Items[i].xClaRisco;
+		  		FieldByName('grEmb').AsString         := Items[i].grEmb;
+		  		FieldByName('qTotProd').AsString      := Items[i].qTotProd;
+		  		FieldByName('qVolTipo').AsString      := Items[i].qVolTipo;
+		  		FieldByName('pontoFulgor').AsString   := Items[i].pontoFulgor;
+		  		Post;
+				end;
+		end;
+  end;
+end;
+procedure TACBrCTeDACTEFR.CarregaVeiculosNovos;
+var i : Integer;
+begin
+ { VeiculosNovos }
+  with cdsVeiculosNovos do
+  begin
+
+		with FCTe.infCTeNorm.veicNovos do
+		begin
+			if FCTe.infCTeNorm.veicNovos.Count > 0 then
+			begin
+				for I := 0 to FCTe.infCTeNorm.veicNovos.Count - 1 do
+				begin
+		  		    Append;
+		  		    FieldByName('Chassi').AsString          := FCTe.infCTeNorm.veicNovos.Items[i].chassi;
+		  		    FieldByName('cCor').AsString       := Items[i].cCor;
+		  		    FieldByName('xCor').AsString     := Items[i].xCor;
+		  		    FieldByName('cMod').AsString         := Items[i].cMod;
+		  		    FieldByName('vUnit').AsFloat      := Items[i].vUnit;
+		  		    FieldByName('vFrete').AsFloat      := Items[i].vFrete;
+		  		    Post;
+				end;
+			end;
+		end;
   end;
 end;
 
@@ -2639,100 +3165,121 @@ begin
   begin
 
     Append;
+    if FCTe.ide.modelo = 67 then  //67-CTeOS
+    begin
+      FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.toma.CNPJCPF);
+      FieldByName('XNome').AsString   := FCTe.toma.xNome;
+      FieldByName('XFant').AsString   := FCTe.toma.XFant;
+      FieldByName('IE').AsString      := FCTe.toma.IE;
+      FieldByName('Xlgr').AsString    := FCTe.toma.enderToma.XLgr;
+      FieldByName('Nro').AsString     := FCTe.toma.enderToma.Nro;
+      FieldByName('XCpl').AsString    := FCTe.toma.enderToma.XCpl;
+      FieldByName('XBairro').AsString := FCTe.toma.enderToma.XBairro;
+      FieldByName('CMun').AsString    := IntToStr(FCTe.toma.enderToma.CMun);
+      FieldByName('XMun').AsString    := FCTe.toma.enderToma.XMun;
+      FieldByName('UF').AsString      := FCTe.toma.enderToma.UF;
+      FieldByName('CEP').AsString     := ManterCep( FCTe.toma.enderToma.CEP );
+      FieldByName('CPais').AsString   := IntToStr(FCTe.toma.enderToma.CPais);
+      FieldByName('XPais').AsString   := FCTe.toma.enderToma.XPais;
+      FieldByName('Fone').AsString    := FormatarFone(FCTe.toma.Fone);
+      FieldByName('Email').AsString   := FCTe.toma.email;
+    end
+    else
+    begin
+      case FCTe.ide.Toma03.Toma of
+        tmRemetente:
+          begin
+            FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Rem.CNPJCPF);
+            FieldByName('XNome').AsString   := FCTe.Rem.xNome;
+            FieldByName('XFant').AsString   := FCTe.Rem.XFant;
+            FieldByName('IE').AsString      := FCTe.Rem.IE;
+            FieldByName('Xlgr').AsString    := FCTe.Rem.EnderReme.XLgr;
+            FieldByName('Nro').AsString     := FCTe.Rem.EnderReme.Nro;
+            FieldByName('XCpl').AsString    := FCTe.Rem.EnderReme.XCpl;
+            FieldByName('XBairro').AsString := FCTe.Rem.EnderReme.XBairro;
+            FieldByName('CMun').AsString    := IntToStr(FCTe.Rem.EnderReme.CMun);
+            FieldByName('XMun').AsString    := FCTe.Rem.EnderReme.XMun;
+            FieldByName('UF').AsString      := FCTe.Rem.EnderReme.UF;
+            FieldByName('CEP').AsString     := ManterCep( FCTe.Rem.EnderReme.CEP );
+            FieldByName('CPais').AsString   := IntToStr(FCTe.Rem.EnderReme.CPais);
+            FieldByName('XPais').AsString   := FCTe.Rem.EnderReme.XPais;
+            FieldByName('Fone').AsString    := FormatarFone(FCTe.Rem.Fone);
+          end;
 
-    case FCTe.ide.Toma03.Toma of
-      tmRemetente:
-        begin
-          FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Rem.CNPJCPF);
-          FieldByName('XNome').AsString   := FCTe.Rem.xNome;
-          FieldByName('XFant').AsString   := FCTe.Rem.XFant;
-          FieldByName('IE').AsString      := FCTe.Rem.IE;
-          FieldByName('Xlgr').AsString    := FCTe.Rem.EnderReme.XLgr;
-          FieldByName('Nro').AsString     := FCTe.Rem.EnderReme.Nro;
-          FieldByName('XCpl').AsString    := FCTe.Rem.EnderReme.XCpl;
-          FieldByName('XBairro').AsString := FCTe.Rem.EnderReme.XBairro;
-          FieldByName('CMun').AsString    := IntToStr(FCTe.Rem.EnderReme.CMun);
-          FieldByName('XMun').AsString    := FCTe.Rem.EnderReme.XMun;
-          FieldByName('UF').AsString      := FCTe.Rem.EnderReme.UF;
-          FieldByName('CEP').AsString     := ManterCep( FCTe.Rem.EnderReme.CEP );
-          FieldByName('CPais').AsString   := IntToStr(FCTe.Rem.EnderReme.CPais);
-          FieldByName('XPais').AsString   := FCTe.Rem.EnderReme.XPais;
-          FieldByName('Fone').AsString    := FormatarFone(FCTe.Rem.Fone);
-        end;
+        tmDestinatario:
+          begin
+            FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Dest.CNPJCPF);
+            FieldByName('XNome').AsString   := FCTe.Dest.xNome;
+            FieldByName('IE').AsString      := FCTe.Dest.IE;
+            FieldByName('Xlgr').AsString    := FCTe.Dest.EnderDest.XLgr;
+            FieldByName('Nro').AsString     := FCTe.Dest.EnderDest.Nro;
+            FieldByName('XCpl').AsString    := FCTe.Dest.EnderDest.XCpl;
+            FieldByName('XBairro').AsString := FCTe.Dest.EnderDest.XBairro;
+            FieldByName('CMun').AsString    := IntToStr(FCTe.Dest.EnderDest.CMun);
+            FieldByName('XMun').AsString    := FCTe.Dest.EnderDest.XMun;
+            FieldByName('UF').AsString      := FCTe.Dest.EnderDest.UF;
+            FieldByName('CEP').AsString     := ManterCep( FCTe.Dest.EnderDest.CEP );
+            FieldByName('CPais').AsString   := IntToStr(FCTe.Dest.EnderDest.CPais);
+            FieldByName('XPais').AsString   := FCTe.Dest.EnderDest.XPais;
+            FieldByName('Fone').AsString    := FormatarFone(FCTe.Dest.Fone);
+          end;
 
-      tmDestinatario:
-        begin
-          FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Dest.CNPJCPF);
-          FieldByName('XNome').AsString   := FCTe.Dest.xNome;
-          FieldByName('IE').AsString      := FCTe.Dest.IE;
-          FieldByName('Xlgr').AsString    := FCTe.Dest.EnderDest.XLgr;
-          FieldByName('Nro').AsString     := FCTe.Dest.EnderDest.Nro;
-          FieldByName('XCpl').AsString    := FCTe.Dest.EnderDest.XCpl;
-          FieldByName('XBairro').AsString := FCTe.Dest.EnderDest.XBairro;
-          FieldByName('CMun').AsString    := IntToStr(FCTe.Dest.EnderDest.CMun);
-          FieldByName('XMun').AsString    := FCTe.Dest.EnderDest.XMun;
-          FieldByName('UF').AsString      := FCTe.Dest.EnderDest.UF;
-          FieldByName('CEP').AsString     := ManterCep( FCTe.Dest.EnderDest.CEP );
-          FieldByName('CPais').AsString   := IntToStr(FCTe.Dest.EnderDest.CPais);
-          FieldByName('XPais').AsString   := FCTe.Dest.EnderDest.XPais;
-          FieldByName('Fone').AsString    := FormatarFone(FCTe.Dest.Fone);
-        end;
+        tmExpedidor:
+          begin
+            FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Exped.CNPJCPF);
+            FieldByName('XNome').AsString   := FCTe.Exped.xNome;
+            FieldByName('IE').AsString      := FCTe.Exped.IE;
+            FieldByName('Xlgr').AsString    := FCTe.Exped.EnderExped.XLgr;
+            FieldByName('Nro').AsString     := FCTe.Exped.EnderExped.Nro;
+            FieldByName('XCpl').AsString    := FCTe.Exped.EnderExped.XCpl;
+            FieldByName('XBairro').AsString := FCTe.Exped.EnderExped.XBairro;
+            FieldByName('CMun').AsString    := IntToStr(FCTe.Exped.EnderExped.CMun);
+            FieldByName('XMun').AsString    := FCTe.Exped.EnderExped.XMun;
+            FieldByName('UF').AsString      := FCTe.Exped.EnderExped.UF;
+            FieldByName('CEP').AsString     := ManterCep( FCTe.Exped.EnderExped.CEP );
+            FieldByName('CPais').AsString   := IntToStr(FCTe.Exped.EnderExped.CPais);
+            FieldByName('XPais').AsString   := FCTe.Exped.EnderExped.XPais;
+            FieldByName('Fone').AsString    := FormatarFone(FCTe.Exped.Fone);
+          end;
 
-      tmExpedidor:
-        begin
-          FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Exped.CNPJCPF);
-          FieldByName('XNome').AsString   := FCTe.Exped.xNome;
-          FieldByName('IE').AsString      := FCTe.Exped.IE;
-          FieldByName('Xlgr').AsString    := FCTe.Exped.EnderExped.XLgr;
-          FieldByName('Nro').AsString     := FCTe.Exped.EnderExped.Nro;
-          FieldByName('XCpl').AsString    := FCTe.Exped.EnderExped.XCpl;
-          FieldByName('XBairro').AsString := FCTe.Exped.EnderExped.XBairro;
-          FieldByName('CMun').AsString    := IntToStr(FCTe.Exped.EnderExped.CMun);
-          FieldByName('XMun').AsString    := FCTe.Exped.EnderExped.XMun;
-          FieldByName('UF').AsString      := FCTe.Exped.EnderExped.UF;
-          FieldByName('CEP').AsString     := ManterCep( FCTe.Exped.EnderExped.CEP );
-          FieldByName('CPais').AsString   := IntToStr(FCTe.Exped.EnderExped.CPais);
-          FieldByName('XPais').AsString   := FCTe.Exped.EnderExped.XPais;
-          FieldByName('Fone').AsString    := FormatarFone(FCTe.Exped.Fone);
-        end;
+        tmRecebedor:
+          begin
+            FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Receb.CNPJCPF);
+            FieldByName('XNome').AsString   := FCTe.Receb.xNome;
+            FieldByName('IE').AsString      := FCTe.Receb.IE;
+            FieldByName('Xlgr').AsString    := FCTe.Receb.EnderReceb.XLgr;
+            FieldByName('Nro').AsString     := FCTe.Receb.EnderReceb.Nro;
+            FieldByName('XCpl').AsString    := FCTe.Receb.EnderReceb.XCpl;
+            FieldByName('XBairro').AsString := FCTe.Receb.EnderReceb.XBairro;
+            FieldByName('CMun').AsString    := IntToStr(FCTe.Receb.EnderReceb.CMun);
+            FieldByName('XMun').AsString    := FCTe.Receb.EnderReceb.XMun;
+            FieldByName('UF').AsString      := FCTe.Receb.EnderReceb.UF;
+            FieldByName('CEP').AsString     := ManterCep( FCTe.Receb.EnderReceb.CEP);
+            FieldByName('CPais').AsString   := IntToStr(FCTe.Receb.EnderReceb.CPais);
+            FieldByName('XPais').AsString   := FCTe.Receb.EnderReceb.XPais;
+            FieldByName('Fone').AsString    := FormatarFone(FCTe.Receb.Fone);
+          end;
+      end;
 
-      tmRecebedor:
-        begin
-          FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.Receb.CNPJCPF);
-          FieldByName('XNome').AsString   := FCTe.Receb.xNome;
-          FieldByName('IE').AsString      := FCTe.Receb.IE;
-          FieldByName('Xlgr').AsString    := FCTe.Receb.EnderReceb.XLgr;
-          FieldByName('Nro').AsString     := FCTe.Receb.EnderReceb.Nro;
-          FieldByName('XCpl').AsString    := FCTe.Receb.EnderReceb.XCpl;
-          FieldByName('XBairro').AsString := FCTe.Receb.EnderReceb.XBairro;
-          FieldByName('CMun').AsString    := IntToStr(FCTe.Receb.EnderReceb.CMun);
-          FieldByName('XMun').AsString    := FCTe.Receb.EnderReceb.XMun;
-          FieldByName('UF').AsString      := FCTe.Receb.EnderReceb.UF;
-          FieldByName('CEP').AsString     := ManterCep( FCTe.Receb.EnderReceb.CEP);
-          FieldByName('CPais').AsString   := IntToStr(FCTe.Receb.EnderReceb.CPais);
-          FieldByName('XPais').AsString   := FCTe.Receb.EnderReceb.XPais;
-          FieldByName('Fone').AsString    := FormatarFone(FCTe.Receb.Fone);
-        end;
-    end;
-
-    case FCTe.ide.Toma4.Toma of
-      tmOutros:
-        begin
-          FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.ide.Toma4.CNPJCPF);
-          FieldByName('XNome').AsString   := FCTe.ide.Toma4.xNome;
-          FieldByName('IE').AsString      := FCTe.ide.Toma4.IE;
-          FieldByName('Xlgr').AsString    := FCTe.ide.Toma4.EnderToma.XLgr;
-          FieldByName('Nro').AsString     := FCTe.ide.Toma4.EnderToma.Nro;
-          FieldByName('XCpl').AsString    := FCTe.ide.Toma4.EnderToma.XCpl;
-          FieldByName('XBairro').AsString := FCTe.ide.Toma4.EnderToma.XBairro;
-          FieldByName('CMun').AsString    := IntToStr(FCTe.ide.Toma4.EnderToma.CMun);
-          FieldByName('XMun').AsString    := FCTe.ide.Toma4.EnderToma.XMun;
-          FieldByName('UF').AsString      := FCTe.ide.Toma4.EnderToma.UF;
-          FieldByName('CEP').AsString     := ManterCep( FCTe.ide.Toma4.EnderToma.CEP );
-          FieldByName('CPais').AsString   := IntToStr(FCTe.ide.Toma4.EnderToma.CPais);
-          FieldByName('XPais').AsString   := FCTe.ide.Toma4.EnderToma.XPais;
-          FieldByName('Fone').AsString    := FormatarFone(FCTe.ide.Toma4.Fone);
-        end;
+      case FCTe.ide.Toma4.Toma of
+        tmOutros:
+          begin
+            FieldByName('CNPJ').AsString    := FormatarCNPJouCPF(FCTe.ide.Toma4.CNPJCPF);
+            FieldByName('XNome').AsString   := FCTe.ide.Toma4.xNome;
+            FieldByName('IE').AsString      := FCTe.ide.Toma4.IE;
+            FieldByName('Xlgr').AsString    := FCTe.ide.Toma4.EnderToma.XLgr;
+            FieldByName('Nro').AsString     := FCTe.ide.Toma4.EnderToma.Nro;
+            FieldByName('XCpl').AsString    := FCTe.ide.Toma4.EnderToma.XCpl;
+            FieldByName('XBairro').AsString := FCTe.ide.Toma4.EnderToma.XBairro;
+            FieldByName('CMun').AsString    := IntToStr(FCTe.ide.Toma4.EnderToma.CMun);
+            FieldByName('XMun').AsString    := FCTe.ide.Toma4.EnderToma.XMun;
+            FieldByName('UF').AsString      := FCTe.ide.Toma4.EnderToma.UF;
+            FieldByName('CEP').AsString     := ManterCep( FCTe.ide.Toma4.EnderToma.CEP );
+            FieldByName('CPais').AsString   := IntToStr(FCTe.ide.Toma4.EnderToma.CPais);
+            FieldByName('XPais').AsString   := FCTe.ide.Toma4.EnderToma.XPais;
+            FieldByName('Fone').AsString    := FormatarFone(FCTe.ide.Toma4.Fone);
+          end;
+      end;
     end;
     Post;
   end;
@@ -2826,14 +3373,12 @@ begin
   end;
 end;
 
-Function TACBrCTeDACTEFR.ManterCep( iCep : Integer ) : String;
+function TACBrCTeDACTEFR.ManterCep( iCep : Integer ) : String;
 begin
   Result := '';
   if iCep > 0 then
     Result := FormatarCEP(Poem_Zeros(iCEP, 8));
 
 end;
-
-
 
 end.

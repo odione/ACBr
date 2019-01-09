@@ -34,6 +34,8 @@
 {                                                                              }
 {******************************************************************************}
 
+{$I ACBr.inc}
+
 unit pcnCFeCancR;
 
 interface
@@ -67,6 +69,7 @@ uses ACBrConsts, ACBrUtil;
 
 constructor TCFeCancR.Create(AOwner: TCFeCanc);
 begin
+  inherited Create;
   FLeitor := TLeitor.Create;
   FCFeCanc := AOwner;
 end;

@@ -57,7 +57,9 @@ const
 
 type
   EACBrMDFeException = class(EACBrDFeException);
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
   TACBrMDFe = class(TACBrDFe)
   private
     FDAMDFE: TACBrMDFeDAMDFEClass;
@@ -68,6 +70,8 @@ type
     FWebServices: TWebServices;
 
     function GetConfiguracoes: TConfiguracoesMDFe;
+    function Distribuicao(ACNPJCPF, AultNSU, ANSU: String): Boolean;
+
     procedure SetConfiguracoes(AValue: TConfiguracoesMDFe);
     procedure SetDAMDFE(const Value: TACBrMDFeDAMDFEClass);
   protected
@@ -75,13 +79,14 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
 
     function GetAbout: String; override;
+    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure EnviarEmail(sPara, sAssunto: String;
+    procedure EnviarEmail(const sPara, sAssunto: String;
       sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil;
-      StreamMDFe: TStream = nil; NomeArq: String = ''); override;
+      StreamMDFe: TStream = nil; const NomeArq: String = ''; sReplyTo: TStrings = nil); override;
 
     function Enviar(ALote: integer; Imprimir: Boolean = True): Boolean; overload;
     function Enviar(ALote: String; Imprimir: Boolean = True): Boolean; overload;
@@ -94,11 +99,10 @@ type
     function cStatCancelado(AValue: integer): Boolean;
 
     function Consultar( AChave: String = ''): Boolean;
-    function ConsultarMDFeNaoEnc(ACNPJ: String): Boolean;
+    function ConsultarMDFeNaoEnc(ACNPJCPF: String): Boolean;
     function Cancelamento(AJustificativa: String; ALote: integer = 0): Boolean;
     function EnviarEvento(idLote: integer): Boolean;
 
-    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
     procedure LerServicoDeParams(LayOutServico: TLayOutMDFe; var Versao: Double;
       var URL: String); reintroduce; overload;
     function LerVersaoDeParams(LayOutServico: TLayOutMDFe): String; reintroduce; overload;
@@ -122,7 +126,9 @@ type
     procedure SetStatus(const stNewStatus: TStatusACBrMDFe);
     procedure ImprimirEvento;
     procedure ImprimirEventoPDF;
-    function DistribuicaoDFe(ACNPJCPF, AultNSU, ANSU: String): Boolean;
+//    function DistribuicaoDFe(ACNPJCPF, AultNSU, ANSU: String): Boolean;
+    function DistribuicaoDFePorUltNSU(ACNPJCPF, AultNSU: String): Boolean;
+    function DistribuicaoDFePorNSU(ACNPJCPF, ANSU: String): Boolean;
 
   published
     property Configuracoes: TConfiguracoesMDFe
@@ -168,13 +174,15 @@ begin
   inherited;
 end;
 
-procedure TACBrMDFe.EnviarEmail(sPara, sAssunto: String; sMensagem: TStrings;
-  sCC: TStrings; Anexos: TStrings; StreamMDFe: TStream; NomeArq: String);
+procedure TACBrMDFe.EnviarEmail(const sPara, sAssunto: String; sMensagem: TStrings;
+  sCC: TStrings; Anexos: TStrings; StreamMDFe: TStream; const NomeArq: String;
+  sReplyTo: TStrings);
 begin
   SetStatus( stMDFeEmail );
 
   try
-    inherited EnviarEmail(sPara, sAssunto, sMensagem, sCC, Anexos, StreamMDFe, NomeArq);
+    inherited EnviarEmail(sPara, sAssunto, sMensagem, sCC, Anexos, StreamMDFe, NomeArq,
+      sReplyTo);
   finally
     SetStatus( stMDFeIdle );
   end;
@@ -466,11 +474,12 @@ begin
     EventoMDFe.Evento.Clear;
     with EventoMDFe.Evento.Add do
     begin
-      infEvento.CNPJ := copy(OnlyNumber(WebServices.Consulta.MDFeChave), 7, 14);
-      infEvento.cOrgao := StrToIntDef(copy(OnlyNumber(WebServices.Consulta.MDFeChave), 1, 2), 0);
+      infEvento.CNPJCPF  := copy(OnlyNumber(WebServices.Consulta.MDFeChave), 7, 14);
+      infEvento.cOrgao   := StrToIntDef(copy(OnlyNumber(WebServices.Consulta.MDFeChave), 1, 2), 0);
       infEvento.dhEvento := now;
       infEvento.tpEvento := teCancelamento;
-      infEvento.chMDFe := WebServices.Consulta.MDFeChave;
+      infEvento.chMDFe   := WebServices.Consulta.MDFeChave;
+
       infEvento.detEvento.nProt := WebServices.Consulta.Protocolo;
       infEvento.detEvento.xJust := AJustificativa;
     end;
@@ -509,9 +518,9 @@ begin
   Result := True;
 end;
 
-function TACBrMDFe.ConsultarMDFeNaoEnc(ACNPJ: String): Boolean;
+function TACBrMDFe.ConsultarMDFeNaoEnc(ACNPJCPF: String): Boolean;
 begin
-  Result := WebServices.ConsultaMDFeNaoEnc(ACNPJ);
+  Result := WebServices.ConsultaMDFeNaoEnc(ACNPJCPF);
 end;
 
 function TACBrMDFe.Enviar(ALote: Integer; Imprimir:Boolean = True): Boolean;
@@ -523,6 +532,9 @@ function TACBrMDFe.Enviar(ALote: String; Imprimir:Boolean = True): Boolean;
 var
  i: Integer;
 begin
+  WebServices.Enviar.Clear;
+  WebServices.Retorno.Clear;
+
   if Manifestos.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum MDF-e adicionado ao Lote'));
 
@@ -588,8 +600,8 @@ begin
       else
         j := 0;
 
-      if trim(EventoMDFe.Evento.Items[i].InfEvento.CNPJ) = '' then
-        EventoMDFe.Evento.Items[i].InfEvento.CNPJ := Manifestos.Items[j].MDFe.Emit.CNPJ;
+      if trim(EventoMDFe.Evento.Items[i].InfEvento.CNPJCPF) = '' then
+        EventoMDFe.Evento.Items[i].InfEvento.CNPJCPF := Manifestos.Items[j].MDFe.Emit.CNPJCPF;
 
       if chMDFe = '' then
         EventoMDFe.Evento.Items[i].InfEvento.chMDFe := Manifestos.Items[j].NumID;
@@ -636,9 +648,8 @@ begin
      DAMDFE.ImprimirEVENTOPDF(nil);
 end;
 
-function TACBrMDFe.DistribuicaoDFe(ACNPJCPF, AultNSU, ANSU: String): Boolean;
+function TACBrMDFe.Distribuicao(ACNPJCPF, AultNSU, ANSU: String): Boolean;
 begin
-//  WebServices.DistribuicaoDFe.cUFAutor := AcUFAutor;
   WebServices.DistribuicaoDFe.CNPJCPF := ACNPJCPF;
   WebServices.DistribuicaoDFe.ultNSU := AultNSU;
   WebServices.DistribuicaoDFe.NSU := ANSU;
@@ -647,6 +658,21 @@ begin
 
   if not Result then
     GerarException( WebServices.DistribuicaoDFe.Msg );
+end;
+
+//function TACBrMDFe.DistribuicaoDFe(ACNPJCPF, AultNSU, ANSU: String): Boolean;
+//begin
+//  Result := Distribuicao(ACNPJCPF, AultNSU, ANSU);
+//end;
+
+function TACBrMDFe.DistribuicaoDFePorUltNSU(ACNPJCPF, AultNSU: String): Boolean;
+begin
+  Result := Distribuicao(ACNPJCPF, AultNSU, '');
+end;
+
+function TACBrMDFe.DistribuicaoDFePorNSU(ACNPJCPF, ANSU: String): Boolean;
+begin
+  Result := Distribuicao(ACNPJCPF, '', ANSU);
 end;
 
 end.

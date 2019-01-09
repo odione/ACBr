@@ -61,6 +61,9 @@ uses
   Gif3 ;
 
 type
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrGIF = class ( TGraphicControl )
   private
 //  fsAbout: TACBrAboutInfo;
@@ -110,7 +113,7 @@ type
     procedure Stop ;
     procedure Start ;
     procedure LoadFromStream(Stream: TStream);
-    procedure LoadFromFile(AFileName: String);
+    procedure LoadFromFile(const AFileName: String);
   published
     property Align ;
     property Anchors;
@@ -460,7 +463,7 @@ begin
      Resume ;
 end;
 
-procedure TACBrGIF.LoadFromFile(AFileName: String);
+procedure TACBrGIF.LoadFromFile(const AFileName: String);
 begin
   Filename := AFileName ;
 end;

@@ -107,7 +107,6 @@ type
      procedure SetArqReq(const AValue : String);
      procedure SetArqResp(const AValue : String);
      procedure SetArqSTS(const AValue : String);
-     procedure SetGPExeName(const AValue : String);
      procedure SetNumLoja(const AValue : Integer);
      procedure SetNumCaixa(const AValue : Integer);
      procedure SetAtualizaPrecos(const AValue : Boolean);     
@@ -208,7 +207,7 @@ begin
            fpValorTotal := fpValorTotal + fpSaque ;
          end;
        131 : fpInstituicao                 := LinStr;
-       133 : fpCodigoAutorizacaoTransacao  := Linha.Informacao.AsInteger;
+       133 : fpCodigoAutorizacaoTransacao  := Linha.Informacao.AsString;
        134 : fpNSU                         := Linha.Informacao.AsString;
        //156 : fpRede                        := LinStr;
        501 : fpTipoPessoa                  := AnsiChar(IfThen(Linha.Informacao.AsInteger = 0,'J','F')[1]);
@@ -315,11 +314,6 @@ end;
 procedure TACBrTEFDTicketCar.SetArqSTS(const AValue : String);
 begin
   fArqSTS := Trim( AValue ) ;
-end;
-
-procedure TACBrTEFDTicketCar.SetGPExeName(const AValue : String);
-begin
-  fGPExeName := Trim( AValue ) ;
 end;
 
 procedure TACBrTEFDTicketCar.SetNumLoja(const AValue : Integer);

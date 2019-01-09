@@ -101,6 +101,7 @@ type
 
     function LerXML(const AXML: String): Boolean;
     function LerArqIni(const AIniString: String): Boolean;
+    function GerarNFeIni: String;
 
     function GerarXML: String;
     function GravarXML(const NomeArquivo: String = ''; const PathArquivo: String = ''): Boolean;
@@ -176,6 +177,7 @@ type
     function LoadFromString(const AXMLString: String; AGerarNFe: Boolean = False): Boolean;
     function LoadFromIni(const AIniString: String): Boolean;
 
+    function GerarIni: String;
     function GravarXML(const APathNomeArquivo: String = ''): Boolean;
     function GravarTXT(const APathNomeArquivo: String = ''): Boolean;
 
@@ -258,7 +260,11 @@ var
   XMLUTF8: AnsiString;
   Leitor: TLeitor;
 begin
-  TACBrNFe(TNotasFiscais(Collection).ACBrNFe).SSL.ValidarCNPJCertificado( NFe.Emit.CNPJCPF );
+  with TACBrNFe(TNotasFiscais(Collection).ACBrNFe) do
+  begin
+    if not Assigned(SSL.AntesDeAssinar) then
+      SSL.ValidarCNPJCertificado( NFe.Emit.CNPJCPF );
+  end;
 
   // Gera novamente, para processar propriedades que podem ter sido modificadas
   XMLStr := GerarXML;
@@ -402,7 +408,7 @@ var
   fsvTotTrib, fsvBC, fsvICMS, fsvICMSDeson, fsvBCST, fsvST, fsvProd, fsvFrete : Currency;
   fsvSeg, fsvDesc, fsvII, fsvIPI, fsvPIS, fsvCOFINS, fsvOutro, fsvServ, fsvNF, fsvTotPag : Currency;
   fsvFCP, fsvFCPST, fsvFCPSTRet, fsvIPIDevol, fsvDup : Currency;
-  FaturamentoDireto, NFImportacao : Boolean;
+  FaturamentoDireto, NFImportacao, UFCons : Boolean;
 
   procedure GravaLog(AString: String);
   begin
@@ -633,7 +639,7 @@ begin
         AdicionaErro('707-NFC-e para operação interestadual ou com o exterior');
 
       GravaLog('Validar: 709-NFCe formato DANFE');
-      if (not (NFe.Ide.tpImp in [tiNFCe, tiNFCeA4, tiMsgEletronica])) then
+      if (not (NFe.Ide.tpImp in [tiNFCe, tiMsgEletronica])) then
         //B21-10
         AdicionaErro('709-Rejeição: NFC-e com formato de DANFE inválido');
 
@@ -876,11 +882,6 @@ begin
          (NFe.Dest.EnderDest.UF = 'EX') then
         AdicionaErro('771-Rejeição: Operação Interestadual e UF de destino com EX');
 
-      GravaLog('Validar: 772-Op.Interstadual e UF igual');
-      if (nfe.Ide.idDest = doInterestadual) and
-         (NFe.Dest.EnderDest.UF = NFe.Emit.EnderEmit.UF) then
-        AdicionaErro('772-Rejeição: Operação Interestadual e UF de destino igual à UF do emitente');
-
       GravaLog('Validar: 773-Op.Interna e UF diferente');
       if (nfe.Ide.idDest = doInterna) and
          (NFe.Dest.EnderDest.UF <> NFe.Emit.EnderEmit.UF) and
@@ -930,13 +931,13 @@ begin
           if (nfe.Cobr.Fat.vLiq <> (nfe.Cobr.Fat.vOrig - nfe.Cobr.Fat.vDesc)) then
             AdicionaErro('896-Rejeição: Valor Liquido da Fatura difere do Valor Original menos o Valor do Desconto');
 
-          GravaLog('Validar: 897-Valor Líquido da Fatura/Valor Original da Fatura maior que o Valor Total da Nota Fiscal');
-          if (((nfe.Cobr.Fat.vLiq > 0) and (nfe.Cobr.Fat.vLiq > nfe.Total.ICMSTot.vNF)) or
-              ((nfe.Cobr.Fat.vOrig > nfe.Total.ICMSTot.vNF)))then
-            AdicionaErro('897-Rejeição: Valor da Fatura maior que Valor Total da NF-e');
+//          GravaLog('Validar: 897-Valor Líquido da Fatura/Valor Original da Fatura maior que o Valor Total da Nota Fiscal');
+//          if (((nfe.Cobr.Fat.vLiq > 0) and (nfe.Cobr.Fat.vLiq > nfe.Total.ICMSTot.vNF)) or
+//              ((nfe.Cobr.Fat.vOrig > nfe.Total.ICMSTot.vNF)))then
+//            AdicionaErro('897-Rejeição: Valor da Fatura maior que Valor Total da NF-e');
 
           fsvDup := 0;
-          UltVencto := NFe.Ide.dEmi;
+          UltVencto := DateOf(NFe.Ide.dEmi);
           for I:=0 to nfe.Cobr.Dup.Count-1 do
           begin
             fsvDup := fsvDup + nfe.Cobr.Dup.Items[I].vDup;
@@ -948,7 +949,7 @@ begin
             //898 - Verificar DATA de autorização
 
             GravaLog('Validar: 894-Se informado o grupo de Parcelas de cobrança (tag:dup, Id:Y07) e Data de vencimento (dVenc, id:Y09) não informada ou menor que a Data de Emissão (id:B09)');
-            if (nfe.Cobr.Dup.Items[I].dVenc < NFe.Ide.dEmi) then
+            if (nfe.Cobr.Dup.Items[I].dVenc < DateOf(NFe.Ide.dEmi)) then
               AdicionaErro('894-Rejeição: Data de vencimento da parcela não informada ou menor que Data de Emissão');
 
             GravaLog('Validar: 867-Se informado o grupo de Parcelas de cobrança (tag:dup, Id:Y07) e Data de vencimento (dVenc, id:Y09) não informada ou menor que a Data de vencimento da parcela anterior (dVenc, id:Y09)');
@@ -959,8 +960,9 @@ begin
           end;
 
           GravaLog('Validar: 872-Se informado o grupo de Parcelas de cobrança (tag:dup, Id:Y07) e a soma do valor das parcelas (vDup, id: Y10) difere do Valor Líquido da Fatura (vLiq, id:Y06).');
-          if (((nfe.Cobr.Fat.vLiq > 0) and (fsvDup < nfe.Cobr.Fat.vLiq)) or
-            (fsvDup < (nfe.Cobr.Fat.vOrig-nfe.Cobr.Fat.vDesc)))then
+          //porque se não tiver parcela não tem valor para ser verificado
+          if (nfe.Cobr.Dup.Count > 0) and (((nfe.Cobr.Fat.vLiq > 0) and (fsvDup < nfe.Cobr.Fat.vLiq)) or
+             (fsvDup < (nfe.Cobr.Fat.vOrig-nfe.Cobr.Fat.vDesc))) then
             AdicionaErro('872-Rejeição: Soma do valor das parcelas difere do Valor Líquido da Fatura');
         end;
       end;
@@ -1001,6 +1003,7 @@ begin
     fsvIPIDevol:= 0;
     FaturamentoDireto := False;
     NFImportacao := False;
+    UFCons := False;
 
     for I:=0 to NFe.Det.Count-1 do
     begin
@@ -1009,122 +1012,153 @@ begin
         if Trim(Prod.NCM) <> '00' then
         begin
           // validar NCM completo somente quando não for serviço
-          GravaLog('Validar: 777-'+IntToStr(I)+'-NCM info');
+          GravaLog('Validar: 777-NCM info [nItem: '+IntToStr(Prod.nItem)+']');
           if Length(Trim(Prod.NCM)) < 8 then
-            AdicionaErro('777-Rejeição: Obrigatória a informação do NCM completo');
+            AdicionaErro('777-Rejeição: Obrigatória a informação do NCM completo [nItem: '+IntToStr(Prod.nItem)+']');
         end;
 
         if (NFe.Ide.modelo = 65) then
         begin
-          GravaLog('Validar: 725-'+IntToStr(I)+'-NFCe CFOP invalido');
+          GravaLog('Validar: 725-NFCe CFOP invalido [nItem: '+IntToStr(Prod.nItem)+']');
           if (pos(OnlyNumber(Prod.CFOP), 'XXXX,5101,5102,5103,5104,5115,5401,5403,5405,5653,5656,5667,5933') <= 0)  then
-            AdicionaErro('725-Rejeição: NFC-e com CFOP inválido');
+            AdicionaErro('725-Rejeição: NFC-e com CFOP inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 774-'+IntToStr(I)+'-NFCe indicador Total');
+          GravaLog('Validar: 774-NFCe indicador Total [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.IndTot = itNaoSomaTotalNFe) then
-            AdicionaErro('774-Rejeição: NFC-e com indicador de item não participante do total');
+            AdicionaErro('774-Rejeição: NFC-e com indicador de item não participante do total [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 736-'+IntToStr(I)+'-NFCe Grupo veiculos novos');
+          GravaLog('Validar: 736-NFCe Grupo veiculos novos [nItem: '+IntToStr(Prod.nItem)+']');
           if (NaoEstaVazio(Prod.veicProd.chassi)) then
-            AdicionaErro('736-Rejeição: NFC-e com grupo de Veículos novos');
+            AdicionaErro('736-Rejeição: NFC-e com grupo de Veículos novos [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 737-'+IntToStr(I)+'-NCM info');
+          GravaLog('Validar: 737-NCM info [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.med.Count > 0) then
-            AdicionaErro('737-Rejeição: NFC-e com grupo de Medicamentos');
+            AdicionaErro('737-Rejeição: NFC-e com grupo de Medicamentos [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 738-'+IntToStr(I)+'-NFCe grupo Armamentos');
+          GravaLog('Validar: 738-NFCe grupo Armamentos [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.arma.Count > 0) then
-            AdicionaErro('738-Rejeição: NFC-e com grupo de Armamentos');
+            AdicionaErro('738-Rejeição: NFC-e com grupo de Armamentos [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 348-'+IntToStr(I)+'-NFCe grupo RECOPI');
+          GravaLog('Validar: 348-NFCe grupo RECOPI [nItem: '+IntToStr(Prod.nItem)+']');
           if (NaoEstaVazio(Prod.nRECOPI)) then
-            AdicionaErro('348-Rejeição: NFC-e com grupo RECOPI');
+            AdicionaErro('348-Rejeição: NFC-e com grupo RECOPI [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 766-'+IntToStr(I)+'-NFCe CST 50');
+          GravaLog('Validar: 766-NFCe CST 50 [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.ICMS.CST = cst50) then
-            AdicionaErro('766-Rejeição: NFC-e com CST 50-Suspensão');
+            AdicionaErro('766-Rejeição: NFC-e com CST 50-Suspensão [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 740-'+IntToStr(I)+'-NFCe CST 51');
+          GravaLog('Validar: 740-NFCe CST 51 [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.ICMS.CST = cst51) then
-            AdicionaErro('740-Rejeição: NFC-e com CST 51-Diferimento');
+            AdicionaErro('740-Rejeição: NFC-e com CST 51-Diferimento [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 741-'+IntToStr(I)+'-NFCe partilha ICMS');
+          GravaLog('Validar: 741-NFCe partilha ICMS [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.ICMS.CST in [cstPart10,cstPart90]) then
-            AdicionaErro('741-Rejeição: NFC-e com Partilha de ICMS entre UF');
+            AdicionaErro('741-Rejeição: NFC-e com Partilha de ICMS entre UF [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 742-'+IntToStr(I)+'-NFCe grupo IPI');
+          GravaLog('Validar: 742-NFCe grupo IPI [nItem: '+IntToStr(Prod.nItem)+']');
           if ((Imposto.IPI.cEnq  <> '') or
               (Imposto.IPI.vBC   <> 0) or
               (Imposto.IPI.qUnid <> 0) or
               (Imposto.IPI.vUnid <> 0) or
               (Imposto.IPI.pIPI  <> 0) or
               (Imposto.IPI.vIPI  <> 0)) then
-            AdicionaErro('742-Rejeição: NFC-e com grupo do IPI');
+            AdicionaErro('742-Rejeição: NFC-e com grupo do IPI [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 743-'+IntToStr(I)+'-NFCe grupo II');
+          GravaLog('Validar: 743-NFCe grupo II [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.II.vBc > 0) or
              (Imposto.II.vDespAdu > 0) or
              (Imposto.II.vII > 0) or
              (Imposto.II.vIOF > 0) or
              (Copy(Prod.CFOP,1,1) = '3') then
-            AdicionaErro('743-Rejeição: NFC-e com grupo do II');
+            AdicionaErro('743-Rejeição: NFC-e com grupo do II [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 746-'+IntToStr(I)+'-NFCe grupo PIS-ST');
+          GravaLog('Validar: 746-NFCe grupo PIS-ST [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.PISST.vBc > 0) or
              (Imposto.PISST.pPis > 0) or
              (Imposto.PISST.qBCProd > 0) or
              (Imposto.PISST.vAliqProd > 0) or
              (Imposto.PISST.vPIS > 0) then
-           AdicionaErro('746-Rejeição: NFC-e com grupo do PIS-ST');
+           AdicionaErro('746-Rejeição: NFC-e com grupo do PIS-ST [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 749-'+IntToStr(I)+'-NFCe grupo COFINS-ST');
+          GravaLog('Validar: 749-NFCe grupo COFINS-ST [nItem: '+IntToStr(Prod.nItem)+']');
           if (Imposto.COFINSST.vBC > 0) or
              (Imposto.COFINSST.pCOFINS > 0) or
              (Imposto.COFINSST.qBCProd > 0) or
              (Imposto.COFINSST.vAliqProd > 0) or
              (Imposto.COFINSST.vCOFINS > 0) then
-            AdicionaErro('749-Rejeição: NFC-e com grupo da COFINS-ST');
+            AdicionaErro('749-Rejeição: NFC-e com grupo da COFINS-ST [nItem: '+IntToStr(Prod.nItem)+']');
         end
         else if(NFe.Ide.modelo = 55) then
         begin
           if (NFe.infNFe.Versao >= 4) then
           begin
-            GravaLog('Validar: 856-'+IntToStr(I)+'-Obrigatória a informação do campo vPart (id: LA03d) para produto "210203001 – GLP" (tag:cProdANP)');
-            if (Prod.comb.cProdANP = 210203001) and (Prod.comb.vPart <= 0) then
-              AdicionaErro('856-Rejeição: Campo valor de partida não preenchido para produto GLP [nItem:'+IntToStr(I)+']');
+ {           GravaLog('Validar: 508-CST incompatível na operação com Não Contribuinte [nItem: '+IntToStr(Prod.nItem)+']');
+            if (NFe.Emit.CRT <> crtSimplesNacional) and
+               (NFe.Dest.indIEDest = inNaoContribuinte) and
+               (NFe.Ide.tpNF <> tnEntrada) and
+               (pos(OnlyNumber(Prod.CFOP), 'XXXX,5915,5916,6915,6916,5912,5913') <= 0) and
+               (EstaVazio(Prod.veicProd.chassi) or (NaoEstaVazio(Prod.veicProd.chassi) and not (Prod.veicProd.tpOP in [toFaturamentoDireto, toVendaDireta]))) and
+               (not (Imposto.ICMS.CST in [cst00, cst20, cst40, cst41, cst60])) then
+              AdicionaErro('508-Rejeição: CST incompatível na operação com Não Contribuinte [nItem: '+IntToStr(Prod.nItem)+']');
 
-{            GravaLog('Validar: 858-'+IntToStr(I)+'-Grupo ICMS60 (id:N08) informado indevidamente nas operações com os produtos combustíveis sujeitos a repasse interestadual');
+            GravaLog('Validar: 529-CST incompatível na operação com Contribuinte Isento de Inscrição Estadual [nItem: '+IntToStr(Prod.nItem)+']');
+            if (NFe.Dest.indIEDest = inIsento) and
+               ((Imposto.ICMS.CST = cst51) or
+               ((Imposto.ICMS.CST = cst50) and (pos(OnlyNumber(Prod.CFOP), 'XXXX,5915,5916,6915,6916,5912,5913') <= 0))) then
+             AdicionaErro('529-Rejeição: CST incompatível na operação com Contribuinte Isento de Inscrição Estadual [nItem: '+IntToStr(Prod.nItem)+']');
+
+            GravaLog('Validar: 600-CSOSN incompatível na operação com Não Contribuinte [nItem: '+IntToStr(Prod.nItem)+']');
+            if (NFe.Emit.CRT = crtSimplesNacional) and
+               (NFe.Dest.indIEDest = inNaoContribuinte) and
+               (NFe.Ide.tpNF <> tnEntrada) and
+               (pos(OnlyNumber(Prod.CFOP), 'XXXX,5915,5916,6915,6916,5912,5913') <= 0) and
+               (EstaVazio(Prod.veicProd.chassi) or (NaoEstaVazio(Prod.veicProd.chassi) and not (Prod.veicProd.tpOP in [toFaturamentoDireto, toVendaDireta]))) and
+               (not (Imposto.ICMS.CSOSN in [csosn102, csosn103, csosn300, csosn400, csosn500])) then
+              AdicionaErro('600-Rejeição: CSOSN incompatível na operação com Não Contribuinte [nItem: '+IntToStr(Prod.nItem)+']');
+
+            GravaLog('Validar: 806-Operação com ICMS-ST sem informação do CEST [nItem: '+IntToStr(Prod.nItem)+']');
+            if (not Imposto.ICMS.CST in [cstPart10,cstPart90]) and
+               EstaVazio(Prod.CEST) and
+               (((NFe.Emit.CRT = crtSimplesNacional) and (Imposto.ICMS.CSOSN in [csosn201, csosn202, csosn203, csosn500, csosn900])) or
+                ((NFe.Emit.CRT <> crtSimplesNacional) and (Imposto.ICMS.CST in [cst10, cst30, cst60, cst70, cst90]))) then
+              AdicionaErro('806-Rejeição: Operação com ICMS-ST sem informação do CEST [nItem: '+IntToStr(Prod.nItem)+']');           }
+
+            GravaLog('Validar: 856-Obrigatória a informação do campo vPart (id: LA03d) para produto "210203001 – GLP" (tag:cProdANP) [nItem: '+IntToStr(Prod.nItem)+']');
+            if (Prod.comb.cProdANP = 210203001) and (Prod.comb.vPart <= 0) then
+              AdicionaErro('856-Rejeição: Campo valor de partida não preenchido para produto GLP [nItem: '+IntToStr(Prod.nItem)+']');
+
+{            GravaLog('Validar: 858-Grupo ICMS60 (id:N08) informado indevidamente nas operações com os produtos combustíveis sujeitos a repasse interestadual [nItem: '+IntToStr(Prod.nItem)+']');
             if (Prod.comb.cProdANP = '210203001') and (Imposto.ICMS.CST = cst60 and Imposto.ICMS.vICMSSTDest <= 0) then
-              AdicionaErro('858-Rejeição: Grupo de Tributação informado indevidamente [nItem:'+IntToStr(I)+']');    }//VERIFICAR
+              AdicionaErro('858-Rejeição: Grupo de Tributação informado indevidamente [nItem: '+IntToStr(Prod.nItem)+']');    }//VERIFICAR
 
 
           end;
         end;
 
-        GravaLog('Validar: 528-'+IntToStr(I)+'-ICMS BC e Aliq');
+        GravaLog('Validar: 528-ICMS BC e Aliq [nItem: '+IntToStr(Prod.nItem)+']');
         if (Imposto.ICMS.CST in [cst00,cst10,cst20,cst70]) and
            (NFe.Ide.finNFe = fnNormal) and
 	       (ComparaValor(Imposto.ICMS.vICMS, Imposto.ICMS.vBC * (Imposto.ICMS.pICMS/100), 0.01) <> 0) then
-          AdicionaErro('528-Rejeição: Valor do ICMS difere do produto BC e Alíquota');
+          AdicionaErro('528-Rejeição: Valor do ICMS difere do produto BC e Alíquota [nItem: '+IntToStr(Prod.nItem)+']');
 
-        GravaLog('Validar: 625-'+IntToStr(I)+'-Insc.SUFRAMA');
+        GravaLog('Validar: 625-Insc.SUFRAMA [nItem: '+IntToStr(Prod.nItem)+']');
         if (Imposto.ICMS.motDesICMS = mdiSuframa) and
            (EstaVazio(NFe.Dest.ISUF))then
-          AdicionaErro('625-Rejeição: Inscrição SUFRAMA deve ser informada na venda com isenção para ZFM');
+          AdicionaErro('625-Rejeição: Inscrição SUFRAMA deve ser informada na venda com isenção para ZFM [nItem: '+IntToStr(Prod.nItem)+']');
 
-        GravaLog('Validar: 530-'+IntToStr(I)+'-ISSQN e IM');
+        GravaLog('Validar: 530-ISSQN e IM [nItem: '+IntToStr(Prod.nItem)+']');
         if EstaVazio(NFe.Emit.IM) and
           ((Imposto.ISSQN.vBC > 0) or
            (Imposto.ISSQN.vAliq > 0) or
            (Imposto.ISSQN.vISSQN > 0) or
            (Imposto.ISSQN.cMunFG > 0) or
            (Imposto.ISSQN.cListServ <> '')) then
-          AdicionaErro('530-Rejeição: Operação com tributação de ISSQN sem informar a Inscrição Municipal');
+          AdicionaErro('530-Rejeição: Operação com tributação de ISSQN sem informar a Inscrição Municipal [nItem: '+IntToStr(Prod.nItem)+']');
 
-        GravaLog('Validar: 287-'+IntToStr(I)+'-Cod.Município FG');
+        GravaLog('Validar: 287-Cod.Município FG [nItem: '+IntToStr(Prod.nItem)+']');
         if (Imposto.ISSQN.cMunFG > 0) and
            not ValidarMunicipio(Imposto.ISSQN.cMunFG) then
-          AdicionaErro('287-Rejeição: Código Município do FG - ISSQN: dígito inválido');
+          AdicionaErro('287-Rejeição: Código Município do FG - ISSQN: dígito inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
         if (NFe.infNFe.Versao >= 4) then
         begin
@@ -1138,17 +1172,17 @@ begin
           begin
             if (Prod.cEAN <> SEM_GTIN) then
             begin
-              GravaLog('Validar: 611-GTIN (cEAN) inválido [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 611-GTIN (cEAN) inválido [nItem: '+IntToStr(Prod.nItem)+']');
               if not ValidarGTIN(Prod.cEAN) then
-                AdicionaErro('611-Rejeição: GTIN (cEAN) inválido [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('611-Rejeição: GTIN (cEAN) inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
-              GravaLog('Validar: 882-GTIN (cEAN) com prefixo inválido [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 882-GTIN (cEAN) com prefixo inválido [nItem: '+IntToStr(Prod.nItem)+']');
               if not ValidarPrefixoGTIN(Prod.cEAN) then
-                AdicionaErro('882-Rejeição: GTIN (cEAN) com prefixo inválido [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('882-Rejeição: GTIN (cEAN) com prefixo inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
-              GravaLog('Validar: 885-GTIN informado, mas não informado o GTIN da unidade tributável [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 885-GTIN informado, mas não informado o GTIN da unidade tributável [nItem: '+IntToStr(Prod.nItem)+']');
               if (Trim(Prod.cEANTrib) = '') or ((Trim(Prod.cEANTrib) = SEM_GTIN)) then
-                AdicionaErro('885-Rejeição: GTIN informado, mas não informado o GTIN da unidade tributável [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('885-Rejeição: GTIN informado, mas não informado o GTIN da unidade tributável [nItem: '+IntToStr(Prod.nItem)+']');
             end;
           end;
 
@@ -1156,68 +1190,71 @@ begin
           begin
             //somente aplicavel em produção a partir de 01/12/2018
             //GravaLog('Validar: 888-GTIN da unidade tributável (cEANTrib) sem informação [nItem:' + IntToStr(I) + ']');
-            //AdicionaErro('888-Rejeição: GTIN da unidade tributável (cEANTrib) sem informação [nItem:' + IntToStr(I) + ']');
+            //AdicionaErro('888-Rejeição: GTIN da unidade tributável (cEANTrib) sem informação [nItem: '+IntToStr(Prod.nItem)+']');
           end
           else
           begin
             if (Prod.cEANTrib <> SEM_GTIN) then
             begin
-              GravaLog('Validar: 612-GTIN da unidade tributável (cEANTrib) inválido [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 612-GTIN da unidade tributável (cEANTrib) inválido [nItem: '+IntToStr(Prod.nItem)+']');
               if not ValidarGTIN(Prod.cEANTrib) then
-                AdicionaErro('612-Rejeição: GTIN da unidade tributável (cEANTrib) inválido [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('612-Rejeição: GTIN da unidade tributável (cEANTrib) inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
-              GravaLog('Validar: 884-GTIN da unidade tributável (cEANTrib) com prefixo inválido [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 884-GTIN da unidade tributável (cEANTrib) com prefixo inválido [nItem: '+IntToStr(Prod.nItem)+']');
               if not ValidarPrefixoGTIN(Prod.cEANTrib) then
-                AdicionaErro('884-Rejeição: GTIN da unidade tributável (cEANTrib) com prefixo inválido [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('884-Rejeição: GTIN da unidade tributável (cEANTrib) com prefixo inválido [nItem: '+IntToStr(Prod.nItem)+']');
 
-              GravaLog('Validar: 886-GTIN da unidade tributável informado, mas não informado o GTIN [nItem:' + IntToStr(I) + ']');
+              GravaLog('Validar: 886-GTIN da unidade tributável informado, mas não informado o GTIN [nItem: '+IntToStr(Prod.nItem)+']');
               if (Trim(Prod.cEAN) = '') or ((Trim(Prod.cEAN) = SEM_GTIN)) then
-                AdicionaErro('886-Rejeição: GTIN da unidade tributável informado, mas não informado o GTIN [nItem:' + IntToStr(I) + ']');
+                AdicionaErro('886-Rejeição: GTIN da unidade tributável informado, mas não informado o GTIN [nItem: '+IntToStr(Prod.nItem)+']');
             end;
           end;
 
-          GravaLog('Validação: 889-Obrigatória a informação do GTIN para o produto [nItem:' + IntToStr(I) + ']');
+          GravaLog('Validação: 889-Obrigatória a informação do GTIN para o produto [nItem: '+IntToStr(Prod.nItem)+']');
           if (Trim(Prod.cEAN) = '') then
-            AdicionaErro('889-Rejeição: Obrigatória a informação do GTIN para o produto [nItem:' + IntToStr(I) + ']');
+            AdicionaErro('889-Rejeição: Obrigatória a informação do GTIN para o produto [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 879-'+IntToStr(I)+'-Se informado indEscala=N- não relevante (id: I05d), deve ser informado CNPJ do Fabricante da Mercadoria (id: I05e)');
+          GravaLog('Validar: 879-Se informado indEscala=N- não relevante (id: I05d), deve ser informado CNPJ do Fabricante da Mercadoria (id: I05e) [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.indEscala = ieNaoRelevante) and
              EstaVazio(Prod.CNPJFab) then
-            AdicionaErro('879-Rejeição: Informado item Produzido em Escala NÃO Relevante e não informado CNPJ do Fabricante [nItem:'+IntToStr(I)+']');
+            AdicionaErro('879-Rejeição: Informado item Produzido em Escala NÃO Relevante e não informado CNPJ do Fabricante [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 489-'+IntToStr(I)+'-Se informado CNPJFab (id: I05e) - CNPJ inválido (DV, zeros)');
+          GravaLog('Validar: 489-Se informado CNPJFab (id: I05e) - CNPJ inválido (DV, zeros) [nItem: '+IntToStr(Prod.nItem)+']');
           if NaoEstaVazio(Prod.CNPJFab) and (not ValidarCNPJ(Prod.CNPJFab)) then
-            AdicionaErro('489-Rejeição: CNPJFab informado inválido (DV ou zeros)');
+            AdicionaErro('489-Rejeição: CNPJFab informado inválido (DV ou zeros) [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 854-'+IntToStr(I)+'-Informado campo cProdANP (id: LA02) = 210203001 (GLP) e campo uTrib (id: I13) <> “kg” (ignorar a diferenciação entre maiúsculas e minúsculas)');
+          GravaLog('Validar: 854-Informado campo cProdANP (id: LA02) = 210203001 (GLP) e campo uTrib (id: I13) <> “kg” (ignorar a diferenciação entre maiúsculas e minúsculas) [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.comb.cProdANP = 210203001) and (UpperCase(Prod.uTrib) <> 'KG') then
-            AdicionaErro('854-Rejeição: Unidade Tributável (tag:uTrib) incompatível com produto informado [nItem:'+IntToStr(I)+']');
+            AdicionaErro('854-Rejeição: Unidade Tributável (tag:uTrib) incompatível com produto informado [nItem: '+IntToStr(Prod.nItem)+']');
+
+          if not UFCons then
+            UFCons := (Prod.comb.UFcons <> '') and (Prod.comb.UFcons <> NFe.emit.EnderEmit.UF);
 
           for J:=0 to Prod.rastro.Count-1 do
           begin
-            GravaLog('Validar: 877-'+IntToStr(I)+'-Data de Fabricação dFab (id:I83) maior que a data de processamento');
+            GravaLog('Validar: 877-Data de Fabricação dFab (id:I83) maior que a data de processamento [nItem: '+IntToStr(Prod.nItem)+']');
             if (Prod.rastro.Items[J].dFab > NFe.Ide.dEmi) then
-              AdicionaErro('877-Rejeição: Data de fabricação maior que a data de processamento [nItem:'+IntToStr(I)+']');
+              AdicionaErro('877-Rejeição: Data de fabricação maior que a data de processamento [nItem: '+IntToStr(Prod.nItem)+']');
 
-            GravaLog('Validar: 870-'+IntToStr(I)+'-Informada data de validade dVal(id: I84) menor que Data de Fabricação dFab (id: I83)');
+            GravaLog('Validar: 870-Informada data de validade dVal(id: I84) menor que Data de Fabricação dFab (id: I83) [nItem: '+IntToStr(Prod.nItem)+']');
             if (Prod.rastro.Items[J].dVal < Prod.rastro.Items[J].dFab) then
-              AdicionaErro('870-Rejeição: Data de validade incompatível com data de fabricação [nItem:'+IntToStr(I)+']');
+              AdicionaErro('870-Rejeição: Data de validade incompatível com data de fabricação [nItem: '+IntToStr(Prod.nItem)+']');
           end;
 
           for J:=0 to Prod.med.Count-1 do
           begin
-            GravaLog('Validar: 873-'+IntToStr(I)+'-Se informado Grupo de Medicamentos (tag:med) obrigatório preenchimento do grupo rastro (id: I80)');
+            GravaLog('Validar: 873-Se informado Grupo de Medicamentos (tag:med) obrigatório preenchimento do grupo rastro (id: I80) [nItem: '+IntToStr(Prod.nItem)+']');
             if NaoEstaVazio(Prod.med[J].cProdANVISA) and (Prod.rastro.Count<=0) then
-              AdicionaErro('873-Rejeição: Operação com medicamentos e não informado os campos de rastreabilidade [nItem:'+IntToStr(I)+']');
+              AdicionaErro('873-Rejeição: Operação com medicamentos e não informado os campos de rastreabilidade [nItem: '+IntToStr(Prod.nItem)+']');
           end;
 
-          GravaLog('Validar: 461-'+IntToStr(I)+'-Informado percentual do GLP (id: LA03a) ou percentual de Gás Natural Nacional (id: LA03b) ou percentual de Gás Natural Importado (id: LA03c) para produto diferente de "210203001 – GLP" (tag:cProdANP)');
+          GravaLog('Validar: 461-Informado percentual do GLP (id: LA03a) ou percentual de Gás Natural Nacional (id: LA03b) ou percentual de Gás Natural Importado (id: LA03c) para produto diferente de "210203001 – GLP" (tag:cProdANP) [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.comb.cProdANP <> 210203001) and ((Prod.comb.pGLP > 0) or (Prod.comb.pGNn > 0) or (Prod.comb.pGNi > 0)) then
-            AdicionaErro('461-Rejeição: Informado campos de percentual de GLP e/ou GLGNn e/ou GLGNi para produto diferente de GLP [nItem:'+IntToStr(I)+']');
+            AdicionaErro('461-Rejeição: Informado campos de percentual de GLP e/ou GLGNn e/ou GLGNi para produto diferente de GLP [nItem: '+IntToStr(Prod.nItem)+']');
 
-          GravaLog('Validar: 855-'+IntToStr(I)+'-Informado percentual do GLP (id: LA03a) ou percentual de Gás Natural Nacional (id: LA03b) ou percentual de Gás Natural Importado (id: LA03c) para produto diferente de "210203001 – GLP" (tag:cProdANP)');
+          GravaLog('Validar: 855-Informado percentual do GLP (id: LA03a) ou percentual de Gás Natural Nacional (id: LA03b) ou percentual de Gás Natural Importado (id: LA03c) para produto diferente de "210203001 – GLP" (tag:cProdANP) [nItem: '+IntToStr(Prod.nItem)+']');
           if (Prod.comb.cProdANP = 210203001) and ((Prod.comb.pGLP + Prod.comb.pGNn + Prod.comb.pGNi) <> 100) then
-            AdicionaErro('855-Rejeição: Somatório percentuais de GLP derivado do petróleo, GLGNn e GLGNi diferente de 100 [nItem:'+IntToStr(I)+']');
+            AdicionaErro('855-Rejeição: Somatório percentuais de GLP derivado do petróleo, GLGNn e GLGNi diferente de 100 [nItem: '+IntToStr(Prod.nItem)+']');
         end;
 
         if Prod.IndTot = itSomaTotalNFe then
@@ -1253,6 +1290,15 @@ begin
         if Copy(Prod.CFOP,1,1) = '3'then
           NFImportacao := True;
       end;
+    end;
+
+    if not UFCons then
+    begin
+      GravaLog('Validar: 772-Op.Interstadual e UF igual');
+      if (nfe.Ide.idDest = doInterestadual) and
+         (NFe.Dest.EnderDest.UF = NFe.Emit.EnderEmit.UF) and
+         (NFe.Dest.CNPJCPF <> NFe.Emit.CNPJCPF) then
+        AdicionaErro('772-Rejeição: Operação Interestadual e UF de destino igual à UF do emitente');
     end;
 
     if FaturamentoDireto then
@@ -1370,13 +1416,38 @@ begin
             fsvTotPag :=  fsvTotPag + NFe.pag[I].vPag;
           end;
 
+          {
+            ** Validação removida na NT 2016.002 v1.10
           GravaLog('Validar: 767-Soma dos pagamentos');
           if (fsvTotPag < NFe.Total.ICMSTot.vNF) then
             AdicionaErro('767-Rejeição: Somatório dos pagamentos diferente do total da Nota Fiscal');
+          }
+
+          if (NFe.Ide.modelo = 65) then
+          begin
+            GravaLog('Validar: 899-NFCe sem pagamento');
+            for I := 0 to NFe.pag.Count - 1 do
+            begin
+              if (NFe.pag[I].tPag = fpSemPagamento) then
+              begin
+                AdicionaErro('899-Rejeição: Informado incorretamente o campo meio de pagamento');
+                Break;
+              end;
+            end;
+
+            GravaLog('Validar: 865-Total dos pagamentos NFCe');
+            if (fsvTotPag < NFe.Total.ICMSTot.vNF) then
+              AdicionaErro('865-Rejeição: Total dos pagamentos menor que o total da nota');
+          end;
+
+          GravaLog('Validar: 866-Ausência de troco');
+          if (NFe.pag.vTroco = 0) and (fsvTotPag > NFe.Total.ICMSTot.vNF) then
+            AdicionaErro('866-Rejeição: Ausência de troco quando o valor dos pagamentos informados for maior que o total da nota');
 
           GravaLog('Validar: 869-Valor do troco');
-          if (NFe.Total.ICMSTot.vNF <> (fsvTotPag - NFe.pag.vTroco)) then
+          if (NFe.pag.vTroco > 0) and (NFe.Total.ICMSTot.vNF <> (fsvTotPag - NFe.pag.vTroco)) then
             AdicionaErro('869-Rejeição: Valor do troco incorreto');
+
         end;
 
         fnDevolucao:
@@ -1432,11 +1503,11 @@ end;
 function NotaFiscal.LerArqIni(const AIniString: String): Boolean;
 var
   INIRec : TMemIniFile ;
-  SL     : TStringList;
+//  SL     : TStringList;
   sSecao : String;
   OK     : boolean;
   I, J, K : Integer;
-  versao, sFim, sProdID, sDINumber, sADINumber, sQtdVol,
+  {versao,} sFim, sProdID, sDINumber, sADINumber, sQtdVol,
     sDupNumber, sAdittionalField, sType, sDay, sDeduc, sNVE, sCNPJCPF : String;
 begin
   Result := False;
@@ -1449,7 +1520,7 @@ begin
     begin
       infNFe.versao := StringToFloatDef( INIRec.ReadString('infNFe','versao', VersaoDFToStr(FConfiguracoes.Geral.VersaoDF)), 0) ;
 
-      versao      := FloatToString(infNFe.versao,'.','#0.00');
+      //versao      := FloatToString(infNFe.versao,'.','#0.00'); // Não está sendo utilizado...
       sSecao      := IfThen( INIRec.SectionExists('Identificacao'), 'Identificacao', 'ide');
       Ide.cNF     := INIRec.ReadInteger( sSecao,'Codigo' ,INIRec.ReadInteger( sSecao,'cNF' ,0));
       Ide.natOp   := INIRec.ReadString(  sSecao,'NaturezaOperacao' ,INIRec.ReadString(  sSecao,'natOp' ,''));
@@ -1789,9 +1860,13 @@ begin
           while true do
           begin
             sSecao := 'detExport'+IntToStrZero(I,3)+IntToStrZero(J,3) ;
-            sFim     := INIRec.ReadString(sSecao,'nRE','FIM') ;
+            sFim     := INIRec.ReadString(sSecao,'nRE','FIM');
             if (sFim = 'FIM') or (Length(sFim) <= 0) then
-              break ;
+            begin
+              sFim     := INIRec.ReadString(sSecao,'nDraw','FIM');
+              if (sFim = 'FIM') or (Length(sFim) <= 0) then
+                break ;
+            end;
 
             with Prod.detExport.Add do
             begin
@@ -1806,7 +1881,7 @@ begin
 
           sSecao := 'impostoDevol'+IntToStrZero(I,3) ;
           sFim   := INIRec.ReadString( sSecao,'pDevol','FIM') ;
-          if (sFim <> 'FIM') then
+          if ((sFim <> 'FIM') and ( Length(sFim) > 0 ))  then
           begin
             pDevol    := StringToFloatDef( INIRec.ReadString(sSecao,'pDevol','') ,0);
             vIPIDevol := StringToFloatDef( INIRec.ReadString(sSecao,'vIPIDevol','') ,0);
@@ -1815,7 +1890,7 @@ begin
           sSecao := IfThen( INIRec.SectionExists('Veiculo'+IntToStrZero(I,3)), 'Veiculo', 'veicProd');
           sSecao := sSecao+IntToStrZero(I,3) ;
           sFim     := INIRec.ReadString( sSecao,'Chassi','FIM') ;
-          if (sFim <> 'FIM') then
+          if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
           begin
             with Prod.veicProd do
             begin
@@ -1891,7 +1966,7 @@ begin
           sSecao := IfThen( INIRec.SectionExists('Combustivel'+IntToStrZero(I,3)), 'Combustivel', 'comb');
           sSecao := sSecao+IntToStrZero(I,3) ;
           sFim     := INIRec.ReadString( sSecao,'cProdANP','FIM') ;
-          if (sFim <> 'FIM') then
+          if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
           begin
             with Prod.comb do
             begin
@@ -1926,7 +2001,7 @@ begin
 
               sSecao := 'ICMSInter'+IntToStrZero(I,3) ;
               sFim     := INIRec.ReadString( sSecao,'vBCICMSSTDest','FIM') ;
-              if (sFim <> 'FIM') then
+              if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
               begin
                 ICMSInter.vBCICMSSTDest := StringToFloatDef(sFim,0) ;
                 ICMSInter.vICMSSTDest   := StringToFloatDef(INIRec.ReadString( sSecao,'vICMSSTDest',''),0) ;
@@ -1934,7 +2009,7 @@ begin
 
               sSecao := 'ICMSCons'+IntToStrZero(I,3) ;
               sFim   := INIRec.ReadString( sSecao,'vBCICMSSTCons','FIM') ;
-              if (sFim <> 'FIM') then
+              if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
               begin
                 ICMSCons.vBCICMSSTCons := StringToFloatDef(sFim,0) ;
                 ICMSCons.vICMSSTCons   := StringToFloatDef(INIRec.ReadString( sSecao,'vICMSSTCons',''),0) ;
@@ -1946,9 +2021,13 @@ begin
           with Imposto do
           begin
             sSecao := 'ICMS'+IntToStrZero(I,3) ;
-            sFim     := INIRec.ReadString( sSecao,'CST',INIRec.ReadString(sSecao,'CSOSN','FIM')) ;
+            //sFim     := INIRec.ReadString( sSecao,'CST',INIRec.ReadString(sSecao,'CSOSN','FIM')) ;
 
-            if (sFim <> 'FIM') then
+            sFim     := INIRec.ReadString( sSecao,'CST','FIM') ;
+            if (sFim = 'FIM') or ( Length(sFim) = 0 ) then
+              sFim     := INIRec.ReadString(sSecao,'CSOSN','FIM');
+
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with ICMS do
               begin
@@ -1999,7 +2078,7 @@ begin
 
             sSecao := 'ICMSUFDest'+IntToStrZero(I,3);
             sFim     := INIRec.ReadString(sSecao,'vBCUFDest','FIM');
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with ICMSUFDest do
               begin
@@ -2016,28 +2095,31 @@ begin
             end;
 
             sSecao := 'IPI'+IntToStrZero(I,3) ;
-            sFim     := INIRec.ReadString( sSecao,'CST','FIM') ;
-            if (sFim <> 'FIM') then
+            sFim   := INIRec.ReadString( sSecao,'CST','FIM') ;
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with IPI do
               begin
                 CST      := StrToCSTIPI(OK, INIRec.ReadString( sSecao,'CST','')) ;
-                clEnq    := INIRec.ReadString(  sSecao,'ClasseEnquadramento',INIRec.ReadString(  sSecao,'clEnq'   ,''));
-                CNPJProd := INIRec.ReadString(  sSecao,'CNPJProdutor'       ,INIRec.ReadString(  sSecao,'CNPJProd',''));
-                cSelo    := INIRec.ReadString(  sSecao,'CodigoSeloIPI'      ,INIRec.ReadString(  sSecao,'cSelo'   ,''));
-                qSelo    := INIRec.ReadInteger( sSecao,'QuantidadeSelos'    ,INIRec.ReadInteger( sSecao,'qSelo'   ,0));
-                cEnq     := INIRec.ReadString(  sSecao,'CodigoEnquadramento',INIRec.ReadString(  sSecao,'cEnq'    ,''));
-                vBC      := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'   ,INIRec.ReadString(sSecao,'vBC'   ,'')) ,0);
-                qUnid    := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'  ,INIRec.ReadString(sSecao,'qUnid' ,'')) ,0);
-                vUnid    := StringToFloatDef( INIRec.ReadString(sSecao,'ValorUnidade',INIRec.ReadString(sSecao,'vUnid' ,'')) ,0);
-                pIPI     := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'    ,INIRec.ReadString(sSecao,'pIPI'  ,'')) ,0);
-                vIPI     := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'       ,INIRec.ReadString(sSecao,'vIPI'  ,'')) ,0);
+                if OK then
+                begin
+                  clEnq    := INIRec.ReadString(  sSecao,'ClasseEnquadramento',INIRec.ReadString(  sSecao,'clEnq'   ,''));
+                  CNPJProd := INIRec.ReadString(  sSecao,'CNPJProdutor'       ,INIRec.ReadString(  sSecao,'CNPJProd',''));
+                  cSelo    := INIRec.ReadString(  sSecao,'CodigoSeloIPI'      ,INIRec.ReadString(  sSecao,'cSelo'   ,''));
+                  qSelo    := INIRec.ReadInteger( sSecao,'QuantidadeSelos'    ,INIRec.ReadInteger( sSecao,'qSelo'   ,0));
+                  cEnq     := INIRec.ReadString(  sSecao,'CodigoEnquadramento',INIRec.ReadString(  sSecao,'cEnq'    ,''));
+                  vBC      := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'   ,INIRec.ReadString(sSecao,'vBC'   ,'')) ,0);
+                  qUnid    := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'  ,INIRec.ReadString(sSecao,'qUnid' ,'')) ,0);
+                  vUnid    := StringToFloatDef( INIRec.ReadString(sSecao,'ValorUnidade',INIRec.ReadString(sSecao,'vUnid' ,'')) ,0);
+                  pIPI     := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'    ,INIRec.ReadString(sSecao,'pIPI'  ,'')) ,0);
+                  vIPI     := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'       ,INIRec.ReadString(sSecao,'vIPI'  ,'')) ,0);
+                end;
               end;
             end;
 
             sSecao := 'II'+IntToStrZero(I,3) ;
             sFim     := INIRec.ReadString( sSecao,'ValorBase',INIRec.ReadString( sSecao,'vBC','FIM')) ;
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with II do
               begin
@@ -2050,17 +2132,19 @@ begin
 
             sSecao := 'PIS'+IntToStrZero(I,3) ;
             sFim     := INIRec.ReadString( sSecao,'CST','FIM') ;
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with PIS do
               begin
-                CST :=  StrToCSTPIS(OK, INIRec.ReadString( sSecao,'CST','01'));
-
-                PIS.vBC       := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'    ,INIRec.ReadString(sSecao,'vBC'      ,'')) ,0);
-                PIS.pPIS      := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'     ,INIRec.ReadString(sSecao,'pPIS'     ,'')) ,0);
-                PIS.qBCProd   := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'   ,INIRec.ReadString(sSecao,'qBCProd'  ,'')) ,0);
-                PIS.vAliqProd := StringToFloatDef( INIRec.ReadString(sSecao,'ValorAliquota',INIRec.ReadString(sSecao,'vAliqProd','')) ,0);
-                PIS.vPIS      := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'        ,INIRec.ReadString(sSecao,'vPIS'     ,'')) ,0);
+                CST :=  StrToCSTPIS(OK, INIRec.ReadString( sSecao,'CST',''));
+                if OK then
+                begin
+                  PIS.vBC       := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'    ,INIRec.ReadString(sSecao,'vBC'      ,'')) ,0);
+                  PIS.pPIS      := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'     ,INIRec.ReadString(sSecao,'pPIS'     ,'')) ,0);
+                  PIS.qBCProd   := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'   ,INIRec.ReadString(sSecao,'qBCProd'  ,'')) ,0);
+                  PIS.vAliqProd := StringToFloatDef( INIRec.ReadString(sSecao,'ValorAliquota',INIRec.ReadString(sSecao,'vAliqProd','')) ,0);
+                  PIS.vPIS      := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'        ,INIRec.ReadString(sSecao,'vPIS'     ,'')) ,0);
+                end;
               end;
             end;
 
@@ -2069,7 +2153,7 @@ begin
             if (sFim = 'FIM') then
               sFim   := INIRec.ReadString( sSecao,'vBC','F')+ INIRec.ReadString( sSecao,'qBCProd','IM') ;
 
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with PISST do
               begin
@@ -2083,17 +2167,19 @@ begin
 
             sSecao := 'COFINS'+IntToStrZero(I,3) ;
             sFim     := INIRec.ReadString( sSecao,'CST','FIM') ;
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with COFINS do
               begin
-                CST := StrToCSTCOFINS(OK, INIRec.ReadString( sSecao,'CST','01'));
-
-                COFINS.vBC       := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'    ,INIRec.ReadString(sSecao,'vBC'      ,'')) ,0);
-                COFINS.pCOFINS   := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'     ,INIRec.ReadString(sSecao,'pCOFINS'  ,'')) ,0);
-                COFINS.qBCProd   := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'   ,INIRec.ReadString(sSecao,'qBCProd'  ,'')) ,0);
-                COFINS.vAliqProd := StringToFloatDef( INIRec.ReadString(sSecao,'ValorAliquota',INIRec.ReadString(sSecao,'vAliqProd','')) ,0);
-                COFINS.vCOFINS   := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'        ,INIRec.ReadString(sSecao,'vCOFINS'  ,'')) ,0);
+                CST := StrToCSTCOFINS(OK, INIRec.ReadString( sSecao,'CST',''));
+                if OK then
+                begin
+                  COFINS.vBC       := StringToFloatDef( INIRec.ReadString(sSecao,'ValorBase'    ,INIRec.ReadString(sSecao,'vBC'      ,'')) ,0);
+                  COFINS.pCOFINS   := StringToFloatDef( INIRec.ReadString(sSecao,'Aliquota'     ,INIRec.ReadString(sSecao,'pCOFINS'  ,'')) ,0);
+                  COFINS.qBCProd   := StringToFloatDef( INIRec.ReadString(sSecao,'Quantidade'   ,INIRec.ReadString(sSecao,'qBCProd'  ,'')) ,0);
+                  COFINS.vAliqProd := StringToFloatDef( INIRec.ReadString(sSecao,'ValorAliquota',INIRec.ReadString(sSecao,'vAliqProd','')) ,0);
+                  COFINS.vCOFINS   := StringToFloatDef( INIRec.ReadString(sSecao,'Valor'        ,INIRec.ReadString(sSecao,'vCOFINS'  ,'')) ,0);
+                end;
               end;
             end;
 
@@ -2102,7 +2188,7 @@ begin
             if (sFim = 'FIM') then
               sFim   := INIRec.ReadString( sSecao,'vBC','F')+ INIRec.ReadString( sSecao,'qBCProd','IM') ;
 
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with COFINSST do
               begin
@@ -2119,7 +2205,7 @@ begin
             if (sFim = 'FIM') then
               sFim := INIRec.ReadString( sSecao,'vBC','FIM');
 
-            if (sFim <> 'FIM') then
+            if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
             begin
               with ISSQN do
               begin
@@ -2379,7 +2465,7 @@ begin
       end;
 
       sFim   := INIRec.ReadString( 'exporta','UFembarq',INIRec.ReadString( 'exporta','UFSaidaPais','FIM')) ;
-      if (sFim <> 'FIM') then
+      if ((sFim <> 'FIM') and ( Length(sFim) > 0 )) then
       begin
         exporta.UFembarq     := INIRec.ReadString( 'exporta','UFembarq','') ;;
         exporta.xLocEmbarq   := INIRec.ReadString( 'exporta','xLocEmbarq','');
@@ -2447,6 +2533,837 @@ begin
   finally
      INIRec.Free;
   end;
+end;
+
+function NotaFiscal.GerarNFeIni: String;
+var
+  I, J, K: integer;
+  sSecao: string;
+  INIRec: TMemIniFile;
+  IniNFe: TStringList;
+begin
+  Result := '';
+
+  if not ValidarChave(NFe.infNFe.ID) then
+    raise EACBrNFeException.Create('NFe Inconsistente para gerar INI. Chave Inválida.');
+
+  INIRec := TMemIniFile.Create('');
+  try
+    with FNFe do
+    begin
+      INIRec.WriteString('infNFe', 'ID', infNFe.ID);
+      INIRec.WriteString('infNFe', 'Versao', FloatToStr(infNFe.Versao));
+      INIRec.WriteInteger('Identificacao', 'cUF', Ide.cUF);
+      INIRec.WriteInteger('Identificacao', 'Codigo', Ide.cNF);
+      INIRec.WriteString('Identificacao', 'natOp', Ide.natOp);
+      INIRec.WriteString('Identificacao', 'indPag', IndpagToStr(Ide.indPag));
+      INIRec.WriteInteger('Identificacao', 'Modelo', Ide.modelo);
+      INIRec.WriteInteger('Identificacao', 'Serie', Ide.serie);
+      INIRec.WriteInteger('Identificacao', 'nNF', Ide.nNF);
+      INIRec.WriteString('Identificacao', 'dEmi', DateTimeToStr(Ide.dEmi));
+      INIRec.WriteString('Identificacao', 'dSaiEnt', DateTimeToStr(Ide.dSaiEnt));
+      INIRec.WriteString('Identificacao', 'tpNF', tpNFToStr(Ide.tpNF));
+      INIRec.WriteString('Identificacao', 'idDest',
+        DestinoOperacaoToStr(TpcnDestinoOperacao(Ide.idDest)));
+      INIRec.WriteInteger('Identificacao', 'cMunFG', Ide.cMunFG);
+      INIRec.WriteString('Identificacao', 'tpAmb', TpAmbToStr(Ide.tpAmb));
+      INIRec.WriteString('Identificacao', 'tpImp', TpImpToStr(Ide.tpImp));
+      INIRec.WriteString('Identificacao', 'tpemis', TpEmisToStr(Ide.tpemis));
+      INIRec.WriteString('Identificacao', 'finNFe', FinNFeToStr(Ide.finNFe));
+      INIRec.WriteString('Identificacao', 'indFinal', ConsumidorFinalToStr(
+        TpcnConsumidorFinal(Ide.indFinal)));
+      INIRec.WriteString('Identificacao', 'indPres',
+        PresencaCompradorToStr(TpcnPresencaComprador(Ide.indPres)));
+      INIRec.WriteString('Identificacao', 'procEmi', procEmiToStr(Ide.procEmi));
+      INIRec.WriteString('Identificacao', 'verProc', Ide.verProc);
+      INIRec.WriteString('Identificacao', 'dhCont', DateToStr(Ide.dhCont));
+      INIRec.WriteString('Identificacao', 'xJust', Ide.xJust);
+
+      for I := 0 to Ide.NFref.Count - 1 do
+      begin
+        with Ide.NFref.Items[i] do
+        begin
+          sSecao := 'NFRef' + IntToStrZero(I + 1, 3);
+          if trim(refNFe) <> '' then
+          begin
+            INIRec.WriteString(sSecao, 'Tipo', 'NFe');
+            INIRec.WriteString(sSecao, 'refNFe', refNFe);
+          end
+          else if trim(RefNF.CNPJ) <> '' then
+          begin
+            INIRec.WriteString(sSecao, 'Tipo', 'NF');
+            INIRec.WriteInteger(sSecao, 'cUF', RefNF.cUF);
+            INIRec.WriteString(sSecao, 'AAMM', RefNF.AAMM);
+            INIRec.WriteString(sSecao, 'CNPJ', RefNF.CNPJ);
+            INIRec.WriteInteger(sSecao, 'Modelo', RefNF.modelo);
+            INIRec.WriteInteger(sSecao, 'Serie', RefNF.serie);
+            INIRec.WriteInteger(sSecao, 'nNF', RefNF.nNF);
+          end
+          else if trim(RefNFP.CNPJCPF) <> '' then
+          begin
+            INIRec.WriteString(sSecao, 'Tipo', 'NFP');
+            INIRec.WriteInteger(sSecao, 'cUF', RefNFP.cUF);
+            INIRec.WriteString(sSecao, 'AAMM', RefNFP.AAMM);
+            INIRec.WriteString(sSecao, 'CNPJ', RefNFP.CNPJCPF);
+            INIRec.WriteString(sSecao, 'IE', RefNFP.IE);
+            INIRec.WriteString(sSecao, 'Modelo', RefNFP.modelo);
+            INIRec.WriteInteger(sSecao, 'Serie', RefNFP.serie);
+            INIRec.WriteInteger(sSecao, 'nNF', RefNFP.nNF);
+          end
+          else if trim(refCTe) <> '' then
+          begin
+            INIRec.WriteString(sSecao, 'Tipo', 'CTe');
+            INIRec.WriteString(sSecao, 'reCTe', refCTe);
+          end
+          else if trim(RefECF.nCOO) <> '' then
+          begin
+            INIRec.WriteString(sSecao, 'Tipo', 'ECF');
+            INIRec.WriteString(sSecao, 'modelo', ECFModRefToStr(RefECF.modelo));
+            INIRec.WriteString(sSecao, 'nECF', RefECF.nECF);
+            INIRec.WriteString(sSecao, 'nCOO', RefECF.nCOO);
+          end;
+        end;
+      end;
+
+      INIRec.WriteString('Emitente', 'CNPJCPF', Emit.CNPJCPF);
+      INIRec.WriteString('Emitente', 'xNome', Emit.xNome);
+      INIRec.WriteString('Emitente', 'xFant', Emit.xFant);
+      INIRec.WriteString('Emitente', 'IE', Emit.IE);
+      INIRec.WriteString('Emitente', 'IEST', Emit.IEST);
+      INIRec.WriteString('Emitente', 'IM', Emit.IM);
+      INIRec.WriteString('Emitente', 'CNAE', Emit.CNAE);
+      INIRec.WriteString('Emitente', 'CRT', CRTToStr(Emit.CRT));
+      INIRec.WriteString('Emitente', 'xLgr', Emit.EnderEmit.xLgr);
+      INIRec.WriteString('Emitente', 'nro', Emit.EnderEmit.nro);
+      INIRec.WriteString('Emitente', 'xCpl', Emit.EnderEmit.xCpl);
+      INIRec.WriteString('Emitente', 'xBairro', Emit.EnderEmit.xBairro);
+      INIRec.WriteInteger('Emitente', 'cMun', Emit.EnderEmit.cMun);
+      INIRec.WriteString('Emitente', 'xMun', Emit.EnderEmit.xMun);
+      INIRec.WriteString('Emitente', 'UF', Emit.EnderEmit.UF);
+      INIRec.WriteInteger('Emitente', 'CEP', Emit.EnderEmit.CEP);
+      INIRec.WriteInteger('Emitente', 'cPais', Emit.EnderEmit.cPais);
+      INIRec.WriteString('Emitente', 'xPais', Emit.EnderEmit.xPais);
+      INIRec.WriteString('Emitente', 'Fone', Emit.EnderEmit.fone);
+      if Avulsa.CNPJ <> '' then
+      begin
+        INIRec.WriteString('Avulsa', 'CNPJ', Avulsa.CNPJ);
+        INIRec.WriteString('Avulsa', 'xOrgao', Avulsa.xOrgao);
+        INIRec.WriteString('Avulsa', 'matr', Avulsa.matr);
+        INIRec.WriteString('Avulsa', 'xAgente', Avulsa.xAgente);
+        INIRec.WriteString('Avulsa', 'fone', Avulsa.fone);
+        INIRec.WriteString('Avulsa', 'UF', Avulsa.UF);
+        INIRec.WriteString('Avulsa', 'nDAR', Avulsa.nDAR);
+        INIRec.WriteString('Avulsa', 'dEmi', DateToStr(Avulsa.dEmi));
+        INIRec.WriteFloat('Avulsa', 'vDAR', Avulsa.vDAR);
+        INIRec.WriteString('Avulsa', 'repEmi', Avulsa.repEmi);
+        INIRec.WriteString('Avulsa', 'dPag', DateToStr(Avulsa.dPag));
+      end;
+      if (Dest.idEstrangeiro <> EmptyStr) then
+        INIRec.WriteString('Destinatario', 'idEstrangeiro', Dest.idEstrangeiro);
+      INIRec.WriteString('Destinatario', 'CNPJCPF', Dest.CNPJCPF);
+      INIRec.WriteString('Destinatario', 'xNome', Dest.xNome);
+      INIRec.WriteString('Destinatario', 'indIEDest', indIEDestToStr(Dest.indIEDest));
+      INIRec.WriteString('Destinatario', 'IE', Dest.IE);
+      INIRec.WriteString('Destinatario', 'ISUF', Dest.ISUF);
+      INIRec.WriteString('Destinatario', 'IM', Dest.IM);
+      INIRec.WriteString('Destinatario', 'Email', Dest.Email);
+      INIRec.WriteString('Destinatario', 'xLgr', Dest.EnderDest.xLgr);
+      INIRec.WriteString('Destinatario', 'nro', Dest.EnderDest.nro);
+      INIRec.WriteString('Destinatario', 'xCpl', Dest.EnderDest.xCpl);
+      INIRec.WriteString('Destinatario', 'xBairro', Dest.EnderDest.xBairro);
+      INIRec.WriteInteger('Destinatario', 'cMun', Dest.EnderDest.cMun);
+      INIRec.WriteString('Destinatario', 'xMun', Dest.EnderDest.xMun);
+      INIRec.WriteString('Destinatario', 'UF', Dest.EnderDest.UF);
+      INIRec.WriteInteger('Destinatario', 'CEP', Dest.EnderDest.CEP);
+      INIRec.WriteInteger('Destinatario', 'cPais', Dest.EnderDest.cPais);
+      INIRec.WriteString('Destinatario', 'xPais', Dest.EnderDest.xPais);
+      INIRec.WriteString('Destinatario', 'Fone', Dest.EnderDest.Fone);
+      if Retirada.CNPJCPF <> '' then
+      begin
+        INIRec.WriteString('Retirada', 'CNPJCPF', Retirada.CNPJCPF);
+        INIRec.WriteString('Retirada', 'xLgr', Retirada.xLgr);
+        INIRec.WriteString('Retirada', 'nro', Retirada.nro);
+        INIRec.WriteString('Retirada', 'xCpl', Retirada.xCpl);
+        INIRec.WriteString('Retirada', 'xBairro', Retirada.xBairro);
+        INIRec.WriteInteger('Retirada', 'cMun', Retirada.cMun);
+        INIRec.WriteString('Retirada', 'xMun', Retirada.xMun);
+        INIRec.WriteString('Retirada', 'UF', Retirada.UF);
+      end;
+      if Entrega.CNPJCPF <> '' then
+      begin
+        INIRec.WriteString('Entrega', 'CNPJCPF', Entrega.CNPJCPF);
+        INIRec.WriteString('Entrega', 'xLgr', Entrega.xLgr);
+        INIRec.WriteString('Entrega', 'nro', Entrega.nro);
+        INIRec.WriteString('Entrega', 'xCpl', Entrega.xCpl);
+        INIRec.WriteString('Entrega', 'xBairro', Entrega.xBairro);
+        INIRec.WriteInteger('Entrega', 'cMun', Entrega.cMun);
+        INIRec.WriteString('Entrega', 'xMun', Entrega.xMun);
+        INIRec.WriteString('Entrega', 'UF', Entrega.UF);
+      end;
+
+      for I := 0 to Det.Count - 1 do
+      begin
+        with Det.Items[I] do
+        begin
+          sSecao := 'Produto' + IntToStrZero(I + 1, 3);
+          INIRec.WriteInteger(sSecao, 'nItem', Prod.nItem);
+          INIRec.WriteString(sSecao, 'infAdProd', infAdProd);
+          INIRec.WriteString(sSecao, 'cProd', Prod.cProd);
+          INIRec.WriteString(sSecao, 'cEAN', Prod.cEAN);
+          INIRec.WriteString(sSecao, 'xProd', Prod.xProd);
+          INIRec.WriteString(sSecao, 'NCM', Prod.NCM);
+          INIRec.WriteString(sSecao, 'CEST', Prod.CEST);
+          INIRec.WriteString(sSecao, 'indEscala', IndEscalaToStr(Prod.indEscala));
+          INIRec.WriteString(sSecao, 'CNPJFab', Prod.CNPJFab);
+          INIRec.WriteString(sSecao, 'cBenef', Prod.cBenef);
+          INIRec.WriteString(sSecao, 'EXTIPI', Prod.EXTIPI);
+          INIRec.WriteString(sSecao, 'CFOP', Prod.CFOP);
+          INIRec.WriteString(sSecao, 'uCom', Prod.uCom);
+          INIRec.WriteFloat(sSecao, 'qCom', Prod.qCom);
+          INIRec.WriteFloat(sSecao, 'vUnCom', Prod.vUnCom);
+          INIRec.WriteFloat(sSecao, 'vProd', Prod.vProd);
+          INIRec.WriteString(sSecao, 'cEANTrib', Prod.cEANTrib);
+          INIRec.WriteString(sSecao, 'uTrib', Prod.uTrib);
+          INIRec.WriteFloat(sSecao, 'qTrib', Prod.qTrib);
+          INIRec.WriteFloat(sSecao, 'vUnTrib', Prod.vUnTrib);
+          INIRec.WriteFloat(sSecao, 'vFrete', Prod.vFrete);
+          INIRec.WriteFloat(sSecao, 'vSeg', Prod.vSeg);
+          INIRec.WriteFloat(sSecao, 'vDesc', Prod.vDesc);
+          INIRec.WriteFloat(sSecao, 'vOutro', Prod.vOutro);
+          INIRec.WriteString(sSecao, 'IndTot', indTotToStr(Prod.IndTot));
+          INIRec.WriteString(sSecao, 'xPed', Prod.xPed);
+          INIRec.WriteString(sSecao, 'nItemPed', Prod.nItemPed);
+          INIRec.WriteString(sSecao, 'nFCI', Prod.nFCI);
+          INIRec.WriteString(sSecao, 'nRECOPI', Prod.nRECOPI);
+          INIRec.WriteFloat(sSecao, 'pDevol', pDevol);
+          INIRec.WriteFloat(sSecao, 'vIPIDevol', vIPIDevol);
+          INIRec.WriteFloat(sSecao, 'vTotTrib', Imposto.vTotTrib);
+          for J := 0 to Prod.NVE.Count - 1 do
+          begin
+            if Prod.NVE.Items[J].NVE <> '' then
+            begin
+              with Prod.NVE.Items[J] do
+              begin
+                sSecao := 'NVE' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+                INIRec.WriteString(sSecao, 'NVE', NVE);
+              end;
+            end
+            else
+              Break;
+          end;
+
+          for J := 0 to Prod.rastro.Count - 1 do
+          begin
+            if Prod.rastro.Items[J].nLote <> '' then
+            begin
+              with Prod.rastro.Items[J] do
+              begin
+                sSecao := 'Rastro' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+                INIRec.WriteString(sSecao, 'nLote', nLote);
+                INIRec.WriteFloat(sSecao, 'qLote', qLote);
+                INIRec.WriteDateTime(sSecao, 'dFab', dFab);
+                INIRec.WriteDateTime(sSecao, 'dVal', dVal);
+                INIRec.WriteString(sSecao, 'cAgreg', cAgreg);
+              end;
+            end
+            else
+              Break;
+          end;
+
+          for J := 0 to Prod.DI.Count - 1 do
+          begin
+            if Prod.DI.Items[j].nDi <> '' then
+            begin
+              with Prod.DI.Items[j] do
+              begin
+                sSecao := 'DI' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+                INIRec.WriteString(sSecao, 'nDi', nDi);
+                INIRec.WriteString(sSecao, 'dDi', DateToStr(dDi));
+                INIRec.WriteString(sSecao, 'xLocDesemb', xLocDesemb);
+                INIRec.WriteString(sSecao, 'UFDesemb', UFDesemb);
+                INIRec.WriteString(sSecao, 'dDesemb', DateToStr(dDesemb));
+                INIRec.WriteString(sSecao, 'cExportador', cExportador);
+                if (TipoViaTranspToStr(tpViaTransp) <> '') then
+                begin
+                  INIRec.WriteString(sSecao, 'tpViaTransp',
+                    TipoViaTranspToStr(tpViaTransp));
+                  if (tpViaTransp = tvMaritima) then
+                    INIRec.WriteFloat(sSecao, 'vAFRMM', vAFRMM);
+                end;
+                if (TipoIntermedioToStr(tpIntermedio) <> '') then
+                begin
+                  INIRec.WriteString(sSecao, 'tpIntermedio',
+                    TipoIntermedioToStr(tpIntermedio));
+                  if not (tpIntermedio = tiContaPropria) then
+                  begin
+                    INIRec.WriteString(sSecao, 'CNPJ', CNPJ);
+                    INIRec.WriteString(sSecao, 'UFTerceiro', UFTerceiro);
+                  end;
+                end;
+                for K := 0 to adi.Count - 1 do
+                begin
+                  with adi.Items[K] do
+                  begin
+                    sSecao :=
+                      'LADI' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3) + IntToStrZero(K + 1, 3);
+                    INIRec.WriteInteger(sSecao, 'nAdicao', nAdicao);
+                    INIRec.WriteInteger(sSecao, 'nSeqAdi', nSeqAdi);
+                    INIRec.WriteString(sSecao, 'cFabricante', cFabricante);
+                    INIRec.WriteFloat(sSecao, 'vDescDI', vDescDI);
+                    INIRec.WriteString(sSecao, 'nDraw', nDraw);
+                  end;
+                end;
+              end;
+            end
+            else
+              Break;
+          end;
+          for J := 0 to Prod.detExport.Count - 1 do
+          begin
+            if Prod.detExport.Items[j].nDraw <> '' then
+            begin
+              with Prod.detExport.Items[j] do
+              begin
+                sSecao := 'detExport' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+                INIRec.WriteString(sSecao, 'nDraw', nDraw);
+                INIRec.WriteString(sSecao, 'nRe', nRE);
+                INIRec.WriteString(sSecao, 'chNFe', chNFe);
+                INIRec.WriteFloat(sSecao, 'qExport', qExport);
+              end;
+            end;
+          end;
+
+          if (pDevol > 0) then
+          begin
+            sSecao := 'impostoDevol' + IntToStrZero(I + 1, 3);
+            INIRec.WriteFloat(sSecao, 'pDevol', pDevol);
+            INIRec.WriteFloat(sSecao, 'vIPIDevol', vIPIDevol);
+          end;
+
+          if Prod.veicProd.chassi <> '' then
+          begin
+            sSecao := 'Veiculo' + IntToStrZero(I + 1, 3);
+            with Prod.veicProd do
+            begin
+              INIRec.WriteString(sSecao, 'tpOP', tpOPToStr(tpOP));
+              INIRec.WriteString(sSecao, 'Chassi', chassi);
+              INIRec.WriteString(sSecao, 'cCor', cCor);
+              INIRec.WriteString(sSecao, 'xCor', xCor);
+              INIRec.WriteString(sSecao, 'pot', pot);
+              INIRec.WriteString(sSecao, 'Cilin', Cilin);
+              INIRec.WriteString(sSecao, 'pesoL', pesoL);
+              INIRec.WriteString(sSecao, 'pesoB', pesoB);
+              INIRec.WriteString(sSecao, 'nSerie', nSerie);
+              INIRec.WriteString(sSecao, 'tpComb', tpComb);
+              INIRec.WriteString(sSecao, 'nMotor', nMotor);
+              INIRec.WriteString(sSecao, 'CMT', CMT);
+              INIRec.WriteString(sSecao, 'dist', dist);
+              INIRec.WriteInteger(sSecao, 'anoMod', anoMod);
+              INIRec.WriteInteger(sSecao, 'anoFab', anoFab);
+              INIRec.WriteString(sSecao, 'tpPint', tpPint);
+              INIRec.WriteInteger(sSecao, 'tpVeic', tpVeic);
+              INIRec.WriteInteger(sSecao, 'espVeic', espVeic);
+              INIRec.WriteString(sSecao, 'VIN', VIN);
+              INIRec.WriteString(sSecao, 'condVeic', condVeicToStr(condVeic));
+              INIRec.WriteString(sSecao, 'cMod', cMod);
+              INIRec.WriteString(sSecao, 'cCorDENATRAN', cCorDENATRAN);
+              INIRec.WriteInteger(sSecao, 'lota', lota);
+              INIRec.WriteInteger(sSecao, 'tpRest', tpRest);
+            end;
+          end;
+          for J := 0 to Prod.med.Count - 1 do
+          begin
+            sSecao := 'Medicamento' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+            with Prod.med.Items[J] do
+            begin
+              INIRec.WriteString(sSecao, 'cProdANVISA', cProdANVISA);
+              INIRec.WriteFloat(sSecao, 'qLote', qLote);
+              INIRec.WriteString(sSecao, 'dFab', DateToStr(dFab));
+              INIRec.WriteString(sSecao, 'dVal', DateToStr(dVal));
+              INIRec.WriteFloat(sSecao, 'vPMC', vPMC);
+            end;
+          end;
+          for J := 0 to Prod.arma.Count - 1 do
+          begin
+            sSecao := 'Arma' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+            with Prod.arma.Items[J] do
+            begin
+              INIRec.WriteString(sSecao, 'tpArma', tpArmaToStr(tpArma));
+              INIRec.WriteString(sSecao, 'nSerie', nSerie);
+              INIRec.WriteString(sSecao, 'nCano', nCano);
+              INIRec.WriteString(sSecao, 'descr', descr);
+            end;
+          end;
+          if (Prod.comb.cProdANP > 0) then
+          begin
+            sSecao := 'Combustivel' + IntToStrZero(I + 1, 3);
+            with Prod.comb do
+            begin
+              INIRec.WriteInteger(sSecao, 'cProdANP', cProdANP);
+              INIRec.WriteFloat(sSecao, 'pMixGN', pMixGN);
+              INIRec.WriteString(sSecao, 'descANP', descANP);
+              INIRec.WriteFloat(sSecao, 'pGLP', pGLP);
+              INIRec.WriteFloat(sSecao, 'pGNn', pGNn);
+              INIRec.WriteFloat(sSecao, 'pGNi', pGNi);
+              INIRec.WriteFloat(sSecao, 'vPart', vPart);
+              INIRec.WriteString(sSecao, 'CODIF', CODIF);
+              INIRec.WriteFloat(sSecao, 'qTemp', qTemp);
+              INIRec.WriteString(sSecao, 'UFCons', UFcons);
+              sSecao := 'CIDE' + IntToStrZero(I + 1, 3);
+              INIRec.WriteFloat(sSecao, 'qBCprod', CIDE.qBCprod);
+              INIRec.WriteFloat(sSecao, 'vAliqProd', CIDE.vAliqProd);
+              INIRec.WriteFloat(sSecao, 'vCIDE', CIDE.vCIDE);
+              sSecao := 'encerrante' + IntToStrZero(I, 3);
+              INIRec.WriteInteger(sSecao, 'nBico', encerrante.nBico);
+              INIRec.WriteInteger(sSecao, 'nBomba', encerrante.nBomba);
+              INIRec.WriteInteger(sSecao, 'nTanque', encerrante.nTanque);
+              INIRec.WriteFloat(sSecao, 'vEncIni', encerrante.vEncIni);
+              INIRec.WriteFloat(sSecao, 'vEncFin', encerrante.vEncFin);
+              sSecao := 'ICMSComb' + IntToStrZero(I + 1, 3);
+              INIRec.WriteFloat(sSecao, 'vBCICMS', ICMS.vBCICMS);
+              INIRec.WriteFloat(sSecao, 'vICMS', ICMS.vICMS);
+              INIRec.WriteFloat(sSecao, 'vBCICMSST', ICMS.vBCICMSST);
+              INIRec.WriteFloat(sSecao, 'vICMSST', ICMS.vICMSST);
+              if (ICMSInter.vBCICMSSTDest > 0) then
+              begin
+                sSecao := 'ICMSInter' + IntToStrZero(I + 1, 3);
+                INIRec.WriteFloat(sSecao, 'vBCICMSSTDest', ICMSInter.vBCICMSSTDest);
+                INIRec.WriteFloat(sSecao, 'vICMSSTDest', ICMSInter.vICMSSTDest);
+              end;
+              if (ICMSCons.vBCICMSSTCons > 0) then
+              begin
+                sSecao := 'ICMSCons' + IntToStrZero(I + 1, 3);
+                INIRec.WriteFloat(sSecao, 'vBCICMSSTCons', ICMSCons.vBCICMSSTCons);
+                INIRec.WriteFloat(sSecao, 'vICMSSTCons', ICMSCons.vICMSSTCons);
+                INIRec.WriteString(sSecao, 'UFCons', ICMSCons.UFcons);
+              end;
+            end;
+          end;
+          with Imposto do
+          begin
+            sSecao := 'ICMS' + IntToStrZero(I + 1, 3);
+            with ICMS do
+            begin
+              INIRec.WriteString(sSecao, 'orig', OrigToStr(ICMS.orig));
+              INIRec.WriteString(sSecao, 'CST', CSTICMSToStr(CST));
+              INIRec.WriteString(sSecao, 'CSOSN', CSOSNIcmsToStr(CSOSN));
+              INIRec.WriteString(sSecao, 'modBC', modBCToStr(ICMS.modBC));
+              INIRec.WriteFloat(sSecao, 'pRedBC', ICMS.pRedBC);
+              INIRec.WriteFloat(sSecao, 'vBC', ICMS.vBC);
+              INIRec.WriteFloat(sSecao, 'pICMS', ICMS.pICMS);
+              INIRec.WriteFloat(sSecao, 'vICMS', ICMS.vICMS);
+              INIRec.WriteFloat(sSecao, 'vBCFCP', ICMS.vBCFCP);
+              INIRec.WriteFloat(sSecao, 'pFCP', ICMS.pFCP);
+              INIRec.WriteFloat(sSecao, 'vFCP', ICMS.vFCP);
+              INIRec.WriteString(sSecao, 'modBCST', modBCSTToStr(ICMS.modBCST));
+              INIRec.WriteFloat(sSecao, 'pMVAST', ICMS.pMVAST);
+              INIRec.WriteFloat(sSecao, 'pRedBCST', ICMS.pRedBCST);
+              INIRec.WriteFloat(sSecao, 'vBCST', ICMS.vBCST);
+              INIRec.WriteFloat(sSecao, 'pICMSST', ICMS.pICMSST);
+              INIRec.WriteFloat(sSecao, 'vICMSST', ICMS.vICMSST);
+              INIRec.WriteFloat(sSecao, 'vBCFCPST', ICMS.vBCFCPST);
+              INIRec.WriteFloat(sSecao, 'pFCPST', ICMS.pFCPST);
+              INIRec.WriteFloat(sSecao, 'vFCPST', ICMS.vFCPST);
+              INIRec.WriteString(sSecao, 'UFST', ICMS.UFST);
+              INIRec.WriteFloat(sSecao, 'pBCOp', ICMS.pBCOp);
+              INIRec.WriteFloat(sSecao, 'vBCSTRet', ICMS.vBCSTRet);
+              INIRec.WriteFloat(sSecao, 'pST', ICMS.pST);
+              INIRec.WriteFloat(sSecao, 'vICMSSTRet', ICMS.vICMSSTRet);
+              INIRec.WriteFloat(sSecao, 'vBCFCPSTRet', ICMS.vBCFCPSTRet);
+              INIRec.WriteFloat(sSecao, 'pFCPSTRet', ICMS.pFCPSTRet);
+              INIRec.WriteFloat(sSecao, 'vFCPSTRet', ICMS.vFCPSTRet);
+              INIRec.WriteString(sSecao, 'motDesICMS', motDesICMSToStr(
+                ICMS.motDesICMS));
+              INIRec.WriteFloat(sSecao, 'pCredSN', ICMS.pCredSN);
+              INIRec.WriteFloat(sSecao, 'vCredICMSSN', ICMS.vCredICMSSN);
+              INIRec.WriteFloat(sSecao, 'vBCSTDest', ICMS.vBCSTDest);
+              INIRec.WriteFloat(sSecao, 'vICMSSTDest', ICMS.vICMSSTDest);
+              INIRec.WriteFloat(sSecao, 'vICMSDeson', ICMS.vICMSDeson);
+              INIRec.WriteFloat(sSecao, 'vICMSOp', ICMS.vICMSOp);
+              INIRec.WriteFloat(sSecao, 'pDif', ICMS.pDif);
+              INIRec.WriteFloat(sSecao, 'vICMSDif', ICMS.vICMSDif);
+
+              INIRec.WriteFloat(sSecao, 'pRedBCEfet', ICMS.pRedBCEfet);
+              INIRec.WriteFloat(sSecao, 'vBCEfet', ICMS.vBCEfet);
+              INIRec.WriteFloat(sSecao, 'pICMSEfet', ICMS.pICMSEfet);
+              INIRec.WriteFloat(sSecao, 'vICMSEfet', ICMS.vICMSEfet);
+            end;
+            sSecao := 'ICMSUFDEST' + IntToStrZero(I + 1, 3);
+            with ICMSUFDest do
+            begin
+              INIRec.WriteFloat(sSecao, 'vBCUFDest', vBCUFDest);
+              INIRec.WriteFloat(sSecao, 'vBCFCPUFDest', vBCFCPUFDest);
+              INIRec.WriteFloat(sSecao, 'pICMSUFDest', pICMSUFDest);
+              INIRec.WriteFloat(sSecao, 'pICMSInter', pICMSInter);
+              INIRec.WriteFloat(sSecao, 'pICMSInterPart', pICMSInterPart);
+              INIRec.WriteFloat(sSecao, 'vICMSUFDest', vICMSUFDest);
+              INIRec.WriteFloat(sSecao, 'vICMSUFRemet', vICMSUFRemet);
+              INIRec.WriteFloat(sSecao, 'pFCPUFDest', pFCPUFDest);
+              INIRec.WriteFloat(sSecao, 'vFCPUFDest', vFCPUFDest);
+            end;
+            if (IPI.vBC > 0) or (IPI.qUnid > 0) or
+              (IPI.vIPI > 0) or (IPI.cEnq = '999') then
+            begin
+              sSecao := 'IPI' + IntToStrZero(I + 1, 3);
+              with IPI do
+              begin
+                INIRec.WriteString(sSecao, 'CST', CSTIPIToStr(CST));
+                INIRec.WriteString(sSecao, 'cEnq', cEnq);
+                INIRec.WriteString(sSecao, 'clEnq', clEnq);
+                INIRec.WriteString(sSecao, 'CNPJProd', CNPJProd);
+                INIRec.WriteString(sSecao, 'cSelo', cSelo);
+                INIRec.WriteInteger(sSecao, 'qSelo', qSelo);
+                INIRec.WriteFloat(sSecao, 'vBC', vBC);
+                INIRec.WriteFloat(sSecao, 'qUnid', qUnid);
+                INIRec.WriteFloat(sSecao, 'vUnid', vUnid);
+                INIRec.WriteFloat(sSecao, 'pIPI', pIPI);
+                INIRec.WriteFloat(sSecao, 'vIPI', vIPI);
+              end;
+            end;
+            if (II.vBc > 0) then
+            begin
+              sSecao := 'II' + IntToStrZero(I + 1, 3);
+              with II do
+              begin
+                INIRec.WriteFloat(sSecao, 'vBc', vBc);
+                INIRec.WriteFloat(sSecao, 'vDespAdu', vDespAdu);
+                INIRec.WriteFloat(sSecao, 'vII', vII);
+                INIRec.WriteFloat(sSecao, 'vIOF', vIOF);
+              end;
+            end;
+            sSecao := 'PIS' + IntToStrZero(I + 1, 3);
+            with PIS do
+            begin
+              INIRec.WriteString(sSecao, 'CST', CSTPISToStr(CST));
+              if (CST = pis01) or (CST = pis02) then
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', PIS.vBC);
+                INIRec.WriteFloat(sSecao, 'pPIS', PIS.pPIS);
+                INIRec.WriteFloat(sSecao, 'vPIS', PIS.vPIS);
+              end
+              else if CST = pis03 then
+              begin
+                INIRec.WriteFloat(sSecao, 'qBCProd', PIS.qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', PIS.vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vPIS', PIS.vPIS);
+              end
+              else if CST = pis99 then
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', PIS.vBC);
+                INIRec.WriteFloat(sSecao, 'pPIS', PIS.pPIS);
+                INIRec.WriteFloat(sSecao, 'qBCProd', PIS.qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', PIS.vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vPIS', PIS.vPIS);
+              end;
+            end;
+            if (PISST.vBc > 0) then
+            begin
+              sSecao := 'PISST' + IntToStrZero(I + 1, 3);
+              with PISST do
+              begin
+                INIRec.WriteFloat(sSecao, 'vBc', vBc);
+                INIRec.WriteFloat(sSecao, 'pPis', pPis);
+                INIRec.WriteFloat(sSecao, 'qBCProd', qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vPIS', vPIS);
+              end;
+            end;
+            sSecao := 'COFINS' + IntToStrZero(I + 1, 3);
+            with COFINS do
+            begin
+              INIRec.WriteString(sSecao, 'CST', CSTCOFINSToStr(CST));
+              if (CST = cof01) or (CST = cof02) then
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', COFINS.vBC);
+                INIRec.WriteFloat(sSecao, 'pCOFINS', COFINS.pCOFINS);
+                INIRec.WriteFloat(sSecao, 'vCOFINS', COFINS.vCOFINS);
+              end
+              else if CST = cof03 then
+              begin
+                INIRec.WriteFloat(sSecao, 'qBCProd', COFINS.qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', COFINS.vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vCOFINS', COFINS.vCOFINS);
+              end
+              else if CST = cof99 then
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', COFINS.vBC);
+                INIRec.WriteFloat(sSecao, 'pCOFINS', COFINS.pCOFINS);
+                INIRec.WriteFloat(sSecao, 'qBCProd', COFINS.qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', COFINS.vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vCOFINS', COFINS.vCOFINS);
+              end;
+            end;
+            if (COFINSST.vBC > 0) then
+            begin
+              sSecao := 'COFINSST' + IntToStrZero(I + 1, 3);
+              with COFINSST do
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', vBC);
+                INIRec.WriteFloat(sSecao, 'pCOFINS', pCOFINS);
+                INIRec.WriteFloat(sSecao, 'qBCProd', qBCProd);
+                INIRec.WriteFloat(sSecao, 'vAliqProd', vAliqProd);
+                INIRec.WriteFloat(sSecao, 'vCOFINS', vCOFINS);
+              end;
+            end;
+            if (ISSQN.vBC > 0) then
+            begin
+              sSecao := 'ISSQN' + IntToStrZero(I + 1, 3);
+              with ISSQN do
+              begin
+                INIRec.WriteFloat(sSecao, 'vBC', vBC);
+                INIRec.WriteFloat(sSecao, 'vAliq', vAliq);
+                INIRec.WriteFloat(sSecao, 'vISSQN', vISSQN);
+                INIRec.WriteInteger(sSecao, 'cMunFG', cMunFG);
+                INIRec.WriteString(sSecao, 'cListServ', cListServ);
+                INIRec.WriteString(sSecao, 'cSitTrib', ISSQNcSitTribToStr(cSitTrib));
+                INIRec.WriteFloat(sSecao, 'vDeducao', vDeducao);
+                INIRec.WriteFloat(sSecao, 'vOutro', vOutro);
+                INIRec.WriteFloat(sSecao, 'vDescIncond', vDescIncond);
+                INIRec.WriteFloat(sSecao, 'vDescCond', vDescCond);
+                INIRec.WriteFloat(sSecao, 'vISSRet', vISSRet);
+                INIRec.WriteString(sSecao, 'indISS', indISSToStr( indISS ));
+                INIRec.Writestring(sSecao, 'cServico', cServico);
+                INIRec.WriteInteger(sSecao, 'cMun', cMun);
+                INIRec.WriteInteger(sSecao, 'cPais', cPais);
+                INIRec.WriteString(sSecao, 'nProcesso', nProcesso);
+                INIRec.WriteString(sSecao, 'indIncentivo', indIncentivoToStr( indIncentivo ));
+              end;
+            end;
+          end;
+        end;
+      end;
+
+      INIRec.WriteFloat('Total', 'vBC', Total.ICMSTot.vBC);
+      INIRec.WriteFloat('Total', 'vICMS', Total.ICMSTot.vICMS);
+      INIRec.WriteFloat('Total', 'vICMSDeson', Total.ICMSTot.vICMSDeson);
+      INIRec.WriteFloat('Total', 'vFCP', Total.ICMSTot.vFCP);
+      INIRec.WriteFloat('Total', 'vICMSUFDest', Total.ICMSTot.vICMSUFDest);
+      INIRec.WriteFloat('Total', 'vICMSUFRemet', Total.ICMSTot.vICMSUFRemet);
+      INIRec.WriteFloat('Total', 'vFCPUFDest', Total.ICMSTot.vFCPUFDest);
+      INIRec.WriteFloat('Total', 'vBCST', Total.ICMSTot.vBCST);
+      INIRec.WriteFloat('Total', 'vST', Total.ICMSTot.vST);
+      INIRec.WriteFloat('Total', 'vFCPST', Total.ICMSTot.vFCPST);
+      INIRec.WriteFloat('Total', 'vFCPSTRet', Total.ICMSTot.vFCPSTRet);
+      INIRec.WriteFloat('Total', 'vProd', Total.ICMSTot.vProd);
+      INIRec.WriteFloat('Total', 'vFrete', Total.ICMSTot.vFrete);
+      INIRec.WriteFloat('Total', 'vSeg', Total.ICMSTot.vSeg);
+      INIRec.WriteFloat('Total', 'vDesc', Total.ICMSTot.vDesc);
+      INIRec.WriteFloat('Total', 'vII', Total.ICMSTot.vII);
+      INIRec.WriteFloat('Total', 'vIPI', Total.ICMSTot.vIPI);
+      INIRec.WriteFloat('Total', 'vIPIDevol', Total.ICMSTot.vIPIDevol);
+      INIRec.WriteFloat('Total', 'vPIS', Total.ICMSTot.vPIS);
+      INIRec.WriteFloat('Total', 'vCOFINS', Total.ICMSTot.vCOFINS);
+      INIRec.WriteFloat('Total', 'vOutro', Total.ICMSTot.vOutro);
+      INIRec.WriteFloat('Total', 'vNF', Total.ICMSTot.vNF);
+      INIRec.WriteFloat('Total', 'vTotTrib', Total.ICMSTot.vTotTrib);
+
+      INIRec.WriteFloat('ISSQNtot', 'vServ', Total.ISSQNtot.vServ);
+      INIRec.WriteFloat('ISSQNtot', 'vBC', Total.ISSQNTot.vBC);
+      INIRec.WriteFloat('ISSQNtot', 'vISS', Total.ISSQNTot.vISS);
+      INIRec.WriteFloat('ISSQNtot', 'vPIS', Total.ISSQNTot.vPIS);
+      INIRec.WriteFloat('ISSQNtot', 'vCOFINS', Total.ISSQNTot.vCOFINS);
+      INIRec.WriteDateTime('ISSQNtot', 'dCompet', Total.ISSQNTot.dCompet);
+      INIRec.WriteFloat('ISSQNtot', 'vDeducao', Total.ISSQNTot.vDeducao);
+      INIRec.WriteFloat('ISSQNtot', 'vOutro', Total.ISSQNTot.vOutro);
+      INIRec.WriteFloat('ISSQNtot', 'vDescIncond', Total.ISSQNTot.vDescIncond);
+      INIRec.WriteFloat('ISSQNtot', 'vDescCond', Total.ISSQNTot.vDescCond);
+      INIRec.WriteFloat('ISSQNtot', 'vISSRet', Total.ISSQNTot.vISSRet);
+      INIRec.WriteString('ISSQNtot', 'cRegTrib', RegTribISSQNToStr(
+        Total.ISSQNTot.cRegTrib));
+
+      INIRec.WriteFloat('retTrib', 'vRetPIS', Total.retTrib.vRetPIS);
+      INIRec.WriteFloat('retTrib', 'vRetCOFINS', Total.retTrib.vRetCOFINS);
+      INIRec.WriteFloat('retTrib', 'vRetCSLL', Total.retTrib.vRetCSLL);
+      INIRec.WriteFloat('retTrib', 'vBCIRRF', Total.retTrib.vBCIRRF);
+      INIRec.WriteFloat('retTrib', 'vIRRF', Total.retTrib.vIRRF);
+      INIRec.WriteFloat('retTrib', 'vBCRetPrev', Total.retTrib.vBCRetPrev);
+      INIRec.WriteFloat('retTrib', 'vRetPrev', Total.retTrib.vRetPrev);
+
+      INIRec.WriteString('Transportador', 'modFrete', modFreteToStr(Transp.modFrete));
+      INIRec.WriteString('Transportador', 'CNPJCPF', Transp.Transporta.CNPJCPF);
+      INIRec.WriteString('Transportador', 'xNome', Transp.Transporta.xNome);
+      INIRec.WriteString('Transportador', 'IE', Transp.Transporta.IE);
+      INIRec.WriteString('Transportador', 'xEnder', Transp.Transporta.xEnder);
+      INIRec.WriteString('Transportador', 'xMun', Transp.Transporta.xMun);
+      INIRec.WriteString('Transportador', 'UF', Transp.Transporta.UF);
+      INIRec.WriteFloat('Transportador', 'vServ', Transp.retTransp.vServ);
+      INIRec.WriteFloat('Transportador', 'vBCRet', Transp.retTransp.vBCRet);
+      INIRec.WriteFloat('Transportador', 'pICMSRet', Transp.retTransp.pICMSRet);
+      INIRec.WriteFloat('Transportador', 'vICMSRet',
+        Transp.retTransp.vICMSRet);
+      INIRec.WriteString('Transportador', 'CFOP', Transp.retTransp.CFOP);
+      INIRec.WriteInteger('Transportador', 'cMunFG', Transp.retTransp.cMunFG);
+      INIRec.WriteString('Transportador', 'Placa', Transp.veicTransp.placa);
+      INIRec.WriteString('Transportador', 'UFPlaca', Transp.veicTransp.UF);
+      INIRec.WriteString('Transportador', 'RNTC', Transp.veicTransp.RNTC);
+      INIRec.WriteString('Transportador', 'vagao', Transp.vagao);
+      INIRec.WriteString('Transportador', 'balsa', Transp.balsa);
+
+      for J := 0 to Transp.Reboque.Count - 1 do
+      begin
+        sSecao := 'Reboque' + IntToStrZero(J + 1, 3);
+        with Transp.Reboque.Items[J] do
+        begin
+          INIRec.WriteString(sSecao, 'placa', placa);
+          INIRec.WriteString(sSecao, 'UF', UF);
+          INIRec.WriteString(sSecao, 'RNTC', RNTC);
+        end;
+      end;
+
+      for I := 0 to Transp.Vol.Count - 1 do
+      begin
+        sSecao := 'Volume' + IntToStrZero(I + 1, 3);
+        with Transp.Vol.Items[I] do
+        begin
+          INIRec.WriteInteger(sSecao, 'qVol', qVol);
+          INIRec.WriteString(sSecao, 'esp', esp);
+          INIRec.WriteString(sSecao, 'marca', marca);
+          INIRec.WriteString(sSecao, 'nVol', nVol);
+          INIRec.WriteFloat(sSecao, 'pesoL', pesoL);
+          INIRec.WriteFloat(sSecao, 'pesoB', pesoB);
+
+          for J := 0 to Lacres.Count - 1 do
+          begin
+            sSecao := 'Lacre' + IntToStrZero(I + 1, 3) + IntToStrZero(J + 1, 3);
+            INIRec.WriteString(sSecao, 'nLacre', Lacres.Items[J].nLacre);
+          end;
+        end;
+      end;
+
+      INIRec.WriteString('Fatura', 'nFat', Cobr.Fat.nFat);
+      INIRec.WriteFloat('Fatura', 'vOrig', Cobr.Fat.vOrig);
+      INIRec.WriteFloat('Fatura', 'vDesc', Cobr.Fat.vDesc);
+      INIRec.WriteFloat('Fatura', 'vLiq', Cobr.Fat.vLiq);
+
+      for I := 0 to Cobr.Dup.Count - 1 do
+      begin
+        sSecao := 'Duplicata' + IntToStrZero(I + 1, 3);
+        with Cobr.Dup.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'nDup', nDup);
+          INIRec.WriteString(sSecao, 'dVenc', DateToStr(dVenc));
+          INIRec.WriteFloat(sSecao, 'vDup', vDup);
+        end;
+      end;
+
+      for I := 0 to pag.Count - 1 do
+      begin
+        sSecao := 'pag' + IntToStrZero(I + 1, 3);
+        with pag.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'tPag', FormaPagamentoToStr(tPag));
+          INIRec.WriteFloat(sSecao, 'vPag', vPag);
+          INIRec.WriteString(sSecao, 'indPag', IndpagToStr(indPag));
+          INIRec.WriteString(sSecao, 'tpIntegra', tpIntegraToStr(tpIntegra));
+          INIRec.WriteString(sSecao, 'CNPJ', CNPJ);
+          INIRec.WriteString(sSecao, 'tBand', BandeiraCartaoToStr(tBand));
+          INIRec.WriteString(sSecao, 'cAut', cAut);
+        end;
+      end;
+      INIRec.WriteFloat(sSecao, 'vTroco', pag.vTroco);
+
+      INIRec.WriteString('DadosAdicionais', 'infAdFisco', InfAdic.infAdFisco);
+      INIRec.WriteString('DadosAdicionais', 'infCpl', InfAdic.infCpl);
+
+      for I := 0 to InfAdic.obsCont.Count - 1 do
+      begin
+        sSecao := 'InfAdic' + IntToStrZero(I + 1, 3);
+        with InfAdic.obsCont.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'xCampo', xCampo);
+          INIRec.WriteString(sSecao, 'xTexto', xTexto);
+        end;
+      end;
+
+      for I := 0 to InfAdic.obsFisco.Count - 1 do
+      begin
+        sSecao := 'ObsFisco' + IntToStrZero(I + 1, 3);
+        with InfAdic.obsFisco.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'xCampo', xCampo);
+          INIRec.WriteString(sSecao, 'xTexto', xTexto);
+        end;
+      end;
+
+      for I := 0 to InfAdic.procRef.Count - 1 do
+      begin
+        sSecao := 'procRef' + IntToStrZero(I + 1, 3);
+        with InfAdic.procRef.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'nProc', nProc);
+          INIRec.WriteString(sSecao, 'indProc', indProcToStr(indProc));
+        end;
+      end;
+
+      if (exporta.UFembarq <> '') or (exporta.UFSaidaPais <> '') then
+      begin
+        INIRec.WriteString('Exporta', 'UFembarq', exporta.UFembarq);
+        INIRec.WriteString('Exporta', 'xLocEmbarq', exporta.xLocEmbarq);
+
+        INIRec.WriteString('Exporta', 'UFSaidaPais', exporta.UFSaidaPais);
+        INIRec.WriteString('Exporta', 'xLocExporta', exporta.xLocExporta);
+        INIRec.WriteString('Exporta', 'xLocDespacho', exporta.xLocDespacho);
+      end;
+
+      if (compra.xNEmp <> '') then
+      begin
+        INIRec.WriteString('Compra', 'xNEmp', compra.xNEmp);
+        INIRec.WriteString('Compra', 'xPed', compra.xPed);
+        INIRec.WriteString('Compra', 'xCont', compra.xCont);
+      end;
+
+      INIRec.WriteString('cana', 'safra', cana.safra);
+      INIRec.WriteString('cana', 'ref', cana.ref);
+      INIRec.WriteFloat('cana', 'qTotMes', cana.qTotMes);
+      INIRec.WriteFloat('cana', 'qTotAnt', cana.qTotAnt);
+      INIRec.WriteFloat('cana', 'qTotGer', cana.qTotGer);
+      INIRec.WriteFloat('cana', 'vFor', cana.vFor);
+      INIRec.WriteFloat('cana', 'vTotDed', cana.vTotDed);
+      INIRec.WriteFloat('cana', 'vLiqFor', cana.vLiqFor);
+
+      for I := 0 to cana.fordia.Count - 1 do
+      begin
+        sSecao := 'forDia' + IntToStrZero(I + 1, 3);
+        with cana.fordia.Items[I] do
+        begin
+          INIRec.WriteInteger(sSecao, 'dia', dia);
+          INIRec.WriteFloat(sSecao, 'qtde', qtde);
+        end;
+      end;
+
+      for I := 0 to cana.deduc.Count - 1 do
+      begin
+        sSecao := 'deduc' + IntToStrZero(I + 1, 3);
+        with cana.deduc.Items[I] do
+        begin
+          INIRec.WriteString(sSecao, 'xDed', xDed);
+          INIRec.WriteFloat(sSecao, 'vDed', vDed);
+        end;
+      end;
+
+      INIRec.WriteString('procNFe', 'tpAmb', TpAmbToStr(procNFe.tpAmb));
+      INIRec.WriteString('procNFe', 'verAplic', procNFe.verAplic);
+      INIRec.WriteString('procNFe', 'chNFe', procNFe.chNFe);
+      INIRec.WriteString('procNFe', 'dhRecbto', DateTimeToStr(procNFe.dhRecbto));
+      INIRec.WriteString('procNFe', 'nProt', procNFe.nProt);
+      INIRec.WriteString('procNFe', 'digVal', procNFe.digVal);
+      INIRec.WriteString('procNFe', 'cStat', IntToStr(procNFe.cStat));
+      INIRec.WriteString('procNFe', 'xMotivo', procNFe.xMotivo);
+
+    end;
+
+  finally
+    IniNFe := TStringList.Create;
+    try
+      INIRec.GetStrings(IniNfe);
+      INIRec.Free;
+      Result := StringReplace(IniNFe.Text, sLineBreak + sLineBreak, sLineBreak, [rfReplaceAll]);
+    finally
+      IniNFe.Free;
+    end;
+
+  end;
+
 end;
 
 function NotaFiscal.GravarXML(const NomeArquivo: String; const PathArquivo: String): Boolean;
@@ -2529,6 +3446,9 @@ begin
     FNFeW.Gerador.Opcoes.FormatoAlerta  := Configuracoes.Geral.FormatoAlerta;
     FNFeW.Gerador.Opcoes.RetirarAcentos := Configuracoes.Geral.RetirarAcentos;
     FNFeW.Gerador.Opcoes.RetirarEspacos := Configuracoes.Geral.RetirarEspacos;
+    FNFeW.Gerador.Opcoes.IdentarXML := Configuracoes.Geral.IdentarXML;
+    FNFeW.Opcoes.NormatizarMunicipios  := Configuracoes.Arquivos.NormatizarMunicipios;
+    FNFeW.Opcoes.PathArquivoMunicipios := Configuracoes.Arquivos.PathArquivoMunicipios;
     FNFeW.Opcoes.CamposFatObrigatorios := Configuracoes.Geral.CamposFatObrigatorios;
     pcnAuxiliar.TimeZoneConf.Assign( Configuracoes.WebServices.TimeZoneConf );
   end;
@@ -2560,6 +3480,9 @@ begin
     FNFeW.Gerador.Opcoes.FormatoAlerta  := Configuracoes.Geral.FormatoAlerta;
     FNFeW.Gerador.Opcoes.RetirarAcentos := Configuracoes.Geral.RetirarAcentos;
     FNFeW.Gerador.Opcoes.RetirarEspacos := Configuracoes.Geral.RetirarEspacos;
+    FNFeW.Gerador.Opcoes.IdentarXML := Configuracoes.Geral.IdentarXML;
+    FNFeW.Opcoes.NormatizarMunicipios  := Configuracoes.Arquivos.NormatizarMunicipios;
+    FNFeW.Opcoes.PathArquivoMunicipios := Configuracoes.Arquivos.PathArquivoMunicipios;
     FNFeW.Opcoes.CamposFatObrigatorios := Configuracoes.Geral.CamposFatObrigatorios;
   end;
 
@@ -2945,6 +3868,14 @@ begin
     LerArqIni(AIniString);
 
   Result := Self.Count > 0;
+end;
+
+function TNotasFiscais.GerarIni: String;
+begin
+  Result := '';
+  if (Self.Count > 0) then
+    Result := Self.Items[0].GerarNFeIni;
+
 end;
 
 function TNotasFiscais.GravarXML(const APathNomeArquivo: String): Boolean;

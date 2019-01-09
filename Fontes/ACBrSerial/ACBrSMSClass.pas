@@ -115,7 +115,7 @@ type
     procedure Ativar; virtual;
     procedure Desativar; virtual;
 
-    procedure EnviarComando(ACmd: String; ATimeOut: Integer = 0);
+    procedure EnviarComando(const ACmd: String; ATimeOut: Integer = 0);
     
     function EmLinha: Boolean; virtual;
     function IMEI: String; virtual;
@@ -170,10 +170,10 @@ end;
 procedure TACBrSMSMensagens.CarregaSMS(const APath: string);
 function FormaDataHora(ADataHora : String) : TDateTime;
 begin
-  Result := StrToDateTimeDef(Copy(ADataHora, 7, 2) + '/' +
-                             Copy(ADataHora, 4, 2) + '/' +
-                             Copy(ADataHora, 1, 2) +
-                             Copy(ADataHora, 9, Length(ADataHora) -8),
+  Result := StrToDateTimeDef(Copy(ADataHora, 9, 2) + '/' +
+                             Copy(ADataHora, 6, 2) + '/' +
+                             Copy(ADataHora, 1, 4) +
+                             Copy(ADataHora, 11, Length(ADataHora) -6),
                              StrToDate('01/01/1990'));
 end;
 const
@@ -185,11 +185,11 @@ var
   I, J : Integer;
   FimSMS : Boolean;
 begin
+  Self.Clear;
+  if not FileExists(APath) then
+    raise EACBrSMSException.CreateFmt('Arquivo "%s" não encontrado.', [APath]);
+  ListaSMS := TStringList.Create;
   try
-    Self.Clear;
-    if not FileExists(APath) then
-      raise EACBrSMSException.CreateFmt('Arquivo "%s" não encontrado.', [APath]);
-    ListaSMS := TStringList.Create;
     ListaSMS.LoadFromFile(APath);
     if ListaSMS.Count = 0 then
       Exit;
@@ -217,7 +217,7 @@ begin
           Conteudo := StringReplace(Conteudo, Telefone, '', [rfReplaceAll]);
           Conteudo := StringReplace(Conteudo, '"', '', [rfReplaceAll]);
           Conteudo := StringReplace(Conteudo, ',', ' ', [rfReplaceAll]);
-          DataHora := FormaDataHora(Trim(Copy(Conteudo, 1, 19)));
+          DataHora := FormaDataHora(Trim(Copy(Conteudo, 1, 21)));
           Mensagem := '';
           J := I + 1;
           FimSMS := (J > ListaSMS.Count -1);
@@ -481,7 +481,7 @@ begin
     Desativar;
 end;
 
-procedure TACBrSMSClass.EnviarComando(ACmd: String; ATimeOut: Integer);
+procedure TACBrSMSClass.EnviarComando(const ACmd: String; ATimeOut: Integer);
 var
   sRet: String;
 begin

@@ -285,7 +285,7 @@ TACBrECFNaoFiscal = class( TACBrECFClass )
     procedure GravaBuffer ;
     procedure ZeraBuffer ;
     procedure ImprimeBuffer ;
-    procedure ImprimePorta( AString : AnsiString ) ; overload ;
+    procedure ImprimePorta( const AString : AnsiString ) ; overload ;
     procedure ImprimePorta( AStringList : TStringList ) ; overload ;
     Procedure AddBufferRelatorio ;
     Procedure AddBufferRodape ;
@@ -294,8 +294,8 @@ TACBrECFNaoFiscal = class( TACBrECFClass )
     Procedure ListaLeituraX( Est : TACBrECFEstado );
     Procedure AbreDocumento(AbreDia : Boolean = false) ;
 
-    function AchaFPGIndiceNaoFiscal( Indice: String) : Integer ;
-    function AchaCNFIndiceNaoFiscal( Indice: String) : Integer ;
+    function AchaFPGIndiceNaoFiscal( const Indice: String) : Integer ;
+    function AchaCNFIndiceNaoFiscal( const Indice: String) : Integer ;
     function GetNomeArqINI: String;
 
     function CalcTotalItem( AQtd, APrecoUnit: Double): Double;
@@ -326,6 +326,8 @@ TACBrECFNaoFiscal = class( TACBrECFClass )
     function GetNumVersao: String; override ;
     function GetSubTotal: Double; override ;
     function GetTotalPago: Double; override ;
+
+    function GetNumUltimoItem: Integer; override ;
 
     function GetEstado: TACBrECFEstado; override ;
     function GetHorarioVerao: Boolean; override ;
@@ -417,14 +419,14 @@ TACBrECFNaoFiscal = class( TACBrECFClass )
        Tipo : String = ''; Posicao : String = '') ; override ;
  end ;
 
-Function StuffMascaraItem( Linha, MascaraItem : AnsiString; Letra : AnsiChar;
-       TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
+Function StuffMascaraItem( const Linha, MascaraItem : AnsiString; Letra : AnsiChar;
+       const TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
 
 implementation
 Uses ACBrUtil;
 
-Function StuffMascaraItem( Linha, MascaraItem : AnsiString; Letra : AnsiChar;
-   TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
+Function StuffMascaraItem( const Linha, MascaraItem : AnsiString; Letra : AnsiChar;
+   const TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
 Var A,B : Integer ;
     L   : AnsiChar ;
 begin
@@ -765,6 +767,11 @@ end;
 function TACBrECFNaoFiscal.GetNumSerie: String;
 begin
   Result := fsNumSerie ;
+end;
+
+function TACBrECFNaoFiscal.GetNumUltimoItem: Integer;
+begin
+  Result := fsItensCupom.Count;
 end;
 
 function TACBrECFNaoFiscal.GetNumCRO: String;
@@ -1353,7 +1360,7 @@ begin
   else
      StrPreco := FormatFloat('####0.000',ValorUnitario ) ;
 
-  Total   := CalcTotalItem( Qtd * ValorUnitario, -2) ;
+  Total   := CalcTotalItem( Qtd, ValorUnitario) ;
   ValDesc := 0 ;
   PorcDesc:= 0 ;
   if ValorDescontoAcrescimo > 0 then
@@ -2291,7 +2298,7 @@ begin
   fsBuffer.Clear ;
 end;
 
-procedure TACBrECFNaoFiscal.ImprimePorta( AString : AnsiString ) ;
+procedure TACBrECFNaoFiscal.ImprimePorta( const AString : AnsiString ) ;
 Var OldAguardandoResposta : Boolean ;
 begin
   OldAguardandoResposta := AguardandoResposta ;
@@ -2852,7 +2859,7 @@ begin
   end ;
 end;
 
-function TACBrECFNaoFiscal.AchaFPGIndiceNaoFiscal( Indice: String) : Integer ;
+function TACBrECFNaoFiscal.AchaFPGIndiceNaoFiscal( const Indice: String) : Integer ;
 var A : Integer ;
 begin
   result := -1 ;
@@ -2867,7 +2874,7 @@ begin
   end ;
 end;
 
-function TACBrECFNaoFiscal.AchaCNFIndiceNaoFiscal(Indice: String): Integer;
+function TACBrECFNaoFiscal.AchaCNFIndiceNaoFiscal(const Indice: String): Integer;
 var A : Integer ;
 begin
   result := -1 ;

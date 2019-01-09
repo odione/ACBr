@@ -177,7 +177,7 @@ procedure TACBrBancoNordeste.GerarRegistroTransacao400(ACBrTitulo :TACBrTitulo; 
 var
   DigitoNossoNumero, Ocorrencia, aEspecie, aAgencia :String;
   Protesto, TipoSacado, MensagemCedente, aConta     :String;
-  wLinha: String;
+  wLinha, wAceite, wDiasProtesto: String;
   WCarteira: Char;
 begin
 
@@ -252,11 +252,21 @@ begin
       else
         WCarteira:= 'I';
 
+      if Aceite = atSim then
+        wAceite := 'S'
+      else
+        wAceite := 'N';
+
+      if DiasDeProtesto > 0 then
+        wDiasProtesto := FormatFloat('00', DiasDeProtesto)
+      else
+        wDiasProtesto := '99';
+
       with ACBrBoleto do
       begin
          if Mensagem.Text<>'' then
          MensagemCedente:= Mensagem[0];
-         
+
          wLinha:= '1'                                                     +  // ID Registro
                   Space(16)                                               +  // Filler - Brancos
                   PadLeft( aAgencia, 4, '0')                                 +  // Cód. da Agência do cliente
@@ -276,7 +286,7 @@ begin
                   PadRight( NumeroDocumento,  10)                             +
                   FormatDateTime( 'ddmmyy', Vencimento)                   +
                   IntToStrZero( Round( ValorDocumento * 100 ), 13)        +
-                  StringOfChar('0',7) + Space(1) + PadRight(aEspecie,2) + 'N' +  // Zeros + Filler + Especie do documento + Idntificação(valor fixo N)
+                  StringOfChar('0', 7) + Space(1) + PadRight(aEspecie, 2) + wAceite +  // Zeros + Filler + Especie do documento + Idntificação(valor fixo N)
                   FormatDateTime( 'ddmmyy', DataDocumento )               +  // Data de Emissão
                   Protesto                                                +
                   IntToStrZero( round(ValorMoraJuros * 100 ), 13)         +
@@ -293,7 +303,8 @@ begin
                   PadRight( Sacado.Cidade, 15 )                               +
                   PadRight( Sacado.UF, 2 )                                    +
                   PadRight( MensagemCedente, 40 )                             +
-                  '990'                                                   +
+                  wDiasProtesto + '0'                   +
+
                   IntToStrZero(aRemessa.Count + 1, 6); // Nº SEQÜENCIAL DO REGISTRO NO ARQUIVO
 
          aRemessa.Text:= aRemessa.Text + UpperCase(wLinha);
@@ -557,15 +568,15 @@ end;
 
 function TACBrBancoNordeste.CarteiraToTipoOperacao(const Carteira: string):String; 
 begin
-  if Carteira = '1' then
+  if Carteira = '01' then
     Result:= '21'
-  else if Carteira = '2' then
+  else if Carteira = '02' then
     Result:= '41'
-  else if Carteira = '4' then
+  else if Carteira = '04' then
     Result:= '21'
-  else if Carteira = '5' then
+  else if Carteira = '05' then
     Result:= '41'
-  else if Carteira = '6' then
+  else if Carteira = '06' then
     Result:= '31'
   else if Carteira = 'I' then
     Result:= '51'

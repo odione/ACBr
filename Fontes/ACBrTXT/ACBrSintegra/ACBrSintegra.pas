@@ -586,7 +586,7 @@ type
     procedure SetObject (Index: Integer; Item: TRegistro74);
     function GetObject (Index: Integer): TRegistro74;
     procedure Insert (Index: Integer; Obj: TRegistro74);
-    function GetRegistroExiste(FCodigo: string): Integer;
+    function GetRegistroExiste(const FCodigo: string): Integer;
   public
     function Add (Obj: TRegistro74): Integer;
     property Objects [Index: Integer]: TRegistro74
@@ -624,7 +624,7 @@ type
     procedure SetObject (Index: Integer; Item: TRegistro75);
     function GetObject (Index: Integer): TRegistro75;
     procedure Insert (Index: Integer; Obj: TRegistro75);
-    function GetRegistroExiste(FCodigo: string): Integer;
+    function GetRegistroExiste(const FCodigo: string): Integer;
   public
     function Add (Obj: TRegistro75): Integer;
     property Objects [Index: Integer]: TRegistro75
@@ -1443,7 +1443,9 @@ type
       read GetObject write SetObject; default;
   end;
 
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrSintegra = class(TACBrComponent)
   private
     FFileName: string;
@@ -1525,8 +1527,8 @@ type
     procedure GerarRegistro88STITNF;
 
     procedure GerarRegistros90;
-    procedure WriteRecord(Rec: string; vSapiMG : Boolean = false);
-    function GetRegistro60M(Emissao: TDateTime;NumSerie: string): TRegistro60M;
+    procedure WriteRecord(const Rec: string; vSapiMG : Boolean = false);
+    function GetRegistro60M(Emissao: TDateTime; const NumSerie: string): TRegistro60M;
     procedure GerarConjuntoRegistros60;
     function GetVersao: string;
     procedure GerarRegistro88EC;
@@ -1707,7 +1709,7 @@ begin
   inherited;
 end;
 
-procedure TACBrSintegra.WriteRecord(Rec: string; vSapiMG : Boolean);
+procedure TACBrSintegra.WriteRecord(const Rec: string; vSapiMG : Boolean);
 begin
   //adicionado variavel para checar a geração dos registro para o SAPI MG
   //para não ocorrer problemas com a geração dos outros arquivos somente informo True nesta
@@ -2428,7 +2430,7 @@ WriteRecord(wregistro);
 end;
 
 function TACBrSintegra.GetRegistro60M(Emissao: TDateTime;
-  NumSerie: string): TRegistro60M;
+  const NumSerie: string): TRegistro60M;
 var
   i: Integer;
 begin
@@ -3101,7 +3103,7 @@ begin
   Result := inherited GetItem(Index) as TRegistro75 ;
 end;
 
-function TRegistros75.GetRegistroExiste(FCodigo: string): Integer;
+function TRegistros75.GetRegistroExiste(const FCodigo: string): Integer;
 var
   i: Integer;
 begin
@@ -3396,33 +3398,14 @@ var
 begin
   witem1 := TRegistro60A(Item1);
   witem2 := TRegistro60A(Item2);
-  if witem1.Emissao>witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
-  else if witem1.Emissao = witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
+
+  if witem1.NumSerie>witem2.NumSerie then
+    Result:=1
+  else if witem1.NumSerie=witem2.NumSerie then
+    Result:=0
   else
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end;
+    Result:=-1;
+
 end;
 
 { TRegistro60M }
@@ -3471,33 +3454,13 @@ var
 begin
   witem1 := TRegistro60D(Item1);
   witem2 := TRegistro60D(Item2);
-  if witem1.Emissao>witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
-  else if witem1.Emissao = witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
+
+  if witem1.NumSerie>witem2.NumSerie then
+    Result:=1
+  else if witem1.NumSerie=witem2.NumSerie then
+    Result:=0
   else
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end;
+    Result:=-1;
 end;
 
 { TRegistros74 }
@@ -3508,33 +3471,13 @@ var
 begin
   witem1 := TRegistro74(Item1);
   witem2 := TRegistro74(Item2);
-  if witem1.Data>witem2.Data then
-  begin
-    if witem1.Codigo>witem2.Codigo then
-      Result:=1
-    else if witem1.Codigo=witem2.Codigo then
-      Result:=0
-    else
-      Result:=-1;
-  end
-  else if witem1.Data = witem2.Data then
-  begin
-    if witem1.Codigo>witem2.Codigo then
-      Result:=1
-    else if witem1.Codigo=witem2.Codigo then
-      Result:=0
-    else
-      Result:=-1;
-  end
+
+  if witem1.Codigo>witem2.Codigo then
+    Result:=1
+  else if witem1.Codigo=witem2.Codigo then
+    Result:=0
   else
-  begin
-    if witem1.Codigo>witem2.Codigo then
-      Result:=1
-    else if witem1.Codigo=witem2.Codigo then
-      Result:=0
-    else
-      Result:=-1;
-  end;
+    Result:=-1;
 end;
 
 function TRegistros74.Add(Obj: TRegistro74): Integer;
@@ -3559,7 +3502,7 @@ begin
      Obj.Free;
 end;
 
-function TRegistros74.GetRegistroExiste(FCodigo: string): Integer;
+function TRegistros74.GetRegistroExiste(const FCodigo: string): Integer;
 var
   i: Integer;
 begin
@@ -3649,33 +3592,13 @@ var
 begin
   witem1 := TRegistro60I(Item1);
   witem2 := TRegistro60I(Item2);
-  if witem1.Emissao>witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
-  else if witem1.Emissao = witem2.Emissao then
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end
+
+  if witem1.NumSerie>witem2.NumSerie then
+    Result:=1
+  else if witem1.NumSerie=witem2.NumSerie then
+    Result:=0
   else
-  begin
-    if witem1.NumSerie>witem2.NumSerie then
-      Result:=1
-    else if witem1.NumSerie=witem2.NumSerie then
-      Result:=0
-    else
-      Result:=-1;
-  end;
+    Result:=-1;
 end;
 
 { TRegistros60R }

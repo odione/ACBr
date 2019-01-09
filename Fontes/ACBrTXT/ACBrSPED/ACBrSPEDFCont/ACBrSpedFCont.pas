@@ -41,7 +41,7 @@ unit ACBrSpedFCont;
 interface
 
 uses
-  SysUtils, Classes, DateUtils,
+  SysUtils, Classes, DateUtils, ACBrBase,
   {$IFDEF FPC}
     LResources,
   {$ENDIF}
@@ -56,8 +56,10 @@ type
   /// ACBrSpedFCont -  Controle Fiscal Contábil de Transição
 
   { TACBrSPEDFCont }
-
-  TACBrSPEDFCont = class(TComponent)
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
+  TACBrSPEDFCont = class(TACBrComponent)
   private
     FACBrTXT: TACBrTXTClass;
     FOnError: TErrorEvent;
@@ -127,7 +129,7 @@ type
     constructor Create(AOwner: TComponent); override; /// Create
     destructor Destroy; override; /// Destroy
 
-    function SaveFileTXT(Arquivo: String): Boolean; /// Método que escreve o arquivo texto no caminho passado como parâmetro
+    function SaveFileTXT(const Arquivo: String): Boolean; /// Método que escreve o arquivo texto no caminho passado como parâmetro
     function SaveStringList(AStringList: TStringList): Boolean; /// Método que escreve o arquivo texto em um StringList
 
     property DT_INI: TDateTime read GetDT_INI write SetDT_INI;
@@ -309,7 +311,7 @@ begin
   FBloco_9.OnError := Value;
 end;
 
-function TACBrSPEDFCont.SaveFileTXT(Arquivo: String): Boolean;
+function TACBrSPEDFCont.SaveFileTXT(const Arquivo: String): Boolean;
 var
    SL : TStringList ;
 begin

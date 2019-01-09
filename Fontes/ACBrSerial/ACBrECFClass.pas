@@ -149,6 +149,7 @@ TACBrECFRodapeRestaurante = class( TPersistent )
     fsCOO:  Integer;
     fsMesa: String;
     fsImprimir: Boolean;
+    fsContaCliente: Boolean;
   public
   published
     property Imprimir : Boolean read fsImprimir write fsImprimir default False;
@@ -156,6 +157,8 @@ TACBrECFRodapeRestaurante = class( TPersistent )
     property CER      : Integer read fsCER      write fsCER stored false;
     property COO      : Integer read fsCOO      write fsCOO stored false;
     property Mesa     : String  read fsMesa     write fsMesa stored false;
+    property ContaCliente: Boolean read fsContaCliente write fsContaCliente
+       stored false default False;
 end;
 
 TACBrECFRodape = class( TPersistent )
@@ -164,7 +167,10 @@ TACBrECFRodape = class( TPersistent )
     fsDavOs: String;
     fsMD5: String;
     fsDav: String;
+    fsDavFarm: String;
     fsNF: String;
+    fsPlaca: String;
+    fsQtdeKM: String;
     fsRestaurante: TACBrECFRodapeRestaurante;
     fsMinasLegal: Boolean;
     fsCupomMania: Boolean;
@@ -181,9 +187,12 @@ TACBrECFRodape = class( TPersistent )
   published
     property MD5         : String  read fsMD5         write SetMD5;
     property Dav         : String  read fsDav         write fsDav   stored False;
+    property DavFarm     : String  read fsDavFarm     write fsDavFarm stored False;
     property NF          : String  read fsNF          write fsNF stored False;
     property DavOs       : String  read fsDavOs       write fsDavOs stored False;
     property PreVenda    : String  read fsPreVenda    write fsPreVenda stored False;
+    property Placa       : String  read fsPlaca       write fsPlaca stored false;
+    property QtdeKM      : String  read fsQtdeKM      write fsQtdeKM stored false;
     property Restaurante : TACBrECFRodapeRestaurante read fsRestaurante write fsRestaurante;
     property CupomMania  : Boolean read fsCupomMania  write fsCupomMania default False;
     property MinasLegal  : Boolean read fsMinasLegal  write fsMinasLegal default False;
@@ -205,7 +214,7 @@ TACBrECFAliquota = class
     fsTipo: Char;
     fsTotal: Double;
     function GetAsString: String;
-    procedure SetAsString(AValue: String);
+    procedure SetAsString(const AValue: String);
     procedure SetTipo(const AValue: Char);
  public
     constructor create ;
@@ -242,7 +251,7 @@ TACBrECFTotalizadorNaoTributado = class
    fsTipo: Char;
    fsTotal: Double;
    function GetAsString: String;
-   procedure SetAsString(AValue: String);
+   procedure SetAsString(const AValue: String);
    procedure SetTipo(const AValue: Char);
  public
    constructor create ;
@@ -284,7 +293,7 @@ TACBrECFFormaPagamento = class
     fsData: TDateTime;
     fsTipoDoc: String;
     function GetAsString: String;
-    procedure SetAsString(AValue: String);
+    procedure SetAsString(const AValue: String);
  public
     constructor create ;
     procedure Assign( AFormaPagamento : TACBrECFFormaPagamento ) ;
@@ -347,7 +356,7 @@ TACBrECFRelatorioGerencial = class
     fsDescricao: String;
     fsContador: Integer;
     function GetAsString: String;
-    procedure SetAsString(AValue: String);
+    procedure SetAsString(const AValue: String);
  public
     constructor create ;
     procedure Assign( ARelatorioGerencial : TACBrECFRelatorioGerencial ) ;
@@ -384,7 +393,7 @@ TACBrECFComprovanteNaoFiscal = class
     fsTotal: Double ;
     fsContador: Integer;
     function GetAsString: String;
-    procedure SetAsString(AValue: String);
+    procedure SetAsString(const AValue: String);
  public
     constructor create ;
     procedure Assign( AComprovanteNaoFiscal : TACBrECFComprovanteNaoFiscal ) ;
@@ -792,6 +801,7 @@ TACBrECFClass = class
 
     function GetTotalAcrescimosISSQN: Double; virtual ;
     function GetTotalCancelamentosISSQN: Double; virtual ;
+    function GetTotalCancelamentosEmAbertoISSQN: Double; virtual;
     function GetTotalDescontosISSQN: Double; virtual ;
     function GetTotalIsencaoISSQN: Double; virtual ;
     function GetTotalNaoTributadoISSQN: Double; virtual ;
@@ -824,7 +834,7 @@ TACBrECFClass = class
     Function EnviaComando_ECF( cmd : AnsiString ) : AnsiString ; virtual ;
 
     procedure LeResposta ; virtual ;
-    function TransmiteComando( Cmd : AnsiString ) : Boolean ; virtual ;
+    function TransmiteComando( const Cmd : AnsiString ) : Boolean ; virtual ;
 
     function VerificaFimLeitura(var Retorno: AnsiString; var TempoLimite: TDateTime) : Boolean ; virtual ;
     function VerificaFimImpressao(var TempoLimite: TDateTime) : Boolean ; virtual ;
@@ -1002,6 +1012,7 @@ TACBrECFClass = class
     Property TotalIsencao       : Double     read GetTotalIsencao ;
 
     Property TotalCancelamentosISSQN          : Double read GetTotalCancelamentosISSQN;
+    Property TotalCancelamentosEmAbertoISSQN  : Double read GetTotalCancelamentosEmAbertoISSQN;
     Property TotalDescontosISSQN              : Double read GetTotalDescontosISSQN;
     Property TotalAcrescimosISSQN             : Double read GetTotalAcrescimosISSQN;
     Property TotalSubstituicaoTributariaISSQN : Double read GetTotalSubstituicaoTributariaISSQN;
@@ -1107,6 +1118,10 @@ TACBrECFClass = class
     { Procedimentos de Cupom Fiscal }
     property Consumidor : TACBrECFConsumidor read fpConsumidor ;
     Procedure AbreCupom ; virtual ;
+    Procedure AbreBilhetePassagem( Origem: String; Destino: String;
+      Linha: String; Agencia: String; DataHora: TDateTime;
+      Poltrona: String; Plataforma: String; Tipo: TACBrECFTipoBilhete; UFDestino: String;
+      PassageiroRG: String; PassageiroNome: String; PassageiroEnd: String); virtual;
     procedure LegendaInmetroProximoItem ; Virtual ;
     Procedure VendeItem( Codigo, Descricao : String; AliquotaECF : String;
        Qtd : Double ; ValorUnitario : Double; ValorDescontoAcrescimo : Double = 0;
@@ -1192,7 +1207,8 @@ TACBrECFClass = class
     Procedure CancelaItemVendido( NumItem : Integer ) ; virtual ;
     procedure CancelaItemVendidoParcial( NumItem : Integer;
       Quantidade : Double) ; Virtual ;
-    procedure CancelaDescontoAcrescimoItem( NumItem : Integer) ; Virtual ;
+    procedure CancelaDescontoAcrescimoItem( NumItem : Integer;
+      TipoAcrescimoDesconto: String = 'D') ; Virtual ;
     Property Subtotal  : Double read GetSubTotal ;
     Property TotalPago : Double read GetTotalPago ;
 
@@ -1277,33 +1293,34 @@ TACBrECFClass = class
        Linhas : TStringList; Documentos : TACBrECFTipoDocumentoSet = [docTodos] ) ; overload ; virtual ;
 
     Procedure EspelhoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; virtual ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; virtual ;
     Procedure EspelhoMFD_DLL( COOInicial, COOFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; virtual ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; overload ; virtual ;
     Procedure ArquivoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD  ) ; overload ; virtual ;
     Procedure ArquivoMFD_DLL( ContInicial, ContFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD;
        TipoContador: TACBrECFTipoContador = tpcCOO ) ; overload ; virtual ;
 
-    Procedure ArquivoMF_DLL(  NomeArquivo : AnsiString  ) ; overload ; virtual ;
-    Procedure ArquivoMFD_DLL(NomeArquivo: AnsiString); overload ; virtual ;
+    Procedure ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString); virtual;
+    Procedure ArquivoMFD_Binario_DLL(Tipo:TACBrECFTipoDownloadMFD; const NomeArquivo: AnsiString;
+       StrInicial, StrFinal: AnsiString); virtual;
 
     procedure PafMF_GerarCAT52(const DataInicial, DataFinal: TDateTime;
-      const DirArquivos: String); virtual;
+      const DirArquivos: String; NumeroSerie: String = ''); virtual;
 
     Procedure IdentificaOperador(Nome : String); virtual;
     Procedure IdentificaPAF( NomeVersao, MD5 : String) ; virtual ;
     Function RetornaInfoECF( Registrador: String) : AnsiString; Virtual ;
 
     { Retorna a Resposta do ECF }
-    Function EnviaComando( cmd : AnsiString = '') : AnsiString ; overload ;
+    Function EnviaComando( const cmd : AnsiString = '') : AnsiString ; overload ;
     { Versao que Permite mudar o TimeOut padrao }
-    Function EnviaComando( cmd : AnsiString; lTimeOut : Integer): AnsiString; overload ;
+    Function EnviaComando( const cmd : AnsiString; lTimeOut : Integer): AnsiString; overload ;
     { Versao que Permite mudar o TimeOut padrao e o TempoInicioMsg }
-    Function EnviaComando( cmd : AnsiString; lTimeOut, lTempoInicioMsg : Integer):
+    Function EnviaComando( const cmd : AnsiString; lTimeOut, lTempoInicioMsg : Integer):
        AnsiString; overload ;
 
     { Gera erro se nao puder abrir Cupom, informando o motivo }
@@ -1348,7 +1365,7 @@ begin
             FloatToStr( RoundTo(Total, -2) ) + '|' ;
 end;
 
-procedure TACBrECFTotalizadorNaoTributado.SetAsString(AValue: String);
+procedure TACBrECFTotalizadorNaoTributado.SetAsString(const AValue: String);
 var
   SL: TStringList;
 begin
@@ -1458,7 +1475,7 @@ begin
             FloatToStr( RoundTo(Total, -2) )+ '|' ;
 end;
 
-procedure TACBrECFAliquota.SetAsString(AValue: String);
+procedure TACBrECFAliquota.SetAsString(const AValue: String);
 var
   SL: TStringList;
 begin
@@ -1529,7 +1546,7 @@ begin
             TipoDoc                          + '|' ;
 end;
 
-procedure TACBrECFFormaPagamento.SetAsString(AValue: String);
+procedure TACBrECFFormaPagamento.SetAsString(const AValue: String);
 var
   SL: TStringList;
 begin
@@ -1671,7 +1688,7 @@ begin
             IntToStr( Contador ) ;
 end;
 
-procedure TACBrECFRelatorioGerencial.SetAsString(AValue: String);
+procedure TACBrECFRelatorioGerencial.SetAsString(const AValue: String);
 var
   SL: TStringList;
 begin
@@ -1728,7 +1745,7 @@ begin
             IntToStr( Contador )             + '|' ;
 end;
 
-procedure TACBrECFComprovanteNaoFiscal.SetAsString(AValue: String);
+procedure TACBrECFComprovanteNaoFiscal.SetAsString(const AValue: String);
 var
   SL: TStringList;
 begin
@@ -1986,7 +2003,7 @@ begin
 
   if not fpDevice.Ativo then
   begin
-     GravaLog('-- Ativando a porta: ' + fpDevice.Porta);
+     GravaLog('   Ativando a porta: ' + fpDevice.Porta);
      fpDevice.Ativar;
   end;
 end;
@@ -1995,7 +2012,7 @@ procedure TACBrECFClass.DesativarPorta;
 begin
   if not Assigned(fpDevice) then exit;
 
-  GravaLog('-- Desativando a porta: ' + fpDevice.Porta);
+  GravaLog('   Desativando a porta: ' + fpDevice.Porta);
   fpDevice.Desativar;
 end;
 
@@ -2048,7 +2065,7 @@ end;
 
 
 {------------------------------------------------------------------------------}
-function TACBrECFClass.EnviaComando(cmd: AnsiString; lTimeOut: Integer): AnsiString;
+function TACBrECFClass.EnviaComando(const cmd: AnsiString; lTimeOut: Integer): AnsiString;
 Var wTimeOut : Integer ;
 begin
   wTimeOut := TimeOut ;                      { Salvando os valores antigos }
@@ -2061,7 +2078,7 @@ begin
   end ;
 end;
 
-function TACBrECFClass.EnviaComando(cmd: AnsiString; lTimeOut,
+function TACBrECFClass.EnviaComando(const cmd: AnsiString; lTimeOut,
   lTempoInicioMsg: Integer): AnsiString;
 Var wTimeOut, wTempoInicioMsg : Integer ;
 begin
@@ -2079,7 +2096,7 @@ begin
   end ;
 end;
 
-function TACBrECFClass.EnviaComando(cmd: AnsiString = ''): AnsiString;
+function TACBrECFClass.EnviaComando(const cmd: AnsiString = ''): AnsiString;
 begin
   try
     try
@@ -2138,7 +2155,7 @@ begin
     WriteLog(fpArqLOG, '-- '+FormatDateTime('dd/mm hh:nn:ss:zzz',now)+' '+ AString);
 end ;
 
-function TACBrECFClass.EnviaComando_ECF(cmd: AnsiString): AnsiString;
+function TACBrECFClass.EnviaComando_ECF( cmd: AnsiString): AnsiString;
 begin
   Result := '';
   ErroAbstract( 'EnviaComando_ECF' );
@@ -2187,6 +2204,13 @@ Var Fim : Boolean ;
 begin
   if not Assigned(fpDevice) then exit ;
 
+  {$IFNDEF FPC}
+  {$IFNDEF DELPHIXE8_UP}
+  // A linha abaixo remove Warning do Delphi (W1036 Variable 'Fim' might not have been initialized)
+  // Isso é um bug do compilador Win32 presente pelo menos da versão Delphi 6 até a XE7 (http://stackoverflow.com/a/25905266/460775)
+  Fim := True;
+  {$ENDIF}
+  {$ENDIF}
   try
      fpRespostaComando := '' ;
      {$IFNDEF NOGUI}
@@ -2197,7 +2221,6 @@ begin
        for Lida antes, já encerra. Se nao chegar até TempoLimite, gera erro.}
      TempoLimite := IncSecond( now, TimeOut) ;
      TempoInicio := IncSecond( now, TempoInicioMsg) ;
-     Fim := True ;
      FimLeitura := False ;
 
      { - Le até atingir a condiçao descrita na funçao VerificaFimLeitura que
@@ -2298,7 +2321,7 @@ end;
    - Se conseguiu retorna True.
    - Se não conseguiu e a propriedade Retentar, estiver ligada retorna False,
    - Se Retentar estiver desligada ou respondeu NAO ao Retentar, dispara Excecao}
-function TACBrECFClass.TransmiteComando(Cmd: AnsiString): Boolean;
+function TACBrECFClass.TransmiteComando(const Cmd: AnsiString): Boolean;
 begin
   Result := True ;
   if not Assigned(fpDevice) then exit;
@@ -2321,7 +2344,9 @@ end;
 function TACBrECFClass.VerificaFimLeitura(var Retorno: AnsiString;
    var TempoLimite: TDateTime) : Boolean ;
 begin
+{$IFDEF FPC}
   Result := False;
+{$ENDIF}
   raise EACBrECFErro.Create( ACBrStr(Format(cACBrECFVerificaFimLeituraException, [ ModeloStr ]))) ;
 end;
 
@@ -2583,40 +2608,41 @@ begin
 end;
 
 procedure TACBrECFClass.EspelhoMFD_DLL(DataInicial,
-  DataFinal: TDateTime; NomeArquivo: AnsiString;
+  DataFinal: TDateTime; const NomeArquivo: AnsiString;
   Documentos: TACBrECFTipoDocumentoSet);
 begin
   ErroAbstract('EspelhoMFD_DLL');
 end;
 
 procedure TACBrECFClass.EspelhoMFD_DLL(COOInicial, COOFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
 begin
   ErroAbstract('EspelhoMFD_DLL');
 end;
 
 procedure TACBrECFClass.ArquivoMFD_DLL(DataInicial, DataFinal: TDateTime;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD);
 begin
   ErroAbstract('ArquivoMFD_DLL');
 end;
 
 procedure TACBrECFClass.ArquivoMFD_DLL(ContInicial, ContFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD; TipoContador: TACBrECFTipoContador);
 begin
   ErroAbstract('ArquivoMFD_DLL');
 end;
 
-procedure TACBrECFClass.ArquivoMF_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFClass.ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString);
 begin
-    ErroAbstract('ArquivoMF_DLL');
+  ErroAbstract('ArquivoMF_Binario_DLL');
 end;
 
-procedure TACBrECFClass.ArquivoMFD_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFClass.ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD;
+  const NomeArquivo: AnsiString; StrInicial, StrFinal: AnsiString);
 begin
-    ErroAbstract('ArquivoMFD_DLL');
+  ErroAbstract('ArquivoMFD_Binario_DLL');
 end;
 
 
@@ -2704,6 +2730,14 @@ begin
         FechaRelatorio ;
      except
      end ;
+end;
+
+procedure TACBrECFClass.AbreBilhetePassagem(Origem, Destino, Linha,
+  Agencia: String; DataHora: TDateTime; Poltrona, Plataforma: String;
+  Tipo: TACBrECFTipoBilhete; UFDestino, PassageiroRG, PassageiroNome,
+  PassageiroEnd: String);
+begin
+  ErroAbstract('AbreBilhetePassagem');
 end;
 
 procedure TACBrECFClass.AbreCupom ;
@@ -2869,7 +2903,7 @@ function TACBrECFClass.GetNumReducoesZRestantes: String;
 var
   CRZR: String;
   I: Integer;
-  LeituraX: TStringList;
+  LeituraXsl: TStringList;
   Linha: String;
 begin
   // implementada a leitura do contador pela leitura X para suprir
@@ -2877,13 +2911,13 @@ begin
   // nas impressoras que possuem, sobrescrever o método e utilizar o
   // comando apropriado
   CRZR := '';
-  LeituraX := TStringList.Create;
+  LeituraXsl := TStringList.Create;
   try
-    LeituraXSerial(LeituraX);
+    LeituraXSerial(LeituraXsl);
 
-    for I := LeituraX.Count - 1 downto 0 do
+    for I := LeituraXsl.Count - 1 downto 0 do
     begin
-      Linha := AnsiUpperCase(LeituraX[I]);
+      Linha := AnsiUpperCase(LeituraXsl[I]);
       if pos('REDUÇÕES RESTANTES:', Linha) > 0 then
       begin
         CRZR := Trim(Copy(Linha, 30, 40));
@@ -2892,7 +2926,7 @@ begin
       end;
     end;
   finally
-    LeituraX.Free;
+    LeituraXsl.Free;
   end;
 
   Result := Trim( CRZR ) ;
@@ -3078,6 +3112,11 @@ begin
   Result := 0;
 end;
 
+function TACBrECFClass.GetTotalCancelamentosEmAbertoISSQN: Double;
+begin
+  Result := 0;
+end;
+
 function TACBrECFClass.GetTotalCancelamentosEmAberto: Double;
 begin
   Result := 0;
@@ -3187,7 +3226,7 @@ begin
       try CancelamentoICMS  := TotalCancelamentos + TotalCancelamentosEmAberto; except end ;
       try DescontoICMS      := TotalDescontos;          except end ;
       try AcrescimoICMS     := TotalAcrescimos;         except end ;
-      try CancelamentoISSQN := TotalCancelamentosISSQN; except end ;
+      try CancelamentoISSQN := TotalCancelamentosISSQN + TotalCancelamentosEmAbertoISSQN; except end ;
       try DescontoISSQN     := TotalDescontosISSQN;     except end ;
       try AcrescimoISSQN    := TotalAcrescimosISSQN;    except end ;
       try CancelamentoOPNF  := TotalCancelamentosOPNF;  except end ;
@@ -3201,7 +3240,11 @@ begin
 
         for I := 0 to fpAliquotas.Count - 1 do
         begin
-          AliqZ := TACBrECFAliquota.Create ;
+          { Deve desconsiderar alíquotas zeradas e índice FF, II, NN (ECFVirtual) }
+          if (fpAliquotas[I].Aliquota <= 0) and (not StrIsNumber(fpAliquotas[I].Indice)) then
+            Continue;
+
+          AliqZ := TACBrECFAliquota.Create;
           AliqZ.Assign( fpAliquotas[I] );
 
           AdicionaAliquota( AliqZ );
@@ -3414,7 +3457,8 @@ begin
   ErroAbstract('DescontoAcrescimoItemAnterior');
 end ;
 
-procedure TACBrECFClass.CancelaDescontoAcrescimoItem(NumItem: Integer);
+procedure TACBrECFClass.CancelaDescontoAcrescimoItem(NumItem: Integer;
+  TipoAcrescimoDesconto: String);
 begin
   ErroAbstract('CancelaDescontoAcrescimoItem');
 end;
@@ -3760,9 +3804,18 @@ begin
 
   fpTotalizadoresNaoTributados := TACBrECFTotalizadoresNaoTributados.create( true ) ;
 
-  fpTotalizadoresNaoTributados.New.Indice := 'F1';
-  fpTotalizadoresNaoTributados.New.Indice := 'I1';
-  fpTotalizadoresNaoTributados.New.Indice := 'N1';
+  with fpTotalizadoresNaoTributados.New do
+  begin
+    Indice := 'F1';
+  end;
+  with fpTotalizadoresNaoTributados.New do
+  begin
+    Indice := 'I1';
+  end;
+  with fpTotalizadoresNaoTributados.New do
+  begin
+    Indice := 'N1';
+  end;
 
   if fpMFD then
   begin
@@ -4933,16 +4986,18 @@ begin
 end ;
 
 procedure TACBrECFClass.PafMF_GerarCAT52(const DataInicial,
-  DataFinal: TDateTime; const DirArquivos: String);
+  DataFinal: TDateTime; const DirArquivos: String; NumeroSerie: String);
 var
-  NomeArquivo, NumSer: String;
+  NomeArquivo: String;
   DataArquivo: TDateTime;
 begin
-  NumSer      := NumSerie;
+  if NumeroSerie = '' then
+    NumeroSerie := GetNumSerie;
+
   DataArquivo := DataInicial;
   repeat
     NomeArquivo := IncludeTrailingPathDelimiter( DirArquivos ) +
-                   NomeArqCAT52( RFDID, NumSer, DataArquivo );
+                   NomeArqCAT52( RFDID, NumeroSerie, DataArquivo );
     Self.ArquivoMFD_DLL(DataArquivo, DataArquivo, NomeArquivo, [docTodos], finNFPTDM);
 
     DataArquivo := IncDay( DataArquivo, 1 );
@@ -5334,6 +5389,7 @@ end ;
 
 constructor TACBrECFRodape.Create;
 begin
+  inherited;
   fsMD5        := EmptyStr;
   fsCupomMania := False;
   fsMinasLegal := False;
@@ -5366,6 +5422,7 @@ end;
 procedure TACBrECFRodape.Clear;
 begin
   fsDav        := EmptyStr;
+  fsDavFarm    := EmptyStr;
   fsDavOs      := EmptyStr;
   fsPreVenda   := EmptyStr;
   fsNF         := EmptyStr;

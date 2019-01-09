@@ -60,12 +60,12 @@ type TACBrCHQSchalter = class( TACBrCHQClass )
     procedure Ativar ; override ;
 
     procedure ImprimirCheque ; Override ;
-    procedure ImprimirLinha( AString : AnsiString ) ; Override ;
+    procedure ImprimirLinha( const AString : AnsiString ) ; Override ;
     procedure ImprimirVerso( AStringList : TStrings ) ; Override ;
 end ;
 
 implementation
-Uses ACBrUtil, ACBrConsts,
+Uses ACBrUtil,
      SysUtils,
    {$IFDEF COMPILER6_UP} DateUtils, {$ELSE} Windows,{$ENDIF}
      ACBrDevice;
@@ -93,24 +93,18 @@ procedure TACBrCHQSchalter.ImprimirCheque;
 Var ValStr, DataStr : String ;
 begin
   { Banco }
-  fpDevice.EnviaString( #27 + 'B' + fpBanco ) ;
-  Sleep(100);
+  EnviarStr( #27 + 'B' + fpBanco ) ;
   { Favorecido }
-  fpDevice.EnviaString( #27 + 'F' + Trim(fpFavorecido) + '$' ) ;
-  Sleep(100);
+  EnviarStr( #27 + 'F' +  fpFavorecido + '$' ) ;
   { Cidade }
-  fpDevice.EnviaString( #27 + 'C' + Trim(fpCidade) + '$' ) ;
-  Sleep(100);
+  EnviarStr( #27 + 'C' + fpCidade + '$' ) ;
   { Data }
   DataStr := FormatDateTime('ddmmyy',fpData) ;
-  fpDevice.EnviaString( #27 + 'D' + DataStr ) ;
-  Sleep(100);
+  EnviarStr( #27 + 'D' + DataStr ) ;
   { Valor }
   ValStr := IntToStrZero( Round( fpValor * 100), 14) ;
-  fpDevice.EnviaString( #27 + 'V' + ValStr ) ;
-  Sleep(100);
+  EnviarStr( #27 + 'V' + ValStr ) ;
   { Envio do comando Valor Inicia a Impressão }
-  
 end;
 
 function TACBrCHQSchalter.GetChequePronto: Boolean;
@@ -118,25 +112,25 @@ begin
   Result := fpDevice.EmLinha ;
 end;
 
-procedure TACBrCHQSchalter.ImprimirLinha(AString: AnsiString);
+procedure TACBrCHQSchalter.ImprimirLinha(const AString: AnsiString);
+var
+  NovaString: AnsiString;
 begin
   if Trim(AString) <> '' then
-     AString := StringOfChar(' ',10) + AString
+     NovaString := StringOfChar(' ',10) + AString
   else
-     AString := Trim(AString) ;
+     NovaString := Trim(AString) ;
 
-  fpDevice.EnviaString( AString + #10 );  { Adciona LF }
-  Sleep(100);
+  EnviarStr( CodificarPaginaDeCodigo(NovaString) + #10 );  { Adciona LF }
 end;
 
 procedure TACBrCHQSchalter.ImprimirVerso(AStringList: TStrings);
 Var A : Integer ;
 begin
   For A := 0 to AStringList.Count - 1 do
-     ImprimirLinha( StringOfChar(' ',10) + TiraAcentos( AStringList[A] ) );
+     ImprimirLinha( StringOfChar(' ',10) + AStringList[A] );
 
-  fpDevice.EnviaString( #12 ) { Envia FF } ;
-  Sleep(100);
+  EnviarStr( #12 ) { Envia FF } ;
 end;
 
 end.

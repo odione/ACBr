@@ -54,26 +54,28 @@ uses
 
 type
   EACBrGNREGuiaFR = class(Exception);
-
-  TACBrGNREGuiaFR = class( TACBrGNREGuiaClass )
-   private
-    FdmGuia: TdmACBrGNREFR;
-    FFastFile: String;
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
+  TACBrGNREGuiaFR = class(TACBrGNREGuiaClass)
+  private
+    FdmGuia        : TdmACBrGNREFR;
+    FFastFile      : String;
     FEspessuraBorda: Integer;
-    FShowDialog:boolean;
+    FShowDialog    : boolean;
     function GetPreparedReport: TfrxReport;
-    function PrepareReport(GNRE: TGNRERetorno = nil): Boolean;
-   public
+    function PrepareReport(GNRE: TGNRERetorno = nil): boolean;
+  public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure ImprimirGuia(GNRE: TGNRERetorno = nil); override;
     procedure ImprimirGuiaPDF(GNRE: TGNRERetorno = nil); override;
   published
-    property FastFile: String read FFastFile write FFastFile;
-    property dmGuia: TdmACBrGNREFR read FdmGuia write FdmGuia;
+    property FastFile      : String read FFastFile write FFastFile;
+    property dmGuia        : TdmACBrGNREFR read FdmGuia write FdmGuia;
     property EspessuraBorda: Integer read FEspessuraBorda write FEspessuraBorda;
     property PreparedReport: TfrxReport read GetPreparedReport;
-    property ShowDialog: Boolean read FShowDialog write FShowDialog default true;
+    property ShowDialog    : boolean read FShowDialog write FShowDialog default true;
   end;
 
 implementation
@@ -82,9 +84,9 @@ uses ACBrGNRE2, ACBrUtil, StrUtils, Dialogs, ACBrGNREGuiasRetorno;
 
 constructor TACBrGNREGuiaFR.Create(AOwner: TComponent);
 begin
-  inherited create( AOwner );
-  FdmGuia := TdmACBrGNREFR.Create(Self);
-  FFastFile := '' ;
+  inherited Create(AOwner);
+  FdmGuia         := TdmACBrGNREFR.Create(Self);
+  FFastFile       := '';
   FEspessuraBorda := 1;
 end;
 
@@ -114,12 +116,7 @@ begin
     if MostrarPreview then
       dmGuia.frxReport.ShowPreparedReport
     else
-    begin
-      dmguia.frxReport.PrintOptions.Printer    := Impressora;
-      dmGuia.frxReport.PrintOptions.Copies     := NumCopias;
-      dmguia.frxReport.PrintOptions.ShowDialog := ShowDialog;
       dmGuia.frxReport.Print;
-    end;
   end;
 end;
 
@@ -128,6 +125,7 @@ const
   TITULO_PDF = 'Guia Nacional de Recolhimento de Tributos Estaduais - GNRE';
 var
   i: Integer;
+  OldShowDialog: Boolean;
 begin
   if PrepareReport(GNRE) then
   begin
@@ -137,24 +135,37 @@ begin
     dmGuia.frxPDFExport.Title      := TITULO_PDF;
     dmGuia.frxPDFExport.Subject    := TITULO_PDF;
     dmGuia.frxPDFExport.Keywords   := TITULO_PDF;
-    dmGuia.frxPDFExport.ShowDialog := False;
-
-    for I := 0 to TACBrGNRE(ACBrGNRE).GuiasRetorno.Count - 1 do
-    begin
-      dmGuia.frxPDFExport.FileName := IncludeTrailingPathDelimiter(PathPDF) + 'GNRE_' + dmGuia.GNRE.RepresentacaoNumerica + '.pdf';
-      dmGuia.frxReport.Export(dmGuia.frxPDFExport);
+    OldShowDialog := dmGuia.frxPDFExport.ShowDialog;
+    try
+      dmGuia.frxPDFExport.ShowDialog := False;
+      for i := 0 to TACBrGNRE(ACBrGNRE).GuiasRetorno.Count - 1 do
+      begin
+        dmGuia.frxPDFExport.FileName := IncludeTrailingPathDelimiter(PathPDF) + 'GNRE_' + dmGuia.GNRE.RepresentacaoNumerica + '.pdf';
+        dmGuia.frxReport.Export(dmGuia.frxPDFExport);
+      end;
+    finally
+      dmGuia.frxPDFExport.ShowDialog := OldShowDialog;
     end;
   end;
 end;
 
-function TACBrGNREGuiaFR.PrepareReport(GNRE: TGNRERetorno): Boolean;
+function TACBrGNREGuiaFR.PrepareReport(GNRE: TGNRERetorno): boolean;
 var
   i: Integer;
+  Stream: TStringStream;
 begin
   Result := False;
 
   if Trim(FastFile) <> '' then
   begin
+    if not (UpperCase(Copy(FastFile, Length(FastFile)-3, 4)) = '.FR3') then
+    begin
+      Stream := TStringStream.Create(FastFile);
+      dmGuia.frxReport.FileName := '';
+      dmGuia.frxReport.LoadFromStream(Stream);
+      Stream.Free;
+    end
+    else
     if FileExists(FastFile) then
       dmGuia.frxReport.LoadFromFile(FastFile)
     else
@@ -162,6 +173,15 @@ begin
   end
   else
     raise EACBrGNREGuiaFR.Create('Caminho do arquivo de impressão do Guia não assinalado.');
+
+  dmGuia.frxReport.PrintOptions.Copies      := NumCopias;
+  dmGuia.frxReport.PrintOptions.ShowDialog  := ShowDialog;
+  dmGuia.frxReport.ShowProgress             := MostrarStatus;
+  dmGuia.frxReport.PreviewOptions.AllowEdit := False;
+
+  // Define a impressora
+  if NaoEstaVazio(dmGuia.frxReport.PrintOptions.Printer) then
+    dmGuia.frxReport.PrintOptions.Printer := Impressora;
 
   if Assigned(GNRE) then
   begin

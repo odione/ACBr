@@ -54,24 +54,49 @@
 // Descomente as linhas abaixo para usar os recursos de Collate e/ou Botão Salvar do Preview do componente Danfe com Rave Reports
 // Essas opções funcionam dependendo da sua versão do Rave Reports. Verifique se sua versão suporta o recurso para não causar erro de compilação
 //--------------------------------------------------------------------------------
-//{$DEFINE RaveCollate}
-//{$DEFINE RaveSaveFromPreview}
+{.$DEFINE RaveCollate}
+{.$DEFINE RaveSaveFromPreview}
 
+// Descomente a linha abaixo, se você quer que seu Executável NÃO dependa das DLLs LibXML2, LibXMLSEC,
 {.$DEFINE DFE_SEM_OPENSSL}
+// Descomente a linha abaixo, se você quer que seu Executável NÃO dependa das DLLs LibXMLSEC, mas continue suportando a LibXML2
+{$DEFINE DFE_SEM_XMLSEC}
+// Descomente a linha abaixo, se você quer que seu Executável NÃO dependa das DLLs LibXML2, mas continue suportando LibXMLSEC
+{.$DEFINE DFE_SEM_LIBXML2}
+// Descomente a linha abaixo, se você não utiliza a obsoleta Capicom para Criptografia (recomendado)
 {.$DEFINE DFE_SEM_CAPICOM}
+// Descomente a linha abaixo, se você não utiliza a obsoleta MSXML para Assinatura de XML(recomendado)
+{.$DEFINE DFE_SEM_MSXML}
+// Descomente a linha abaixo, se você não deseja adicionar a Dependência da INDY nos seus Projetos
+{.$DEFINE DFE_SEM_INDY}
 
-// Descomente essa linha, para usar a carga de DLL tardia, nas Units do OpenSSL
+{$IfDef DFE_SEM_OPENSSL}
+  {$Define DFE_SEM_XMLSEC}
+  {$Define DFE_SEM_LIBXML2}
+{$EndIf}
+
+// Descomente essa linha, para usar a carga de DLL tardia, nas Units do OpenSSL  (Apenas Delphi)
 {.$DEFINE USE_DELAYED}
+
+// Descomente essa linha, para usar ZLibExGZ de \ACBr\Fontes\Terceiros\ZLibExGZ
+// ZLib de D7 contém bugs e está incompleta. Caso contrário usará compactação nativa, unit "ZLib"
+{.$DEFINE USE_ZLibExGZ}
+
+// Para Remover Warnings de CAST causados por WideString/String/AnsiString, descomente a linha abaixo. (Apenas Delphi)
+{.$DEFINE REMOVE_CAST_WARN}
 
 // Ajusta FreePascal para o modo Delphi
 //------------------------------------------------------------------------------
 {$IFDEF FPC}
+  {$DEFINE DFE_SEM_INDY}
   {$DEFINE VCL}
   {$DEFINE UNICODE} // Lazarus 0.9.26 usa UnicodeString como default para String
   {$DEFINE DELPHI7}
   {$DEFINE COMPILER7}
   {$DEFINE HAS_FORMATSETTINGS}
   {$DEFINE HAS_REGEXPR}
+  {$DEFINE HAS_INLINE}
+  {$DEFINE HAS_STRICTDELIMITER}
   {$H+}
 
   {$UnDef FPC3}
@@ -86,19 +111,28 @@
    {$DEFINE HAS_CHARINSET}
    {$UnDef FPC2}
   {$ENDIF}
-
 {$ELSE}
   {$DEFINE BORLAND}
 {$ENDIF}
 
+{$IFDEF BORLAND}
+  {$IFDEF REMOVE_CAST_WARN}
+    {$WARN IMPLICIT_STRING_CAST OFF}
+    {$WARN IMPLICIT_STRING_CAST_LOSS OFF}
+    {$WARN SYMBOL_DEPRECATED OFF}
+    {$WARN SYMBOL_PLATFORM OFF}
+    {$WARN DUPLICATE_CTOR_DTOR OFF}
+    {$WARN CVT_ACHAR_TO_WCHAR OFF}
+  {$ENDIF}
+{$ENDIF}
+
+
 {$IFNDEF MSWINDOWS}   // Linux, apenas OpenSSL, sem Capicom
   {$DEFINE DFE_SEM_CAPICOM}
+  {$DEFINE DFE_SEM_MSXML}
+  {$DEFINE DFE_SEM_INDY}
+  {$UnDef STDCALL}
 {$ENDIF}
-
-{$IFDEF DFE_SEM_CAPICOM}
-  {$UNDEF DFE_SEM_OPENSSL}
-{$ENDIF}
-
 
 // utilizar para facilitar a manutenção do ACBr.inc, já que ele era uma cópia
 // da jedi, essa mudança permite uma evolução melhor do arquivo.
@@ -109,6 +143,12 @@
  {$UNDEF USE_DELAYED}
 {$ENDIF}
 
+{$IFDEF DELPHI9_UP}
+  {$DEFINE HAS_INLINE}
+{$ENDIF}
+{$IFDEF DELPHI10_UP}
+  {$DEFINE HAS_STRICTDELIMITER}
+{$ENDIF}
 {$IFDEF DELPHI12_UP}
   {$DEFINE HAS_CHARINSET}
 {$ENDIF}
@@ -223,5 +263,34 @@
 
 {$IFDEF NOGUI}
   {$DEFINE CONSOLE}
+{$ENDIF}
+
+// Ative a diretiva abaixo, para usar a Libxml2, libxslt, libxmlsec compilada
+// com MinGw ftp://ftp.zlatkovic.com/libxml/64bit/
+{.$DEFINE USE_MINGW}
+{$IfNDef MSWINDOWS}
+  {$DEFINE USE_MINGW}
+{$EndIf}
+
+// ZLib em D7 contem muitos bugs e não suporta GZip de forma correta
+{$IfNDef FPC}        
+ {$IfNDef DELPHIXE2_UP}
+  {$Define USE_ZLibExGZ}
+ {$EndIf}
+{$Else}
+ {$UnDef USE_ZLibExGZ} // ZLibExGZ não é compatível com FPC
+{$EndIf}
+
+// Compatibilização de Tipos inexistentes em Delphi Linux (POSIX)
+{$IFDEF POSIX}
+  AnsiString = UTF8String;
+  AnsiChar = UTF8Char;
+  PAnsiChar = PUTF8Char;
+  PPAnsiChar = ^PUTF8Char;
+{$ENDIF}
+
+// INDY mudou muito no Delphi RIO, e as Units do ACBr ainda não foram ajustadas
+{$IFDEF DELPHIX_RIO_UP}
+ {$DEFINE DFE_SEM_INDY}
 {$ENDIF}
 

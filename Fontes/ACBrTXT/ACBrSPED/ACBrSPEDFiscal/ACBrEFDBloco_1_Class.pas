@@ -42,7 +42,7 @@ unit ACBrEFDBloco_1_Class;
 
 interface
 
-uses SysUtils, Classes, DateUtils, ACBrSped, ACBrEFDBloco_1,
+uses SysUtils, StrUtils, Classes, DateUtils, ACBrSped, ACBrEFDBloco_1,
      ACBrEFDBloco_0_Class, ACBrEFDBlocos, ACBrUtil;
 
 type
@@ -83,6 +83,10 @@ type
     FRegistro1923Count: Integer;
     FRegistro1925Count: Integer;
     FRegistro1926Count: Integer;
+    FRegistro1960Count: Integer;
+    FRegistro1970Count: Integer;
+    FRegistro1975Count: Integer;
+    FRegistro1980Count: Integer;
 
     procedure WriteRegistro1010(Reg1001: TRegistro1001) ;
     procedure WriteRegistro1100(Reg1001: TRegistro1001) ;
@@ -113,6 +117,11 @@ type
     procedure WriteRegistro1923(Reg1921: TRegistro1921) ;
     procedure WriteRegistro1925(Reg1920: TRegistro1920) ;
     procedure WriteRegistro1926(Reg1920: TRegistro1920) ;
+    procedure WriteRegistro1960(Reg1001: TRegistro1001) ;
+    procedure WriteRegistro1970(Reg1001: TRegistro1001) ;
+    procedure WriteRegistro1975(Reg1970: TRegistro1970) ;
+    procedure WriteRegistro1980(Reg1001: TRegistro1001) ;
+
 
     procedure CriaRegistros;
     procedure LiberaRegistros;
@@ -151,6 +160,10 @@ type
     function Registro1923New: TRegistro1923;
     function Registro1925New: TRegistro1925;
     function Registro1926New: TRegistro1926;
+    function Registro1960New: TRegistro1960;
+    function Registro1970New: TRegistro1970;
+    function Registro1975New: TRegistro1975;
+    function Registro1980New: TRegistro1980;
 
     procedure WriteRegistro1001 ;
     procedure WriteRegistro1990 ;
@@ -188,6 +201,10 @@ type
     property Registro1923Count: Integer read FRegistro1923Count write FRegistro1923Count;
     property Registro1925Count: Integer read FRegistro1925Count write FRegistro1925Count;
     property Registro1926Count: Integer read FRegistro1926Count write FRegistro1926Count;
+    property Registro1960Count: Integer read FRegistro1960Count write FRegistro1960Count;
+    property Registro1970Count: Integer read FRegistro1970Count write FRegistro1970Count;
+    property Registro1975Count: Integer read FRegistro1975Count write FRegistro1975Count;
+    property Registro1980Count: Integer read FRegistro1980Count write FRegistro1980Count;
   end;
 
 implementation
@@ -240,6 +257,10 @@ begin
   Registro1923Count := 0;
   Registro1925Count := 0;
   Registro1926Count := 0;
+  Registro1960Count := 0;
+  Registro1970Count := 0;
+  Registro1975Count := 0;
+  Registro1980Count := 0;
 
   FRegistro1990.QTD_LIN_1 := 0;
 end;
@@ -267,7 +288,7 @@ end;
 
 function TBloco_1.Registro1100New: TRegistro1100;
 begin
-   Result := FRegistro1001.Registro1100.New(FRegistro1001);
+   Result := FRegistro1001.Registro1100.New();
 end;
 
 function TBloco_1.Registro1010New: TRegistro1010;
@@ -286,7 +307,7 @@ begin
       raise Exception.Create('O registro 1105 deve ser filho do registro 1100, e não existe nenhum 1100 pai!');
 
    U1100  := FRegistro1001.Registro1100.Items[U1100Count];
-   Result := U1100.Registro1105.New(U1100);
+   Result := U1100.Registro1105.New();
 end;
 
 function TBloco_1.Registro1110New: TRegistro1110;
@@ -306,7 +327,7 @@ end;
 
 function TBloco_1.Registro1200New: TRegistro1200;
 begin
-   Result := FRegistro1001.Registro1200.New(FRegistro1001);
+   Result := FRegistro1001.Registro1200.New();
 end;
 
 function TBloco_1.Registro1210New: TRegistro1210;
@@ -324,7 +345,7 @@ end;
 
 function TBloco_1.Registro1300New: TRegistro1300;
 begin
-   Result := FRegistro1001.Registro1300.New(FRegistro1001);
+   Result := FRegistro1001.Registro1300.New();
 end;
 
 function TBloco_1.Registro1310New: TRegistro1310;
@@ -337,7 +358,7 @@ begin
       raise Exception.Create('O registro 1310 deve ser filho do registro 1300, e não existe nenhum 1300 pai!');
 
    U1300  := FRegistro1001.Registro1300.Items[U1300Count];
-   Result := U1300.Registro1310.New(U1300);
+   Result := U1300.Registro1310.New();
 end;
 
 function TBloco_1.Registro1320New: TRegistro1320;
@@ -357,7 +378,7 @@ end;
 
 function TBloco_1.Registro1350New: TRegistro1350;
 begin
-   Result := FRegistro1001.Registro1350.New(FRegistro1001);
+   Result := FRegistro1001.Registro1350.New();
 end;
 
 function TBloco_1.Registro1360New: TRegistro1360;
@@ -388,7 +409,7 @@ end;
 
 function TBloco_1.Registro1390New: TRegistro1390;
 begin
-   Result := FRegistro1001.Registro1390.New(FRegistro1001);
+   Result := FRegistro1001.Registro1390.New();
 end;
 
 function TBloco_1.Registro1391New: TRegistro1391;
@@ -409,7 +430,7 @@ end;
 
 function TBloco_1.Registro1500New: TRegistro1500;
 begin
-   Result := FRegistro1001.Registro1500.New(FRegistro1001);
+   Result := FRegistro1001.Registro1500.New();
 end;
 
 function TBloco_1.Registro1510New: TRegistro1510;
@@ -432,7 +453,7 @@ end;
 
 function TBloco_1.Registro1700New: TRegistro1700;
 begin
-   Result := FRegistro1001.Registro1700.New(FRegistro1001);
+   Result := FRegistro1001.Registro1700.New();
 end;
 
 function TBloco_1.Registro1710New: TRegistro1710;
@@ -476,6 +497,13 @@ begin
          WriteRegistro1700(Registro1001) ;
          WriteRegistro1800(Registro1001) ;
          WriteRegistro1900(Registro1001) ;
+         if (FBloco_0.Registro0000.COD_VER >= vlVersao112) and
+            (FBloco_0.Registro0000.UF = 'PE') then
+         begin
+           WriteRegistro1960(Registro1001) ;
+           WriteRegistro1970(Registro1001) ;
+           WriteRegistro1980(Registro1001) ;
+         end;
        end;
      end;
 
@@ -502,7 +530,11 @@ begin
                LFill( IND_EE ) +
                LFill( IND_CART  ) +
                LFill( IND_FORM  ) +
-               LFill( IND_AER )) ;
+               LFill( IND_AER )+
+               ifthen(FBloco_0.Registro0000.COD_VER >= vlVersao112,
+               LFill( IND_GIAF1 )+
+               LFill( IND_GIAF3 )+
+               LFill( IND_GIAF4 ),'') ) ;
          Registro1990.QTD_LIN_1 := Registro1990.QTD_LIN_1 + 1;
         end;
      end;
@@ -1188,7 +1220,7 @@ end;
 
 function TBloco_1.Registro1900New: TRegistro1900;
 begin
-   Result := FRegistro1001.Registro1900.New(FRegistro1001);
+   Result := FRegistro1001.Registro1900.New();
 end;
 
 procedure TBloco_1.WriteRegistro1900(Reg1001: TRegistro1001);
@@ -1223,24 +1255,24 @@ begin
       raise Exception.Create('O registro 1910 deve ser filho do registro 1900, e não existe nenhum 1900 pai!');
 
    U1900  := FRegistro1001.Registro1900.Items[U1900Count];
-   Result := U1900.Registro1910.New(U1900);
+   Result := U1900.Registro1910.New();
 end;
 
 function TBloco_1.Registro1920New: TRegistro1920;
 var
-  U1910: TRegistro1910;
+//  U1910: TRegistro1910;
   U1900Count: Integer;
   U1910Count: Integer;
 begin
   U1900Count := FRegistro1001.Registro1900.Count -1;
   U1910Count := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Count -1;
-  U1910 := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[u1910Count];
-  Result := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.New(U1910);
+//  U1910 := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[u1910Count];
+  Result := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.New();
 end;
 
 function TBloco_1.Registro1921New: TRegistro1921;
 var
-  U1920: TRegistro1920;
+//  U1920: TRegistro1920;
   U1900Count: Integer;
   U1910Count: Integer;
   U1920Count: Integer;
@@ -1249,8 +1281,8 @@ begin
   U1910Count := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Count -1;
   U1920Count := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.Count -1;
 
-  U1920 := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[u1910Count].Registro1920.Items[U1920Count];
-  Result := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.Items[U1920Count].Registro1921.New(U1920);
+//  U1920 := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[u1910Count].Registro1920.Items[U1920Count];
+  Result := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.Items[U1920Count].Registro1921.New();
 end;
 
 function TBloco_1.Registro1922New: TRegistro1922;
@@ -1308,6 +1340,34 @@ begin
   U1920Count := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.Count -1;
 
   Result := FRegistro1001.Registro1900.Items[U1900Count].Registro1910.Items[U1910Count].Registro1920.Items[U1920Count].Registro1926.New;
+end;
+
+function TBloco_1.Registro1960New: TRegistro1960;
+begin
+   Result := FRegistro1001.Registro1960.New(FRegistro1001);
+end;
+
+function TBloco_1.Registro1970New: TRegistro1970;
+begin
+  Result := FRegistro1001.Registro1970.New();
+end;
+
+function TBloco_1.Registro1975New: TRegistro1975;
+var
+  U1970: TRegistro1970;
+  U1970Count: Integer;
+begin
+  U1970Count := FRegistro1001.Registro1970.Count -1;
+  if U1970Count = -1 then
+    raise Exception.Create('O registro 1975 deve ser filho do registro 1970, e não existe nenhum 1970 pai!');
+
+  U1970  := FRegistro1001.Registro1970.Items[U1970Count];
+  Result := U1970.Registro1975.New();
+end;
+
+function TBloco_1.Registro1980New: TRegistro1980;
+begin
+  Result := FRegistro1001.Registro1980.New(FRegistro1001);
 end;
 
 procedure TBloco_1.WriteRegistro1910(Reg1900: TRegistro1900);
@@ -1488,6 +1548,125 @@ begin
      end;
      /// Variavél para armazenar a quantidade de registro do tipo.
      FRegistro1926Count := FRegistro1926Count + Reg1920.Registro1926.Count;
+  end;
+end;
+
+procedure TBloco_1.WriteRegistro1960(Reg1001: TRegistro1001);
+var
+  intFor: integer;
+begin
+  if Assigned( Reg1001.Registro1960 ) then
+  begin
+    for intFor := 0 to Reg1001.Registro1960.Count - 1 do
+    begin
+      with Reg1001.Registro1960.Items[intFor] do
+      begin
+        Add( LFill('1960') +
+             LFill( IND_AP ) +
+             LFill( G1_01, 0, 2) +
+             LFill( G1_02, 0, 2) +
+             LFill( G1_03, 0, 2) +
+             LFill( G1_04, 0, 2) +
+             LFill( G1_05, 0, 2) +
+             LFill( G1_06, 0, 2) +
+             LFill( G1_07, 0, 2) +
+             LFill( G1_08, 0, 2) +
+             LFill( G1_09, 0, 2) +
+             LFill( G1_10, 0, 2) +
+             LFill( G1_11, 0, 2));
+      end;
+      Registro1990.QTD_LIN_1 := Registro1990.QTD_LIN_1 + 1;
+    end;
+    /// Variavél para armazenar a quantidade de registro do tipo.
+    FRegistro1960Count := FRegistro1960Count + Reg1001.Registro1960.Count;
+  end;
+end;
+
+procedure TBloco_1.WriteRegistro1970(Reg1001: TRegistro1001);
+var
+  intFor: integer;
+begin
+  if Assigned( Reg1001.Registro1970 ) then
+  begin
+    for intFor := 0 to Reg1001.Registro1970.Count - 1 do
+    begin
+      with Reg1001.Registro1970.Items[intFor] do
+      begin
+        Add( LFill('1970') +
+             LFill( IND_AP  ) +
+             LFill( G3_01 , 0, 2) +
+             LFill( G3_02 , 0, 2) +
+             LFill( G3_03 , 0, 2) +
+             LFill( G3_04 , 0, 2) +
+             LFill( G3_05 , 0, 2) +
+             LFill( G3_06 , 0, 2) +
+             LFill( G3_07 , 0, 2) +
+             LFill( G3_T  , 0, 2) +
+             LFill( G3_08 , 0, 2) +
+             LFill( G3_09 , 0, 2));
+      end;
+      Registro1990.QTD_LIN_1 := Registro1990.QTD_LIN_1 + 1;
+      WriteRegistro1975( Reg1001.Registro1970.Items[intFor] );
+    end;
+    /// Variavél para armazenar a quantidade de registro do tipo.
+    FRegistro1970Count := FRegistro1970Count + Reg1001.Registro1970.Count;
+  end;
+end;
+
+procedure TBloco_1.WriteRegistro1975(Reg1970: TRegistro1970);
+var
+  intFor: integer;
+begin
+  if Assigned( Reg1970.Registro1975) then
+  begin
+    for intFor := 0 to Reg1970.Registro1975.Count - 1 do
+    begin
+      with Reg1970.Registro1975.Items[intFor] do
+      begin
+        Add( LFill('1975') +
+             LFill( ALIQ_IMP_BASE ,0, 2 ) +
+             LFill( G3_10, 0, 2) +
+             LFill( G3_11, 0, 2) +
+             LFill( G3_12, 0, 2));
+      end;
+      Registro1990.QTD_LIN_1 := Registro1990.QTD_LIN_1 + 1;
+    end;
+    /// Variavél para armazenar a quantidade de registro do tipo.
+    FRegistro1975Count := FRegistro1975Count + Reg1970.Registro1975.Count;
+  end;
+
+end;
+
+procedure TBloco_1.WriteRegistro1980(Reg1001: TRegistro1001);
+var
+  intFor: integer;
+begin
+  if Assigned( Reg1001.Registro1980 ) then
+  begin
+    for intFor := 0 to Reg1001.Registro1980.Count - 1 do
+    begin
+      with Reg1001.Registro1980.Items[intFor] do
+      begin
+        Add( LFill('1980') +
+             LFill( IND_AP   ) +
+             LFill( G4_01 , 0, 2) +
+             LFill( G4_02 , 0, 2) +
+             LFill( G4_03 , 0, 2) +
+             LFill( G4_04 , 0, 2) +
+             LFill( G4_05 , 0, 2) +
+             LFill( G4_06 , 0, 2) +
+             LFill( G4_07 , 0, 2) +
+             LFill( G4_08 , 0, 2) +
+             LFill( G4_09 , 0, 2) +
+             LFill( G4_10 , 0, 2) +
+             LFill( G4_11 , 0, 2) +
+             LFill( G4_12 , 0, 2));
+      end;
+
+      Registro1990.QTD_LIN_1 := Registro1990.QTD_LIN_1 + 1;
+    end;
+    /// Variavél para armazenar a quantidade de registro do tipo.
+    FRegistro1980Count := FRegistro1980Count + Reg1001.Registro1980.Count;
   end;
 end;
 

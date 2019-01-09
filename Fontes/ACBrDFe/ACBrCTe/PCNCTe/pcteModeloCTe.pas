@@ -57,7 +57,7 @@ uses
 {$IFNDEF VER130}
   Variants,
 {$ENDIF}
-  pcnAuxiliar, pcnConversao, pcteCTe, pcteCTeW, pcteConversaoCTe;
+  pcnAuxiliar, pcnConversao, pcteCTe, pcteCTeW, pcteConversaoCTe, ACBrUtil;
 
 procedure ModeloCTe;
 
@@ -67,8 +67,8 @@ procedure ModeloCTe;
 var
   CTe: TCTe;
   CTeW: TCTeW;
-  i, j, k: Integer;
-  s: String;
+  i{, j, k}: Integer;
+//  s: String;
   ReferenciadaTipoCTe: Boolean;
   Opcao1: Boolean;
 begin
@@ -102,7 +102,7 @@ begin
                                         //         (0)=fpPago
                                         //         (1)=fpAPagar
                                         //         (2)=fpOutras
-  CTe.Ide.modelo := '57';               // - Código do Modelo do Documento Fiscal Utilizar o código 57 para identificação do CT-e.
+  CTe.Ide.modelo := 57;                 // - Código do Modelo do Documento Fiscal Utilizar o código 57 para identificação do CT-e.
   CTe.Ide.serie := 0;                   // - Série do Documento Fiscal, informar 0 (zero) para série única.
   CTe.Ide.nCT := 0;                     // - Número do Documento Fiscal
   CTe.Ide.dhEmi := now;                 // - Data e Hora de emissão do Documento Fiscal
@@ -563,7 +563,7 @@ begin
 
   if CTeW.Gerador.ListaDeAlertas.Count = 0 then // Se não contiver nenhum erro, grava
   begin
-    CTeW.gerador.SalvarArquivo('C:\Meu-Caminho\' + CTeW.ObterNomeArquivo); // Não é necessário informar o parametro fpXML pois ele é default
+    CTeW.gerador.SalvarArquivo('C:\Meu-Caminho\' + OnlyNumber(CTeW.CTe.infCTe.Id) + '-cte.xml'); // Não é necessário informar o parametro fpXML pois ele é default
   end;
 
   CTeW.Free;

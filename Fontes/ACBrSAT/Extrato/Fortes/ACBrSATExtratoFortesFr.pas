@@ -52,7 +52,7 @@ uses Classes, SysUtils,
        LResources,
      {$ENDIF}
      Forms, Graphics,
-     ACBrSATExtratoClass, ACBrSATExtratoFortes,
+     ACBrSATExtratoClass, ACBrSATExtratoReportClass,
      pcnCFe, pcnCFeCanc, pcnConversao,
      RLConsts, RLReport, RLBarcode, RLPDFFilter, RLHTMLFilter, RLPrintDialog,
      RLFilters, RLPrinters, Controls, StrUtils;
@@ -60,13 +60,15 @@ uses Classes, SysUtils,
 type
 
   { TACBrSATExtratoFortes }
-
-  TACBrSATExtratoFortes = class( TACBrSATExtratoFortesClass )
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
+  TACBrSATExtratoFortes = class( TACBrSATExtratoReportClass )
   private
   protected
     procedure Imprimir;
   public
-    procedure ImprimirExtrato(ACFe: TCFe); override;
+    procedure ImprimirExtrato(ACFe: TCFe = nil); override;
     procedure ImprimirExtratoResumido(ACFe : TCFe = nil); override;
     procedure ImprimirExtratoCancelamento(ACFe : TCFe = nil; ACFeCanc: TCFeCanc = nil); override;
   end ;
@@ -80,24 +82,26 @@ type
     bcChaveAcessoCanl1: TRLBarcode;
     bcChaveAcessoCanl2: TRLBarcode;
     imgLogo: TRLImage;
-    imgLogoCan: TRLImage;
+    imgLogoCanc: TRLImage;
+    imgQRCode: TRLImage;
     imgQRCodeCan: TRLImage;
     imgQRCodeCanl: TRLImage;
+    lAcrescItem: TRLLabel;
     lBaseCalcISSQN: TRLLabel;
-    lChaveAcessoCan: TRLLabel;
-    lChaveAcessoCanl: TRLLabel;
-    lCPF_CNPJ: TRLLabel;
-    lCabItem: TRLLabel;
-    lCPF_CNPJCan: TRLLabel;
-    lCupomFiscalEletronico: TRLLabel;
-    lCupomFiscalEletronicoCan: TRLLabel;
+    lCabItem: TRLMemo;
+    lChaveAcesso: TRLMemo;
+    lChaveAcessoCan: TRLMemo;
+    lChaveAcessoCanl: TRLMemo;
+    lCPF_CNPJ: TRLMemo;
+    lCPF_CNPJCan: TRLMemo;
+    lCupomFiscalEletronicoCan: TRLMemo;
+    lDataHoraLateral: TRLLabel;
     lDataHoraCan: TRLLabel;
     lDataHoraCanl: TRLLabel;
     lDeducISSQN: TRLLabel;
-    lDesconto: TRLLabel;
-    lDescValLiq: TRLLabel;
-    lEmitCNPJ_IE_IM: TRLLabel;
-    lEmitCNPJ_IE_IMCan: TRLLabel;
+    lDescItem: TRLLabel;
+    lEmitCNPJ_IE_IM: TRLMemo;
+    lEmitCNPJ_IE_IMCan: TRLMemo;
     lEndereco: TRLMemo;
     lEnderecoCan: TRLMemo;
     lFiller1: TRLLabel;
@@ -108,89 +112,108 @@ type
     lFiller6: TRLLabel;
     lNomeFantasia: TRLMemo;
     lNomeFantasiaCan: TRLMemo;
-    lNumeroExtrato: TRLLabel;
+    lNumeroExtrato: TRLMemo;
     lNumeroExtratoCan: TRLLabel;
+    lNumSATLateral: TRLLabel;
     lNumSATCan: TRLLabel;
     lNumSATCanl: TRLLabel;
-    lOutro: TRLLabel;
-    lOutroValLiq: TRLLabel;
+    lRatAcresSubTot: TRLLabel;
+    lRatDescSubTot: TRLLabel;
     lRazaoSocial: TRLMemo;
     lRazaoSocialCan: TRLMemo;
     lRazaoSocialNome: TRLMemo;
     lRazaoSocialNomeCanc: TRLMemo;
+    lTeste: TRLLabel;
+    lTitLei12744Lateral: TRLMemo;
+    lTitSATLateral: TRLLabel;
+    lTotDescAcresItem: TRLLabel;
     lTesteCan: TRLMemo;
+    lTitBaseCalcISSQN: TRLLabel;
     lTitCancelamento: TRLLabel;
-    lTitCancelamento1: TRLLabel;
-    lTitCancelamento2: TRLLabel;
+    lTitCancelamento1: TRLMemo;
+    lTitCancelamento2: TRLMemo;
+    lTitDeducISSQN: TRLLabel;
+    lTitLei12741: TRLMemo;
+    lTitLei12743: TRLMemo;
+    lTitObsContrib: TRLMemo;
+    lTitRatAcresSubtot: TRLLabel;
+    lTitRatDescSubtot: TRLLabel;
     lTitSATCan: TRLLabel;
-    lTeste: TRLMemo;
-    lTitDestEnt: TRLLabel;
-    lTitEndEnt: TRLLabel;
-    lTitLei12741: TRLLabel;
-    lTitLei12742: TRLLabel;
-    lTitLei12743: TRLLabel;
     lTitSATCanl: TRLLabel;
+    lTitTotDescAcresItem: TRLLabel;
     lTitTotalCan: TRLLabel;
     lTotalCan: TRLLabel;
     lValLei12741: TRLLabel;
-    lTitObsContrib: TRLLabel;
     lPagamento: TRLLabel;
     lMeioPagamento: TRLLabel;
-    lTitTotAcrescimos: TRLLabel;
+    lAcresSubTot: TRLLabel;
     lTitTotal: TRLLabel;
     lTitTroco: TRLLabel;
     lTitTotDescontos: TRLLabel;
     lTotAcrescimos: TRLLabel;
-    lChaveAcesso: TRLLabel;
-    lSubTotal: TRLLabel;
+    lTotalBruto: TRLLabel;
     lNumSAT: TRLLabel;
     lTitSAT: TRLLabel;
     bcChaveAcesso1: TRLBarcode;
     lSequencia: TRLLabel;
-    lTitDeducISSQN: TRLLabel;
-    lTitSubTotal: TRLLabel;
-    lTitDesconto: TRLLabel;
-    lTitAcrescimo: TRLLabel;
-    lTitDescValLiq: TRLLabel;
-    lTitOutroValLiq: TRLLabel;
-    lTitBaseCalcISSQN: TRLLabel;
+    lTitTotalBruto: TRLLabel;
+    lTitDesItem: TRLLabel;
+    lTitAcrescItem: TRLLabel;
     lTotal: TRLLabel;
     lTroco: TRLLabel;
     lTotalItem: TRLLabel;
-    lTotDescontos: TRLLabel;
-    mDestEnt: TRLMemo;
+    lDescSubTot: TRLLabel;
+    mConsumidorLateral: TRLMemo;
     mEndEnt: TRLMemo;
+    mMsgAppQRCode: TRLMemo;
+    mMsgAppQRCodeLateral: TRLMemo;
+    mSwHouseSite: TRLMemo;
+    mMsgAppQRCodeCanc: TRLMemo;
     mObsContrib: TRLMemo;
     mLinhaItem: TRLMemo;
+    mSwHouseSiteCanc: TRLMemo;
+    pAsterisco: TRLPanel;
+    pGap1: TRLPanel;
+    pGap10: TRLPanel;
+    pGap11: TRLPanel;
+    pGap9: TRLPanel;
+    pGapObs: TRLPanel;
+    pNumSATLateral: TRLPanel;
+    pNumSATDataHoraLateral: TRLPanel;
     pGap6: TRLPanel;
     pGap7: TRLPanel;
     pEspacoFinalCan: TRLPanel;
+    pGap8: TRLPanel;
     pNumSATCan: TRLPanel;
     pNumSATCancl: TRLPanel;
     rlbDadosCupomCancelado: TRLBand;
     rlbCabecalhoCan: TRLBand;
     rlbConsumidor: TRLBand;
     rlbDadosCliche: TRLBand;
+    rlbGap1: TRLBand;
+    rlbRatAcresSubTot: TRLBand;
+    rlbGapDescAcres: TRLBand;
+    rlbRatDescSubTot: TRLBand;
+    rlbGapTotItens: TRLBand;
     rlbLegenda: TRLBand;
     rlbNumExtrato: TRLBand;
     rlbCanRodape: TRLBand;
+    rlbSubDescAcresItem: TRLBand;
     rlbTeste: TRLBand;
     rlbTesteCan: TRLBand;
     rlDadosEntrega: TRLBand;
     rlbPagamento: TRLBand;
     rlbObsFisco: TRLBand;
-    rlbGap: TRLBand;
     rlbDescontos: TRLBand;
     rlbAcrescimos: TRLBand;
     rlbTotal: TRLBand;
-    rlbSubTotal: TRLBand;
+    rlbTotalBruto: TRLBand;
     rlbDescItem: TRLBand;
-    rlbOutroItem: TRLBand;
+    rlbAcresItem: TRLBand;
     rlbDetItem: TRLBand;
     rlbDeducISSQN: TRLBand;
     rlbRodape: TRLBand;
     rlbTroco: TRLBand;
-    RLDraw1: TRLDraw;
     RLDraw10: TRLDraw;
     RLDraw11: TRLDraw;
     RLDraw12: TRLDraw;
@@ -199,28 +222,30 @@ type
     rlbsCabecalho: TRLSubDetail;
     RLDraw4: TRLDraw;
     RLDraw5: TRLDraw;
+    RLDraw6: TRLDraw;
     RLDraw8: TRLDraw;
     RLDraw9: TRLDraw;
+    lTitConsumidorLateral: TRLLabel;
     RLPanel1: TRLPanel;
-    RLPanel2: TRLPanel;
+    pSATSerieHora: TRLPanel;
+    pQRCode: TRLPanel;
+    pTextoLateral: TRLPanel;
+    pConsumidorLateral: TRLPanel;
+    pGap: TRLPanel;
+    paLogoCanc: TRLPanel;
     RLPanel3: TRLPanel;
-    RLPanel4: TRLPanel;
+    pTotalCanc: TRLPanel;
     pEspacoFinal: TRLPanel;
+    paLogoECliche: TRLPanel;
+    paLogo: TRLPanel;
+    paCliche: TRLPanel;
     rlVenda: TRLReport;
     rlObsContrib: TRLBand;
-    RLDraw2: TRLDraw;
-    RLDraw6: TRLDraw;
-    RLDraw7: TRLDraw;
     RLHTMLFilter1: TRLHTMLFilter;
     lDataHora: TRLLabel;
-    imgQRCode: TRLImage;
     pGap05: TRLPanel;
     mObsFisco: TRLMemo;
-    lTitDadosParaEntrega: TRLLabel;
     pLei12741: TRLPanel;
-    pAsterisco: TRLPanel;
-    pEndDest: TRLPanel;
-    pDestEnt: TRLPanel;
     pNumSAT: TRLPanel;
     RLPDFFilter1: TRLPDFFilter;
     rlsbDetItem: TRLSubDetail;
@@ -229,14 +254,29 @@ type
     rlCancelamento: TRLReport;
 
     procedure FormDestroy(Sender: TObject);
-    procedure lCPF_CNPJBeforePrint(Sender: TObject; var OutputText: string;
-      var PrintIt: boolean);
-    procedure lRazaoSocialNomeBeforePrint(Sender: TObject; var Text: string;
-      var PrintIt: Boolean);
     procedure pAsteriscoBeforePrint(Sender: TObject; var PrintIt: boolean);
+    procedure pConsumidorLateralBeforePrint(Sender: TObject;
+      var PrintIt: Boolean);
     procedure pLei12741BeforePrint(Sender: TObject; var PrintIt: boolean);
+    procedure pNumSATDataHoraLateralBeforePrint(Sender: TObject;
+      var PrintIt: Boolean);
+    procedure pNumSATLateralBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pNumSATBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pNumSATCanBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pNumSATCanclBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pQRCodeBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pSATSerieHoraBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure pTotalCancBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure rlbConsumidorBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure rlbGapDescAcresBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure rlbRatAcresSubTotBeforePrint(Sender: TObject; var PrintIt: Boolean
+      );
+    procedure rlbRatDescSubTotBeforePrint(Sender: TObject; var PrintIt: Boolean
+      );
     procedure rlbsCabecalhoDataRecord(Sender: TObject; RecNo: integer;
       CopyNo: integer; var Eof: boolean; var RecordAction: TRLRecordAction);
+    procedure rlbSubDescAcresItemBeforePrint(Sender: TObject;
+      var PrintIt: Boolean);
     procedure rlbTesteBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbAcrescimosBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbLegendaBeforePrint(Sender: TObject; var PrintIt: boolean);
@@ -245,10 +285,10 @@ type
     procedure rlbDetItemBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbDeducISSQNBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbObsFiscoBeforePrint(Sender: TObject; var PrintIt: boolean);
-    procedure rlbOutroItemBeforePrint(Sender: TObject; var PrintIt: boolean);
+    procedure rlbAcresItemBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbPagamentoBeforePrint(Sender: TObject; var PrintIt: boolean);
-    procedure rlbGapBeforePrint(Sender: TObject; var PrintIt: boolean);
-    procedure rlbSubTotalBeforePrint(Sender: TObject; var PrintIt: boolean);
+    procedure rlbGapTotItensBeforePrint(Sender: TObject; var PrintIt: boolean);
+    procedure rlbTotalBrutoBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbTotalBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlbTrocoBeforePrint(Sender: TObject; var PrintIt: boolean);
     procedure rlCancelamentoBeforePrint(Sender: TObject; var PrintIt: boolean);
@@ -273,10 +313,12 @@ type
     fHeightDetItem: Integer;
     fResumido: Boolean;
 
-    function CalcularTamanhoDaPagina( AReport : TRLReport): Integer;
-    procedure PintarQRCode(QRCodeData: String; APict: TPicture);
+    procedure PintarQRCode(const QRCodeData: String; APict: TPicture);
     function CompoemEnderecoCFe: String ;
     function CompoemCliche: String;
+
+    function CalcularCaractesWidth( Canvas : TCanvas; WidthTotal : Integer ): Integer;
+    procedure DiminuirFonteSeNecessario( ARLMemo: TRLMemo; TamanhoMinimo: Integer = 1);
   public
     { Public declarations }
     property ACBrSATExtrato : TACBrSATExtratoFortes read fACBrSATExtrato ;
@@ -305,6 +347,8 @@ end;
 { TACBrSATExtratoFortesFr }
 
 procedure TACBrSATExtratoFortesFr.FormCreate(Sender: TObject);
+var
+  TemLogo: Boolean;
 begin
   fNumItem  := 0 ;
   fNumPagto := 0 ;
@@ -317,17 +361,79 @@ begin
 
   with fACBrSATExtrato do
   begin
+    TemLogo := LogoVisible;
+    if TemLogo then
+    begin
+      TemLogo := Assigned(ACBrSATExtrato.PictureLogo) and
+                 ((ACBrSATExtrato.PictureLogo.Height + ACBrSATExtrato.PictureLogo.Width) > 0);
+
+      if (not TemLogo) and (Logo <> '') and FileExists(Logo) then
+      begin
+        try
+          ACBrSATExtrato.PictureLogo.LoadFromFile(Logo);
+          TemLogo := True;
+        except
+        end;
+      end;
+    end;
+
     rlVenda.Width := LarguraBobina;
-    rlVenda.Margins.LeftMargin   := Margens.Esquerda;
-    rlVenda.Margins.RightMargin  := Margens.Direita;
-    rlVenda.Margins.TopMargin    := Margens.Topo;
-    rlVenda.Margins.BottomMargin := Margens.Fundo;
+    rlVenda.Margins.LeftMargin   := MargemEsquerda;
+    rlVenda.Margins.RightMargin  := MargemDireita;
+    rlVenda.Margins.TopMargin    := MargemSuperior;
+    rlVenda.Margins.BottomMargin := MargemInferior;
 
     rlCancelamento.Width := LarguraBobina;
-    rlCancelamento.Margins.LeftMargin   := Margens.Esquerda;
-    rlCancelamento.Margins.RightMargin  := Margens.Direita;
-    rlCancelamento.Margins.TopMargin    := Margens.Topo;
-    rlCancelamento.Margins.BottomMargin := Margens.Fundo;
+    rlCancelamento.Margins.LeftMargin   := MargemEsquerda;
+    rlCancelamento.Margins.RightMargin  := MargemDireita;
+    rlCancelamento.Margins.TopMargin    := MargemSuperior;
+    rlCancelamento.Margins.BottomMargin := MargemInferior;
+
+    //Detalhes de Dimensionamento LogoTipo
+    {$IfNDef NOGUI}
+     paLogo.Visible := TemLogo;
+
+     if paLogo.Visible then
+     begin
+       imgLogo.Picture.Assign( ACBrSATExtrato.PictureLogo );
+
+       imgLogo.AutoSize := LogoAutoSize;
+       imgLogo.Stretch  := LogoStretch;
+       imgLogo.Center   := LogoCenter;
+
+       if fACBrSATExtrato.ImprimeLogoLateral then
+       begin
+         paCliche.Align := faClientTop;
+         paLogo.Align   := faLeftTop;
+         paLogo.Width   := LogoWidth;
+         paLogo.Height  := LogoHeigth;
+         imgLogo.Align  := faClient;
+       end
+       else
+       begin
+         paLogo.Align   := faTop;
+         paLogo.Top     := 0;  // Força ir para o Topo
+         paCliche.Align := faTop;
+         imgLogo.Width  := LogoWidth;
+         imgLogo.Height := LogoHeigth;
+         imgLogo.Align  := faClientTop;
+       end;
+     end;
+
+     paLogoCanc.Visible := TemLogo;
+
+     if paLogoCanc.Visible then
+     begin
+       paLogoCanc.Align := faTop;
+       paLogoCanc.Top   := 0;  // Força ir para o Topo
+       imgLogoCanc.Picture.Assign( ACBrSATExtrato.PictureLogo );
+       imgLogoCanc.AutoSize := LogoAutoSize;
+       imgLogoCanc.Stretch  := LogoStretch;
+       imgLogoCanc.Center   := LogoCenter;
+       imgLogoCanc.Width    := LogoWidth;
+       imgLogoCanc.Height   := LogoHeigth;
+     end;
+    {$EndIf}
   end;
 end;
 
@@ -347,13 +453,12 @@ begin
   with ACBrSATExtrato.CFe do
   begin
     mEndEnt.Lines.Clear;
-    mDestEnt.Lines.Clear;
 
-    PrintIt := Trim(Entrega.xLgr)+
-               Trim(Entrega.nro)+
-               Trim(Entrega.xCpl)+
-               Trim(Entrega.xBairro)+
-               Trim(Entrega.xMun) <> '' ;
+    PrintIt := (Trim(Entrega.xLgr)+
+                Trim(Entrega.nro)+
+                Trim(Entrega.xCpl)+
+                Trim(Entrega.xBairro)+
+                Trim(Entrega.xMun) <> '') ;
 
     if PrintIt then
     begin
@@ -361,16 +466,14 @@ begin
       if (Entrega.nro <> '') then
         Endereco := Endereco + ', '+Entrega.nro;
       if (Entrega.xCpl <> '') then
-        Endereco := Endereco + ' - '+Entrega.xCpl;
+        Endereco := Endereco + ' '+Entrega.xCpl;
       if (Entrega.xBairro <> '') then
-        Endereco := Endereco + ' - '+Entrega.xBairro;
+        Endereco := Endereco + ' '+Entrega.xBairro;
       if (Entrega.xMun <> '') then
-        Endereco := Endereco + ' - '+Entrega.xMun;
+        Endereco := Endereco + ' '+Entrega.xMun+'-'+Entrega.UF;
 
-      mEndEnt.Lines.Add( Endereco );
+      mEndEnt.Lines.Add( ACBrStr('ENDEREÇO DE ENTREGA: ')+Endereco );
 
-      if (Dest.xNome <> '' ) then
-        mDestEnt.Lines.Add( Dest.xNome );
     end;
   end;
 end;
@@ -382,10 +485,14 @@ begin
   begin
     mObsContrib.Lines.Clear;
 
-    PrintIt := (InfAdic.infCpl <> '') or (Total.vCFeLei12741 > 0);
+    PrintIt := (InfAdic.infCpl <> '') or
+               (ACBrSATExtrato.ImprimeMsgOlhoNoImposto and (Total.vCFeLei12741 > 0));
 
     if PrintIt and (InfAdic.infCpl <> '') then
       mObsContrib.Lines.Text := StringReplace(InfAdic.infCpl,';',sLineBreak,[rfReplaceAll]);
+
+    lTitObsContrib.Top := 0;
+    pGapObs.Top := 0;
   end;
 end;
 
@@ -419,30 +526,7 @@ begin
   RecordAction := raUseIt ;
 end;
 
-function TACBrSATExtratoFortesFr.CalcularTamanhoDaPagina(AReport: TRLReport): Integer;
-var
-  TotalPaginaPixel: Integer;
-begin
-  if AReport = rlVenda then
-    // Calculando o tamanho da Página em Pixels //
-    TotalPaginaPixel := rlbsCabecalho.Height +
-                        rlbRodape.Height +
-                        round(rlsbDetItem.Height * (ACBrSATExtrato.CFe.Det.Count * 2)) + //MULTIPLICAR P/2 AS LINHAS
-                        rlObsContrib.Height
-  else
-    TotalPaginaPixel := rlbCabecalhoCan.Height +
-                        rlbDadosCupomCancelado.Height +
-                        rlbCanRodape.Height +
-                        ifthen( (ACBrSATExtrato.CFe.ide.tpAmb = taHomologacao), rlbTeste.Height, 0 ) ;
-
-  Result := max( 100, 50 + round(TotalPaginaPixel/MMAsPixels));
-  
-  // Limite do driver (Tamanho da página)
-  if (Result > 3276) then
-    Result := 3276;  
-end;
-
-procedure TACBrSATExtratoFortesFr.PintarQRCode(QRCodeData: String; APict: TPicture);
+procedure TACBrSATExtratoFortesFr.PintarQRCode(const QRCodeData: String; APict: TPicture);
 var
   QRCode: TDelphiZXingQRCode;
   QRCodeBitmap: TBitmap;
@@ -451,9 +535,10 @@ begin
   QRCode       := TDelphiZXingQRCode.Create;
   QRCodeBitmap := TBitmap.Create;
   try
-    QRCode.Data      := QRCodeData;
-    QRCode.Encoding  := qrUTF8NoBOM;
+    QRCode.Encoding  := qrUTF8BOM;
     QRCode.QuietZone := 1;
+    QRCode.CorrectionLevel := qrclL;
+    QRCode.Data      := WideString(QRCodeData);
 
     //QRCodeBitmap.SetSize(QRCode.Rows, QRCode.Columns);
     QRCodeBitmap.Width  := QRCode.Columns;
@@ -521,6 +606,42 @@ begin
   Result := CNPJ_IE_IM;
 end;
 
+function TACBrSATExtratoFortesFr.CalcularCaractesWidth(Canvas: TCanvas;
+  WidthTotal: Integer): Integer;
+var
+  LinhaExemplo : String;
+begin
+  LinhaExemplo := '*';
+
+  while (Canvas.TextWidth(LinhaExemplo) < WidthTotal) do
+    LinhaExemplo := LinhaExemplo + '*';
+
+  Result := Length(LinhaExemplo)-2
+end;
+
+procedure TACBrSATExtratoFortesFr.DiminuirFonteSeNecessario(ARLMemo: TRLMemo;
+  TamanhoMinimo: Integer);
+var
+  ABmp: TBitmap;
+begin
+  ABmp := TBitmap.Create;
+  try
+    ABmp.Canvas.Font.Assign(ARLMemo.Font);
+    TamanhoMinimo := max(1, TamanhoMinimo);
+
+    while ABmp.Canvas.Font.Size > TamanhoMinimo do
+    begin
+      if ABmp.Canvas.TextWidth( ARLMemo.Lines.Text ) <= ARLMemo.ClientWidth then
+        Break;
+
+      ABmp.Canvas.Font.Size := ABmp.Canvas.Font.Size - 1;
+    end;
+  finally
+    ARLMemo.Font.Size := ABmp.Canvas.Font.Size;
+    ABmp.Free;
+  end;
+end;
+
 procedure TACBrSATExtratoFortesFr.rlVendaBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 var
@@ -534,40 +655,39 @@ begin
 
   with ACBrSATExtrato.CFe do
   begin
+
+    if (Emit.cRegTrib = RTSimplesNacional) then
+      fObsFisco.Add( Msg_ICMS_123_2006 );
+
     // Copiando as Observações do Fisco para Lista Interna //
     for I :=0 to InfAdic.obsFisco.Count - 1 do
-       fObsFisco.Add( InfAdic.obsFisco.Items[I].xCampo + '-' +
-                      InfAdic.obsFisco.Items[I].xTexto);
-
-    if Emit.cRegTrib = RTSimplesNacional then
-       fObsFisco.Add( Msg_ICMS_123_2006 );
+      fObsFisco.Add( InfAdic.obsFisco.Items[I].xCampo + '-' +
+                     InfAdic.obsFisco.Items[I].xTexto);
 
     lNomeFantasia.Lines.Text:= Emit.xFant ;
     lRazaoSocial.Lines.Text := Emit.xNome ;
     lEndereco.Lines.Text    := CompoemEnderecoCFe;
-    lEmitCNPJ_IE_IM.Caption := CompoemCliche;
-    imgLogo.Picture.Assign( ACBrSATExtrato.PictureLogo );
+    lEmitCNPJ_IE_IM.Lines.Text := CompoemCliche;
+    DiminuirFonteSeNecessario(lEmitCNPJ_IE_IM, 6);
 
     // Numero do Extrato ou Homologação //
     if (ide.tpAmb = taHomologacao) then
       NumExtrato := '000000'
     else
-      NumExtrato := Trim( IntToStr( ide.nCFe ) );
+      NumExtrato := IntToStrZero(ide.nCFe, 6);
 
-    lNumeroExtrato.Caption := StringReplace(lNumeroExtrato.Caption,'<NUMERO>',NumExtrato,[]);
+    lNumeroExtrato.Lines.Text := StringReplace(lNumeroExtrato.Lines.Text,'<NUMERO>',NumExtrato,[]);
+    DiminuirFonteSeNecessario(lNumeroExtrato, 6);
 
-    // CPF_CNPJ do Consumidor //
-    lCPF_CNPJ.Caption := StringReplace(lCPF_CNPJ.Caption,'<CPF_CNPJ>',
-                                       FormatarCNPJouCPF(Dest.CNPJCPF),[]);
-    lRazaoSocialNome.Lines.Text := StringReplace(lRazaoSocialNome.Lines.Text,
-                                       '<xNome>', Dest.xNome,[]);
+    pSATSerieHora.Visible := not ACBrSATExtrato.ImprimeQRCodeLateral;
+    lTitLei12743.Visible := not ACBrSATExtrato.ImprimeQRCodeLateral;
+    mMsgAppQRCode.Visible := not ACBrSATExtrato.ImprimeQRCodeLateral;
+    if mMsgAppQRCode.Visible then
+      mMsgAppQRCode.Lines.Text := ACBrSATExtrato.MsgAppQRCode;
 
-    // Informações do Rodapé do Extrato //
-    lNumSAT.Caption   := Trim(IntToStr( ide.nserieSAT ));
-    lDataHora.Caption := FormatDateTimeBr(ide.dEmi + ide.hEmi);
-    lChaveAcesso.Caption   := FormatarChaveAcesso(infCFe.ID);
-    bcChaveAcesso1.Caption := copy( infCFe.ID, 1,22);
-    bcChaveAcesso2.Caption := copy( infCFe.ID,23,22);
+    lChaveAcesso.Lines.Text := FormatarChaveAcesso(infCFe.ID);
+    bcChaveAcesso1.Caption := copy(infCFe.ID, 1,22);
+    bcChaveAcesso2.Caption := copy(infCFe.ID,23,22);
 
     // QRCode  //
     imgQRCode.Visible := ACBrSATExtrato.ImprimeQRCode;
@@ -580,33 +700,91 @@ begin
                                                        ide.assinaturaQRCODE );
       PintarQRCode( qrcode, imgQRCode.Picture );
     end;
+
+    mSwHouseSite.Lines.Clear;
+    if ACBrSATExtrato.Sistema <> '' then
+      mSwHouseSite.Lines.Add(ACBrSATExtrato.Sistema);
+
+    if ACBrSATExtrato.Site <> '' then
+      mSwHouseSite.Lines.Add(ACBrSATExtrato.Site);
   end;
 end;
 
 procedure TACBrSATExtratoFortesFr.rlbDetItemBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 var
-  LinhaItem, Descricao: String;
+  LinhaItem, sCodigo, sDescricao, sVlrImpostos, mvUnCom: String;
+  nTamDescricao, maxCaracter: Integer;
+  {$IFNDEF FPC}
+    BMP : TBitmap;
+  {$ENDIF}
 begin
   PrintIt := not Resumido;
   if not PrintIt then exit;
 
+  mLinhaItem.Lines.Clear ;
+  {$IFNDEF FPC}
+    BMP:=TBitMap.Create;
+    try
+      BMP.Canvas.Font.Assign(mLinhaItem.Font);
+      maxCaracter := CalcularCaractesWidth( BMP.Canvas, mLinhaItem.Width);
+    finally
+      BMP.Free;
+    end;
+  {$ELSE}
+    maxCaracter := CalcularCaractesWidth(mLinhaItem.Canvas, mLinhaItem.Width);
+  {$ENDIF}
+
+
   with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
   begin
     lSequencia.Caption := IntToStrZero(nItem,3);
+    lTotalItem.Caption := FormatFloatBr(Prod.vProd);
+    mvUnCom := IfThen(Prod.EhCombustivel, ',0.000', ACBrSATExtrato.CasasDecimais.MaskvUnCom);
 
-    Descricao := ACBrStrToAnsi( Trim(Prod.xProd) );
-    LinhaItem := Trim(Prod.cProd)+' '+
-                 Descricao+' '+
-                 FormatFloatBr(Prod.qCom, ACBrSATExtrato.Mask_qCom)+' '+
-                 Trim(Prod.uCom)+' X '+
-                 FormatFloatBr(Prod.vUnCom, IfThen(Prod.EhCombustivel, '#,###,##0.000', ACBrSATExtrato.Mask_vUnCom))+' ';
+    if (Length( Trim( Prod.cEAN ) ) > 0) and (ACBrSATExtrato.ImprimeCodigoEan) then
+      sCodigo := Trim(Prod.cEAN)
+    else
+      sCodigo := Trim(Prod.cProd);
 
     if Imposto.vItem12741 > 0 then
-      LinhaItem := LinhaItem + '('+FormatFloatBr(Imposto.vItem12741,'0.00')+') ';
+      sVlrImpostos := ' ('+FormatFloatBr(Imposto.vItem12741)+') '
+    else
+      sVlrImpostos := '';
 
-    mLinhaItem.Lines.Text := LinhaItem;
-    lTotalItem.Caption    := FormatFloatBr(Prod.vProd,'#,###,##0.00');
+    if ACBrSATExtrato.ImprimeEmUmaLinha then
+    begin
+      LinhaItem := sCodigo + ' [DesProd] ' +
+                   ACBrSATExtrato.FormatarQuantidade(Prod.qCom, False) + ' ' +
+                   Trim( Prod.uCom) + ' X ' +
+                   FormatFloatBr(Prod.vUnCom, mvUnCom) +
+                   sVlrImpostos;
+
+      // acerta tamanho da descrição
+      nTamDescricao := maxCaracter - Length(LinhaItem);
+      sDescricao := PadRight(Copy(Trim(Prod.xProd), 1, nTamDescricao), nTamDescricao);
+
+      LinhaItem := StringReplace(LinhaItem, '[DesProd]', sDescricao, [rfReplaceAll]);
+
+      mLinhaItem.Lines.Add(LinhaItem);
+    end
+    else
+    begin
+      LinhaItem := sCodigo + ' ' + Trim(Prod.xProd);
+      if Trim(infAdProd) <> '' then
+        LinhaItem := LinhaItem + '-'+ StringReplace( infAdProd, ';', sLineBreak, [rfReplaceAll]);
+
+      mLinhaItem.Lines.Add(LinhaItem);
+
+      sVlrImpostos := sVlrImpostos + '|';
+      //Centraliza os valores. A fonte dos itens foi mudada para Courier New, Pois esta o espaço tem o mesmo tamanho dos demais caractere.
+      LinhaItem  := ACBrSATExtrato.FormatarQuantidade(Prod.qCom, False) +'|'+
+                    Trim(Prod.uCom) + ' X ' +
+                    FormatFloatBr(Prod.vUnCom, mvUnCom) +'|'+
+                    sVlrImpostos + '|';
+      LinhaItem  := PadSpace(LinhaItem, maxCaracter, '|') ;
+      mLinhaItem.Lines.Add(LinhaItem);
+    end;
   end;
 end;
 
@@ -615,30 +793,47 @@ procedure TACBrSATExtratoFortesFr.rlbDescItemBeforePrint(Sender: TObject;
 begin
   with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
   begin
-    PrintIt := (not Resumido) and (Prod.vDesc > 0) ;
+    PrintIt := ACBrSATExtrato.ImprimeDescAcrescItem and (not Resumido) and (Prod.vDesc > 0);
 
     if PrintIt then
-    begin
-      lDesconto.Caption   := FormatFloatBr(Prod.vDesc,'-#,###,##0.00');
-      lDescValLiq.Caption := FormatFloatBr(Prod.vProd-Prod.vDesc,'#,###,##0.00');
-    end;
+      lDescItem.Caption := FormatFloatBr(Prod.vDesc,'-,0.00');
   end;
 end;
 
-procedure TACBrSATExtratoFortesFr.rlbOutroItemBeforePrint(Sender: TObject;
+procedure TACBrSATExtratoFortesFr.rlbRatDescSubTotBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
+  begin
+    PrintIt := ACBrSATExtrato.ImprimeDescAcrescItem and (not Resumido) and (Prod.vRatDesc > 0);
+
+    if PrintIt then
+      lRatDescSubTot.Caption := FormatFloatBr(Prod.vRatDesc,'-,0.00');
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.rlbAcresItemBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 begin
   with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
   begin
-    PrintIt := (not Resumido) and (Prod.vOutro > 0);
+    PrintIt := ACBrSATExtrato.ImprimeDescAcrescItem and (not Resumido) and (Prod.vOutro > 0);
 
     if PrintIt then
-    begin
-      lOutro.Caption       := FormatFloatBr(Prod.vOutro,'+#,###,##0.00');
-      lOutroValLiq.Caption := FormatFloatBr(Prod.vProd+Prod.vOutro,'#,###,##0.00');
-    end;
+      lAcrescItem.Caption := FormatFloatBr(Prod.vOutro,'+,0.00');
   end;
+end;
 
+procedure TACBrSATExtratoFortesFr.rlbRatAcresSubTotBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
+  begin
+    PrintIt := ACBrSATExtrato.ImprimeDescAcrescItem and (not Resumido) and (Prod.vRatAcr > 0);
+
+    if PrintIt then
+      lRatAcresSubTot.Caption := FormatFloatBr(Prod.vRatAcr,'+,0.00');
+  end;
 end;
 
 procedure TACBrSATExtratoFortesFr.rlbPagamentoBeforePrint(Sender: TObject;
@@ -647,11 +842,11 @@ begin
   with ACBrSATExtrato.CFe.Pagto.Items[fNumPagto] do
   begin
     lMeioPagamento.Caption := ACBrStr(CodigoMPToDescricao(cMP));
-    lPagamento.Caption     := FormatFloatBr(vMP,'#,###,##0.00');
+    lPagamento.Caption     := FormatFloatBr(vMP);
   end;
 end;
 
-procedure TACBrSATExtratoFortesFr.rlbGapBeforePrint(Sender: TObject;
+procedure TACBrSATExtratoFortesFr.rlbGapTotItensBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 begin
   PrintIt := not Resumido;
@@ -666,56 +861,71 @@ begin
 
     if PrintIt then
     begin
-      lDeducISSQN.Caption    := FormatFloatBr(Imposto.ISSQN.vDeducISSQN,'-#,###,##0.00');
-      lBaseCalcISSQN.Caption := FormatFloatBr(Imposto.ISSQN.vBC,'#,###,##0.00');
+      lDeducISSQN.Caption    := FormatFloatBr(Imposto.ISSQN.vDeducISSQN,'-,0.00');
+      lBaseCalcISSQN.Caption := FormatFloatBr(Imposto.ISSQN.vBC);
     end;
   end;
 end;
 
-procedure TACBrSATExtratoFortesFr.rlbSubTotalBeforePrint(Sender: TObject;
+procedure TACBrSATExtratoFortesFr.rlbTotalBrutoBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 var
-  Descontos, Acrescimos: Double;
+  TotalDescAcresItem: Currency;
 begin
   with ACBrSATExtrato.CFe do
   begin
-    Descontos  := (Total.ICMSTot.vDesc  + Total.DescAcrEntr.vDescSubtot);
-    Acrescimos := (Total.ICMSTot.vOutro + Total.DescAcrEntr.vAcresSubtot);
+    TotalDescAcresItem := Total.ICMSTot.vOutro - Total.ICMSTot.vDesc;
 
-    PrintIt := (not Resumido) and ((Descontos > 0) or (Acrescimos > 0));
+    PrintIt :=  (TotalDescAcresItem <> 0) or
+                (Total.DescAcrEntr.vDescSubtot <> 0) or
+                (Total.DescAcrEntr.vAcresSubtot <> 0);
 
     if PrintIt then
-      lSubTotal.Caption := FormatFloatBr(Total.ICMSTot.vProd,'#,###,##0.00');
+      lTotalBruto.Caption := FormatFloatBr(Total.ICMSTot.vProd);
   end;
 end;
 
-procedure TACBrSATExtratoFortesFr.rlbDescontosBeforePrint(Sender: TObject;
-  var PrintIt: boolean);
+procedure TACBrSATExtratoFortesFr.rlbSubDescAcresItemBeforePrint(
+  Sender: TObject; var PrintIt: Boolean);
 var
-  Descontos: Double;
+  TotalDescAcresItem: Currency;
+  Sinal: String;
 begin
   with ACBrSATExtrato.CFe do
   begin
-    Descontos := (Total.ICMSTot.vDesc  + Total.DescAcrEntr.vDescSubtot);
-    PrintIt   := (not Resumido) and (Descontos > 0);
+    TotalDescAcresItem := Total.ICMSTot.vOutro - Total.ICMSTot.vDesc;
+
+    PrintIt := (TotalDescAcresItem <> 0);
+    if PrintIt then
+    begin
+      Sinal := IfThen(TotalDescAcresItem < 0,'-','+');
+      lTotDescAcresItem.Caption := FormatFloatBr(TotalDescAcresItem, Sinal+',0.00');
+    end;
+  end;
+end;
+
+
+procedure TACBrSATExtratoFortesFr.rlbDescontosBeforePrint(Sender: TObject;
+  var PrintIt: boolean);
+begin
+  with ACBrSATExtrato.CFe do
+  begin
+    PrintIt := (Total.DescAcrEntr.vDescSubtot > 0);
 
     if PrintIt then
-      lTotDescontos.Caption := FormatFloatBr(Descontos,'#,###,##0.00');
+      lDescSubTot.Caption := FormatFloatBr(Total.DescAcrEntr.vDescSubtot, '-,0.00');
   end;
 end;
 
 procedure TACBrSATExtratoFortesFr.rlbAcrescimosBeforePrint(Sender: TObject;
   var PrintIt: boolean);
-var
-  Acrescimos: Double;
 begin
   with ACBrSATExtrato.CFe do
   begin
-    Acrescimos := (Total.ICMSTot.vOutro + Total.DescAcrEntr.vAcresSubtot);
-    PrintIt    := (not Resumido) and (Acrescimos > 0);
+    PrintIt := (Total.DescAcrEntr.vAcresSubtot > 0);
 
     if PrintIt then
-      lTotAcrescimos.Caption := FormatFloatBr(Acrescimos,'#,###,##0.00');
+      lTotAcrescimos.Caption := FormatFloatBr(Total.DescAcrEntr.vAcresSubtot, '+,0.00');
   end;
 end;
 
@@ -730,22 +940,35 @@ begin
   fObsFisco.Free;
 end;
 
-procedure TACBrSATExtratoFortesFr.lCPF_CNPJBeforePrint(Sender: TObject;
-  var OutputText: string; var PrintIt: boolean);
-begin
-  PrintIt := (ACBrSATExtrato.CFe.Dest.CNPJCPF <> '') ;
-end;
-
-procedure TACBrSATExtratoFortesFr.lRazaoSocialNomeBeforePrint(Sender: TObject;
-  var Text: string; var PrintIt: Boolean);
-begin
-  PrintIt := (Trim(ACBrSATExtrato.CFe.Dest.xNome) <> '') ;
-end;
-
 procedure TACBrSATExtratoFortesFr.pAsteriscoBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 begin
   PrintIt := not Resumido;
+end;
+
+procedure TACBrSATExtratoFortesFr.pConsumidorLateralBeforePrint(
+  Sender: TObject; var PrintIt: Boolean);
+var
+  NomeConsumidor: String;
+begin
+  with ACBrSATExtrato.CFe do
+  begin
+    if (Trim(Dest.xNome) <> '') then
+      NomeConsumidor := Trim(Dest.xNome)
+    else if (ACBrSATExtrato.ImprimeCPFNaoInformado and (Trim(Dest.CNPJCPF) = '')) then
+      NomeConsumidor := ACBrStr('CONSUMIDOR NÃO IDENTIFICADO')
+    else
+      NomeConsumidor := '';
+
+    if (Trim(Dest.CNPJCPF) <> '') then
+      NomeConsumidor := FormatarCNPJouCPF(Dest.CNPJCPF) +
+                        IfThen(NomeConsumidor<>'', ' - '+NomeConsumidor, '');
+
+    PrintIt := (NomeConsumidor <> '');
+
+    if PrintIt then
+      mConsumidorLateral.Lines.Text := NomeConsumidor;
+  end;
 end;
 
 procedure TACBrSATExtratoFortesFr.pLei12741BeforePrint(Sender: TObject;
@@ -753,10 +976,113 @@ procedure TACBrSATExtratoFortesFr.pLei12741BeforePrint(Sender: TObject;
 begin
   with ACBrSATExtrato.CFe do
   begin
-    PrintIt := (Total.vCFeLei12741 > 0);
+    PrintIt := (Total.vCFeLei12741 > 0); // and (fImprimeMsgOlhoNoImposto);
 
     if PrintIt then
-      lValLei12741.Caption := FormatFloatBr(Total.vCFeLei12741, '#,###,##0.00');
+      lValLei12741.Caption := FormatFloatBr(Total.vCFeLei12741);
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.pNumSATDataHoraLateralBeforePrint(
+  Sender: TObject; var PrintIt: Boolean);
+begin
+  with ACBrSATExtrato.CFe do
+  begin
+    lNumSATLateral.Caption   := FormatFloatBr(ide.nserieSAT,'000,000,000');
+    lDataHoraLateral.Caption := FormatDateTimeBr(ide.dEmi + ide.hEmi, 'DD/MM/YYYY - hh:nn:ss');
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.pNumSATLateralBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  lTitSATLateral.Width := Trunc(pNumSATLateral.Width / 2);
+end;
+
+procedure TACBrSATExtratoFortesFr.pNumSATBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  lTitSAT.Width := Trunc(pNumSAT.Width / 2)-16;
+end;
+
+procedure TACBrSATExtratoFortesFr.pNumSATCanBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  lTitSATCan.Width := Trunc(pNumSATCan.Width / 2);
+end;
+
+procedure TACBrSATExtratoFortesFr.pNumSATCanclBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  lTitSATCanl.Width := Trunc(pNumSATCancl.Width / 2);
+end;
+
+procedure TACBrSATExtratoFortesFr.pQRCodeBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  pTextoLateral.Visible := ACBrSATExtrato.ImprimeQRCodeLateral;
+  if pTextoLateral.Visible then
+  begin
+    pTextoLateral.Width := Trunc(pQRCode.Width / 2);
+
+    mMsgAppQRCodeLateral.Lines.Text := ACBrSATExtrato.MsgAppQRCode;
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.pSATSerieHoraBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  with ACBrSATExtrato.CFe do
+  begin
+    lNumSAT.Caption   := FormatFloatBr(ide.nserieSAT,'000,000,000');
+    lDataHora.Caption := FormatDateTimeBr(ide.dEmi + ide.hEmi, 'DD/MM/YYYY - hh:nn:ss');
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.pTotalCancBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  lTitTotalCan.Width := Trunc(pTotalCanc.Width / 2);
+end;
+
+procedure TACBrSATExtratoFortesFr.rlbConsumidorBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  with ACBrSATExtrato.CFe do
+  begin
+    PrintIt := (not ACBrSATExtrato.ImprimeQRCodeLateral) and
+               ( (Trim(Dest.CNPJCPF) <> '') or
+                 ACBrSATExtrato.ImprimeCPFNaoInformado
+               );
+
+    if PrintIt then
+    begin
+      lCPF_CNPJ.Lines.Text := StringReplace(lCPF_CNPJ.Caption,'<CPF_CNPJ>',
+                                         IfThen( Trim(Dest.CNPJCPF)<>'',
+                                                 FormatarCNPJouCPF(Dest.CNPJCPF),
+                                                 ACBrStr('CONSUMIDOR NÃO IDENTIFICADO')),[]);
+      lRazaoSocialNome.Visible := (Trim(ACBrSATExtrato.CFe.Dest.xNome) <> '');
+      if lRazaoSocialNome.Visible then
+         lRazaoSocialNome.Lines.Text := StringReplace(lRazaoSocialNome.Lines.Text,
+                                          '<xNome>', Dest.xNome,[]);
+    end;
+  end;
+end;
+
+procedure TACBrSATExtratoFortesFr.rlbGapDescAcresBeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  PrintIt := (not Resumido) and (fNumItem < (ACBrSATExtrato.CFe.Det.Count-1));
+  if not PrintIt then
+    Exit;
+
+  with ACBrSATExtrato.CFe.Det.Items[fNumItem] do
+  begin
+    PrintIt := ACBrSATExtrato.ImprimeDescAcrescItem and
+              ( (Prod.vDesc > 0) or (Prod.vOutro > 0) or
+                (Prod.vRatDesc > 0) or (Prod.vRatAcr > 0) );
+
+    PrintIt := PrintIt or (Imposto.ISSQN.vDeducISSQN > 0);
   end;
 end;
 
@@ -777,7 +1103,7 @@ end;
 procedure TACBrSATExtratoFortesFr.rlbTotalBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 begin
-  lTotal.Caption := FormatFloatBr(ACBrSATExtrato.CFe.Total.vCFe,'#,###,##0.00');
+  lTotal.Caption := FormatFloatBr(ACBrSATExtrato.CFe.Total.vCFe);
 end;
 
 procedure TACBrSATExtratoFortesFr.rlbTrocoBeforePrint(Sender: TObject;
@@ -788,7 +1114,7 @@ begin
     PrintIt := (Pagto.vTroco > 0);
 
     if PrintIt then
-      lTroco.Caption := FormatFloatBr(Pagto.vTroco,'#,###,##0.00');;
+      lTroco.Caption := FormatFloatBr(Pagto.vTroco);;
   end;
 end;
 
@@ -802,8 +1128,8 @@ begin
     lNomeFantasiaCan.Lines.Text:= Emit.xFant ;
     lRazaoSocialCan.Lines.Text := Emit.xNome ;
     lEnderecoCan.Lines.Text    := CompoemEnderecoCFe;
-    lEmitCNPJ_IE_IMCan.Caption := CompoemCliche;
-    imgLogoCan.Picture.Assign( ACBrSATExtrato.PictureLogo );
+    lEmitCNPJ_IE_IMCan.Lines.Text := CompoemCliche;
+    DiminuirFonteSeNecessario(lEmitCNPJ_IE_IMCan, 6);
 
     // Numero do Extrato ou Homologação //
     if (ide.tpAmb = taHomologacao) then
@@ -812,16 +1138,22 @@ begin
       NumExtrato := Trim( IntToStr( ACBrSATExtrato.CFeCanc.ide.nCFe ) );
 
     // CPF_CNPJ do Consumidor //
-    lCPF_CNPJCan.Caption := StringReplace(lCPF_CNPJ.Caption,'<CPF_CNPJ>',
-                                       FormatarCNPJouCPF(Dest.CNPJCPF),[]);
-    lRazaoSocialNomeCanc.Lines.Text := StringReplace(lRazaoSocialNomeCanc.Lines.Text,
-                                       '<xNome>', Dest.xNome,[]);
-    lTotalCan.Caption := FormatFloatBr(Total.vCFe,'#,###,##0.00');
+    lCPF_CNPJCan.Visible := (Dest.CNPJCPF <> '') or ACBrSATExtrato.ImprimeCPFNaoInformado ;
+    if lCPF_CNPJCan.Visible then
+      lCPF_CNPJCan.Lines.Text := StringReplace(lCPF_CNPJ.Caption,'<CPF_CNPJ>',
+                                         FormatarCNPJouCPF(Dest.CNPJCPF),[]);
+
+    lRazaoSocialNomeCanc.Visible := (Trim(Dest.xNome) <> '') ;
+    if lRazaoSocialNomeCanc.Visible then
+      lRazaoSocialNomeCanc.Lines.Text := StringReplace(lRazaoSocialNomeCanc.Lines.Text,
+                                         '<xNome>', Dest.xNome,[]);
+
+    lTotalCan.Caption := FormatFloatBr(Total.vCFe);
 
     // Informações do Rodapé do Extrato //
     lNumSATCan.Caption   := Trim(IntToStr( ide.nserieSAT ));
     lDataHoraCan.Caption := FormatDateTimeBr(ide.dEmi + ide.hEmi);
-    lChaveAcessoCan.Caption  := FormatarChaveAcesso(infCFe.ID);
+    lChaveAcessoCan.Lines.Text := FormatarChaveAcesso(infCFe.ID);
     bcChaveAcessoCan1.Caption := copy( infCFe.ID, 1,22);
     bcChaveAcessoCan2.Caption := copy( infCFe.ID,23,22);
 
@@ -844,7 +1176,7 @@ begin
     // Informações do Rodapé do Extrato //
     lNumSATCanl.Caption   := Trim(IntToStr( ide.nserieSAT ));
     lDataHoraCanl.Caption := FormatDateTimeBr(ide.dEmi + ide.hEmi);
-    lChaveAcessoCanl.Caption  := FormatarChaveAcesso(infCFe.ID);
+    lChaveAcessoCanl.Lines.Text := FormatarChaveAcesso(infCFe.ID);
     bcChaveAcessoCanl1.Caption := copy( infCFe.ID, 1,22);
     bcChaveAcessoCanl2.Caption := copy( infCFe.ID,23,22);
 
@@ -861,6 +1193,14 @@ begin
     end;
   end;
 
+  mMsgAppQRCodeCanc.Lines.Text := ACBrSATExtrato.MsgAppQRCode;
+
+  mSwHouseSiteCanc.Lines.Clear;
+  if ACBrSATExtrato.Sistema <> '' then
+    mSwHouseSiteCanc.Lines.Add(ACBrSATExtrato.Sistema);
+
+  if ACBrSATExtrato.Site <> '' then
+    mSwHouseSiteCanc.Lines.Add(ACBrSATExtrato.Site);
 end;
 
 procedure TACBrSATExtratoFortesFr.rlbObsFiscoBeforePrint(Sender: TObject;
@@ -894,11 +1234,11 @@ begin
       end;
 
       RLPrinter.Copies     := NumCopias ;
-      RLLayout.PrintDialog := MostrarSetup;
+      RLLayout.PrintDialog := MostraSetup;
       RLLayout.ShowProgress:= False ;
 
-      if (Filtro = fiNenhum) and (PrinterName <> '') then
-        RLPrinter.PrinterName := PrinterName;
+      if (Filtro = fiNenhum) and (Impressora <> '') then
+        RLPrinter.PrinterName := Impressora;
 
       //Para impressoras sem guilhotina não cortar no QrCorde
       pEspacoFinal.Height := EspacoFinal;
@@ -906,20 +1246,24 @@ begin
 
       // Largura e Margens do Relatório //
       RLLayout.Width := LarguraBobina;
-      RLLayout.Margins.LeftMargin   := Margens.Esquerda;
-      RLLayout.Margins.RightMargin  := Margens.Direita;
-      RLLayout.Margins.TopMargin    := Margens.Topo;
-      RLLayout.Margins.BottomMargin := Margens.Fundo;
+      RLLayout.Margins.LeftMargin   := MargemEsquerda;
+      RLLayout.Margins.RightMargin  := MargemDireita;
+      RLLayout.Margins.TopMargin    := MargemSuperior;
+      RLLayout.Margins.BottomMargin := MargemInferior;
 
       // Ajustando o tamanho da página //
       RLLayout.PageBreaking := pbNone;
       RLLayout.PageSetup.PaperSize   := fpCustom ;
       RLLayout.PageSetup.PaperWidth  := Round(LarguraBobina/MMAsPixels) ;
-      RLLayout.PageSetup.PaperHeight := CalcularTamanhoDaPagina( RLLayout );
+
+      RLLayout.UnlimitedHeight := True; // ****** ATENÇÃO ******
+      // Se você recebeu um erro de compilação na linha ACIMA
+      // Voce DEVE atualizar os fontes do seu Fortes Report CE
+      // https://github.com/fortesinformatica/fortesreport-ce
 
       if Filtro = fiNenhum then
       begin
-        if MostrarPreview then
+        if MostraPreview then
           RLLayout.PreviewModal
         else
           RLLayout.Print;
@@ -929,13 +1273,16 @@ begin
         if RLLayout.Prepare then
         begin
           case Filtro of
-            fiPDF  : RLFiltro := RLPDFFilter1;
-            fiHTML : RLFiltro := RLHTMLFilter1;
+            fiPDF  :
+              RLFiltro := RLPDFFilter1;
+            fiHTML :
+              RLFiltro := RLHTMLFilter1;
           else
             exit ;
           end ;
 
-          RLFiltro.FileName := NomeArquivo ;
+          RLFiltro.ShowProgress := RLLayout.ShowProgress;
+          RLFiltro.FileName := NomeDocumento ;
           RLFiltro.FilterPages( RLLayout.Pages );
         end;
       end;
@@ -970,3 +1317,6 @@ initialization
 {$endif}
 
 end.
+if (Dest.xNome <> '' ) then
+  mDestEnt.Lines.Add( ACBrStr('Destinatário: ')+Dest.xNome );
+

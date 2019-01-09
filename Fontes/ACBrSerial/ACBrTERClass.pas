@@ -65,6 +65,7 @@ Type
             fpDevice : TACBrDevice;
             fpAtivo : Boolean;
             fpModeloStr : String;
+            fpDuplaConfirmacao: Boolean;
         Public
             Constructor Create(AOwner: TComponent);
             Destructor Destroy; Override;
@@ -75,12 +76,13 @@ Type
 
             Procedure LeBalanca( Terminal : Word = 0  ); Virtual;  
             Procedure LeSerial( MillisecTimeOut : Integer = 500 ); Virtual;
-            Procedure EnviaString( Texto : String; Terminal : Word = 0 ); Virtual;
-            Procedure EnviaRotacao( Texto : String; Linha : Word = 0; Terminal : Word = 0 ); Virtual;
+            Procedure EnviaString( const Texto : String; Terminal : Word = 0 ); Virtual;
+            Procedure EnviaRotacao( const Texto : String; Linha : Word = 0; Terminal : Word = 0 ); Virtual;
             Procedure LimpaTela( Terminal : Word = 0 ); Virtual;
             Procedure PosicionaCursor( Linha, Coluna : Word; Terminal : Word = 0 ); Virtual;
             Procedure BackSpace( Terminal : Word = 0 ); Virtual;
             Property ModeloStr : String Read fpModeloStr;
+            Property DuplaConfirmacao: Boolean Read fpDuplaConfirmacao Write fpDuplaConfirmacao;
         End;
 
 Implementation
@@ -104,6 +106,7 @@ Begin
 
     fpAtivo     := False;
     fpModeloStr := 'Não Definida';
+    fpDuplaConfirmacao := True;
 End;
 
 Destructor TACBrTERClass.Destroy;
@@ -167,13 +170,13 @@ Begin
     Raise Exception.Create(ACBrStr('Procedure BackSpace não implementada em: ') + ModeloStr );
 End;
 
-Procedure TACBrTERClass.EnviaString( Texto : String; Terminal : Word = 0 );
+Procedure TACBrTERClass.EnviaString( const Texto : String; Terminal : Word = 0 );
 Begin
     { Deve ser implementada na Classe Filha }
     Raise Exception.Create(ACBrStr('Procedure EnviaString não implementada em: ') + ModeloStr );
 End;
 
-Procedure TACBrTERClass.EnviaRotacao( Texto : String; Linha : Word = 0; Terminal : Word = 0 );
+Procedure TACBrTERClass.EnviaRotacao( const Texto : String; Linha : Word = 0; Terminal : Word = 0 );
 Begin
     { Deve ser implementada na Classe Filha }
     Raise Exception.Create(ACBrStr('Procedure EnviaRotacao não implementada em: ') + ModeloStr );

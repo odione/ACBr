@@ -51,11 +51,11 @@ interface
 
 uses
   SysUtils, Classes,
-  pcnAuxiliar, pcnConversao, pcnGerador, pcnLeitor, pcteConversaoCTe;
+  pcnConversao, pcnGerador, pcnLeitor, pcteConversaoCTe;
 
 type
 
-  TPcnPadraoNomeProcCTe = (tpnPublico, tpnPrivado);
+//  TPcnPadraoNomeProcCTe = (tpnPublico, tpnPrivado);
 
   TProcCTe = class(TPersistent)
   private
@@ -79,7 +79,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function GerarXML: boolean;
-    function ObterNomeArquivo(const PadraoNome: TPcnPadraoNomeProcCTe = tpnPrivado): String;
+//    function ObterNomeArquivo(const PadraoNome: TPcnPadraoNomeProcCTe = tpnPrivado): String;
   published
     property Gerador: TGerador          read FGerador            write FGerador;
     property PathCTe: String            read FPathCTe            write FPathCTe;
@@ -102,6 +102,9 @@ type
 
 implementation
 
+uses
+  pcnAuxiliar, ACBrUtil;
+
 { TProcCTe }
 
 constructor TProcCTe.Create;
@@ -114,7 +117,7 @@ begin
   FGerador.Free;
   inherited;
 end;
-
+(*
 function TProcCTe.ObterNomeArquivo(const PadraoNome: TPcnPadraoNomeProcCTe = tpnPrivado): String;
 begin
   Result := FchCTe + '-procCTe.xml';
@@ -123,7 +126,7 @@ begin
     Result := FnProt + '_v' + Versao + '-procCTe.xml';
   end;
 end;
-
+*)
 function TProcCTe.GerarXML: boolean;
 
 function PreencherTAG(const TAG: String; Texto: String): String;
@@ -141,6 +144,7 @@ var
   LocLeitor: TLeitor;
   i: Integer;
   ProtLido: Boolean; // Protocolo lido do Arquivo
+  Modelo: Integer;
 begin
   XMLCTe      := TStringList.Create;
   XMLinfProt  := TStringList.Create;
@@ -194,7 +198,7 @@ begin
                 Gerador.ListaDeAlertas.Clear;
                 break;
               end;
-              I := I + 1;
+              inc(I);
             end;
           finally
             LocLeitor.Free;
@@ -265,12 +269,26 @@ begin
     if (Gerador.ListaDeAlertas.Count = 0) and
        (FXML_CTe <> '') and (FXML_prot <> '') then
     begin
+      FchCTe := RetornarConteudoEntre(FXML_CTe, 'Id="CTe', '"');
+
+      Modelo := StrToIntDef(ExtrairModeloChaveAcesso(FchCTe), 57);
+
       Gerador.ArquivoFormatoXML := '';
       Gerador.wGrupo(ENCODING_UTF8, '', False);
-      Gerador.wGrupo('cteProc versao="' + Versao + '" ' + NAME_SPACE_CTE, '');
-      Gerador.wTexto('<CTe xmlns' + RetornarConteudoEntre(FXML_CTe, '<CTe xmlns', '</CTe>') + '</CTe>');
-      Gerador.wTexto(FXML_prot);
-      Gerador.wGrupo('/cteProc');
+      if Modelo = 57 then
+      begin
+        Gerador.wGrupo('cteProc versao="' + Versao + '" ' + NAME_SPACE_CTE, '');
+        Gerador.wTexto('<CTe xmlns' + RetornarConteudoEntre(FXML_CTe, '<CTe xmlns', '</CTe>') + '</CTe>');
+        Gerador.wTexto(FXML_prot);
+        Gerador.wGrupo('/cteProc');
+      end
+      else
+      begin
+        Gerador.wGrupo('cteOSProc versao="' + Versao + '" ' + NAME_SPACE_CTE, '');
+        Gerador.wTexto('<CTeOS xmlns' + RetornarConteudoEntre(FXML_CTe, '<CTeOS xmlns', '</CTeOS>') + '</CTeOS>');
+        Gerador.wTexto(FXML_prot);
+        Gerador.wGrupo('/cteOSProc');
+      end;
     end;
 
     Result := (Gerador.ListaDeAlertas.Count = 0);

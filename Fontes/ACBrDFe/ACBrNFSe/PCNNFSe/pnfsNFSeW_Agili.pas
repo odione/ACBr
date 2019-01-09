@@ -43,7 +43,7 @@ uses
   synacode, ACBrConsts,
   pnfsNFSeW,
   pcnAuxiliar, pcnConversao, pcnGerador,
-  pnfsNFSe, pnfsConversao;
+  pnfsNFSe, pnfsConversao, pnfsConsts;
 
 type
   { TNFSeW_Agili }
@@ -105,7 +105,7 @@ end;
 function _RegimeEspecialTributacaoToStr(const t: TnfseRegimeEspecialTributacao): String;
 begin
   result := EnumeradoToStr(t,
-                           ['-1','-2','-4','-5','-6'],
+                           ['','-2','-4','-5','-6'],
                            [retNenhum, retEstimativa, retCooperativa, retMicroempresarioIndividual, retMicroempresarioEmpresaPP]);
 end;
 
@@ -132,18 +132,24 @@ begin
                            [trRPS, trNFConjugada, trCupom]);
 end;
 
+function _ResponsavelRetencaoToStr(const T: TnfseResponsavelRetencao): String;
+begin
+  result := EnumeradoToStr(t,
+                           ['-1', '-2', '-3'],
+                           [ptTomador, rtIntermediario, rtPrestador]);
+end;
 { TNFSeW_Agili }
 
 procedure TNFSeW_Agili.GerarIdentificacaoRPS;
 begin
   Gerador.wGrupoNFSe('IdentificacaoRps');
-  Gerador.wCampoNFSe(tcStr, '#1', 'Numero', 01, 15, 1, OnlyNumber(NFSe.IdentificacaoRps.Numero), '');
-  Gerador.wCampoNFSe(tcStr, '#2', 'Serie ', 01, 05, 1, NFSe.IdentificacaoRps.Serie, '');
+  Gerador.wCampoNFSe(tcStr, '#1', 'Numero', 01, 15, 1, OnlyNumber(NFSe.IdentificacaoRps.Numero), DSC_NUMRPS);
+  Gerador.wCampoNFSe(tcStr, '#2', 'Serie ', 01, 05, 1, NFSe.IdentificacaoRps.Serie, DSC_SERIERPS);
 
   if VersaoNFSe = ve100 then
-    Gerador.wCampoNFSe(tcStr, '#3', 'Tipo', 01, 01, 1, _TipoRPSToStr(NFSe.IdentificacaoRps.Tipo), '')
+    Gerador.wCampoNFSe(tcStr, '#3', 'Tipo', 01, 01, 1, _TipoRPSToStr(NFSe.IdentificacaoRps.Tipo), DSC_TIPORPS)
   else
-    Gerador.wCampoNFSe(tcStr, '#3', 'Tipo', 01, 01, 1, TipoRPSToStr(NFSe.IdentificacaoRps.Tipo), '');
+    Gerador.wCampoNFSe(tcStr, '#3', 'Tipo', 01, 01, 1, TipoRPSToStr(NFSe.IdentificacaoRps.Tipo), DSC_TIPORPS);
 
   Gerador.wGrupoNFSe('/IdentificacaoRps');
 end;
@@ -153,9 +159,9 @@ begin
   if NFSe.RpsSubstituido.Numero <> '' then
   begin
     Gerador.wGrupoNFSe('RpsSubstituido');
-    Gerador.wCampoNFSe(tcStr, '#10', 'Numero', 01, 15, 1, OnlyNumber(NFSe.RpsSubstituido.Numero), '');
-    Gerador.wCampoNFSe(tcStr, '#11', 'Serie ', 01, 05, 1, NFSe.RpsSubstituido.Serie, '');
-    Gerador.wCampoNFSe(tcStr, '#12', 'Tipo  ', 01, 01, 1, _TipoRPSToStr(NFSe.RpsSubstituido.Tipo), '');
+    Gerador.wCampoNFSe(tcStr, '#10', 'Numero', 01, 15, 1, OnlyNumber(NFSe.RpsSubstituido.Numero), DSC_NUMRPSSUB);
+    Gerador.wCampoNFSe(tcStr, '#11', 'Serie ', 01, 05, 1, NFSe.RpsSubstituido.Serie, DSC_SERIERPSSUB);
+    Gerador.wCampoNFSe(tcStr, '#12', 'Tipo  ', 01, 01, 1, _TipoRPSToStr(NFSe.RpsSubstituido.Tipo), DSC_TIPORPSSUB);
     Gerador.wGrupoNFSe('/RpsSubstituido');
   end;
 end;
@@ -234,7 +240,7 @@ begin
       begin
         Gerador.wCampoNFSe(tcStr, '', 'TipoLogradouro', 001, 120, 1, NFSe.Tomador.Endereco.TipoLogradouro, '');
         Gerador.wCampoNFSe(tcStr, '#39', 'Logradouro ', 001, 120, 1, NFSe.Tomador.Endereco.Endereco, '');
-        Gerador.wCampoNFSe(tcStr, '#40', 'Numero     ', 001, 010, 1, NFSe.Tomador.Endereco.Numero, '');
+        Gerador.wCampoNFSe(tcStr, '#40', 'Numero     ', 001, 010, 0, NFSe.Tomador.Endereco.Numero, '');
         Gerador.wCampoNFSe(tcStr, '#41', 'Complemento', 001, 300, 0, NFSe.Tomador.Endereco.Complemento, '');
         Gerador.wCampoNFSe(tcStr, '#42', 'Bairro     ', 001, 120, 0, NFSe.Tomador.Endereco.Bairro, '')
       end
@@ -351,7 +357,7 @@ begin
 
   if VersaoNFSe = ve100 then
   begin
-    Gerador.wCampoNFSe(tcStr, '', 'Observacao            ', 01, 4000, 0, '', '');
+    Gerador.wCampoNFSe(tcStr, '', 'Observacao            ', 01, 4000, 0, NFSe.OutrasInformacoes, '');
     Gerador.wCampoNFSe(tcStr, '', 'Complemento           ', 01, 3000, 0, '', '');  // Não enviar TAG
   end;
 
@@ -410,10 +416,13 @@ procedure TNFSeW_Agili.GerarRegimeEspecialTributacao;
 begin
   if VersaoNFSe = ve100 then
   begin
-    Gerador.wGrupoNFSe('RegimeEspecialTributacao');
-    Gerador.wCampoNFSe(tcStr, '', 'Codigo   ', 01, 01, 1, _RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), '');
-    Gerador.wCampoNFSe(tcStr, '', 'Descricao', 01, 300, 0, '', '');
-    Gerador.wGrupoNFSe('/RegimeEspecialTributacao');
+    if _RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao) <> '' then
+    begin
+      Gerador.wGrupoNFSe('RegimeEspecialTributacao');
+      Gerador.wCampoNFSe(tcStr, '', 'Codigo   ', 01, 01, 1, _RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), '');
+      Gerador.wCampoNFSe(tcStr, '', 'Descricao', 01, 300, 0, '', '');
+      Gerador.wGrupoNFSe('/RegimeEspecialTributacao');
+    end;
   end
   else begin
     Gerador.wCampoNFSe(tcStr, '#6', 'RegimeEspecialTributacao', 01, 01, 1, RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), '')
@@ -425,13 +434,13 @@ begin
   if VersaoNFSe = ve100 then
   begin
     Gerador.wGrupoNFSe('ResponsavelISSQN');
-    Gerador.wCampoNFSe(tcStr, '', 'Codigo   ', 01, 01, 0, '-3', '');  // -1=Tomador -2=Intermediário -3=Prestador
+    Gerador.wCampoNFSe(tcStr, '', 'Codigo   ', 01, 01, 0, _ResponsavelRetencaoToStr(NFSe.Servico.ResponsavelRetencao), ''); 
     Gerador.wCampoNFSe(tcStr, '', 'Descricao', 01, 300, 0, '', '');
     Gerador.wGrupoNFSe('/ResponsavelISSQN');
   end
-  else begin
+  else
+  if (NFSe.Servico.Valores.IssRetido <> stNormal) then
     Gerador.wCampoNFSe(tcStr, '', 'ResponsavelRetencao', 01, 01, 0, ResponsavelRetencaoToStr(NFSe.Servico.ResponsavelRetencao), '')
-  end;
 end;
 
 procedure TNFSeW_Agili.GerarExigibilidadeISSQN;
@@ -514,10 +523,18 @@ begin
   end;
 
   GerarResponsavelISSQN;
-  Gerador.wCampoNFSe(tcStr, '', 'CodigoAtividadeEconomica', 01, 140, 1, FormatarCnae(NFSe.Servico.CodigoCnae), '');
+  if NaoEstaVazio(NFSe.Servico.CodigoTributacaoMunicipio) then
+    Gerador.wCampoNFSe(tcStr, '', 'CodigoAtividadeEconomica', 01, 140, 1, NFSe.Servico.CodigoTributacaoMunicipio, '')
+  else
+  begin
+    if VersaoNFSe = ve100 then
+      Gerador.wCampoNFSe(tcStr, '', 'CodigoAtividadeEconomica', 01, 140, 1, FormatarCnae(NFSe.Servico.CodigoCnae), '')
+    else
+      Gerador.wCampoNFSe(tcStr, '', 'CodigoAtividadeEconomica', 01, 140, 1, NFSe.Servico.CodigoCnae, '');
+  end;
 
   if VersaoNFSe = ve200 then
-    Gerador.wCampoNFSe(tcStr, '#30', 'CodigoCnae', 01, 15, 0, FormatarCnae(NFSe.Servico.CodigoCnae), '');
+    Gerador.wCampoNFSe(tcStr, '#30', 'CodigoCnae', 01, 15, 0, OnlyNumber(NFSe.Servico.CodigoCnae), '');
 
   GerarExigibilidadeISSQN;
   Gerador.wCampoNFSe(tcStr, '', 'BeneficioProcesso', 01, 30, 0, NFSe.Servico.NumeroProcesso, '');
@@ -556,9 +573,8 @@ begin
 end;
 
 function TNFSeW_Agili.GerarXml: Boolean;
-var
-  Gerar: Boolean;
 begin
+  Gerador.ListaDeAlertas.Clear;
   Gerador.ArquivoFormatoXML := '';
   Gerador.Prefixo           := FPrefixo4;
 
@@ -576,27 +592,6 @@ begin
   FNFSe.InfID.ID := OnlyNumber(FNFSe.IdentificacaoRps.Numero) + FNFSe.IdentificacaoRps.Serie;
 
   GerarXML_Agili;
-
-  if FOpcoes.GerarTagAssinatura <> taNunca then
-  begin
-    Gerar := true;
-    if FOpcoes.GerarTagAssinatura = taSomenteSeAssinada then
-      Gerar := ((NFSe.signature.DigestValue <> '') and
-                (NFSe.signature.SignatureValue <> '') and
-                (NFSe.signature.X509Certificate <> ''));
-    if FOpcoes.GerarTagAssinatura = taSomenteParaNaoAssinada then
-      Gerar := ((NFSe.signature.DigestValue = '') and
-                (NFSe.signature.SignatureValue = '') and
-                (NFSe.signature.X509Certificate = ''));
-    if Gerar then
-    begin
-      FNFSe.signature.URI := FNFSe.InfID.ID;
-      FNFSe.signature.Gerador.Opcoes.IdentarXML := Gerador.Opcoes.IdentarXML;
-      FNFSe.signature.GerarXMLNFSe;
-      Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
-                                   FNFSe.signature.Gerador.ArquivoFormatoXML;
-    end;
-  end;
 
   Gerador.wGrupo('/Rps');
 

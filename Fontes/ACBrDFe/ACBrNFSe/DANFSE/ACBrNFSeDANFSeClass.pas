@@ -40,34 +40,19 @@ interface
 
 uses
   SysUtils, Classes,
+  ACBrBase, ACBrDFeReport,
   pnfsNFSe, pnfsConversao;
 
 type
-
- TACBrNFSeDANFSeClass = class( TComponent )
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}	
+ TACBrNFSeDANFSeClass = class(TACBrDFeReport)
   private
-    function GetPathPDF: String;
-    procedure SetPathPDF(const Value: String);
     procedure SetNFSe(const Value: TComponent);
     procedure ErroAbstract( NomeProcedure: String );
   protected
     FACBrNFSe: TComponent;
-    FLogo: String;
-    FSistema: String;
-    FUsuario: String;
-    FPathPDF: String;
-    FImpressora: String;
-    FMostrarPreview: Boolean;
-    FMostrarStatus: Boolean;
-    FNumCopias: Integer;
-    FExpandirLogoMarca: Boolean;
-    FFax : String;
-    FSite: String;
-    FEmail: String;
-    FMargemInferior: Double;
-    FMargemSuperior: Double;
-    FMargemEsquerda: Double;
-    FMargemDireita: Double;
     FPrestLogo: String;
     FPrefeitura: String;
     FRazaoSocial: String;
@@ -84,6 +69,7 @@ type
     FT_Complemento   : String;
     FT_Email         : String;
     FEMail_Prestador : String;
+    FFormatarNumeroDocumentoNFSe  : Boolean;
     FUF : String;
     FAtividade : String;
     FNFSeCancelada: boolean;
@@ -93,30 +79,16 @@ type
     FTamanhoFonte: Integer;
 
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function GetSeparadorPathPDF(aInitialPath: String): String; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure VisualizarDANFSe(NFSe: TNFSe = nil); virtual;
     procedure ImprimirDANFSe(NFSe: TNFSe = nil); virtual;
     procedure ImprimirDANFSePDF(NFSe: TNFSe = nil); virtual;
+
   published
     property ACBrNFSe: TComponent  read FACBrNFSe write SetNFSe;
-    property Logo: String read FLogo write FLogo;
-    property Sistema: String read FSistema write FSistema;
-    property Usuario: String read FUsuario write FUsuario;
-    property PathPDF: String read GetPathPDF write SetPathPDF;
-    property Impressora: String read FImpressora write FImpressora;
-    property MostrarPreview: Boolean read FMostrarPreview write FMostrarPreview;
-    property MostrarStatus: Boolean read FMostrarStatus write FMostrarStatus;
-    property NumCopias: Integer read FNumCopias write FNumCopias;
-    property ExpandirLogoMarca: Boolean read FExpandirLogoMarca write FExpandirLogoMarca default false;
-    property Fax : String read FFax   write FFax;
-    property Site: String read FSite  write FSite;
-    property Email: String read FEmail write FEmail;
-    property MargemInferior: Double read FMargemInferior write FMargemInferior;
-    property MargemSuperior: Double read FMargemSuperior write FMargemSuperior;
-    property MargemEsquerda: Double read FMargemEsquerda write FMargemEsquerda;
-    property MargemDireita: Double read FMargemDireita write FMargemDireita;
     property PrestLogo: String read FPrestLogo write FPrestLogo;
     property Prefeitura: String read FPrefeitura write FPrefeitura;
 
@@ -139,12 +111,13 @@ type
     property T_Email: String read FT_Email write FT_Email;
 
     property Atividade: String read FAtividade write FAtividade;
-    property NFSeCancelada: Boolean read FNFSeCancelada write FNFSeCancelada;
+    property Cancelada: Boolean read FNFSeCancelada write FNFSeCancelada;
     property ImprimeCanhoto: Boolean read FImprimeCanhoto write FImprimeCanhoto default False;
 
     property TipoDANFSE: TTipoDANFSE read FTipoDANFSE   write FTipoDANFSE default tpPadrao;
     property Provedor: TNFSeProvedor read FProvedor     write FProvedor;
     property TamanhoFonte: Integer   read FTamanhoFonte write FTamanhoFonte;
+    property FormatarNumeroDocumentoNFSe : Boolean read FFormatarNumeroDocumentoNFSe write FFormatarNumeroDocumentoNFSe;
   end;
 
 implementation
@@ -159,21 +132,6 @@ begin
  inherited create( AOwner );
 
  FACBrNFSe       := nil;
- FLogo           := '';
- FSistema        := '';
- FUsuario        := '';
- FPathPDF        := '';
- FImpressora     := '';
- FMostrarPreview := True;
- FMostrarStatus  := True;
- FNumCopias      := 1;
- FFax            := '';
- FSite           := '';
- FEmail          := '';
- FMargemInferior := 0.8;
- FMargemSuperior := 0.8;
- FMargemEsquerda := 0.6;
- FMargemDireita  := 0.51;
  FPrestLogo      := '';
  FPrefeitura     := '';
  FRazaoSocial    := '';
@@ -194,7 +152,7 @@ begin
  FT_Endereco            := '';
  FT_Complemento         := '';
  FT_Email               := '';
-
+ FFormatarNumeroDocumentoNFSe := True;
  FNFSeCancelada := False;
 
  FProvedor := proNenhum;
@@ -209,21 +167,6 @@ end;
 procedure TACBrNFSeDANFSeClass.ErroAbstract(NomeProcedure: String);
 begin
  raise Exception.Create( NomeProcedure );
-end;
-
-procedure TACBrNFSeDANFSeClass.VisualizarDANFSe(NFSe: TNFSe);
-begin
- ErroAbstract('Visualizar');
-end;
-
-procedure TACBrNFSeDANFSeClass.ImprimirDANFSe(NFSe: TNFSe);
-begin
- ErroAbstract('Imprimir');
-end;
-
-procedure TACBrNFSeDANFSeClass.ImprimirDANFSePDF(NFSe: TNFSe);
-begin
- ErroAbstract('ImprimirPDF');
 end;
 
 procedure TACBrNFSeDANFSeClass.Notification(AComponent: TComponent;
@@ -263,18 +206,51 @@ begin
   end;
 end;
 
-function TACBrNFSeDANFSeClass.GetPathPDF: String;
+function TACBrNFSeDANFSeClass.GetSeparadorPathPDF(aInitialPath: String): String;
+var
+   dhEmissao: TDateTime;
+   DescricaoModelo: String;
+   ANFSe: TNFSe;
 begin
-  if Trim(FPathPDF) <> '' then
-    Result := IncludeTrailingPathDelimiter(FPathPDF)
-  else
-    Result := Trim(FPathPDF)
+  Result := aInitialPath;
+
+  if Assigned(ACBrNFSe) then  // Se tem o componente ACBrNFSe
+  begin
+    if TACBrNFSe(ACBrNFSe).NotasFiscais.Count > 0 then  // Se tem alguma Nota carregada
+    begin
+      ANFSe := TACBrNFSe(ACBrNFSe).NotasFiscais.Items[0].NFSe;
+      if TACBrNFSe(ACBrNFSe).Configuracoes.Arquivos.EmissaoPathNFSe then
+        dhEmissao := ANFSe.DataEmissao
+      else
+        dhEmissao := Now;
+
+      DescricaoModelo := '';
+      if TACBrNFSe(ACBrNFSe).Configuracoes.Arquivos.AdicionarLiteral then
+      begin
+        DescricaoModelo := TACBrNFSe(ACBrNFSe).GetNomeModeloDFe;
+      end;
+
+      Result := TACBrNFSe(ACBrNFSe).Configuracoes.Arquivos.GetPath(
+                Result, DescricaoModelo,
+                OnlyNumber(ANFSe.PrestadorServico.IdentificacaoPrestador.CNPJ),
+                dhEmissao);
+    end;
+  end;
 end;
 
-procedure TACBrNFSeDANFSeClass.SetPathPDF(const Value: String);
+procedure TACBrNFSeDANFSeClass.VisualizarDANFSe(NFSe: TNFSe);
 begin
-  if Trim(Value) <> '' then
-    FPathPDF := IncludeTrailingPathDelimiter(Value);
+ ErroAbstract('VisualizarDANFSe');
+end;
+
+procedure TACBrNFSeDANFSeClass.ImprimirDANFSe(NFSe: TNFSe);
+begin
+ ErroAbstract('ImprimirDANFSe');
+end;
+
+procedure TACBrNFSeDANFSeClass.ImprimirDANFSePDF(NFSe: TNFSe);
+begin
+ ErroAbstract('ImprimirDANFSePDF');
 end;
 
 end.

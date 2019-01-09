@@ -42,11 +42,20 @@ interface
 uses
   SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtCtrls, ACBrNFSeDANFSeRL, RLFilters, RLPDFFilter, RLReport, DB,
-  pnfsConversao, ACBrDelphiZXingQRCode ;
+  pnfsConversao, ACBrDelphiZXingQRCode;
 
 type
+
+  { TfrlDANFSeRLRetrato }
+
   TfrlDANFSeRLRetrato = class(TfrlDANFSeRL)
     rlbCabecalho: TRLBand;
+    RLDraw10: TRLDraw;
+    RLDraw2: TRLDraw;
+    RLDraw3: TRLDraw;
+    RLDraw70: TRLDraw;
+    RLDraw8: TRLDraw;
+    RLDraw9: TRLDraw;
     rllNumNF0: TRLLabel;
     RLLabel13: TRLLabel;
     RLLabel12: TRLLabel;
@@ -203,7 +212,22 @@ type
     RLSystemInfo2: TRLSystemInfo;
     RLLabel62: TRLLabel;
     RLLabel63: TRLLabel;
+    RLDraw11: TRLDraw;
+    RLLabel64: TRLLabel;
+    rllMunicipioPrestacaoServico: TRLLabel;
+    rlbHeaderItensDetalhado: TRLBand;
+    RLLabel65: TRLLabel;
+    RLLabel66: TRLLabel;
+    RLLabel67: TRLLabel;
+    RLLabel68: TRLLabel;
+    subItens: TRLSubDetail;
+    rlbItensServico: TRLBand;
+    txtServicoQtde: TRLLabel;
+    rlmServicoDescricao: TRLMemo;
+    txtServicoUnitario: TRLLabel;
+    txtServicoTotal: TRLLabel;
     procedure rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure rlbItensServicoBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbPrestadorBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbTomadorBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbItensBeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -211,13 +235,15 @@ type
     procedure rbOutrasInformacoesBeforePrint(Sender: TObject;
       var PrintIt: Boolean);
     procedure RLNFSeBeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure subItensDataRecord(Sender: TObject; RecNo: Integer;
+       CopyNo: Integer; var Eof: Boolean; var RecordAction: TRLRecordAction);
   private
     { Private declarations }
-    procedure Itens;
+    FNumItem: Integer;
     function ManterAliquota(dAliquota: Double): String;
   public
     { Public declarations }
-    procedure QuebradeLinha(const sQuebradeLinha: String);
+    class procedure QuebradeLinha(const sQuebradeLinha: String);
   end;
 
 var
@@ -226,7 +252,8 @@ var
 implementation
 
 uses
- StrUtils, DateUtils, ACBrUtil, pnfsNFSe, ACBrValidador;
+ StrUtils, DateUtils, ACBrUtil, pnfsNFSe,
+ ACBrValidador, ACBrDFeReportFortes;
 
 {$IFnDEF FPC}
   {$R *.dfm}
@@ -239,20 +266,7 @@ var
 
 { TfrlDANFSeRLRetrato }
 
-procedure TfrlDANFSeRLRetrato.Itens;
-begin
- cdsItens.Close;
- cdsItens.CreateDataSet;
- cdsItens.Open;
-
- cdsItens.Append;
- cdsItens.FieldByName('DISCRIMINACAO').AsString := FNFSe.Servico.Discriminacao;
- cdsItens.Post;
-
- cdsItens.First;
-end;
-
-procedure TfrlDANFSeRLRetrato.QuebradeLinha(const sQuebradeLinha: String);
+class procedure TfrlDANFSeRLRetrato.QuebradeLinha(const sQuebradeLinha: String);
 begin
   FQuebradeLinha := sQuebradeLinha;
 end;
@@ -270,12 +284,12 @@ begin
   rlmDadosAdicionais.Lines.BeginUpdate;
   rlmDadosAdicionais.Lines.Clear;
 
-  If FNFSe.OutrasInformacoes <> '' Then
-    rlmDadosAdicionais.Lines.Add(StringReplace(FNFSe.OutrasInformacoes, ';', #13#10, [rfReplaceAll,rfIgnoreCase]))
-  Else If FOutrasInformacaoesImp <> '' Then
-    rlmDadosAdicionais.Lines.Add(StringReplace(FOutrasInformacaoesImp, ';', #13#10, [rfReplaceAll,rfIgnoreCase]));
+  If fpNFSe.OutrasInformacoes <> '' Then
+    rlmDadosAdicionais.Lines.Add(StringReplace(fpNFSe.OutrasInformacoes, ';', #13#10, [rfReplaceAll,rfIgnoreCase]))
+  Else If fpDANFSe.OutrasInformacaoesImp <> '' Then
+    rlmDadosAdicionais.Lines.Add(StringReplace(fpDANFSe.OutrasInformacaoesImp, ';', #13#10, [rfReplaceAll,rfIgnoreCase]));
 
-  if pos('http://', LowerCase( FNFSe.OutrasInformacoes) ) > 0 then
+  if ((pos('http://', LowerCase( fpNFSe.OutrasInformacoes) ) > 0) or (pos('http://', LowerCase( fpNFSe.Link) ) > 0)) then
   begin
     rlmDadosAdicionais.Width := 643;
 
@@ -287,13 +301,16 @@ begin
     rlImgQrCode.SetBounds(648, 3, 90, 90);
     rlImgQrCode.BringToFront;
 
-    QRCodeData   := Trim(MidStr(FNFSe.OutrasInformacoes, pos('http://', LowerCase( FNFSe.OutrasInformacoes)), Length(FNFSe.OutrasInformacoes) ));
+    if(fpNFSe.Link <> '') then //Provedor Tecnos tem o link para a nota no campo Link
+      QRCodeData := Trim(MidStr(fpNFSe.Link, pos('http://', LowerCase( fpNFSe.Link)), Length(fpNFSe.Link) ))
+    else
+      QRCodeData := Trim(MidStr(fpNFSe.OutrasInformacoes, pos('http://', LowerCase( fpNFSe.OutrasInformacoes)), Length(fpNFSe.OutrasInformacoes) ));
     QRCode       := TDelphiZXingQRCode.Create;
     QRCodeBitmap := TBitmap.Create;
     try
-      QRCode.Data      := QRCodeData;
       QRCode.Encoding  := qrUTF8NoBOM;
       QRCode.QuietZone := 1;
+      QRCode.Data      := WideString(QRCodeData);
 
       QRCodeBitmap.Width  := QRCode.Columns;
       QRCodeBitmap.Height := QRCode.Rows;
@@ -317,91 +334,103 @@ begin
   end;
 
   rlmDadosAdicionais.Lines.EndUpdate;
-  rllDataHoraImpressao.Caption := Format('DATA E HORA DA IMPRESSÃO: %s' , [FormatDateTime('dd/mm/yyyy hh:nn',Now)]);
+  rllDataHoraImpressao.Caption := Format(ACBrStr('DATA E HORA DA IMPRESSÃO: %s') , [FormatDateTime('dd/mm/yyyy hh:nn',Now)]);
 
-  if FUsuario <> '' then
-    rllDataHoraImpressao.Caption := Format('%s   USUÁRIO: %s', [rllDataHoraImpressao.Caption, FUsuario]);
+  if fpDANFSe.Usuario <> '' then
+    rllDataHoraImpressao.Caption := Format(ACBrStr('%s   USUÁRIO: %s'), [rllDataHoraImpressao.Caption, fpDANFSe.Usuario]);
 
   // imprime sistema
-  if FSistema <> '' then
+  if fpDANFSe.Sistema <> '' then
   begin
-    rllSistema.Caption := Format('Desenvolvido por %s' , [FSistema]);
+    rllSistema.Caption := Format('Desenvolvido por %s' , [fpDANFSe.Sistema]);
   end
   else
   begin
     rllSistema.Caption := '';
   end;
+
+  //Exibe canhoto
+  rlbCanhoto.Visible:= fpDANFSe.ImprimeCanhoto;
 end;
 
 procedure TfrlDANFSeRLRetrato.rlbCabecalhoBeforePrint(Sender: TObject;
   var PrintIt: Boolean);
-var
- vStringStream: TStringStream;
 begin
   inherited;
-  if (FLogo <> '') then
+  if Trim(fpDANFSe.Logo) <> '' then
   begin
-    if FilesExists(FLogo) then
-       rliLogo.Picture.LoadFromFile(FLogo)
-    else
-      begin
-        vStringStream := TStringStream.Create(FLogo);
-        try
-          try
-            vStringStream.Position := 0;
-            rliLogo.Picture.Bitmap.LoadFromStream(vStringStream);
-          except
-          end;
-        finally
-           vStringStream.Free;
-        end;
-    end;
+    TDFeReportFortes.CarregarLogo(rliLogo, fpDANFSe.Logo);
   end;
 
   rlmPrefeitura.Lines.Clear;
-  rlmPrefeitura.Lines.Add(StringReplace( FPrefeitura, ';', #13#10, [rfReplaceAll,rfIgnoreCase] ) );
+  rlmPrefeitura.Lines.Add(StringReplace( fpDANFSe.Prefeitura, ';', #13#10, [rfReplaceAll,rfIgnoreCase] ) );
 
-  With FNFSe do
+  With fpNFSe do
   begin
-    rllNumNF0.Caption             := FormatFloat('00000000000'        , StrToFloatDef(Numero, 0));
-    rllEmissao.Caption            := FormatDateTime('dd/mm/yyyy hh:nn', DataEmissao);
-    rllCodVerificacao.Caption     := CodigoVerificacao;
+    rllNumNF0.Caption         := FormatFloat('00000000000'        , StrToFloatDef(Numero, 0));
+    rllEmissao.Caption        := FormatDateTime('dd/mm/yyyy hh:nn', DataEmissao);
+    rllCodVerificacao.Caption := CodigoVerificacao;
 
-    if length( Competencia )  = 6 then
-      rllCompetencia.Caption      := Copy(Competencia, 5, 2) + '/' + Copy(Competencia, 1, 4)
+    if length( Competencia ) = 6 then
+      rllCompetencia.Caption := Copy(Competencia, 5, 2) + '/' + Copy(Competencia, 1, 4)
     else
-      rllCompetencia.Caption      := Copy(Competencia, 6, 2) + '/' + Copy(Competencia, 1, 4);
+    begin
+      if length( Competencia ) >= 10 then // dd/mm/aaaa ou aaaa/mm/dd
+      begin
+        if (Pos('/', Competencia) = 3) or (Pos('-', Competencia) = 3) then
+          rllCompetencia.Caption := Copy(Competencia, 4, 7)
+        else
+          rllCompetencia.Caption := Copy(Competencia, 6, 2) + '/' + Copy(Competencia, 1, 4);
+      end
+      else
+        rllCompetencia.Caption := Copy(Competencia, 6, 2) + '/' + Copy(Competencia, 1, 4);		
+    end;
 
     rllNumeroRPS.Caption          := IdentificacaoRps.Numero;
     rllNumNFSeSubstituida.Caption := NfseSubstituida;
+    rllMunicipioPrestacaoServico.Caption := CodCidadeToCidade(StrToIntDef(Servico.CodigoMunicipio, 0));
+  end;
+end;
+
+procedure TfrlDANFSeRLRetrato.rlbItensServicoBeforePrint(Sender: TObject;
+   var PrintIt: Boolean);
+begin
+  with fpNFSe.Servico.ItemServico.Items[FNumItem] do
+  begin
+    txtServicoQtde.Caption := FormatFloatBr( Quantidade );
+    rlmServicoDescricao.Lines.Clear;
+    rlmServicoDescricao.Lines.Add( StringReplace( Descricao, FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
+    txtServicoUnitario.Caption := FormatFloatBr( ValorUnitario );
+    txtServicoTotal.Caption    := FormatFloatBr( ValorTotal );
   end;
 end;
 
 procedure TfrlDANFSeRLRetrato.rlbISSQNBeforePrint(Sender: TObject;
   var PrintIt: Boolean);
 var
- MostrarObra: Boolean;
+  MostrarObra, MostrarNaturezaOperacao: Boolean;
 begin
   inherited;
   RLLabel16.Visible := False;
 
-  With FNFSe do
+  With fpNFSe do
   begin
+    rllNatOperacao.Caption    := NaturezaOperacaoDescricao( NaturezaOperacao );
+    MostrarNaturezaOperacao   := rllNatOperacao.Caption<>'';
+    RLLabel137.Visible        := MostrarNaturezaOperacao;
+    rllRegimeEspecial.Caption := nfseRegimeEspecialTributacaoDescricao( RegimeEspecialTributacao );
+    rllOpcaoSimples.Caption   := SimNao( Integer ( OptanteSimplesNacional ) );
+    rllIncentivador.Caption   := SimNao( Integer ( IncentivadorCultural ) );
+    rllCodObra.Caption        := ConstrucaoCivil.CodigoObra;
+    rllCodART.Caption         := ConstrucaoCivil.Art;
 
-    rllNatOperacao.Caption            := NaturezaOperacaoDescricao( NaturezaOperacao );
-    rllRegimeEspecial.Caption         := nfseRegimeEspecialTributacaoDescricao( RegimeEspecialTributacao );
-    rllOpcaoSimples.Caption           := SimNao( Integer ( OptanteSimplesNacional ) );
-    rllIncentivador.Caption           := SimNao( Integer ( IncentivadorCultural ) );
-    rllCodObra.Caption                := ConstrucaoCivil.CodigoObra;
-    rllCodART.Caption                 := ConstrucaoCivil.Art;
-
-    MostrarObra                       := (rllCodObra.Caption<>'') or (rllCodART.Caption<>'');
-    rlsLinhaH1.Visible                := MostrarObra;
-    rllTituloConstCivil.Visible       := MostrarObra;
-    rllCodigoObra.Visible             := MostrarObra;
-    rllCodObra.Visible                := MostrarObra;
-    rllCodigoArt.Visible              := MostrarObra;
-    rllCodART.Visible                 := MostrarObra;
+    MostrarObra                 := (rllCodObra.Caption<>'') or (rllCodART.Caption<>'');
+    rlsLinhaH1.Visible          := MostrarObra;
+    rllTituloConstCivil.Visible := MostrarObra;
+    rllCodigoObra.Visible       := MostrarObra;
+    rllCodObra.Visible          := MostrarObra;
+    rllCodigoArt.Visible        := MostrarObra;
+    rllCodART.Visible           := MostrarObra;
 
     with Servico.Valores  do
     begin
@@ -411,16 +440,17 @@ begin
       If Servico.xItemListaServico <> '' Then
       Begin
         RLLabel16.Visible := True;
-        rlmCodServico.Lines.Append('Atividade: ' + FAtividade);
+        if fpDANFSe.Atividade <> '' then
+          rlmCodServico.Lines.Append('Atividade: ' + fpDANFSe.Atividade);
         rlmCodServico.Lines.Append( Servico.ItemListaServico + ' - '+ Servico.xItemListaServico);
       End
       Else
       Begin
-        If FAtividade <> '' Then
+        If fpDANFSe.Atividade <> '' Then
         Begin
           RLLabel16.Visible := True;
           RLLabel16.Caption := 'Atividade:';
-          rlmCodServico.Lines.Append(FAtividade);
+          rlmCodServico.Lines.Append(fpDANFSe.Atividade);
         End
       End;
       rllValorPIS.Caption             := FormatFloat('#,##0.00', ValorPis );
@@ -447,6 +477,7 @@ begin
       rllISSReter.Caption             := SituacaoTributariaDescricao( IssRetido );
       rllValorISS.Caption             := FormatFloat('#,##0.00',ValorIss);
 
+
     end;
   end;
 
@@ -458,45 +489,27 @@ begin
   inherited;
 
   rlmDescricao.Lines.Clear;
-  rlmDescricao.Lines.Add( StringReplace( FNFSe.Servico.Discriminacao,
+  rlmDescricao.Lines.Add( StringReplace( fpNFSe.Servico.Discriminacao,
                           FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
 end;
 
 procedure TfrlDANFSeRLRetrato.rlbPrestadorBeforePrint(Sender: TObject;
   var PrintIt: Boolean);
-var
-  vStringStream: TStringStream;
 begin
   inherited;
-  if (FPrestLogo <> '') then
-  begin
-    if FilesExists(FPrestLogo) then
-       rliPrestLogo.Picture.LoadFromFile(FPrestLogo)
-    else
-    begin
-      vStringStream := TStringStream.Create(FPrestLogo);
-      try
-        try
-          rliPrestLogo.Picture.Bitmap.LoadFromStream(vStringStream);
-        except
-        end;
-      finally
-        vStringStream.Free;
-      end;
-    end;
-  end;
+  TDFeReportFortes.CarregarLogo(rliPrestLogo, fpDANFSe.PrestLogo);
 
-  With FNFSe do
+  With fpNFSe do
   begin
     with PrestadorServico do
     begin
       with IdentificacaoPrestador do
       begin
         rllPrestCNPJ.Caption          := FormatarCNPJ( Cnpj );
-        rllPrestInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal  , FInscMunicipal );
-        rllPrestNome.Caption          := IfThen( RazaoSocial <> ''        , RazaoSocial         , FRazaoSocial);
+        rllPrestInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal  , fpDANFSe.InscMunicipal );
+        rllPrestNome.Caption          := IfThen( RazaoSocial <> ''        , RazaoSocial         , fpDANFSe.RazaoSocial);
         with Tomador.IdentificacaoTomador do
-          rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> ''  , InscricaoEstadual   , FT_InscEstadual );
+          rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> ''  , InscricaoEstadual   , fpDANFSe.T_InscEstadual );
       end;
 
       With Endereco do
@@ -506,20 +519,20 @@ begin
                                                                   Trim( Bairro )+
                                                                   ' - CEP: '+
                                                                   FormatarCEP( CEP ) ,
-                                                                                                  Trim(FEndereco) ) ;
-        rllPrestComplemento.Caption   := IfThen( Complemento <> '', Complemento , FComplemento);
-        rllPrestMunicipio.Caption     := IfThen( xMunicipio <> '' , CodigoMunicipio + ' - ' + xMunicipio , FMunicipio);
-        rllPrestUF.Caption            := IfThen( UF <> ''         , UF  , FUF);
+                                                                                                  Trim(fpDANFSe.Endereco) ) ;
+        rllPrestComplemento.Caption   := IfThen( Complemento <> '', Complemento , fpDANFSe.Complemento);
+        rllPrestMunicipio.Caption     := IfThen( xMunicipio <> '' , CodigoMunicipio + ' - ' + xMunicipio , fpDANFSe.Municipio);
+        rllPrestUF.Caption            := IfThen( UF <> ''         , UF  , fpDANFSe.UF);
       end;
       With Contato do
       begin
-        rllPrestTelefone.Caption      := IfThen( Telefone <> '' , FormatarFone( Telefone) , FormatarFone(FFone) );
-        rllPrestEmail.Caption         := IfThen( Email <> '' , Email , FEMail_Prestador);
+        rllPrestTelefone.Caption      := IfThen( Telefone <> '' , FormatarFone( Telefone) , FormatarFone(fpDANFSe.Fone) );
+        rllPrestEmail.Caption         := IfThen( Email <> '' , Email , fpDANFSe.EMail_Prestador);
       end;
 
-      rllPrestNomeEnt.Caption         := FRazaoSocial;
+      rllPrestNomeEnt.Caption         := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.RazaoSocial);
       rllNumNF0Ent.Caption            := FormatFloat('00000000000', StrToFloatDef(Numero, 0));
-      rllTomadorNomeEnt.Caption       := 'Emissão:' + FormatDateTime('dd/mm/yy',DataEmissao) +
+      rllTomadorNomeEnt.Caption       := ACBrStr('Emissão:') + FormatDateTime('dd/mm/yy',DataEmissao) +
                                          '-Tomador:'+Tomador.RazaoSocial+
                                          '-Total:' + FormatFloat('##,##0.00', Servico.Valores.ValorLiquidoNfse) ;
     end;
@@ -530,7 +543,7 @@ procedure TfrlDANFSeRLRetrato.rlbTomadorBeforePrint(Sender: TObject;
   var PrintIt: Boolean);
 begin
   inherited;
-  With FNFSe do
+  With fpNFSe do
   begin
     With Tomador do
     begin
@@ -543,7 +556,7 @@ begin
         else
           rllTomaCNPJ.Caption := FormatarCNPJ( CpfCnpj );
 
-         rllTomaInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal , FT_InscMunicipal);
+         rllTomaInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal , fpDANFSe.T_InscMunicipal);
 
       end;
       With Endereco do
@@ -557,10 +570,10 @@ begin
                                       FormatarCEP(CEP);
         End
         Else
-         rllTomaEndereco.Caption := Trim(FT_Endereco) + ' - CEP: ' +
+         rllTomaEndereco.Caption := Trim(fpDANFSe.T_Endereco) + ' - CEP: ' +
                                     FormatarCEP(CEP);
 
-        rllTomaComplemento.Caption := IfThen( Complemento <> '' , Complemento , FT_Complemento);
+        rllTomaComplemento.Caption := IfThen( Complemento <> '' , Complemento , fpDANFSe.T_Complemento);
 
         rllTomaMunicipio.Caption := CodigoMunicipio + ' - ' + xMunicipio;
         rllTomaUF.Caption        := UF;
@@ -568,8 +581,8 @@ begin
 
       with Contato do
       begin
-        rllTomaTelefone.Caption := IfThen( Telefone <> '' , FormatarFone(Telefone) , FormatarFone(FT_Fone));
-        rllTomaEmail.Caption    := IfThen( Email    <> '' , Email , FT_Email);
+        rllTomaTelefone.Caption := IfThen( Telefone <> '' , FormatarFone(Telefone) , FormatarFone(fpDANFSe.T_Fone));
+        rllTomaEmail.Caption    := IfThen( Email    <> '' , Email , fpDANFSe.T_Email);
       end;
 
      rllMsgTeste.Visible := False;
@@ -591,18 +604,23 @@ procedure TfrlDANFSeRLRetrato.RLNFSeBeforePrint(Sender: TObject;
   var PrintIt: Boolean);
 begin
   inherited;
-  Itens;
 
-  RLNFSe.DataSource := dsItens;
-  RLNFSe.Title := 'NFS-e: ' + FNFSe.Numero;
-
-  RLNFSe.Margins.TopMargin    := FMargemSuperior * 10;
-  RLNFSe.Margins.BottomMargin := FMargemInferior * 10;
-  RLNFSe.Margins.LeftMargin   := FMargemEsquerda * 10;
-  RLNFSe.Margins.RightMargin  := FMargemDireita * 10;
-
+  RLNFSe.Title := 'NFS-e: ' + fpNFSe.Numero;
+  TDFeReportFortes.AjustarMargem(RLNFSe, fpDANFSe);
+  rlbItens.Visible := Not(fpDANFSe.DetalharServico);
+  rlbHeaderItensDetalhado.Visible := fpDANFSe.DetalharServico;
+  subItens.Visible := fpDANFSe.DetalharServico;
 end;
 
+procedure TfrlDANFSeRLRetrato.subItensDataRecord(Sender: TObject;
+   RecNo: Integer; CopyNo: Integer; var Eof: Boolean;
+   var RecordAction: TRLRecordAction);
+begin
+  inherited;
+  FNumItem := RecNo - 1 ;
+  Eof := (RecNo > fpNFSe.Servico.ItemServico.Count) ;
+  RecordAction := raUseIt ;
+end;
 
 Function TfrlDANFSeRLRetrato.ManterAliquota( dAliquota : Double ) : String;
 begin

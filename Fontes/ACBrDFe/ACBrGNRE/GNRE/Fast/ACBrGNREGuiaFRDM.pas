@@ -54,22 +54,28 @@ uses
   FmtBcd;
 
 type
-  TdmACBrGNREFR = class(TDataModule)
+  TdmACBrGNREFR = class
     frxPDFExport: TfrxPDFExport;
     cdsGuia: TClientDataSet;
     frxGuia: TfrxDBDataset;
     frxBarCodeObject: TfrxBarCodeObject;
     frxReport: TfrxReport;
-    constructor Create(AOwner: TComponent); override;
-    procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }
-    FGNREGuiaClassOwner: TACBrGNREGuiaClass;
-    FGNRE: TGNRERetorno;
+    FGNREGuiaClassOwner     : TACBrGNREGuiaClass;
+    FGNRE                   : TGNRERetorno;
+    FIncorporarFontesPdf    : Boolean;
+    FIncorporarBackgroundPdf: Boolean;
   public
     { Public declarations }
+    constructor Create(AOwner: TComponent);
+    destructor Destroy; override;
     property GNRE: TGNRERetorno read FGNRE write FGNRE;
     property GNREGuiaClassOwner: TACBrGNREGuiaClass read FGNREGuiaClassOwner;
+
+    property IncorporarBackgroundPdf: Boolean read FIncorporarBackgroundPdf write FIncorporarBackgroundPdf;
+    property IncorporarFontesPdf: Boolean read FIncorporarFontesPdf write FIncorporarFontesPdf;
+
     procedure CarregaDados;
   end;
 
@@ -80,125 +86,11 @@ implementation
 
 uses ACBrGNRE2, ACBrDFeUtil, StrUtils, Math, pgnreRetConsResLoteGNRE;
 
-{$R *.dfm}
-
-type
-  ArrOfStr = array of string;
-  TSplitResult = array of string;
-
   { TdmACBrNFeFR }
 
-function SubstrCount(const ASubString, AString: string): Integer;
-var
-  i: integer;
-begin
-  Result := -1;
-  i := 0;
-  repeat
-    Inc(Result);
-    i := PosEx(ASubString, AString, i + 1);
-  until i = 0;
-end;
-
-function Split(const ADelimiter, AString: string): TSplitResult;
-var
-  Step: ^string;
-  Chr: PChar;
-  iPos, iLast, iDelLen, iLen, x: integer;
-label
-  EndLoop;
-begin
-  SetLength(Result, SubstrCount(ADelimiter, AString) + 1);
-  if High(Result) = 0 then
-    Result[0] := AString
-  else
-  begin
-    iDelLen := PCardinal(Cardinal(ADelimiter) - SizeOf(Cardinal))^;
-    iLen := PCardinal(Cardinal(AString) - SizeOf(Cardinal))^;
-    Step := @Result[0];
-    iLast := 0;
-    iPos := 0;
-    repeat
-      if iPos + iDelLen > iLen then
-      begin
-        if iLast <> iPos then
-          iPos := iLen;
-      end else
-        for x := 1 to iDelLen do
-          if AString[iPos + x] <> ADelimiter[x] then
-            goto EndLoop;
-
-      if iPos - iLast > 0 then
-      begin
-        SetLength(Step^, iPos - iLast);
-        Chr := PChar(Step^);
-        for x := 1 to PCardinal(Cardinal(Step^) - SizeOf(Cardinal))^ do
-        begin
-          Chr^ := AString[iLast + x];
-          Inc(Chr);
-        end;
-      end else
-        Step^ := '';
-
-      Cardinal(Step) := Cardinal(Step) + SizeOf(Cardinal);
-      iLast := iPos + iDelLen;
-
-      EndLoop:
-      Inc(iPos);
-    until iLast >= iLen;
-  end;
-end;
-
-function Explode(sPart, sInput: string): ArrOfStr;
-begin
-  while Pos(sPart, sInput) <> 0 do
-  begin
-    SetLength(Result, Length(Result) + 1);
-    Result[Length(Result) - 1] := Copy(sInput, 0, Pos(sPart, sInput) - 1);
-    Delete(sInput, 1, Pos(sPart, sInput));
-  end;
-
-  SetLength(Result, Length(Result) + 1);
-  Result[Length(Result) - 1] := sInput;
-end;
-
-function CollateBr(Str: string): string;
-var
-  Resultado, Temp: string;
-  vChar: Char;
-  Tamanho, i: integer;
-begin
-  Result := '';
-  Tamanho := Length(str);
-  i := 1;
-  while i <= Tamanho do
-  begin
-    Temp := Copy(str, i, 1);
-    vChar := Temp[1];
-    case vChar of
-      'á', 'â', 'ã', 'à', 'ä', 'å', 'Á', 'Â', 'Ã', 'À', 'Ä', 'Å': Resultado := 'A';
-      'é', 'ê', 'è', 'ë', 'É', 'Ê', 'È', 'Ë': Resultado := 'E';
-      'í', 'î', 'ì', 'ï', 'Í', 'Î', 'Ì', 'Ï': Resultado := 'I';
-      'ó', 'ô', 'õ', 'ò', 'ö', 'Ó', 'Ô', 'Õ', 'Ò', 'Ö': Resultado := 'O';
-      'ú', 'û', 'ù', 'ü', 'Ú', 'Û', 'Ù', 'Ü': Resultado := 'U';
-      'ç', 'Ç': Resultado := 'C';
-      'ñ', 'Ñ': Resultado := 'N';
-      'ý', 'ÿ', 'Ý', 'Y': Resultado := 'Y';
-      else
-        if vChar > #127 then Resultado := #32
-{$IFDEF DELPHI12_UP}
-        else if CharInset(vChar, ['a'..'z', 'A'..'Z', '0'..'9', '-', ' ']) then
-{$ELSE}
-        else if vChar in ['a'..'z', 'A'..'Z', '0'..'9', '-', ' '] then
-{$ENDIF}
-          Resultado := UpperCase(vCHAR);
-    end;
-    Result := Result + Resultado;
-    i := i + 1;
-  end;
-end;
-
 procedure TdmACBrGNREFR.CarregaDados;
+var
+  Referencia : String;
 
   function FormatarData(Str: string): string;
   begin
@@ -243,6 +135,7 @@ begin
     FieldDefs.Add('DataVencimento', ftDate);
     FieldDefs.Add('DataLimitePagamento', ftDate);
     FieldDefs.Add('PeriodoReferencia', ftString, 1);
+    FieldDefs.Add('PerMesAnoRef', ftString, 25);
     FieldDefs.Add('MesAnoReferencia', ftString, 6);
     FieldDefs.Add('Parcela', ftString, 2);
     FieldDefs.Add('ValorPrincipal', ftFloat);
@@ -260,10 +153,10 @@ begin
 
     with GNRE do
     begin
-      FieldByName('Ambiente').AsInteger := InfoCabec.Ambiente;
-      FieldByName('SequencialGuia').AsInteger := SequencialGuia;
-      FieldByName('UFFavorecida').AsString := UFFavorecida;
-      FieldByName('CodReceita').AsInteger := CodReceita;
+      FieldByName('Ambiente').AsInteger        := InfoCabec.Ambiente;
+      FieldByName('SequencialGuia').AsInteger  := SequencialGuia;
+      FieldByName('UFFavorecida').AsString     := UFFavorecida;
+      FieldByName('CodReceita').AsInteger      := CodReceita;
       FieldByName('TipoDocEmitente').AsInteger := TipoDocEmitente;
 
       case TipoDocEmitente of
@@ -272,12 +165,12 @@ begin
         3: FieldByName('DocEmitente').AsString := RemoverZeros(DocEmitente);
       end;
 
-      FieldByName('RazaoSocialEmitente').AsString := RazaoSocialEmitente;
-      FieldByName('EnderecoEmitente').AsString := EnderecoEmitente;
-      FieldByName('MunicipioEmitente').AsString := MunicipioEmitente;
-      FieldByName('UFEmitente').AsString := UFEmitente;
-      FieldByName('CEPEmitente').AsString := CEPEmitente;
-      FieldByName('TelefoneEmitente').AsString := RemoverZeros(TelefoneEmitente);
+      FieldByName('RazaoSocialEmitente').AsString  := RazaoSocialEmitente;
+      FieldByName('EnderecoEmitente').AsString     := EnderecoEmitente;
+      FieldByName('MunicipioEmitente').AsString    := MunicipioEmitente;
+      FieldByName('UFEmitente').AsString           := UFEmitente;
+      FieldByName('CEPEmitente').AsString          := CEPEmitente;
+      FieldByName('TelefoneEmitente').AsString     := RemoverZeros(TelefoneEmitente);
       FieldByName('TipoDocDestinatario').AsInteger := TipoDocDestinatario;
 
       case TipoDocDestinatario of
@@ -287,30 +180,49 @@ begin
       end;
 
       FieldByName('MunicipioDestinatario').AsString := MunicipioDestinatario;
-      FieldByName('Produto').AsString := Produto;
-      FieldByName('NumDocOrigem').AsString := RemoverZeros(NumDocOrigem);
-      FieldByName('Convenio').AsString := Convenio;
-      FieldByName('InfoComplementares').AsString := InfoComplementares;
-      FieldByName('DataVencimento').AsDateTime := StrToDate(FormatarData(DataVencimento));
+      FieldByName('Produto').AsString               := Produto;
+      FieldByName('NumDocOrigem').AsString          := RemoverZeros(NumDocOrigem);
+      FieldByName('Convenio').AsString              := Convenio;
+      FieldByName('InfoComplementares').AsString    := InfoComplementares;
+      FieldByName('DataVencimento').AsDateTime      := StrToDate(FormatarData(DataVencimento));
 
       if DataLimitePagamento = '00000000' then
         FieldByName('DataLimitePagamento').AsDateTime := FieldByName('DataVencimento').AsDateTime
       else
         FieldByName('DataLimitePagamento').AsDateTime := StrToDate(FormatarData(DataLimitePagamento));
 
-      FieldByName('PeriodoReferencia').AsString := PeriodoReferencia;
-      FieldByName('MesAnoReferencia').AsString := MesAnoReferencia;
-      FieldByName('Parcela').AsString := IntToStr(Parcela);
-      FieldByName('ValorPrincipal').AsCurrency := ValorPrincipal;
+      FieldByName('PeriodoReferencia').AsString      := PeriodoReferencia;
+      FieldByName('MesAnoReferencia').AsString       := MesAnoReferencia;
+      FieldByName('Parcela').AsString                := IntToStr(Parcela);
+      FieldByName('ValorPrincipal').AsCurrency       := ValorPrincipal;
       FieldByName('AtualizacaoMonetaria').AsCurrency := AtualizacaoMonetaria;
-      FieldByName('Juros').AsCurrency := Juros;
-      FieldByName('Multa').AsCurrency := Multa;
-      FieldByName('RepresentacaoNumerica').AsString := RepresentacaoNumerica;
-      FieldByName('CodigoBarras').AsString := CodigoBarras;
-      FieldByName('QtdeVias').AsInteger := QtdeVias;
-      FieldByName('NumeroControle').AsString := NumeroControle;
-      FieldByName('IdentificadorGuia').AsString := IdentificadorGuia;
-      FieldByName('Reservado').AsString := Reservado;
+      FieldByName('Juros').AsCurrency                := Juros;
+      FieldByName('Multa').AsCurrency                := Multa;
+      FieldByName('RepresentacaoNumerica').AsString  := RepresentacaoNumerica;
+      FieldByName('CodigoBarras').AsString           := CodigoBarras;
+      FieldByName('QtdeVias').AsInteger              := QtdeVias;
+      FieldByName('NumeroControle').AsString         := NumeroControle;
+      FieldByName('IdentificadorGuia').AsString      := IdentificadorGuia;
+      FieldByName('Reservado').AsString              := Reservado;
+
+      if Trim(FieldByName('PeriodoReferencia').AsString) <> '' then
+      begin
+        case FieldByName('PeriodoReferencia').AsInteger of
+          0: Referencia := 'Mensal';
+          1: Referencia := '1a Quinzena';
+          2: Referencia := '2a Quinzena';
+          3: Referencia := '1o Decêndio';
+          4: Referencia := '2o Decêndio';
+          5: Referencia := '3o Decêndio';
+        end;
+
+        Referencia := Referencia + '-';
+      end;
+
+      FieldByName('PerMesAnoRef').AsString := Referencia
+                                            + LeftStr(FieldByName('MesAnoReferencia').AsString, 2)
+                                            + '/'
+                                            + RightStr(FieldByName('MesAnoReferencia').AsString, 4);
     end;
     Post;
   end;
@@ -318,15 +230,79 @@ end;
 
 constructor TdmACBrGNREFR.Create(AOwner: TComponent);
 begin
-  inherited;
   FGNREGuiaClassOwner := TACBrGNREGuiaClass(AOwner);
+
+  frxReport := TfrxReport.Create(nil);
+
+  with frxReport do
+  begin
+    // Version = '5.5.8'
+    DotMatrixReport           := False;
+    IniFile                   := '\Software\Fast Reports';
+    PreviewOptions.AllowEdit  := False;
+    PreviewOptions.Buttons    := [pbPrint, pbLoad, pbSave, pbExport, pbZoom, pbFind, pbOutline, pbPageSetup, pbTools, pbNavigator, pbExportQuick];
+    PreviewOptions.Zoom       := 1.000000000000000000;
+    PrintOptions.Printer      := 'Default';
+    PrintOptions.PrintOnSheet := 0;
+    // ReportOptions.CreateDate = 40401.475989294000000000
+    // ReportOptions.LastChange = 41075.662367303240000000
+    ScriptLanguage := 'PascalScript';
+    StoreInDFM     := False;
+  end;
+
+  frxPDFExport := TfrxPDFExport.Create(nil);
+  with frxPDFExport do
+  begin
+    Background      := IncorporarBackgroundPdf;
+    EmbeddedFonts   := IncorporarFontesPdf;
+    Subject         := 'Exportando DANFE para PDF';
+    UseFileCache    := True;
+    ShowProgress    := True;
+    OverwritePrompt := False;
+    DataOnly        := False;
+    PrintOptimized  := True;
+    Outline         := False;
+    HTMLTags        := True;
+    Quality         := 95;
+    Transparency    := False;
+    Author          := 'FastReport';
+    ProtectionFlags := [ePrint, eModify, eCopy, eAnnot];
+    HideToolbar     := False;
+    HideMenubar     := False;
+    HideWindowUI    := False;
+    FitWindow       := False;
+    CenterWindow    := False;
+    PrintScaling    := False;
+    PdfA            := False;
+  end;
+
+  cdsGuia := TClientDataSet.Create(nil);
+  frxGuia := TfrxDBDataset.Create(nil);
+  with frxGuia do
+  begin
+    UserName        := 'Guia';
+    CloseDataSource := False;
+    OpenDataSource  := False;
+    DataSet         := cdsGuia;
+    BCDToCurrency   := False;
+  end;
+  frxBarCodeObject := TfrxBarCodeObject.Create(nil);
+
+  frxReport.EnabledDataSets.Clear;
+  frxReport.DataSets.Clear;
+
+  frxReport.EnabledDataSets.Add(frxGuia);
+  frxReport.DataSets.Add(frxGuia);
 end;
 
-procedure TdmACBrGNREFR.DataModuleCreate(Sender: TObject);
+destructor TdmACBrGNREFR.Destroy;
 begin
-	frxReport.PreviewOptions.Buttons := [pbPrint, pbLoad, pbSave, pbExport, pbZoom, pbFind,
-    pbOutline, pbPageSetup, pbTools, pbNavigator, pbExportQuick ];
+  frxPDFExport.Free;
+  cdsGuia.Free;
+  frxGuia.Free;
+  frxBarCodeObject.Free;
+  frxReport.Free;
+  inherited;
 end;
 
 end.
-

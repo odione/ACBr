@@ -30,7 +30,7 @@ uses
   {$IfDef FPC}
    zstream
   {$Else}
-   ZLib, ACBrZLibEx
+   ZLib
   {$EndIf};
 
 const
@@ -243,7 +243,7 @@ begin
     inStream.Seek(-8, soFromEnd);
     inStream.ReadBuffer(crcGZin, 4); // CRC32 (CRC-32)
     inStream.ReadBuffer(sizeGZin, 4); // ISIZE (Input SIZE)
-    inStream.Size := inStream.Size-8; // cut the 4 byte crc32 and 4 byte input size
+    //inStream.Size := inStream.Size-8; // cut the 4 byte crc32 and 4 byte input size
   end
   else if (hdr and $00009C78) = $00009C78 then // zlib header
   begin
@@ -252,7 +252,7 @@ begin
     inStream.Seek(-4, soFromEnd); // first byte is start of deflate header
     inStream.ReadBuffer(d, 4);
     adler32in := SwapEndian(d);
-    inStream.Size := inStream.Size-4; // cut the 4 byte adler32 code
+    //inStream.Size := inStream.Size-4; // cut the 4 byte adler32 code
   end
   else
   begin
@@ -300,9 +300,9 @@ begin
      zlevel := zcDefault;
    end;
 
-//   if SkipHeader then
-//     cs := Tcompressionstream.create(outStream, zlevel, RAW_WBITS)
-//   else
+   if SkipHeader then
+     cs := Tcompressionstream.create(outStream, zlevel, RAW_WBITS)
+   else
      cs := Tcompressionstream.create(level, outStream);
   {$EndIf}
   try
@@ -324,9 +324,9 @@ begin
   {$IfDef FPC}
    ds := Tdecompressionstream.Create(inStream, SkipHeader);
   {$Else}
-//   if SkipHeader then
-//     ds := Tdecompressionstream.Create(inStream, RAW_WBITS)
-//   else
+   if SkipHeader then
+     ds := Tdecompressionstream.Create(inStream, RAW_WBITS)
+   else
      ds := Tdecompressionstream.Create(inStream);
   {$EndIf}
   GetMem(Buffer, MAXWORD);

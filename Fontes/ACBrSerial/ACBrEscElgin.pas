@@ -57,7 +57,7 @@ type
   public
     constructor Create(AOwner: TACBrPosPrinter);
 
-    function ComandoQrCode(ACodigo: AnsiString): AnsiString; override;
+    function ComandoQrCode(const ACodigo: AnsiString): AnsiString; override;
     procedure LerStatus(var AStatus: TACBrPosPrinterStatus); override;
   end;
 
@@ -100,11 +100,11 @@ begin
     if TestBit(B, 4) then
       AStatus := AStatus + [stPoucoPapel];
   except
-    AStatus := AStatus + [stErro];
+    AStatus := AStatus + [stErroLeitura];
   end;
 end;
 
-function TACBrEscElgin.ComandoQrCode(ACodigo: AnsiString): AnsiString;
+function TACBrEscElgin.ComandoQrCode(const ACodigo: AnsiString): AnsiString;
 var
   Quality: AnsiChar;
 begin

@@ -120,6 +120,9 @@ TACBrCHQModelos = class(TObjectList)
   declara a Classe. NAO DEVE SER INSTANCIADA. Usada apenas como base para
   as demais Classes de Imp.Cheques como por exemplo a classe TACBrCHQChronos }
 type
+
+{ TACBrCHQClass }
+
 TACBrCHQClass = class
   private
     procedure SetAtivo(const Value: Boolean);
@@ -133,6 +136,8 @@ TACBrCHQClass = class
 
     fpAtivo   : Boolean ;
     fpModeloStr: String;
+
+    fpPaginaDeCodigo: Word;
 
     { comando enviado para a impressora }
     fpComandoEnviado  : String ;
@@ -155,6 +160,7 @@ TACBrCHQClass = class
     procedure SetfpFavorecido(const Value: String);
     procedure SetBomPara(const Value: TDateTime); virtual;
 
+    procedure EnviarStr(const AStr: string);
   public
     constructor Create(AOwner: TComponent);
     Destructor Destroy  ; override ;
@@ -165,6 +171,9 @@ TACBrCHQClass = class
 
     Property ECF : TACBrECF read fpECF write fpECF ;
     Property ModeloStr: String  read fpModeloStr ;
+
+    // Pagina de Código
+    property PaginaDeCodigo: Word   read fpPaginaDeCodigo write fpPaginaDeCodigo;
 
     property Banco      : String    read fpBanco      write SetfpBanco ;
     property Valor      : Double    read fpValor      write fpValor ;
@@ -180,12 +189,14 @@ TACBrCHQClass = class
 
     property ChequePronto : Boolean read GetChequePronto ;
 
-    procedure ImprimirLinha( AString : AnsiString ) ; Virtual ;
+    procedure ImprimirLinha( const AString : AnsiString ) ; Virtual ;
     procedure ImprimirVerso( AStringList : TStrings ) ; Virtual ;
 
     procedure ImprimirCheque ; Virtual ;
     Procedure TravarCheque ; Virtual ;
     Procedure DestravarCheque ; Virtual ;
+
+    function CodificarPaginaDeCodigo(const ATexto: String): AnsiString;
 end ;
 
 
@@ -220,6 +231,9 @@ begin
   fpData       := now;
   fpObservacao := '' ;
   fpCMC7       := '' ;
+
+  // Pagina de Codigo
+  fpPaginaDeCodigo := 0;   // 0 = Sem acentos
 end;
 
 destructor TACBrCHQClass.Destroy;
@@ -259,10 +273,9 @@ begin
   fpAtivo := false ;
 end;
 
-procedure TACBrCHQClass.ImprimirLinha( AString : AnsiString );
+procedure TACBrCHQClass.ImprimirLinha( const AString : AnsiString );
 begin
-  fpDevice.EnviaString( AString + #13 + #10 );  { Adciona CR + LF }
-  Sleep(100);
+  EnviarStr( CodificarPaginaDeCodigo(AString) + #13 + #10 );  { Adciona CR + LF }
 end;
 
 procedure TACBrCHQClass.ImprimirVerso(AStringList: TStrings);
@@ -271,7 +284,7 @@ begin
   TravarCheque ;
 
   For A := 0 to AStringList.Count - 1 do
-     ImprimirLinha( StringOfChar(' ',10) + TiraAcentos( AStringList[A] ) );
+     ImprimirLinha( StringOfChar(' ',10) + AStringList[A] );
 
   DestravarCheque ;
 end;
@@ -325,17 +338,17 @@ end;
 
 procedure TACBrCHQClass.SetfpCidade(const Value: String);
 begin
-  fpCidade := TiraAcentos( Value );
+  fpCidade := CodificarPaginaDeCodigo( Trim(Value) );
 end;
 
 procedure TACBrCHQClass.SetfpFavorecido(const Value: String);
 begin
-  fpFavorecido := TiraAcentos( Value );
+  fpFavorecido := CodificarPaginaDeCodigo( Trim(Value) );
 end;
 
 procedure TACBrCHQClass.SetfpObservacao(const Value: String);
 begin
-  fpObservacao := TiraAcentos( Value );
+  fpObservacao := CodificarPaginaDeCodigo( Value );
 end;
 
 procedure TACBrCHQClass.SetBomPara(const Value: TDateTime);
@@ -343,7 +356,23 @@ begin
   fpBomPara := Value;
 end;
 
+function TACBrCHQClass.CodificarPaginaDeCodigo(const ATexto: String): AnsiString;
+begin
+  if fpPaginaDeCodigo > 0 then
+     Result := TranslateString( ACBrStrToAnsi( ATexto ), fpPaginaDeCodigo )
+  else
+     Result := TiraAcentos( ATexto );
+end ;
 
+procedure TACBrCHQClass.EnviarStr(const AStr: string);
+begin
+  try
+    fpDevice.EnviaString(AStr);
+  except
+  end;
+
+  Sleep(100);
+end;
 
 { -------------------------------- TACBrCHQModelos --------------------------- }
 constructor TACBrCHQModelos.Create(AOwnsObjects : Boolean);

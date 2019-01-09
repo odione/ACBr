@@ -38,7 +38,7 @@ unit ACBrECFVirtualPrinter ;
 interface
 uses
   Classes, SysUtils,
-  ACBrDevice, ACBrECFVirtualBuffer, ACBrECFClass, ACBrUtil, ACBrConsts,
+  ACBrDevice, ACBrECFVirtualBuffer, ACBrECFClass, ACBrUtil,
   ACBrPosPrinter ;
 
 const
@@ -58,6 +58,19 @@ TACBrECFVirtualPrinter = class( TACBrECFVirtualBuffer )
     procedure AtivarPosPrinter;
   published
     property PosPrinter : TACBrPosPrinter read FPosPrinter write SetPosPrinter;
+
+    property Colunas ;
+    property NomeArqINI ;
+    property NumSerie ;
+    property NumECF ;
+    property NumCRO ;
+    property CNPJ ;
+    property IE ;
+    property IM ;
+
+    property Cabecalho ;
+    property CabecalhoItem ;
+    property MascaraItem ;
   end ;
 
 { TACBrECFVirtualPrinterClass }
@@ -75,7 +88,7 @@ TACBrECFVirtualPrinterClass = class( TACBrECFVirtualBufferClass )
 
     function ColunasExpandido(): Integer; override;
   protected
-    procedure Imprimir( AString : AnsiString ) ; override ;
+    procedure Imprimir(const AString : AnsiString ) ; override ;
 
     function GetSubModeloECF: String ; override ;
     function GetNumVersao: String; override ;
@@ -199,7 +212,7 @@ begin
   inherited ;
 end;
 
-procedure TACBrECFVirtualPrinterClass.Imprimir(AString: AnsiString);
+procedure TACBrECFVirtualPrinterClass.Imprimir(const AString: AnsiString);
 Var
   OldAguardandoResposta : Boolean ;
 begin

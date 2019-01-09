@@ -58,7 +58,9 @@ type
   EACBrNFSeException = class(EACBrDFeException);
 
   { TACBrNFSe }
-
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
   TACBrNFSe = class(TACBrDFe)
   private
     FDANFSE: TACBrNFSeDANFSEClass;
@@ -75,19 +77,23 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
 
     function GetAbout: String; override;
+    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure EnviarEmail(sPara, sAssunto: String;
       sMensagem: TStrings = nil; sCC: TStrings = nil; Anexos: TStrings = nil;
-      StreamNFSe: TStream = nil; NomeArq: String = ''); override;
+      StreamNFSe: TStream = nil; NomeArq: String = ''; sReplyTo: TStrings = nil); override;
 
-    function GerarLote(ALote: Integer): Boolean; overload;
-    function GerarLote(ALote: String): Boolean; overload;
+    function GerarLote(ALote: Integer; AqMaxRps: Integer = 50): Boolean; overload;
+    function GerarLote(ALote: String; AqMaxRps: Integer = 50): Boolean; overload;
 
     function Enviar(ALote: integer; Imprimir: Boolean = True): Boolean; overload;
     function Enviar(ALote: String; Imprimir: Boolean = True): Boolean; overload;
+
+    function TesteEnviar(ALote: Integer): Boolean; overload;
+    function TesteEnviar(ALote: String): Boolean; overload;
 
     function EnviarSincrono(ALote: Integer; Imprimir: Boolean = True): Boolean; overload;
     function EnviarSincrono(ALote: String; Imprimir: Boolean = True): Boolean; overload;
@@ -97,7 +103,8 @@ type
     function ConsultarSituacao(AProtocolo: String;
                                const ANumLote: String = ''): Boolean;
     function ConsultarLoteRps(ANumLote, AProtocolo: string): Boolean;
-    function ConsultarNFSeporRps(ANumero, ASerie, ATipo: String): Boolean;
+    function ConsultarNFSeporRps(ANumero, ASerie, ATipo: String;
+                                 const ANumLote: String = ''): Boolean;
     function ConsultarNFSe(ADataInicial, ADataFinal: TDateTime;
       ANumeroNFSe: String = ''; APagina: Integer = 1;
       ACNPJTomador: String = ''; AIMTomador: String = '';
@@ -106,12 +113,13 @@ type
 
     function CancelarNFSe(ACodigoCancelamento: String;
                           ANumeroNFSe: String = '';
-                          AMotivoCancelamento: String = ''): Boolean;
+                          AMotivoCancelamento: String = '';
+                          const ANumLote: String = ''): Boolean;
 
     function SubstituirNFSe(ACodigoCancelamento, ANumeroNFSe: String;
                             AMotivoCancelamento: String = ''): Boolean;
 
-    function LinkNFSe(ANumeroNFSe: Integer; ACodVerificacao: String): String;
+    function LinkNFSe(ANumeroNFSe: Integer; ACodVerificacao: String; AChaveAcesso: String = ''): String;
 
     function GetNomeModeloDFe: String; override;
     function GetNameSpaceURI: String; override;
@@ -119,7 +127,6 @@ type
     function cStatConfirmada(AValue: integer): Boolean;
     function cStatProcessado(AValue: integer): Boolean;
 
-    function NomeServicoToNomeSchema(const NomeServico: String): String; override;
     procedure LerServicoDeParams(LayOutServico: TLayOutNFSe; var Versao: Double;
       var URL: String); reintroduce; overload;
     function LerVersaoDeParams(LayOutServico: TLayOutNFSe): String; reintroduce; overload;
@@ -175,12 +182,14 @@ begin
 end;
 
 procedure TACBrNFSe.EnviarEmail(sPara, sAssunto: String; sMensagem: TStrings;
-  sCC: TStrings; Anexos: TStrings; StreamNFSe: TStream; NomeArq: String);
+  sCC: TStrings; Anexos: TStrings; StreamNFSe: TStream; NomeArq: String;
+  sReplyTo: TStrings);
 begin
   SetStatus( stNFSeEmail );
 
   try
-    inherited EnviarEmail(sPara, sAssunto, sMensagem, sCC, Anexos, StreamNFSe, NomeArq);
+    inherited EnviarEmail(sPara, sAssunto, sMensagem, sCC, Anexos, StreamNFSe, NomeArq,
+      sReplyTo);
   finally
     SetStatus( stNFSeIdle );
   end;
@@ -236,7 +245,7 @@ end;
 
 function TACBrNFSe.GetNameSpaceURI: String;
 begin
-  Result := ''; // ACBRNFSE_NAMESPACE; 
+  Result := ''; // ACBRNFSE_NAMESPACE;
 end;
 
 function TACBrNFSe.cStatConfirmada(AValue: integer): Boolean;
@@ -365,6 +374,8 @@ begin
       LayNfseGerar:                URL := Configuracoes.Geral.ConfigURL.HomGerarNFSe;
       LayNfseRecepcaoLoteSincrono: URL := Configuracoes.Geral.ConfigURL.HomRecepcaoSincrono;
       LayNfseSubstituiNfse:        URL := Configuracoes.Geral.ConfigURL.HomSubstituiNFSe;
+      LayNfseAbrirSessao:          URL := Configuracoes.Geral.ConfigURL.HomAbrirSessao;
+      LayNfseFecharSessao:         URL := Configuracoes.Geral.ConfigURL.HomFecharSessao;
     end;
   end
   else begin
@@ -378,6 +389,8 @@ begin
       LayNfseGerar:                URL := Configuracoes.Geral.ConfigURL.ProGerarNFSe;
       LayNfseRecepcaoLoteSincrono: URL := Configuracoes.Geral.ConfigURL.ProRecepcaoSincrono;
       LayNfseSubstituiNfse:        URL := Configuracoes.Geral.ConfigURL.ProSubstituiNFSe;
+      LayNfseAbrirSessao:          URL := Configuracoes.Geral.ConfigURL.ProAbrirSessao;
+      LayNfseFecharSessao:         URL := Configuracoes.Geral.ConfigURL.ProFecharSessao;
     end;
   end;
 end;
@@ -392,23 +405,24 @@ begin
   end;
 end;
 
-function TACBrNFSe.GerarLote(ALote: Integer): Boolean;
+function TACBrNFSe.GerarLote(ALote: Integer; AqMaxRps: Integer): Boolean;
 begin
-  Result := GerarLote(IntToStr(ALote));
+  Result := GerarLote(IntToStr(ALote), AqMaxRps);
 end;
 
-function TACBrNFSe.GerarLote(ALote: String): Boolean;
+function TACBrNFSe.GerarLote(ALote: String; AqMaxRps: Integer): Boolean;
 begin
   if NotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum RPS adicionado ao Lote'));
 
-  if NotasFiscais.Count > 50 then
-    GerarException(ACBrStr('ERRO: Conjunto de RPS transmitidos (máximo de 50 RPS)' +
+  if NotasFiscais.Count > AqMaxRps then
+    GerarException(ACBrStr('ERRO: Conjunto de RPS transmitidos (máximo de ' +
+      IntToStr(AqMaxRps) + ' RPS)' +
       ' excedido. Quantidade atual: ' + IntToStr(NotasFiscais.Count)));
 
   NotasFiscais.Assinar(Configuracoes.Geral.ConfigAssinar.RPS);
 
-  Result := WebServices.GeraLote(ALote);
+  Result := WebServices.GeraLote(ALote, AqMaxRps);
 end;
 
 function TACBrNFSe.Enviar(ALote: integer; Imprimir: Boolean): Boolean;
@@ -482,7 +496,7 @@ begin
   if NotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum RPS adicionado ao componente'));
 
-  if Configuracoes.Geral.Provedor in [proBHISS, proWebISS] then
+  if Configuracoes.Geral.Provedor in [proBHISS, proWebISS, proWebISSv2] then
   begin
     if NotasFiscais.Count > 3 then
       GerarException(ACBrStr('ERRO: Conjunto de RPS transmitidos (máximo de 3 RPS)' +
@@ -519,12 +533,13 @@ begin
   Result := WebServices.ConsultaLoteRps(ANumLote, AProtocolo);
 end;
 
-function TACBrNFSe.ConsultarNFSeporRps(ANumero, ASerie, ATipo: String): Boolean;
+function TACBrNFSe.ConsultarNFSeporRps(ANumero, ASerie, ATipo: String;
+                                       const ANumLote: String = ''): Boolean;
 begin
   if NotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum RPS carregado ao componente'));
 
-  Result := WebServices.ConsultaNFSeporRps(ANumero, ASerie, ATipo);
+  Result := WebServices.ConsultaNFSeporRps(ANumero, ASerie, ATipo, ANumLote);
 end;
 
 function TACBrNFSe.ConsultarNFSe(ADataInicial, ADataFinal: TDateTime;
@@ -536,14 +551,28 @@ begin
             ASerie);
 end;
 
-function TACBrNFSe.CancelarNFSe(ACodigoCancelamento, ANumeroNFSe,
-  AMotivoCancelamento: String): Boolean;
+function TACBrNFSe.CancelarNFSe(ACodigoCancelamento: String;
+  ANumeroNFSe: String = ''; AMotivoCancelamento: String = '';
+  const ANumLote: String = ''): Boolean;
 begin
   if NotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhuma NFS-e carregada ao componente'));
 
-  Result := WebServices.CancelaNFSe(ACodigoCancelamento, ANumeroNFSe,
-                                    AMotivoCancelamento);
+  if( Configuracoes.Geral.Provedor = proIPM )then
+    begin
+      NotasFiscais.Items[0].NFSe.Status := srCancelado;
+
+      if (ANumeroNFSe <> '') then
+        NotasFiscais.Items[0].NFSe.Numero := ANumeroNFSe;
+
+      if (AMotivoCancelamento <> '') then
+        NotasFiscais.Items[0].NFSe.OutrasInformacoes := AMotivoCancelamento;
+
+      Result := Gerar( StrToIntDef( NotasFiscais.Items[0].NFSe.IdentificacaoRps.Numero, 0 ), 1, False )
+    end
+  else
+    Result := WebServices.CancelaNFSe(ACodigoCancelamento, ANumeroNFSe,
+                                      AMotivoCancelamento, ANumLote);
 end;
 
 function TACBrNFSe.SubstituirNFSe(ACodigoCancelamento,
@@ -564,23 +593,46 @@ begin
                                       AMotivoCancelamento);
 end;
 
-function TACBrNFSe.LinkNFSe(ANumeroNFSe: Integer; ACodVerificacao: String): String;
+function TACBrNFSe.TesteEnviar(ALote: Integer): Boolean;
+begin
+  Result := TesteEnviar(IntToStr(ALote));
+end;
+
+function TACBrNFSe.TesteEnviar(ALote: String): Boolean;
+begin
+  if NotasFiscais.Count <= 0 then
+    GerarException(ACBrStr('ERRO: Nenhum RPS adicionado ao Lote'));
+
+  if NotasFiscais.Count > 50 then
+    GerarException(ACBrStr('ERRO: Conjunto de RPS transmitidos (máximo de 50 RPS)' +
+      ' excedido. Quantidade atual: ' + IntToStr(NotasFiscais.Count)));
+
+  NotasFiscais.Assinar(Configuracoes.Geral.ConfigAssinar.RPS);
+
+  Result := WebServices.TestaEnvio(ALote);
+end;
+
+function TACBrNFSe.LinkNFSe(ANumeroNFSe: Integer; ACodVerificacao: String; AChaveAcesso: String = ''): String;
 var
-  Texto, xNumeroNFSe, xNomeMunic: String;
+  Texto, xNumeroNFSe, xNomeMunic, xLink: String;
 begin
   if Configuracoes.WebServices.Ambiente = taProducao then
   begin
     Texto := Configuracoes.Geral.ConfigGeral.ProLinkNFSe;
     xNomeMunic := Configuracoes.Geral.xNomeURL_P;
+    xLink := Configuracoes.Geral.xLinkURL_P;
   end
-  else begin
+  else
+  begin
     Texto := Configuracoes.Geral.ConfigGeral.HomLinkNFSe;
     xNomeMunic := Configuracoes.Geral.xNomeURL_H;
+    xLink := Configuracoes.Geral.xLinkURL_H;
   end;
   // %CodVerif%      : Representa o Código de Verificação da NFS-e
   // %NumeroNFSe%    : Representa o Numero da NFS-e
   // %NomeMunicipio% : Representa o Nome do Municipio
   // %InscMunic%     : Representa a Inscrição Municipal do Emitente
+  // %Cnpj%          : Representa o CNPJ do Emitente
 
   xNumeroNFSe := IntToStr(ANumeroNFSe);
 
@@ -588,9 +640,11 @@ begin
   Texto := StringReplace(Texto, '%NumeroNFSe%', xNumeroNFSe, [rfReplaceAll]);
   Texto := StringReplace(Texto, '%NomeMunicipio%', xNomeMunic, [rfReplaceAll]);
   Texto := StringReplace(Texto, '%InscMunic%', Configuracoes.Geral.Emitente.InscMun, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%ChaveAcesso%', AChaveAcesso, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%Cnpj%', Configuracoes.Geral.Emitente.CNPJ, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%LinkURL%', xLink, [rfReplaceAll]);
 
   Result := Texto;
 end;
 
 end.
-

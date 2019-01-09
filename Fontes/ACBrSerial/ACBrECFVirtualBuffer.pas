@@ -58,7 +58,7 @@ TACBrECFVirtualBuffer = class( TACBrECFVirtual )
     function GetMascaraItem: String;
     procedure SetCabecalho(AValue: TStrings);
     procedure SetCabecalhoItem(AValue: TStrings);
-    procedure SetMascaraItem(AValue: String);
+    procedure SetMascaraItem(const AValue: String);
   protected
     procedure CreateVirtualClass ; override ;
 
@@ -95,9 +95,9 @@ TACBrECFVirtualBufferClass = class( TACBrECFVirtualClass )
     procedure AddBufferRodape;
 
   protected
-    procedure AddBufferLinhas( AString: AnsiString) ;
+    procedure AddBufferLinhas( const AString: AnsiString) ;
 
-    function AjustaLinhaColunas( Linha: AnsiString ): AnsiString; virtual;
+    function AjustaLinhaColunas( const Linha: AnsiString ): AnsiString; virtual;
     function ColunasExpandido(): Integer; virtual;
 
     procedure AtivarVirtual ; override;
@@ -107,6 +107,9 @@ TACBrECFVirtualBufferClass = class( TACBrECFVirtualClass )
     procedure VendeItemVirtual( ItemCupom: TACBrECFVirtualClassItemCupom); override;
     Procedure DescontoAcrescimoItemAnteriorVirtual(
       ItemCupom: TACBrECFVirtualClassItemCupom; PorcDesc: Double) ; override ;
+    procedure CancelaDescontoAcrescimoItemVirtual(
+      ItemCupom: TACBrECFVirtualClassItemCupom;
+      TipoAcrescimoDesconto: String = 'D'); override;
     Procedure CancelaItemVendidoVirtual( NumItem : Integer ) ; override ;
 
     Procedure SubtotalizaCupomVirtual( MensagemRodape : AnsiString  = '' ) ; override ;
@@ -128,7 +131,7 @@ TACBrECFVirtualBufferClass = class( TACBrECFVirtualClass )
     procedure FechaRelatorioVirtual; override;
 
   protected
-    procedure Imprimir( AString : AnsiString ) ; overload ; virtual;
+    procedure Imprimir( const AString : AnsiString ) ; overload ; virtual;
     procedure Imprimir( AStringList : TStringList ) ; overload ;
 
     function GetSubModeloECF: String ; override ;
@@ -161,8 +164,8 @@ TACBrECFVirtualBufferClass = class( TACBrECFVirtualClass )
     Procedure AbreGaveta ; override ;
   end ;
 
-Function StuffMascaraItem( Linha, MascaraItem : AnsiString; Letra : AnsiChar;
-       TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
+Function StuffMascaraItem( const Linha, MascaraItem : AnsiString; Letra : AnsiChar;
+       const TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
 
 implementation
 
@@ -170,8 +173,8 @@ Uses
   math, strutils,
   ACBrUtil;
 
-Function StuffMascaraItem( Linha, MascaraItem : AnsiString; Letra : AnsiChar;
-   TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
+Function StuffMascaraItem( const Linha, MascaraItem : AnsiString; Letra : AnsiChar;
+   const TextoInserir : AnsiString; Fim:Boolean = False) : AnsiString ;
 Var A,B : Integer ;
     L   : AnsiChar ;
 begin
@@ -259,7 +262,7 @@ begin
   TACBrECFVirtualBufferClass(fpECFVirtualClass).CabecalhoItem.Assign( AValue );
 end;
 
-procedure TACBrECFVirtualBuffer.SetMascaraItem(AValue: String);
+procedure TACBrECFVirtualBuffer.SetMascaraItem(const AValue: String);
 begin
   TACBrECFVirtualBufferClass(fpECFVirtualClass).MascaraItem := AValue;
 end;
@@ -450,75 +453,148 @@ begin
 end ;
 
 procedure TACBrECFVirtualBufferClass.AddBufferRelatorio;
-Var
-  wTotalAliq, wTotalNaoFiscal, wTotalCancelado, wVendaLiquida: Double;
-  I : Integer ;
+var
+  I, wContNaoFiscal: Integer;
+  wTotalAliq, wTotalNaoFiscal, wTotalCanceladoICMS, wTotalCanceladoISSQN,
+    wVendaLiquida: Double;
 begin
-  wTotalAliq := 0 ;
-  if fpAliquotas.Count > 2 then
+  wTotalNaoFiscal := 0;
+  wContNaoFiscal  := 0;
+  For I := 0 to fpComprovantesNaoFiscais.Count-1 do
   begin
-    For I := 0 to 2 do
-      with fpAliquotas[I] do
-        wTotalAliq := RoundTo(wTotalAliq + Total,-2) ;
+    with fpComprovantesNaoFiscais[I] do
+    begin
+      wTotalNaoFiscal := RoundTo(wTotalNaoFiscal + Total,-2) ;
+      wContNaoFiscal  := wContNaoFiscal + Contador;
+    end;
   end;
 
-  wTotalNaoFiscal := 0 ;
-  For I := 0 to fpComprovantesNaoFiscais.Count-1 do
-    with fpComprovantesNaoFiscais[I] do
-      wTotalNaoFiscal := RoundTo(wTotalNaoFiscal + Total,-2) ;
-
-  wTotalCancelado := fpCuponsCanceladosEmAbertoTotal + fpCuponsCanceladosTotal;
-  wVendaLiquida   := max(fpVendaBruta - wTotalCancelado - fpTotalDescontos, 0);
+  wTotalCanceladoICMS  := fpCuponsCanceladosEmAbertoTotalICMS + fpCuponsCanceladosTotalICMS;
+  wTotalCanceladoISSQN := fpCuponsCanceladosEmAbertoTotalISSQN + fpCuponsCanceladosTotalISSQN;
+  wVendaLiquida   := max(fpVendaBruta - wTotalCanceladoICMS - fpTotalDescontosICMS -
+    wTotalCanceladoISSQN - fpTotalDescontosISSQN, 0);
 
   with fsBuffer do
   begin
-    Add( '</linha_simples>' ) ;
+    // CONTADORES //
     Add( PadCenter(' Contadores ',Colunas,'-') ) ;
+    Add( PadSpace('Reinicio de Operacao:|'+IntToStrZero(fpNumCRO,4),Colunas,'|') ) ;
     Add( PadSpace('Reducoes Z:|'+IntToStrZero(fpReducoesZ,4),Colunas,'|') ) ;
     Add( PadSpace('Leitura  X:|'+IntToStrZero(fpLeiturasX,6),Colunas,'|') ) ;
+    Add( PadSpace('Cupom Fiscal:|'+IntToStrZero(fpNumCCF,6), Colunas,'|') ) ;
     Add( PadSpace('Cancelamentos de Cupom:|'+IntToStrZero(fpCuponsCancelados,6), Colunas,'|') ) ;
     if fpCuponsCanceladosEmAberto > 0 then
       Add( PadSpace('Canc.Cupom em Aberto:|'+IntToStrZero(fpCuponsCanceladosEmAberto,6), Colunas,'|') ) ;
 
+    Add( PadSpace('Operação Não Fiscal:|'+IntToStrZero(wContNaoFiscal,6), Colunas,'|') ) ;
     Add( PadSpace('Cancelamentos Não Fiscal:|'+IntToStrZero(fpCNFCancelados,6), Colunas,'|') ) ;
     Add( PadSpace('COO do Primeiro Cupom:|'+IntToStrZero(fpCOOInicial,6), Colunas,'|') ) ;
     Add( PadSpace('COO do Ultimo Cupom:|'+IntToStrZero(fpCOOFinal,6),Colunas,'|'));
     Add( PadSpace('Relatorios Gerenciais:|'+IntToStrZero(fpNumCER,6),Colunas,'|') ) ;
-    Add( PadCenter(' Totalizadores ',Colunas,'-') ) ;
-    Add( PadSpace('Totalizador Geral:|'+FormatFloat('###,###,##0.00', fpGrandeTotal ),Colunas,'|') ) ;
-    Add( PadSpace('Venda Bruta Diaria:|'+FormatFloat('###,###,##0.00', fpVendaBruta ), Colunas, '|'));
+    Add( PadSpace('Comprovante Credito/Debito:|'+IntToStrZero(fpNumCDC,6),Colunas,'|') ) ;
 
-    if fpCuponsCanceladosEmAbertoTotal > 0 then
+    // TOTALIZADORES GERAIS //
+    Add(PadCenter(' Totalizadores ', Colunas,'-'));
+    Add(PadSpace('Totalizador Geral:|'+FormatFloatBr(fpGrandeTotal),Colunas,'|'));
+    Add(PadSpace('Venda Bruta Diaria:|'+FormatFloatBr(fpVendaBruta), Colunas, '|'));
+    Add(PadSpace('Venda Liquida:|'+FormatFloatBr(wVendaLiquida), Colunas, '|'));
+    Add(PadSpace('Total Não Fiscal:|'+FormatFloatBr(wTotalNaoFiscal), Colunas,'|'));
+    Add(PadSpace('Total Não Fiscal Cancelado:|'+FormatFloatBr(fpCNFCanceladosTotal), Colunas,'|'));
+
+    // TOTALIZADORES ICMS //
+    Add(PadCenter(' Totalizadores ICMS ', Colunas,'-'));
+
+    if (fpCuponsCanceladosEmAbertoTotalICMS > 0) then
     begin
-      Add( PadSpace('Cancelados em Aberto:|'+FormatFloat('###,###,##0.00',
-           fpCuponsCanceladosEmAbertoTotal ), Colunas,'|') ) ;
-      Add( PadSpace('Cancelados:|'+FormatFloat('###,###,##0.00',
-           fpCuponsCanceladosTotal), Colunas,'|') ) ;
+      Add(PadSpace('Cancelados em Aberto:|'+FormatFloatBr(fpCuponsCanceladosEmAbertoTotalICMS), Colunas,'|'));
+      Add(PadSpace('Cancelados:|'+FormatFloatBr(fpCuponsCanceladosTotalICMS), Colunas,'|'));
     end;
 
-    Add( PadSpace('Total Cancelado:|'+FormatFloat('###,###,##0.00', wTotalCancelado), Colunas,'|') ) ;
-    Add( PadSpace('Total Descontos:|'+FormatFloat('###,###,##0.00', fpTotalDescontos), Colunas, '|'));
-    Add( PadSpace('Venda Liquida:|'+FormatFloat('###,###,##0.00', wVendaLiquida), Colunas, '|'));
-    Add( PadSpace('Total Acrescimos:|'+FormatFloat('###,###,##0.00', fpTotalAcrescimos), Colunas, '|'));
-    Add( PadSpace('Total Não Fiscal:|'+FormatFloat('###,###,##0.00', wTotalNaoFiscal), Colunas,'|') ) ;
-    Add( PadSpace('Total Não Fiscal Cancelado:|'+FormatFloat('###,###,##0.00', fpCNFCanceladosTotal), Colunas,'|') ) ;
+    Add(PadSpace('Total Cancelado:|'+FormatFloatBr(wTotalCanceladoICMS), Colunas,'|'));
+    Add(PadSpace('Total Descontos:|'+FormatFloatBr(fpTotalDescontosICMS), Colunas, '|'));
+    Add(PadSpace('Total Acrescimos:|'+FormatFloatBr(fpTotalAcrescimosICMS), Colunas, '|'));
 
-    Add( PadCenter('Total Vendido por Aliquota',Colunas,'-') ) ;
-    Add( PadSpace('F1|Substituicao Tributaria|'+FormatFloat('###,###,##0.00', fpAliquotas[0].Total ), Colunas,'|') ) ;
-    Add( PadSpace('I1|Isencao|'+FormatFloat('###,###,##0.00', fpAliquotas[1].Total ), Colunas,'|') ) ;
-    Add( PadSpace('N1|Nao Incidencia|'+FormatFloat('###,###,##0.00', fpAliquotas[2].Total ), Colunas,'|') ) ;
+    // TOTALIZADORES ISSQN //
+    Add(PadCenter(' Totalizadores ISSQN ', Colunas,'-'));
 
-    For I := 3 to fpAliquotas.Count - 1 do
+    if (fpCuponsCanceladosEmAbertoTotalISSQN > 0) then
+    begin
+      Add(PadSpace('Cancelados em Aberto:|'+FormatFloatBr(fpCuponsCanceladosEmAbertoTotalISSQN), Colunas,'|'));
+      Add(PadSpace('Cancelados:|'+FormatFloatBr(fpCuponsCanceladosTotalISSQN), Colunas,'|'));
+    end;
+
+    Add(PadSpace('Total Cancelado:|'+FormatFloatBr(wTotalCanceladoISSQN), Colunas,'|'));
+    Add(PadSpace('Total Descontos:|'+FormatFloatBr(fpTotalDescontosISSQN), Colunas, '|'));
+    Add(PadSpace('Total Acrescimos:|'+FormatFloatBr(fpTotalAcrescimosISSQN), Colunas, '|'));
+
+    wTotalAliq := 0;
+    Add( PadCenter('I C M S',Colunas,'-'));
+    if fpAliquotas[0].Indice = 'F1' then
+    begin
+      Add( PadSpace('F1|Substituicao Tributaria|'+FormatFloatBr(fpAliquotas[0].Total ), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[0].Total;
+    end;
+
+    if fpAliquotas[1].Indice = 'I1' then
+    begin
+      Add( PadSpace('I1|Isencao|'+FormatFloatBr(fpAliquotas[1].Total ), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[1].Total;
+    end;
+
+    if fpAliquotas[2].Indice = 'N1' then
+    begin
+      Add( PadSpace('N1|Nao Incidencia|'+FormatFloatBr(fpAliquotas[2].Total ), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[2].Total;
+    end;
+
+    For I := 6 to fpAliquotas.Count - 1 do
     begin
       with fpAliquotas[I] do
       begin
-        Add( PadSpace(Indice+'|'+ Tipo + FormatFloat('#0.00',Aliquota)+'%|'+
-             FormatFloat('###,###,##0.00',Total),Colunas,'|') ) ;
-        wTotalAliq := RoundTo(wTotalAliq + Total,-2) ;
+        if Tipo = 'T' then
+        begin
+          Add( PadSpace(Indice+'|'+ Tipo + FormatFloatBr(Aliquota,'00.00')+'%|'+
+               FormatFloatBr(Total),Colunas,'|') ) ;
+          wTotalAliq := RoundTo(wTotalAliq + Total,-2) ;
+        end;
       end ;
     end;
+    Add( PadSpace('T O T A L   R$|'+FormatFloatBr(wTotalAliq), Colunas,'|') ) ;
 
-    Add( PadSpace('T O T A L   R$|'+FormatFloat('###,###,##0.00',wTotalAliq), Colunas,'|') ) ;
+
+    wTotalAliq := 0;
+    Add( PadCenter('I S S Q N',Colunas,'-') ) ;
+    if fpAliquotas[3].Indice = 'FS1' then
+    begin
+      Add( PadSpace('FS1|Substituicao Tributaria|'+FormatFloatBr(fpAliquotas[3].Total), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[3].Total;
+    end;
+
+    if fpAliquotas[4].Indice = 'IS1' then
+    begin
+      Add( PadSpace('IS1|Isencao|'+FormatFloatBr(fpAliquotas[4].Total), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[4].Total;
+    end;
+
+    if fpAliquotas[5].Indice = 'NS1' then
+    begin
+      Add( PadSpace('NS1|Nao Incidencia|'+FormatFloatBr(fpAliquotas[5].Total), Colunas,'|') ) ;
+      wTotalAliq := wTotalAliq + fpAliquotas[5].Total;
+    end;
+
+    For I := 6 to fpAliquotas.Count - 1 do
+    begin
+      with fpAliquotas[I] do
+      begin
+        if Tipo = 'S' then
+        begin
+          Add( PadSpace(Indice+'|'+ Tipo + FormatFloatBr(Aliquota,'00.00')+'%|'+
+               FormatFloatBr(Total),Colunas,'|') ) ;
+          wTotalAliq := RoundTo(wTotalAliq + Total,-2) ;
+        end;
+      end ;
+    end;
+    Add( PadSpace('T O T A L   R$|'+FormatFloatBr(wTotalAliq), Colunas,'|') ) ;
 
 
     Add( PadCenter(' Relatorio Gerencial ',Colunas,'-') ) ;
@@ -539,7 +615,7 @@ begin
       with fpFormasPagamentos[I] do
       begin
         Add( PadSpace(Indice+'  '+PadRight(Descricao,20)+'|'+
-             FormatFloat('###,###,##0.00',Total), Colunas,'|') ) ;
+             FormatFloatBr(Total), Colunas,'|') ) ;
       end ;
     end ;
 
@@ -549,7 +625,7 @@ begin
       with fpComprovantesNaoFiscais[I] do
       begin
         Add( PadSpace(Indice+'  '+PadRight(Descricao,20)+'|'+
-             FormatFloat('###,###,##0.00',Total), Colunas,'|') ) ;
+             FormatFloatBr(Total), Colunas,'|') ) ;
       end ;
     end ;
   end ;
@@ -637,7 +713,7 @@ begin
   end ;
 end;
 
-procedure TACBrECFVirtualBufferClass.AddBufferLinhas(AString: AnsiString);
+procedure TACBrECFVirtualBufferClass.AddBufferLinhas(const AString: AnsiString);
 var
   Linhas: TStringList;
 begin
@@ -653,14 +729,14 @@ begin
   end;
 end;
 
-function TACBrECFVirtualBufferClass.AjustaLinhaColunas(Linha: AnsiString
+function TACBrECFVirtualBufferClass.AjustaLinhaColunas(const Linha: AnsiString
   ): AnsiString;
 begin
   Result := AjustaLinhas( Linha, Colunas );
   Result := StringReplace( Result, #10, sLineBreak, [rfReplaceAll] ) ;
 end;
 
-function TACBrECFVirtualBufferClass.ColunasExpandido: Integer;
+function TACBrECFVirtualBufferClass.ColunasExpandido(): Integer;
 begin
   Result := Trunc(Colunas / 2);
 end;
@@ -805,7 +881,8 @@ begin
       AddBufferRodape ;
   else
     begin
-      InsertBufferCabecalho;
+      if Estado = estLivre then
+        InsertBufferCabecalho;
 
       fsBuffer.Add( PadSpace('COO do Cupom Cancelado:|'+IntToStrZero(StrToInt(NumCupom)-1,6),
                          Colunas,'|') ) ;
@@ -832,7 +909,7 @@ begin
   ZeraBuffer;
 end ;
 
-procedure TACBrECFVirtualBufferClass.Imprimir(AString : AnsiString) ;
+procedure TACBrECFVirtualBufferClass.Imprimir(const AString : AnsiString) ;
 begin
   { ACBrECFVirtualBuffer não tem impressão, sobrescrever nas classes filhas }
 end ;
@@ -948,6 +1025,27 @@ begin
 
   fsBuffer.Add( PadSpace('|'+StrDescAcre+' ITEM: '+IntToStrZero(ItemCupom.Sequencia,3)+'|'+
                          ifthen(PorcDesc > 0, FormatFloat('#0.00', PorcDesc)+'%','')+'|'+
+                         'R$ '+FormatFloat('##,##0.00', ItemCupom.DescAcres)+'|'+
+                         FormatFloat('###,##0.00',TotalItem),
+                         Colunas, '|')) ;
+  ImprimeBuffer ;
+end;
+
+procedure TACBrECFVirtualBufferClass.CancelaDescontoAcrescimoItemVirtual(
+  ItemCupom: TACBrECFVirtualClassItemCupom; TipoAcrescimoDesconto: String);
+var
+  StrDescAcre: String;
+  TotalItem: Double;
+begin
+  if ItemCupom.DescAcres > 0 then
+    StrDescAcre := 'ACRESCIMO'
+  else
+    StrDescAcre := 'DESCONTO';
+
+  TotalItem := ItemCupom.TotalLiquido;
+
+  fsBuffer.Add( PadSpace('|CANCELADO '+StrDescAcre+
+                         ' ITEM: '+IntToStrZero(ItemCupom.Sequencia,3)+'|'+
                          'R$ '+FormatFloat('##,##0.00', ItemCupom.DescAcres)+'|'+
                          FormatFloat('###,##0.00',TotalItem),
                          Colunas, '|')) ;

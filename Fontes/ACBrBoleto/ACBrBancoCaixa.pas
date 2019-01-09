@@ -54,7 +54,7 @@ type
     fQtRegLote: Integer;
     function RetornaModalidade(const ACBrTitulo :TACBrTitulo): String;
     function FormataNossoNumero(const ACBrTitulo :TACBrTitulo): String;
-    function RetornaCodCarteira(Carteira: string; const ACBrTitulo : TACBrTitulo): integer;
+    function RetornaCodCarteira(const Carteira: string; const ACBrTitulo : TACBrTitulo): integer;
    public
     Constructor create(AOwner: TACBrBanco);
     function CalcularDigitoVerificador(const ACBrTitulo: TACBrTitulo ): String; override;
@@ -205,11 +205,11 @@ begin
 
       if (ACBrTitulo.Carteira = 'RG') or (ACBrTitulo.Carteira = 'SR') then
       begin
-        if ACBrTitulo.CarteiraEnvio = tceCedente then
-          ANossoNumero := AModalidade + PadLeft(ANossoNumero, 15, '0')
-        else if (StrToIntDef(ANossoNumero,0)) <> 0  then
-          ANossoNumero := AModalidade + PadLeft(ANossoNumero, 15, '0')
-        else
+//        if ACBrTitulo.CarteiraEnvio = tceCedente then
+//          ANossoNumero := AModalidade + PadLeft(ANossoNumero, 15, '0')
+//        else if (StrToIntDef(ANossoNumero,0)) <> 0  then
+//          ANossoNumero := AModalidade + PadLeft(ANossoNumero, 15, '0')
+//        else
           ANossoNumero := AModalidade + PadLeft(ANossoNumero, 15, '0')
       end
       else
@@ -261,7 +261,7 @@ begin
     Result:= copy( CodigoBarras, 1, 4) + DigitoCodBarras + copy( CodigoBarras, 5, 44);
 end;
 
-function TACBrCaixaEconomica.RetornaCodCarteira(Carteira: string; const ACBrTitulo: TACBrTitulo): integer;
+function TACBrCaixaEconomica.RetornaCodCarteira(const Carteira: string; const ACBrTitulo: TACBrTitulo): integer;
 
 begin
     if (Carteira = 'RG') and (ACBrTitulo.CarteiraEnvio = tceCedente) then
@@ -479,7 +479,8 @@ end;
 function TACBrCaixaEconomica.GerarRegistroTransacao240(ACBrTitulo : TACBrTitulo): String;
 var
   ATipoOcorrencia, ATipoBoleto, ADataMoraJuros, AModalidade        : String;
-  ADataDesconto, ADataMulta, ANossoNumero, ATipoAceite, AEspecieDoc: String; 
+  ADataDesconto, ADataMulta, ANossoNumero, ATipoAceite, AEspecieDoc: String;
+  ACodigoDesconto                                                  : String;
 
   function MontarInstrucoes2: string;
   begin
@@ -619,7 +620,7 @@ begin
       if (ValorMoraJuros > 0) then
        begin
          if DataMoraJuros <> 0 then
-            ADataMoraJuros := FormatDateTime('ddmmyyyy',IncDay (DataMoraJuros))
+            ADataMoraJuros := FormatDateTime('ddmmyyyy', DataMoraJuros)
          else
             ADataMoraJuros := PadRight('', 8, '0');
        end
@@ -633,9 +634,18 @@ begin
             ADataDesconto := FormatDateTime('ddmmyyyy', DataDesconto)
          else
             ADataDesconto := PadRight('', 8, '0');
+        
+         case TipoDesconto of
+           tdValorFixoAteDataInformada : ACodigoDesconto := '1';
+           tdPercentualAteDataInformada: ACodigoDesconto := '2';
+	 else
+	   ACodigoDesconto := '1';
+         end; 
        end
-      else
-         ADataDesconto := PadRight('', 8, '0');
+      else begin
+        ADataDesconto := PadRight('', 8, '0');
+        ACodigoDesconto := '0';
+      end;
 
       {Multa}
       if (PercentualMulta > 0) then
@@ -676,7 +686,7 @@ begin
                ADataMoraJuros                                             + //119 a 126 - Data a partir da qual serão cobrados juros
                IfThen(ValorMoraJuros > 0, IntToStrZero( round(ValorMoraJuros * 100), 15),
                       PadRight('', 15, '0'))                                                   + //127 a 141 - Valor de juros de mora por dia
-               IfThen(ValorDesconto > 0, '1', '0')                        + //142 - Código de desconto: Valor fixo até a data informada
+               ACodigoDesconto                                            + //142 - Código de desconto: Valor fixo até a data informada
                ADataDesconto                                              + //143 a 150 - Data do desconto
                IfThen(ValorDesconto > 0, IntToStrZero( round(ValorDesconto * 100), 15),
                       PadRight('', 15, '0'))                                                   + //151 a 165 - Valor do desconto por dia
@@ -883,7 +893,7 @@ begin
       if (ValorMoraJuros > 0) then
        begin
          if (DataMoraJuros > 0) and (DataMoraJuros >= 30/12/2000) then
-            ADataMoraJuros := FormatDateTime('ddmmyy',IncDay(DataMoraJuros))
+            ADataMoraJuros := FormatDateTime('ddmmyy', DataMoraJuros)
          else
             ADataMoraJuros := PadLeft('', 6, '0');
        end

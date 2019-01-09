@@ -42,11 +42,11 @@ interface
 
 uses
   SysUtils, Classes,
-{$IFNDEF VER130}
-  Variants,
-{$ENDIF}
-  pcnAuxiliar, pcnConversao, pcnGerador, pcnLeitor, pmdfeEventoMDFe,
-  ACBrUtil;
+//{$IFNDEF VER130}
+//  Variants,
+//{$ENDIF}
+  pcnConversao, pcnGerador, pcnConsts, //pcnLeitor,
+  pmdfeEventoMDFe, pcnSignature;
 
 type
   TInfEventoCollection     = class;
@@ -68,13 +68,17 @@ type
   private
     FInfEvento: TInfEvento;
     FRetInfEvento: TRetInfEvento;
+    Fsignature: Tsignature;
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
   published
     property InfEvento: TInfEvento       read FInfEvento    write FInfEvento;
+    property signature: Tsignature       read Fsignature    write Fsignature;
     property RetInfEvento: TRetInfEvento read FRetInfEvento write FRetInfEvento;
   end;
+
+  { TEventoMDFe }
 
   TEventoMDFe = class(TPersistent)
   private
@@ -91,6 +95,7 @@ type
     function LerXML(const CaminhoArquivo: String): Boolean;
     function LerXMLFromString(const AXML: String): Boolean;
     function ObterNomeArquivo(tpEvento: TpcnTpEvento): String;
+    function LerFromIni(const AIniString: String): Boolean;
   published
     property Gerador: TGerador             read FGerador write FGerador;
     property idLote: Integer               read FidLote  write FidLote;
@@ -101,7 +106,9 @@ type
 implementation
 
 uses
- pmdfeRetEnvEventoMDFe;
+  IniFiles,
+  pcnAuxiliar, pmdfeRetEnvEventoMDFe,
+  ACBrUtil, ACBrDFeUtil;
 
 { TEventoMDFe }
 
@@ -116,17 +123,6 @@ begin
   FGerador.Free;
   FEvento.Free;
   inherited;
-end;
-
-function TEventoMDFe.ObterNomeArquivo(tpEvento: TpcnTpEvento): String;
-begin
- case tpEvento of
-    teCancelamento:     Result := Evento.Items[0].InfEvento.chMDFe + '-can-eve.xml';
-    teEncerramento:     Result := Evento.Items[0].InfEvento.chMDFe + '-ped-eve.xml';
-    teInclusaoCondutor: Result := Evento.Items[0].InfEvento.chMDFe + '-inc-eve.xml'; 
-  else
-    raise EventoException.Create('Obter nome do arquivo de Evento não Implementado!');
- end;
 end;
 
 function TEventoMDFe.GerarXML: Boolean;
@@ -147,7 +143,7 @@ begin
   Gerador.wCampo(tcInt, 'EP05', 'cOrgao', 1, 2, 1, Evento.Items[0].InfEvento.cOrgao);
   Gerador.wCampo(tcStr, 'EP06', 'tpAmb ', 1, 1, 1, TpAmbToStr(Evento.Items[0].InfEvento.tpAmb), DSC_TPAMB);
 
-  sDoc := OnlyNumber(Evento.Items[0].InfEvento.CNPJ);
+  sDoc := OnlyNumber(Evento.Items[0].InfEvento.CNPJCPF);
 
   case Length(sDoc) of
     14: begin
@@ -165,10 +161,12 @@ begin
   if not ValidarChave(Evento.Items[0].InfEvento.chMDFe)
    then Gerador.wAlerta('EP08', 'chMDFe', '', 'Chave de MDFe inválida');
 
-  // Segundo o manual a data deve conter o UTC mas no schema não contem
-  Gerador.wCampo(tcStr, 'EP09', 'dhEvento', 01, 27,   1, FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Evento.Items[0].InfEvento.dhEvento)
-                                                           {+ GetUTC(CodigoParaUF(Evento.Items[0].InfEvento.cOrgao),
-                                                                     Evento.Items[0].InfEvento.dhEvento)} );
+  if Versao = '3.00' then
+    Gerador.wCampo(tcStr, 'EP09', 'dhEvento', 01, 25, 1, FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Evento.Items[0].InfEvento.dhEvento)
+                                                             + GetUTC(CodigoParaUF(Evento.Items[0].InfEvento.cOrgao),
+                                                                       Evento.Items[0].InfEvento.dhEvento))
+  else
+    Gerador.wCampo(tcStr, 'EP09', 'dhEvento', 01, 25, 1, FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Evento.Items[0].InfEvento.dhEvento));
 
   Gerador.wCampo(tcInt, 'EP10', 'tpEvento  ', 6, 6, 1, Evento.Items[0].InfEvento.TipoEvento);
   Gerador.wCampo(tcInt, 'EP11', 'nSeqEvento', 1, 2, 1, Evento.Items[0].InfEvento.nSeqEvento);
@@ -206,6 +204,14 @@ begin
   end;
   Gerador.wGrupo('/detEvento');
   Gerador.wGrupo('/infEvento');
+
+  if Evento.Items[0].signature.URI <> '' then
+  begin
+    Evento.Items[0].signature.Gerador.Opcoes.IdentarXML := Gerador.Opcoes.IdentarXML;
+    Evento.Items[0].signature.GerarXML;
+    Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + Evento.Items[0].signature.Gerador.ArquivoFormatoXML;
+  end;
+
   Gerador.wGrupo('/eventoMDFe');
 
   Result := (Gerador.ListaDeAlertas.Count = 0);
@@ -239,24 +245,29 @@ begin
      Result := RetEventoMDFe.LerXml;
      with FEvento.Add do
       begin
-         infEvento.Id         := RetEventoMDFe.InfEvento.Id;
-         InfEvento.cOrgao     := RetEventoMDFe.InfEvento.cOrgao;
-         infEvento.tpAmb      := RetEventoMDFe.InfEvento.tpAmb;
-         infEvento.CNPJ       := RetEventoMDFe.InfEvento.CNPJ;
-         infEvento.chMDFe     := RetEventoMDFe.InfEvento.chMDFe;
-         infEvento.dhEvento   := RetEventoMDFe.InfEvento.dhEvento;
-         infEvento.tpEvento   := RetEventoMDFe.InfEvento.tpEvento;
-         infEvento.nSeqEvento := RetEventoMDFe.InfEvento.nSeqEvento;
+        infEvento.Id         := RetEventoMDFe.InfEvento.Id;
+        InfEvento.cOrgao     := RetEventoMDFe.InfEvento.cOrgao;
+        infEvento.tpAmb      := RetEventoMDFe.InfEvento.tpAmb;
+        infEvento.CNPJCPF    := RetEventoMDFe.InfEvento.CNPJCPF;
+        infEvento.chMDFe     := RetEventoMDFe.InfEvento.chMDFe;
+        infEvento.dhEvento   := RetEventoMDFe.InfEvento.dhEvento;
+        infEvento.tpEvento   := RetEventoMDFe.InfEvento.tpEvento;
+        infEvento.nSeqEvento := RetEventoMDFe.InfEvento.nSeqEvento;
 
-         infEvento.VersaoEvento         := RetEventoMDFe.InfEvento.VersaoEvento;
-         infEvento.detEvento.descEvento := RetEventoMDFe.InfEvento.detEvento.descEvento;
-         infEvento.detEvento.nProt      := RetEventoMDFe.InfEvento.detEvento.nProt;
-         infEvento.detEvento.dtEnc      := RetEventoMDFe.InfEvento.detEvento.dtEnc;
-         infEvento.detEvento.cUF        := RetEventoMDFe.InfEvento.detEvento.cUF;
-         infEvento.detEvento.cMun       := RetEventoMDFe.InfEvento.detEvento.cMun;
-         infEvento.detEvento.xJust      := RetEventoMDFe.InfEvento.detEvento.xJust;
-         infEvento.detEvento.xNome      := RetEventoMDFe.InfEvento.detEvento.xNome;
-         infEvento.detEvento.CPF        := RetEventoMDFe.InfEvento.detEvento.CPF;
+        infEvento.VersaoEvento         := RetEventoMDFe.InfEvento.VersaoEvento;
+        infEvento.detEvento.descEvento := RetEventoMDFe.InfEvento.detEvento.descEvento;
+        infEvento.detEvento.nProt      := RetEventoMDFe.InfEvento.detEvento.nProt;
+        infEvento.detEvento.dtEnc      := RetEventoMDFe.InfEvento.detEvento.dtEnc;
+        infEvento.detEvento.cUF        := RetEventoMDFe.InfEvento.detEvento.cUF;
+        infEvento.detEvento.cMun       := RetEventoMDFe.InfEvento.detEvento.cMun;
+        infEvento.detEvento.xJust      := RetEventoMDFe.InfEvento.detEvento.xJust;
+        infEvento.detEvento.xNome      := RetEventoMDFe.InfEvento.detEvento.xNome;
+        infEvento.detEvento.CPF        := RetEventoMDFe.InfEvento.detEvento.CPF;
+
+        signature.URI             := RetEventoMDFe.signature.URI;
+        signature.DigestValue     := RetEventoMDFe.signature.DigestValue;
+        signature.SignatureValue  := RetEventoMDFe.signature.SignatureValue;
+        signature.X509Certificate := RetEventoMDFe.signature.X509Certificate;
 
         if RetEventoMDFe.retEvento.Count > 0 then
          begin
@@ -279,6 +290,68 @@ begin
       end;
   finally
      RetEventoMDFe.Free;
+  end;
+end;
+
+function TEventoMDFe.ObterNomeArquivo(tpEvento: TpcnTpEvento): String;
+begin
+  case tpEvento of
+    teCancelamento:     Result := Evento.Items[0].InfEvento.chMDFe + '-can-eve.xml';
+    teEncerramento:     Result := Evento.Items[0].InfEvento.chMDFe + '-ped-eve.xml';
+    teInclusaoCondutor: Result := Evento.Items[0].InfEvento.chMDFe + '-inc-eve.xml';
+  else
+    raise EventoException.Create('Obter nome do arquivo de Evento não Implementado!');
+  end;
+end;
+
+function TEventoMDFe.LerFromIni(const AIniString: String): Boolean;
+var
+  I: Integer;
+  sSecao, sFim: String;
+  INIRec: TMemIniFile;
+  Ok: Boolean;
+begin
+  Result := False;
+  Self.Evento.Clear;
+
+  INIRec := TMemIniFile.Create('');
+  try
+    LerIniArquivoOuString(AIniString, INIRec);
+
+    idLote := INIRec.ReadInteger('EVENTO', 'idLote', 0);
+
+    I := 1;
+    while true do
+    begin
+      sSecao := 'EVENTO'+IntToStrZero(I,3);
+      sFim   := INIRec.ReadString(sSecao, 'chMDFe', 'FIM');
+      if (sFim = 'FIM') or (Length(sFim) <= 0) then
+        break;
+
+      with Self.Evento.Add do
+      begin
+        infEvento.chMDFe     := INIRec.ReadString(sSecao, 'chMDFe', '');
+        infEvento.cOrgao     := INIRec.ReadInteger(sSecao, 'cOrgao', 0);
+        infEvento.CNPJCPF    := INIRec.ReadString(sSecao, 'CNPJCPF', '');
+        infEvento.dhEvento   := StringToDateTime(INIRec.ReadString(sSecao, 'dhEvento', ''));
+        infEvento.tpEvento   := StrToTpEvento(Ok, INIRec.ReadString(sSecao, 'tpEvento', ''));
+        infEvento.nSeqEvento := INIRec.ReadInteger(sSecao, 'nSeqEvento', 1);
+
+        // Usado no detalhamento do evento
+        infEvento.detEvento.xJust := INIRec.ReadString(sSecao, 'xJust', '');
+        infEvento.detEvento.nProt := INIRec.ReadString(sSecao, 'nProt', '');
+        InfEvento.detEvento.dtEnc := StringToDateTime(INIRec.ReadString(sSecao, 'dtEnc', ''));
+        InfEvento.detEvento.cUF   := INIRec.ReadInteger(sSecao, 'cUF', 0);
+        InfEvento.detEvento.cMun  := INIRec.ReadInteger(sSecao, 'cMun', 0);
+        infEvento.detEvento.xNome := INIRec.ReadString(sSecao, 'xNome', '');
+        infEvento.detEvento.CPF   := INIRec.ReadString(sSecao, 'CPF', '');
+      end;
+      Inc(I);
+    end;
+
+    Result := True;
+  finally
+    INIRec.Free;
   end;
 end;
 
@@ -312,12 +385,14 @@ end;
 constructor TInfEventoCollectionItem.Create;
 begin
   FInfEvento := TInfEvento.Create;
+  Fsignature := Tsignature.Create;
   FRetInfEvento := TRetInfEvento.Create;
 end;
 
 destructor TInfEventoCollectionItem.Destroy;
 begin
   FInfEvento.Free;
+  Fsignature.Free;
   FRetInfEvento.Free;
   inherited;
 end;

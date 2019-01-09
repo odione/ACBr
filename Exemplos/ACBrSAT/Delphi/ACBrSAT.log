@@ -1,0 +1,22 @@
+14/09/18 16:05:07:497 - ACBrSAT.Inicializado
+14/09/18 16:05:28:898 - VerificarStatusValidador
+14/09/18 16:05:28:898 - NumeroSessao: 999753
+14/09/18 16:05:28:908 - VerificarStatusValidador( <Integrador><Identificador><Valor>999753</Valor></Identificador><Componente Nome="VFP-e"><Metodo Nome="VerificarStatusValidador"><Construtor><Parametros><Parametro><Nome>chaveAcessoValidador</Nome><Valor>25CFE38D-3B92-46C0-91CA-CFF751A82D3D</Valor></Parametro></Parametros></Construtor><Parametros><Parametro><Nome>idFila</Nome><Valor>0</Valor></Parametro><Parametro><Nome>cnpj</Nome><Valor/></Parametro></Parametros></Metodo></Componente></Integrador> )
+14/09/18 16:05:28:908 - Criando arquivo: c:\Integrador\Input\verificarstatusvalidador-999753.tmp
+14/09/18 16:05:31:982 - NumeroSessao: 999753
+14/09/18 16:05:31:982 - EFCreateError - Cannot create file "c:\Integrador\Input\verificarstatusvalidador-999753.tmp". O sistema não pode encontrar o caminho especificado
+14/09/18 16:05:45:151 - EnviarPagamento
+14/09/18 16:05:45:151 - NumeroSessao: 7877
+14/09/18 16:05:45:151 - EnviarPagamento( <Integrador><Identificador><Valor>7877</Valor></Identificador><Componente Nome="VFP-e"><Metodo Nome="EnviarPagamento"><Construtor><Parametros><Parametro><Nome>chaveAcessoValidador</Nome><Valor>25CFE38D-3B92-46C0-91CA-CFF751A82D3D</Valor></Parametro></Parametros></Construtor><Parametros><Parametro><Nome>ChaveRequisicao</Nome><Valor>26359854-5698-1365-9856-965478231456</Valor></Parametro><Parametro><Nome>Estabelecimento</Nome><Valor>10</Valor></Parametro><Parametro><Nome>SerialPos</Nome><Valor>ACBr-FIOXSJYI</Valor></Parametro><Parametro><Nome>Cnpj</Nome><Valor/></Parametro><Parametro><Nome>IcmsBase</Nome><Valor>0.23</Valor></Parametro><Parametro><Nome>ValorTotalVenda</Nome><Valor>1530</Valor></Parametro><Parametro><Nome>HabilitarMultiplosPagamentos</Nome><Valor>true</Valor></Parametro><Parametro><Nome>HabilitarControleAntiFraude</Nome><Valor>false</Valor></Parametro><Parametro><Nome>CodigoMoeda</Nome><Valor>BRL</Valor></Parametro><Parametro><Nome>EmitirCupomNFCE</Nome><Valor>false</Valor></Parametro><Parametro><Nome>OrigemPagamento</Nome><Valor>Mesa 1234</Valor></Parametro></Parametros></Metodo></Componente></Integrador> )
+14/09/18 16:05:45:151 - Criando arquivo: c:\Integrador\Input\enviarpagamento-7877.tmp
+14/09/18 16:05:47:004 - NumeroSessao: 7877
+14/09/18 16:05:47:004 - EFCreateError - Cannot create file "c:\Integrador\Input\enviarpagamento-7877.tmp". O sistema não pode encontrar o caminho especificado
+14/09/18 16:05:49:818 - EnviarStatusPagamento
+14/09/18 16:05:49:818 - NumeroSessao: 360952
+14/09/18 16:05:49:818 - EnviarStatusPagamento( <Integrador><Identificador><Valor>360952</Valor></Identificador><Componente Nome="VFP-e"><Metodo Nome="EnviarStatusPagamento"><Construtor><Parametros><Parametro><Nome>chaveAcessoValidador</Nome><Valor>25CFE38D-3B92-46C0-91CA-CFF751A82D3D</Valor></Parametro></Parametros></Construtor><Parametros><Parametro><Nome>CodigoAutorizacao</Nome><Valor>20551</Valor></Parametro><Parametro><Nome>Bin</Nome><Valor>123456</Valor></Parametro><Parametro><Nome>DonoCartao</Nome><Valor>TESTE</Valor></Parametro><Parametro><Nome>DataExpiracao</Nome><Valor>01/01</Valor></Parametro><Parametro><Nome>InstituicaoFinanceira</Nome><Valor>STONE</Valor></Parametro><Parametro><Nome>Parcelas</Nome><Valor>1</Valor></Parametro><Parametro><Nome>CodigoPagamento</Nome><Valor>12846</Valor></Parametro><Parametro><Nome>ValorPagamento</Nome><Valor>1530.00</Valor></Parametro><Parametro><Nome>idFila</Nome><Valor>1674068</Valor></Parametro><Parametro><Nome>Tipo</Nome><Valor>1</Valor></Parametro><Parametro><Nome>UltimosQuatroDigitos</Nome><Valor>12345</Valor></Parametro></Parametros></Metodo></Componente></Integrador> )
+14/09/18 16:05:49:818 - Criando arquivo: c:\Integrador\Input\enviarstatuspagamento-360952.tmp
+14/09/18 16:05:51:420 - NumeroSessao: 360952
+14/09/18 16:05:51:420 - EFCreateError - Cannot create file "c:\Integrador\Input\enviarstatuspagamento-360952.tmp". O sistema não pode encontrar o caminho especificado
+14/09/18 16:06:02:416 - NumeroSessao: 816370 - Comando: ConsultarSAT
+14/09/18 16:06:02:426 - Sessão: 816370, Dados: <Integrador><Identificador><Valor>816370</Valor></Identificador><Componente Nome="MF-e"><Metodo Nome="ConsultarMFe"><Parametros><Parametro><Nome>numeroSessao</Nome><Valor>816370</Valor></Parametro></Parametros></Metodo></Componente></Integrador>
+14/09/18 16:06:02:426 - Criando arquivo: c:\Integrador\Input\consultarmfe-20180914160602-816370.tmp

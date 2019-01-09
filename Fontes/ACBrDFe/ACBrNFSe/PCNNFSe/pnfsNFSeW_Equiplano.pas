@@ -43,7 +43,7 @@ uses
   synacode, ACBrConsts,
   pnfsNFSeW,
   pcnAuxiliar, pcnConversao, pcnGerador,
-  pnfsNFSe, pnfsConversao;
+  pnfsNFSe, pnfsConversao, pnfsConsts;
 
 type
   { TNFSeW_Equiplano }
@@ -90,8 +90,8 @@ uses
 
 procedure TNFSeW_Equiplano.GerarIdentificacaoRPS;
 begin
-  Gerador.wCampoNFSe(tcInt,   '', 'nrRps       ', 01, 15, 1, OnlyNumber(NFSe.IdentificacaoRps.Numero), '');
-  Gerador.wCampoNFSe(tcStr,   '', 'nrEmissorRps', 01, 01, 1, NFSe.IdentificacaoRps.Serie, '');
+  Gerador.wCampoNFSe(tcInt,   '', 'nrRps       ', 01, 15, 1, OnlyNumber(NFSe.IdentificacaoRps.Numero), DSC_NUMRPS);
+  Gerador.wCampoNFSe(tcStr,   '', 'nrEmissorRps', 01, 01, 1, NFSe.IdentificacaoRps.Serie, DSC_SERIERPS);
   Gerador.wCampoNFSe(tcDatHor,'', 'dtEmissaoRps', 19, 19, 1, NFSe.DataEmissao, DSC_DEMI);
   Gerador.wCampoNFSe(tcStr,   '', 'stRps       ', 01, 01, 1, '1', '');
   Gerador.wCampoNFSe(tcStr,   '', 'tpTributacao', 01, 01, 1, NaturezaOperacaoToStr(NFSe.NaturezaOperacao), '');
@@ -114,10 +114,11 @@ var
 begin
   if (Trim(NFSe.Tomador.IdentificacaoTomador.DocTomadorEstrangeiro) <> '') then
     sTpDoc := '3'  //Est
-  else if (Length(OnlyNumber(NFSe.Tomador.IdentificacaoTomador.CpfCnpj)) = 14) then
-         sTpDoc := '2'  //CNPJ
-       else
-         sTpDoc := '1'; //CPF
+  else
+    if (Length(OnlyNumber(NFSe.Tomador.IdentificacaoTomador.CpfCnpj)) = 14) then
+      sTpDoc := '2'  //CNPJ
+    else
+      sTpDoc := '1'; //CPF
 
   Gerador.wGrupoNFSe('tomador');
 
@@ -128,7 +129,7 @@ begin
   Gerador.wGrupoNFSe('/documento');
 
   Gerador.wCampoNFSe(tcStr, '', 'nmTomador          ', 01, 080, 1, NFSe.Tomador.RazaoSocial, '');
-  Gerador.wCampoNFSe(tcStr, '', 'dsEmail            ', 00, 080, 1, NFSe.Tomador.Contato.Email, '');
+  Gerador.wCampoNFSe(tcStr, '', 'dsEmail            ', 00, 080, 0, NFSe.Tomador.Contato.Email, '');
   Gerador.wCampoNFSe(tcStr, '', 'nrInscricaoEstadual', 00, 020, 0, NFSe.Tomador.IdentificacaoTomador.InscricaoEstadual, '');
   Gerador.wCampoNFSe(tcStr, '', 'dsEndereco         ', 00, 040, 1, NFSe.Tomador.Endereco.Endereco, '');
   Gerador.wCampoNFSe(tcStr, '', 'nrEndereco         ', 00, 010, 1, NFSe.Tomador.Endereco.Numero, '');
@@ -154,7 +155,7 @@ end;
 
 procedure TNFSeW_Equiplano.GerarListaServicos;
 var
-  iAux, iSerItem, iSerSubItem: Integer;
+  iAux, iSerItem, iSerSubItem, i: Integer;
 begin
   iAux := StrToInt(OnlyNumber(NFSe.Servico.ItemListaServico)); //Ex.: 1402, 901
   if (iAux > 999) then //Ex.: 1402
@@ -169,24 +170,52 @@ begin
 
   Gerador.wGrupoNFSe('listaServicos');
 
-  Gerador.wGrupoNFSe('servico');
-  Gerador.wCampoNFSe(tcStr, '', 'nrServicoItem   ', 01, 02, 1, iSerItem, '');
-  Gerador.wCampoNFSe(tcStr, '', 'nrServicoSubItem', 01, 02, 1, iSerSubItem, '');
-  Gerador.wCampoNFSe(tcDe2, '', 'vlServico       ', 01, 15, 1, NFSe.Servico.Valores.ValorServicos, '');
-  Gerador.wCampoNFSe(tcDe2, '', 'vlAliquota      ', 01, 02, 1, NFSe.Servico.Valores.Aliquota, '');
 
-  if (NFSe.Servico.Valores.ValorDeducoes > 0) then
+  if NFSe.Servico.ItemServico.Count > 1 then
   begin
-    Gerador.wGrupoNFSe('deducao');
-    Gerador.wCampoNFSe(tcDe2, '', 'vlDeducao             ', 01, 15, 1, NFSe.Servico.Valores.ValorDeducoes, '');
-    Gerador.wCampoNFSe(tcStr, '', 'dsJustificativaDeducao', 01,255, 1, NFSe.Servico.Valores.JustificativaDeducao, '');
-    Gerador.wGrupoNFSe('/deducao');
-  end;
+    for i:=0 to NFSe.Servico.ItemServico.Count-1 do
+    begin
+      Gerador.wGrupoNFSe('servico');
+      Gerador.wCampoNFSe(tcStr, '', 'nrServicoItem   ', 01, 02, 1, iSerItem, '');
+      Gerador.wCampoNFSe(tcStr, '', 'nrServicoSubItem', 01, 02, 1, iSerSubItem, '');
+      Gerador.wCampoNFSe(tcDe2, '', 'vlServico       ', 01, 15, 1, NFSe.Servico.ItemServico.Items[i].ValorUnitario, '');
+      Gerador.wCampoNFSe(tcDe2, '', 'vlAliquota      ', 01, 02, 1, NFSe.Servico.Valores.Aliquota, '');
 
-  Gerador.wCampoNFSe(tcDe2, '', 'vlBaseCalculo         ', 01,  15, 1, NFSe.Servico.Valores.BaseCalculo, '');
-  Gerador.wCampoNFSe(tcDe2, '', 'vlIssServico          ', 01,  15, 1, NFSe.Servico.Valores.ValorIss, '');
-  Gerador.wCampoNFSe(tcStr, '', 'dsDiscriminacaoServico', 01,1024, 1, NFSe.Servico.Discriminacao, '');
-  Gerador.wGrupoNFSe('/servico');
+      if (NFSe.Servico.Valores.ValorDeducoes > 0) then
+      begin
+        Gerador.wGrupoNFSe('deducao');
+        Gerador.wCampoNFSe(tcDe2, '', 'vlDeducao             ', 01, 15, 1, NFSe.Servico.Valores.ValorDeducoes, '');
+        Gerador.wCampoNFSe(tcStr, '', 'dsJustificativaDeducao', 01,255, 1, NFSe.Servico.Valores.JustificativaDeducao, '');
+        Gerador.wGrupoNFSe('/deducao');
+      end;
+
+      Gerador.wCampoNFSe(tcDe2, '', 'vlBaseCalculo         ', 01,  15, 1, NFSe.Servico.ItemServico.Items[i].BaseCalculo, '');
+      Gerador.wCampoNFSe(tcDe2, '', 'vlIssServico          ', 01,  15, 1, NFSe.Servico.ItemServico.Items[i].ValorIss, '');
+      Gerador.wCampoNFSe(tcStr, '', 'dsDiscriminacaoServico', 01,1024, 1, NFSe.Servico.ItemServico.Items[i].Discriminacao, '');
+      Gerador.wGrupoNFSe('/servico');
+    end;
+  end
+  else
+  begin
+    Gerador.wGrupoNFSe('servico');
+    Gerador.wCampoNFSe(tcStr, '', 'nrServicoItem   ', 01, 02, 1, iSerItem, '');
+    Gerador.wCampoNFSe(tcStr, '', 'nrServicoSubItem', 01, 02, 1, iSerSubItem, '');
+    Gerador.wCampoNFSe(tcDe2, '', 'vlServico       ', 01, 15, 1, NFSe.Servico.Valores.ValorServicos, '');
+    Gerador.wCampoNFSe(tcDe2, '', 'vlAliquota      ', 01, 02, 1, NFSe.Servico.Valores.Aliquota, '');
+
+    if (NFSe.Servico.Valores.ValorDeducoes > 0) then
+    begin
+      Gerador.wGrupoNFSe('deducao');
+      Gerador.wCampoNFSe(tcDe2, '', 'vlDeducao             ', 01, 15, 1, NFSe.Servico.Valores.ValorDeducoes, '');
+      Gerador.wCampoNFSe(tcStr, '', 'dsJustificativaDeducao', 01,255, 1, NFSe.Servico.Valores.JustificativaDeducao, '');
+      Gerador.wGrupoNFSe('/deducao');
+    end;
+
+    Gerador.wCampoNFSe(tcDe2, '', 'vlBaseCalculo         ', 01,  15, 1, NFSe.Servico.Valores.BaseCalculo, '');
+    Gerador.wCampoNFSe(tcDe2, '', 'vlIssServico          ', 01,  15, 1, NFSe.Servico.Valores.ValorIss, '');
+    Gerador.wCampoNFSe(tcStr, '', 'dsDiscriminacaoServico', 01,1024, 1, NFSe.Servico.Discriminacao, '');
+    Gerador.wGrupoNFSe('/servico');
+  end;
 
   Gerador.wGrupoNFSe('/listaServicos');
 end;
@@ -246,44 +275,23 @@ begin
 end;
 
 function TNFSeW_Equiplano.GerarXml: Boolean;
-var
-  Gerar: Boolean;
 begin
+  Gerador.ListaDeAlertas.Clear;
   Gerador.ArquivoFormatoXML := '';
   Gerador.Prefixo           := FPrefixo4;
 
-  if (RightStr(FURL, 1) <> '/') and (FDefTipos <> '')
-    then FDefTipos := '/' + FDefTipos;
+  if (RightStr(FURL, 1) <> '/') and (FDefTipos <> '') then
+    FDefTipos := '/' + FDefTipos;
 
-  if Trim(FPrefixo4) <> ''
-    then Atributo := ' xmlns:' + StringReplace(Prefixo4, ':', '', []) + '="' + FURL + FDefTipos + '"'
-    else Atributo := ' xmlns="' + FURL + FDefTipos + '"';
+  if Trim(FPrefixo4) <> '' then
+    Atributo := ' xmlns:' + StringReplace(Prefixo4, ':', '', []) + '="' + FURL + FDefTipos + '"'
+  else
+    Atributo := ' xmlns="' + FURL + FDefTipos + '"';
 
   FNFSe.InfID.ID := OnlyNumber(FNFSe.IdentificacaoRps.Numero) +
                       FNFSe.IdentificacaoRps.Serie;
 
   GerarXML_Equiplano;
-
-  if FOpcoes.GerarTagAssinatura <> taNunca then
-  begin
-    Gerar := true;
-    if FOpcoes.GerarTagAssinatura = taSomenteSeAssinada then
-      Gerar := ((NFSe.signature.DigestValue <> '') and
-                (NFSe.signature.SignatureValue <> '') and
-                (NFSe.signature.X509Certificate <> ''));
-    if FOpcoes.GerarTagAssinatura = taSomenteParaNaoAssinada then
-      Gerar := ((NFSe.signature.DigestValue = '') and
-                (NFSe.signature.SignatureValue = '') and
-                (NFSe.signature.X509Certificate = ''));
-    if Gerar then
-    begin
-      FNFSe.signature.URI := FNFSe.InfID.ID;
-      FNFSe.signature.Gerador.Opcoes.IdentarXML := Gerador.Opcoes.IdentarXML;
-      FNFSe.signature.GerarXMLNFSe;
-      Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
-                                   FNFSe.signature.Gerador.ArquivoFormatoXML;
-    end;
-  end;
 
   Gerador.gtAjustarRegistros(NFSe.InfID.ID);
   Result := (Gerador.ListaDeAlertas.Count = 0);

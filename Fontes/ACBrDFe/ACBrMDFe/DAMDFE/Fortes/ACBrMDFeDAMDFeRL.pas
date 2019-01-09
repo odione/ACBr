@@ -40,84 +40,33 @@ interface
 
 uses
   Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ExtCtrls, pmdfeMDFe, ACBrMDFe,
-  RLReport, RLFilters, RLPrinters, RLPDFFilter, RLConsts,
-  {$IFDEF BORLAND} DBClient, {$ELSE} BufDataset, {$ENDIF} DB;
+  Dialogs, ExtCtrls,
+  pmdfeMDFe,
+  ACBrMDFe, ACBrMDFeDAMDFeRLClass, ACBrDFeReportFortes,
+  RLReport, RLFilters, RLPrinters, RLPDFFilter, RLConsts;
 
 type
 
   { TfrlDAMDFeRL }
 
   TfrlDAMDFeRL = class(TForm)
-    dsItens: TDatasource;
     RLMDFe: TRLReport;
     RLPDFFilter1: TRLPDFFilter;
-    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
   protected
-    FACBrMDFe: TACBrMDFe;
-    FMDFe: TMDFe;
-    FLogo: string;
-    FEmail: string;
-    FFax: string;
-    FNumCopias: integer;
-    FSistema: string;
-    FSite: string;
-    FUsuario: string;
-    AfterPreview: boolean;
-    FExpandirLogoMarca: boolean;
-    ChangedPos: boolean;
-    FSemValorFiscal: boolean;
-    FMargemSuperior: double;
-    FMargemInferior: double;
-    FMargemEsquerda: double;
-    FMargemDireita: double;
-    FImpressora: string;
-    FMDFeCancelada: boolean;
-    FMDFeEncerrado: boolean;
-
-    cdsItens:  {$IFDEF BORLAND} TClientDataSet {$ELSE} TBufDataset{$ENDIF};
-    procedure ConfigDataSet;
+    fpACBrMDFe: TACBrMDFe;
+    fpMDFe: TMDFe;
+    fpDAMDFe: TACBrMDFeDAMDFeRL;
+    fpAfterPreview: boolean;
+    fpChangedPos: boolean;
+    fpSemValorFiscal: boolean;
 
     procedure rllSemValorFiscalPrint(Sender: TObject; var Value: string);
   public
     { Public declarations }
-    class procedure Imprimir(AOwner: TComponent; 
-		  AMDFe: TMDFe; ALogo: string = '';
-      AEmail: string = '';
-      AExpandirLogoMarca: boolean = False;
-      AFax: string = '';
-      ANumCopias: integer = 1;
-      ASistema: string = '';
-      ASite: string = '';
-      AUsuario: string = '';
-      APreview: boolean = True;
-      AMargemSuperior: double = 0.8;
-      AMargemInferior: double = 0.8;
-      AMargemEsquerda: double = 0.6;
-      AMargemDireita: double = 0.51;
-      AImpressora: string = '';
-      AMDFeCancelada: boolean = False;
-      AMDFeEncerrado: boolean = False;
-      APrintDialog  : Boolean = True  );
-
-    class procedure SavePDF(AOwner: TComponent; 
-		  AFile: string; AMDFe: TMDFe;
-      ALogo: string = '';
-      AEmail: string = '';
-      AExpandirLogoMarca: boolean = False;
-      AFax: string = '';
-      ANumCopias: integer = 1;
-      ASistema: string = '';
-      ASite: string = '';
-      AUsuario: string = '';
-      AMargemSuperior: double = 0.8;
-      AMargemInferior: double = 0.8;
-      AMargemEsquerda: double = 0.6;
-      AMargemDireita: double = 0.51;
-      AMDFeCancelada: boolean = False;
-      AMDFeEncerrado: boolean = False);
+    class procedure Imprimir(ADAMDFe: TACBrMDFeDAMDFeRL; AMDFes: array of TMDFe);
+    class procedure SalvarPDF(ADAMDFe: TACBrMDFeDAMDFeRL; AMDFe: TMDFe; AFile: String);
 
   end;
 
@@ -132,196 +81,100 @@ uses
  {$R *.dfm}
 {$endif}
 
-class procedure TfrlDAMDFeRL.Imprimir(AOwner: TComponent; 
-  AMDFe: TMDFe;
-  ALogo: string = '';
-  AEmail: string = '';
-  AExpandirLogoMarca: boolean = False;
-  AFax: string = '';
-  ANumCopias: integer = 1;
-  ASistema: string = '';
-  ASite: string = '';
-  AUsuario: string = '';
-  APreview: boolean = True;
-  AMargemSuperior: double = 0.8;
-  AMargemInferior: double = 0.8;
-  AMargemEsquerda: double = 0.6;
-  AMargemDireita: double = 0.51;
-  AImpressora: string = '';
-  AMDFeCancelada: boolean = False;
-  AMDFeEncerrado: boolean = False;
-  APrintDialog: Boolean = True);
+class procedure TfrlDAMDFeRL.Imprimir(ADAMDFe: TACBrMDFeDAMDFeRL; AMDFes: array of TMDFe);
+var
+  Report: TRLReport;
+  ReportNext: TRLCustomReport;
+  i: Integer;
+  DAMDFeReport: TfrlDAMDFeRL;
+  ReportArray: array of TfrlDAMDFeRL;
 begin
-  with Create(AOwner) do
-    //with TfrlDAMDFeRL do
-    try
-      FMDFe := AMDFe;
-      FLogo := ALogo;
-      FEmail := AEmail;
-      FExpandirLogoMarca := AExpandirLogoMarca;
-      FFax := AFax;
-      FNumCopias := ANumCopias;
-      FSistema := ASistema;
-      FSite := ASite;
-      FUsuario := AUsuario;
-      FMargemSuperior := AMargemSuperior;
-      FMargemInferior := AMargemInferior;
-      FMargemEsquerda := AMargemEsquerda;
-      FMargemDireita := AMargemDireita;
-      FImpressora := AImpressora;
-      FMDFeCancelada := AMDFeCancelada;
-      FMDFeEncerrado := AMDFeEncerrado;
+  if (Length(AMDFes) < 1) then
+    Exit;
 
-      if FImpressora > '' then
-        RLPrinter.PrinterName := FImpressora;
+  try
+    SetLength(ReportArray, Length(AMDFes));
 
-      if FNumCopias > 0 then
-        RLPrinter.Copies := FNumCopias
-      else
-        RLPrinter.Copies := 1;
-
-      RLMDFe.PrintDialog := APrintDialog;
-      if APreview = True then
-        RLMDFe.PreviewModal
-      else
-        RLMDFe.Print;
-    finally
-      Free;
-    end;
-end;
-
-class procedure TfrlDAMDFeRL.SavePDF(AOwner: TComponent; 
-  AFile: string;
-  AMDFe: TMDFe;
-  ALogo: string = '';
-  AEmail: string = '';
-  AExpandirLogoMarca: boolean = False;
-  AFax: string = '';
-  ANumCopias: integer = 1;
-  ASistema: string = '';
-  ASite: string = '';
-  AUsuario: string = '';
-  AMargemSuperior: double = 0.8;
-  AMargemInferior: double = 0.8;
-  AMargemEsquerda: double = 0.6;
-  AMargemDireita: double = 0.51;
-  AMDFeCancelada: boolean = False;
-  AMDFeEncerrado: boolean = False);
-begin
-  with Create(AOwner) do
-    //with TfrlDAMDFeRL do
-    try
-      FMDFe := AMDFe;
-      FLogo := ALogo;
-      FEmail := AEmail;
-      FExpandirLogoMarca := AExpandirLogoMarca;
-      FFax := AFax;
-      FNumCopias := ANumCopias;
-      FSistema := ASistema;
-      FSite := ASite;
-      FUsuario := AUsuario;
-      FMargemSuperior := AMargemSuperior;
-      FMargemInferior := AMargemInferior;
-      FMargemEsquerda := AMargemEsquerda;
-      FMargemDireita := AMargemDireita;
-      FMDFeCancelada := AMDFeCancelada;
-      FMDFeEncerrado := AMDFeEncerrado;
-
-      with RLPDFFilter1.DocumentInfo do
-      begin
-        Title := ACBrStr('DAMDFe - MDFe nº ') +
-          FormatFloat('000,000,000', FMDFe.Ide.nMDF);
-        KeyWords := ACBrStr('Número:') + FormatFloat('000,000,000', FMDFe.Ide.nMDF) +
-          ACBrStr('; Data de emissão: ') + FormatDateTime('dd/mm/yyyy', FMDFe.Ide.dhEmi) +
-          '; CNPJ: ' + FMDFe.emit.CNPJ;
-      end;
-
-      RLMDFe.SaveToFile(AFile);
-    finally
-      Free;
-    end;
-end;
-
-procedure TfrlDAMDFeRL.FormCreate(Sender: TObject);
-begin
-  ConfigDataSet;
-end;
-
-procedure TfrlDAMDFeRL.ConfigDataSet;
-begin
-  if not Assigned(cdsItens) then
-    cdsItens :=
-{$IFDEF BORLAND}  TClientDataSet.create(nil)  {$ELSE}
-      TBufDataset.Create(nil)
-{$ENDIF}
-  ;
-
-  if cdsItens.Active then
-  begin
- {$IFDEF BORLAND}
-  if cdsItens is TClientDataSet then
-  TClientDataSet(cdsItens).EmptyDataSet;
- {$ENDIF}
-    cdsItens.Active := False;
-  end;
-
- {$IFDEF BORLAND}
- if cdsItens is TClientDataSet then
-  begin
-  TClientDataSet(cdsItens).StoreDefs := False;
-  TClientDataSet(cdsItens).IndexDefs.Clear;
-  TClientDataSet(cdsItens).IndexFieldNames := '';
-  TClientDataSet(cdsItens).IndexName := '';
-  TClientDataSet(cdsItens).Aggregates.Clear;
-  TClientDataSet(cdsItens).AggFields.Clear;
-  end;
- {$ELSE}
-  if cdsItens is TBufDataset then
-  begin
-    TBufDataset(cdsItens).IndexDefs.Clear;
-    TBufDataset(cdsItens).IndexFieldNames := '';
-    TBufDataset(cdsItens).IndexName := '';
-  end;
- {$ENDIF}
-
-  with cdsItens do
-    if FieldCount = 0 then
+    for i := 0 to High(AMDFes) do
     begin
-      FieldDefs.Clear;
-      Fields.Clear;
-      FieldDefs.Add('CHAVE1', ftString, 84);
-      FieldDefs.Add('CHAVE2', ftString, 84);
+      DAMDFeReport := Create(nil);
+      DAMDFeReport.fpMDFe := AMDFes[i];
+      DAMDFeReport.fpDAMDFe := ADAMDFe;
 
-   {$IFDEF BORLAND}
-    if cdsItens is TClientDataSet then
-    TClientDataSet(cdsItens).CreateDataSet;
-   {$ELSE}
-      if cdsItens is TBufDataset then
-        TBufDataset(cdsItens).CreateDataSet;
-   {$ENDIF}
+      DAMDFeReport.RLMDFe.CompositeOptions.ResetPageNumber := True;
+      ReportArray[i] := DAMDFeReport;
     end;
 
- {$IFDEF BORLAND}
-  if cdsItens is TClientDataSet then
-  TClientDataSet(cdsItens).StoreDefs := False;
- {$ENDIF}
+    Report := ReportArray[0].RLMDFe;
+    for i := 1 to High(ReportArray) do
+    begin
+      if (Report.NextReport = nil) then
+        Report.NextReport := ReportArray[i].RLMDFe
+      else
+      begin
+        ReportNext := Report.NextReport;
 
-  if not cdsItens.Active then
-    cdsItens.Active := True;
+        repeat
+          if (ReportNext.NextReport <> nil) then
+            ReportNext := ReportNext.NextReport;
+        until (ReportNext.NextReport = nil);
 
-  {$IFDEF BORLAND}
-   if cdsItens is TClientDataSet then
-   if cdsItens.Active then
-   TClientDataSet(cdsItens).LogChanges := False;
- {$ENDIF}
+        ReportNext.NextReport := ReportArray[i].RLMDFe;
+      end;
+    end;
 
-  dsItens.dataset := cdsItens;
+    TDFeReportFortes.AjustarReport(Report, DAMDFeReport.fpDAMDFe);
+
+    if DAMDFeReport.fpDAMDFe.MostraPreview then
+      Report.PreviewModal
+    else
+      Report.Print;
+  finally
+    if (ReportArray <> nil) then
+    begin
+      for i := 0 to High(ReportArray) do
+        FreeAndNil(ReportArray[i]);
+
+      SetLength(ReportArray, 0);
+      Finalize(ReportArray);
+      ReportArray := nil;
+    end;
+  end;
+end;
+
+class procedure TfrlDAMDFeRL.SalvarPDF(ADAMDFe: TACBrMDFeDAMDFeRL; AMDFe: TMDFe; AFile: String);
+var
+  DAMDFeReport: TfrlDAMDFeRL;
+//  ADir: String;
+begin
+  DAMDFeReport := Create(nil);
+  try
+    DAMDFeReport.fpMDFe := AMDFe;
+    DAMDFeReport.fpDAMDFe := ADAMDFe;
+
+    TDFeReportFortes.AjustarReport(DAMDFeReport.RLMDFe, DAMDFeReport.fpDAMDFe);
+    TDFeReportFortes.AjustarFiltroPDF(DAMDFeReport.RLPDFFilter1, DAMDFeReport.fpDAMDFe, AFile);
+
+    with DAMDFeReport.RLPDFFilter1.DocumentInfo do
+    begin
+      Title := ACBrStr('DAMDFe - MDFe nº ') +
+          FormatFloat('000,000,000', DAMDFeReport.fpMDFe.Ide.nMDF);
+      KeyWords := ACBrStr('Número:') + FormatFloat('000,000,000', DAMDFeReport.fpMDFe.Ide.nMDF) +
+          ACBrStr('; Data de emissão: ') + FormatDateTime('dd/mm/yyyy', DAMDFeReport.fpMDFe.Ide.dhEmi) +
+          '; CNPJ: ' + DAMDFeReport.fpMDFe.emit.CNPJCPF;
+    end;
+
+    DAMDFeReport.RLMDFe.Prepare;
+    DAMDFeReport.RLPDFFilter1.FilterPages(DAMDFeReport.RLMDFe.Pages);
+  finally
+    FreeAndNil(DAMDFeReport);
+  end;
 end;
 
 procedure TfrlDAMDFeRL.rllSemValorFiscalPrint(Sender: TObject; var Value: string);
 begin
   inherited;
-  if FSemValorFiscal then
+  if fpSemValorFiscal then
     Value := '';
 end;
 

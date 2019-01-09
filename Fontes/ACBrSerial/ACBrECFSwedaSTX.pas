@@ -67,7 +67,7 @@ protected
   function GetObject (Index: Integer): TACBrECFSwedaInfo34;
   procedure Insert (Index: Integer; Obj: TACBrECFSwedaInfo34);
 public
-  function AchaSecao( Secao : String ) : Integer ;
+  function AchaSecao( const Secao : String ) : Integer ;
   function Add (Obj: TACBrECFSwedaInfo34): Integer;
   property Objects [Index: Integer]: TACBrECFSwedaInfo34
     read GetObject write SetObject; default;
@@ -110,12 +110,12 @@ TACBrECFSwedaSTX = class( TACBrECFClass )
 
     function RemoveNulos(Str:AnsiString):AnsiString;
     Function PreparaCmd( cmd : AnsiString ) : AnsiString ;
-    function CalcCheckSum(cmd: AnsiString): AnsiChar;
+    function CalcCheckSum(const cmd: AnsiString): AnsiChar;
     function DescompactaRetorno(const Dados: AnsiString): AnsiString;
     function DescreveErro(Erro: Integer): String;
-    function AjustaRetorno(Retorno: AnsiString): AnsiString;
+    function AjustaRetorno(const Retorno: AnsiString): AnsiString;
     function AjustaValor( ADouble : Double; Decimais : Integer = 2 ) : String ;
-    function ExtraiRetornoLeituras(Retorno: AnsiString): AnsiString;
+    function ExtraiRetornoLeituras(const Retorno: AnsiString): AnsiString;
   protected
     function GetDataHora: TDateTime; override ;
     function GetNumCupom: String; override ;
@@ -196,6 +196,8 @@ TACBrECFSwedaSTX = class( TACBrECFClass )
     Procedure DescontoAcrescimoItemAnterior( ValorDescontoAcrescimo : Double = 0;
        DescontoAcrescimo : String = 'D'; TipoDescontoAcrescimo : String = '%';
        NumItem : Integer = 0 ) ;  override ;
+    procedure CancelaDescontoAcrescimoItem(NumItem : Integer;
+       TipoAcrescimoDesconto: String = 'D') ;override ;
     Procedure SubtotalizaCupom( DescontoAcrescimo : Double = 0;
        MensagemRodape : AnsiString  = '') ; override ;
     Procedure EfetuaPagamento( CodFormaPagto : String; Valor : Double;
@@ -285,34 +287,37 @@ TACBrECFSwedaSTX = class( TACBrECFClass )
        Linhas : TStringList; Documentos : TACBrECFTipoDocumentoSet = [docTodos] ) ; overload ; override ;
 
     Procedure EspelhoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; override ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; override ;
     Procedure EspelhoMFD_DLL( COOInicial, COOFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; override ;
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos]  ) ; override ;
     Procedure ArquivoMFD_DLL( DataInicial, DataFinal : TDateTime;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD  ) ; override ;
     Procedure ArquivoMFD_DLL( ContInicial, ContFinal : Integer;
-       NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
+       const NomeArquivo : AnsiString; Documentos : TACBrECFTipoDocumentoSet = [docTodos];
        Finalidade: TACBrECFFinalizaArqMFD = finMFD;
        TipoContador: TACBrECFTipoContador = tpcCOO  ) ; override ;
 
-    Procedure ArquivoMF_DLL(NomeArquivo: AnsiString); override ;
-    Procedure ArquivoMFD_DLL(NomeArquivo: AnsiString); override ;
+    Procedure ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString); override;
+    Procedure ArquivoMFD_Binario_DLL(Tipo: TACBrECFTipoDownloadMFD; const NomeArquivo: AnsiString;
+      StrInicial, StrFinal: AnsiString); override;
 
-    procedure PafMF_GerarCAT52(const DataInicial: TDateTime;
-      const DataFinal: TDateTime; const DirArquivos: string); override;
+    procedure PafMF_GerarCAT52(const DataInicial, DataFinal: TDateTime;
+      const DirArquivos: String; NumeroSerie: String = ''); override;
 
     function TraduzirTag(const ATag: AnsiString): AnsiString; override;
     function TraduzirTagBloco(const ATag, Conteudo : AnsiString) : AnsiString ; override;
  end ;
 
 implementation
-Uses SysUtils, IniFiles, Math,
-   {$IFDEF COMPILER6_UP} DateUtils, StrUtils {$ELSE} ACBrD5, Windows{$ENDIF},
+Uses
+   {$IFDEF MSWINDOWS} Windows, {$ENDIF MSWINDOWS}
+   SysUtils, IniFiles, Math,
+   {$IFDEF COMPILER6_UP} DateUtils, StrUtils, {$ELSE} ACBrD5, {$ENDIF}
    ACBrECF, ACBrConsts, ACBrUtil;
 
 { --------------------------- TACBrECFSwedaCache ---------------------------- }
-function TACBrECFSwedaCache.AchaSecao(Secao: String): Integer;
+function TACBrECFSwedaCache.AchaSecao(const Secao: String): Integer;
 Var I : Integer ;
 begin
   I := 0 ;
@@ -367,7 +372,7 @@ begin
   fsRespostasComando := '' ;
   fsFalhasRX         := 0 ;
   fsPoucoPapel       := False;
-  fpModeloStr        := 'SwedaSTX' ;
+  fpModeloStr        := 'SWEDA' ;
   fpRFDID            := 'SW' ;
   fpIdentificaConsumidorRodape := True ;
 end;
@@ -942,7 +947,7 @@ begin
   Result := cmd + CalcCheckSum( cmd ) ;
 end ;
 
-function TACBrECFSwedaSTX.CalcCheckSum(cmd : AnsiString) : AnsiChar ;
+function TACBrECFSwedaSTX.CalcCheckSum(const cmd : AnsiString) : AnsiChar ;
 Var A, iSoma, LenCmd, CheckSum : Integer ;
 begin
   { Calculando a Soma dos caracteres ASC }
@@ -958,7 +963,7 @@ begin
 end ;
 
 { Remove Blocos de Resposta de Status não solicitados  (envio automático pelo ECF)}
-function TACBrECFSwedaSTX.AjustaRetorno(Retorno : AnsiString) : AnsiString ;
+function TACBrECFSwedaSTX.AjustaRetorno(const Retorno : AnsiString) : AnsiString ;
 Var
   LenRet, PosETX, PosSTX, Erro : Integer ;
   Bloco, Tipo : AnsiString ;
@@ -1000,7 +1005,7 @@ begin
 end ;
 
 { Remove Blocos de Resposta de Status não solicitados  (envio automático pelo ECF)}
-function TACBrECFSwedaSTX.ExtraiRetornoLeituras(Retorno : AnsiString
+function TACBrECFSwedaSTX.ExtraiRetornoLeituras(const Retorno : AnsiString
   ) : AnsiString ;
 Var
   PosETX, PosSTX : Integer ;
@@ -1057,7 +1062,7 @@ begin
 end;
 
 procedure TACBrECFSwedaSTX.EspelhoMFD_DLL(COOInicial, COOFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
 Var
   Resp : Integer ;
   CooIni, CooFim : AnsiString ;
@@ -1086,7 +1091,7 @@ begin
 end;
 
 procedure TACBrECFSwedaSTX.EspelhoMFD_DLL(DataInicial, DataFinal: TDateTime;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet);
 Var
   Resp : Integer ;
   DiaIni, DiaFim : AnsiString ;
@@ -1115,7 +1120,7 @@ begin
 end;
 
 procedure TACBrECFSwedaSTX.ArquivoMFD_DLL(ContInicial, ContFinal: Integer;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD;
   TipoContador: TACBrECFTipoContador);
 Var
@@ -1152,9 +1157,9 @@ begin
 
     if Finalidade = finMF then
      begin
-       PathBin := ExtractFilePath(NomeArquivo);   // na expecificacao de requisito 2.01 pede para gerar e assinar o "Arquivo Binario" da MF também
+       PathBin := ExtractFilePath(NomeArquivo);
        PathBin := PathBin + 'MF.BIN';
-       DeleteFile( PathBin );
+       SysUtils.DeleteFile( PathBin );
 
        Resp := xECF_DownloadMF( pathBin );
        if Resp <> 1 then
@@ -1181,7 +1186,7 @@ begin
                             'Arquivo: "'+NomeArquivo + '" não gerado' ))
 end;
 
-procedure TACBrECFSwedaSTX.ArquivoMF_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFSwedaSTX.ArquivoMF_Binario_DLL(const NomeArquivo: AnsiString);
 var
   Resp: Integer;
   FileMF, ArquivoMf : AnsiString;
@@ -1219,16 +1224,25 @@ begin
                             'Arquivo: "'+NomeArquivo+'" não gerado' ))
 end;
 
-procedure TACBrECFSwedaSTX.ArquivoMFD_DLL(NomeArquivo: AnsiString);
+procedure TACBrECFSwedaSTX.ArquivoMFD_Binario_DLL(
+  Tipo: TACBrECFTipoDownloadMFD; const NomeArquivo: AnsiString;
+  StrInicial, StrFinal: AnsiString);
 var
   Resp: Integer;
-  FileMFD, ArquivoMfd : AnsiString;
+  FileMFD, TipoSweda, ArquivoMfd : AnsiString;
   OldAtivo: Boolean;
 begin
   ArquivoMfd := fsApplicationPath+'SWEDA'+PathDelim+GetNumSerie+PathDelim+GetNumSerieMFD+'.MFD' ;
   GravaLog( '  Arquivo Binario deve estar em: '+ArquivoMfd );
 
   LoadDLLFunctions;
+
+  case Tipo of
+     tdmfdData: TipoSweda := '1';
+     tdmfdCOO : TipoSweda := '2';
+  else
+     TipoSweda := '0';
+  end;
 
   OldAtivo := Ativo ;
   try
@@ -1237,7 +1251,7 @@ begin
     // fazer o download da MF
     GravaLog( '   xECF_DownloadMFD' );
     FileMFD := ExtractFileName( NomeArquivo );
-    Resp := xECF_DownloadMFD( FileMFD, '0', '', '', '0' );
+    Resp := xECF_DownloadMFD( FileMFD, TipoSweda, StrInicial, StrFinal, '0' );
     if (Resp <> 1) then
        raise EACBrECFERRO.Create( ACBrStr( 'Erro ao executar ECF_DownloadMFD.'+sLineBreak+
                                   DescricaoErroDLL(Resp) ))
@@ -1258,8 +1272,8 @@ begin
 
 end;
 
-procedure TACBrECFSwedaSTX.PafMF_GerarCAT52(const DataInicial: TDateTime;
-   const DataFinal: TDateTime; const DirArquivos: string);
+procedure TACBrECFSwedaSTX.PafMF_GerarCAT52(const DataInicial,
+  DataFinal: TDateTime; const DirArquivos: String; NumeroSerie: String);
 var
   Resp: Integer;
   Dia, FileMF : AnsiString;
@@ -1311,7 +1325,7 @@ begin
 end;
 
 procedure TACBrECFSwedaSTX.ArquivoMFD_DLL(DataInicial, DataFinal: TDateTime;
-  NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
+  const NomeArquivo: AnsiString; Documentos: TACBrECFTipoDocumentoSet;
   Finalidade: TACBrECFFinalizaArqMFD);
 Var
   Resp : Integer ;
@@ -1350,7 +1364,7 @@ begin
           //na expecificacao de requisito 2.01 pede para gerar e assinar o "Arquivo Binario" da MF também
           PathBin := ExtractFilePath(NomeArquivo);
           PathBin:= PathBin + 'MF.BIN';
-          DeleteFile( PathBin );
+          SysUtils.DeleteFile( PathBin );
 
           Resp := xECF_DownloadMF( pathBin );
           if Resp <> 1 then
@@ -1472,12 +1486,14 @@ Var RetCmd : AnsiString ;
     Sinalizadores : AnsiString ;
     B : Integer ;
 begin
-  Result := fpEstado ;  // Suprimir Warning
-  try
-    fpEstado := estNaoInicializada ;
-    if (not fpAtivo) then
-      exit ;
+  fpEstado := estNaoInicializada ;
+  if (not fpAtivo) then
+  begin
+    Result := fpEstado ;
+    Exit ;
+  end;
 
+  try
     fpEstado := estDesconhecido ;
 
     RetCmd := EnviaComando( '34' ) ;
@@ -1748,6 +1764,19 @@ begin
      end;
   end;
   EnviaComando('08') ;
+end;
+
+procedure TACBrECFSwedaSTX.CancelaDescontoAcrescimoItem(NumItem: Integer;
+  TipoAcrescimoDesconto: String);
+var
+  CMD : String ;
+begin
+  CMD := '69' ;
+
+  if NumItem > 0 then
+     CMD := CMD + '|' + IntToStr(NumItem) + '|' + ifthen(TipoAcrescimoDesconto='D','2','1');
+
+  EnviaComando( CMD ) ;
 end;
 
 procedure TACBrECFSwedaSTX.CancelaItemVendido(NumItem: Integer);

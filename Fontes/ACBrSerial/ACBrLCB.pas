@@ -69,6 +69,9 @@ uses ACBrBase, ACBrDevice  {Units da ACBr}
 type
 
 { Componente ACBrLCB - Leitor de Código de Barras }
+	{$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF RTL230_UP}
 TACBrLCB = class( TACBrComponent )
   private
     fsDevice  : TACBrDevice ;   { SubComponente ACBrDevice }
@@ -103,7 +106,7 @@ TACBrLCB = class( TACBrComponent )
     procedure SetUltimoCodigo(const Value: AnsiString);
     procedure SetPrefixoAExcluir(const Value: AnsiString);
     procedure SetSufixo(const Value: AnsiString);
-    procedure AddFila( AString : AnsiString ) ;
+    procedure AddFila( const AString : AnsiString ) ;
     procedure SetUsarFila(const Value: Boolean);
     procedure SetIntervalo(const Value: Integer);
   protected
@@ -122,7 +125,7 @@ TACBrLCB = class( TACBrComponent )
     procedure ApagarFila ;
     property FilaCount : Integer read GetFilaCount ;
 
-    procedure EnviarString( AString : AnsiString ) ;
+    procedure EnviarString( const AString : AnsiString ) ;
     function LerString : AnsiString ;
      
     property UltimaLeitura : AnsiString read fsUltimaLeitura ;
@@ -318,7 +321,7 @@ begin
   fs_Sufixo := TraduzComando( Value ) ;
 end;
 
-procedure TACBrLCB.AddFila(AString: AnsiString);
+procedure TACBrLCB.AddFila(const AString: AnsiString);
 begin
   if Fila.Count = FilaMaxItens then
      Fila.Delete( 0 ) ;
@@ -404,7 +407,7 @@ begin
   fsTimer.Enabled  := fsAtivo and (fsIntervalo > 0) ;
 end;
 
-procedure TACBrLCB.EnviarString(AString: AnsiString);
+procedure TACBrLCB.EnviarString(const AString: AnsiString);
 begin
   if not fsAtivo then
      raise Exception.Create(ACBrStr('Componente ACBrLCB não está ATIVO'));
