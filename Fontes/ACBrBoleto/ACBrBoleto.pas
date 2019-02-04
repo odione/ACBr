@@ -56,7 +56,6 @@ uses Classes, Graphics, Contnrs, IniFiles,
      ACBrBase, ACBrMail, ACBrValidador;
 
 const
-  CACBrBoleto_Versao = '0.1.0';
   CInstrucaoPagamento = 'Pagar preferencialmente nas agencias do %s';
   CInstrucaoPagamentoLoterica = 'Preferencialmente nas Casas Lotéricas até o valor limite';
   CCedente = 'CEDENTE';
@@ -64,7 +63,7 @@ const
   CConta = 'CONTA';
   CTitulo = 'TITULO';
 
-  cACBrTipoOcorrenciaDecricao: array[0..281] of String = (
+  cACBrTipoOcorrenciaDecricao: array[0..290] of String = (
     'Remessa Registrar',
     'Remessa Baixar',
     'Remessa Debitar Em Conta',
@@ -135,6 +134,7 @@ const
     'Remessa Baixa Título Negativado Sem Protesto',
     'Remessa Alterar Valor Mínimo', 
     'Remessa Alterar Valor Máximo',
+    'Remessa Excluir Negativacao Serasa e Baixar',
     'Retorno Abatimento Cancelado',
     'Retorno Abatimento Concedido',
     'Retorno Acerto Controle Participante',
@@ -346,7 +346,15 @@ const
     'Retorno Estorno Liquidacao OnLine',
     'Retorno Confirmacao Alteracao Valor Nominal',
     'Retorno Confirmacao Alteracao Valor Percentual Minimo Maximo',
-    'Tipo Ocorrencia Nenhum'
+    'Tipo Ocorrencia Nenhum',
+    'Retorno Confirmação de Recebimento de Pedido de Negativação',
+    'Retorno Confirmação de Recebimento de Pedido de Exclusão de Negativação',
+    'Retorno Confirmação de Entrada de Negativação',
+    'Retorno Entrada de Negativação Rejeitada',
+    'Retorno Confirmação de Exclusão de Negativação',
+    'Retorno Exlusão de Negativação Rejeitada',
+    'Retorno Exclusão e Negativação por Outros Motivos',
+    'Retorno Ocorrência Informacional por Outros Motivos'
 );
 
 type
@@ -473,6 +481,7 @@ type
     toRemessaBaixaTituloNegativadoSemProtesto,
     toRemessaAlterarValorMinimo,
     toRemessaAlterarValorMaximo,
+    toRemessaExcluirNegativacaoSerasaBaixar,
     {Ocorrências para arquivo retorno}
     toRetornoAbatimentoCancelado,
     toRetornoAbatimentoConcedido,
@@ -685,7 +694,15 @@ type
     toRetornoEstornoLiquidacaoOnLine,
     toRetornoConfirmacaoAlteracaoValorNominal,
     toRetornoConfirmacaoAlteracaoValorpercentualMinimoMaximo,
-    toTipoOcorrenciaNenhum
+    toTipoOcorrenciaNenhum,
+    toRetornoConfRecPedidoNegativacao,
+    toRetornoConfRecPedidoExclusaoNegativacao,
+    toRetornoConfEntradaNegativacao,
+    toRetornoEntradaNegativacaoRejeitada,
+    toRetornoConfExclusaoNegativacao,
+    toRetornoExclusaoNegativacaoRejeitada,
+    toRetornoExcusaoNegativacaoOutrosMotivos,
+    toRetornoOcorrenciaInfOutrosMotivos
   );
 
   {TACBrOcorrencia}
@@ -891,8 +908,8 @@ type
   {Define se a carteira é Cobrança Simples / Registrada}
   TACBrTipoCarteira = (tctSimples, tctRegistrada, tctEletronica);
 
-  {Definir como o boleto vai ser gerado/enviado pelo Cedente ou pelo Banco }
-  TACBrCarteiraEnvio = (tceCedente, tceBanco);
+  {Definir como o boleto vai ser gerado/enviado pelo Cedente ou pelo Banco via correio ou Banco via email }
+  TACBrCarteiraEnvio = (tceCedente, tceBanco, tceBancoEmail);
 
   {Definir codigo Desconto }
   TACBrCodigoDesconto    = (cdSemDesconto, cdValorFixo);
@@ -1153,6 +1170,7 @@ type
     procedure SetCodigoGeracao (const AValue: String);
     procedure SetDataProtesto(AValue: TDateTime);
     procedure SetVencimento(AValue: TDateTime);
+    procedure setValorDocumento(const AValue: Currency);
     procedure AtualizaDadosProtesto();
    public
      constructor Create(ACBrBoleto:TACBrBoleto);
@@ -1177,7 +1195,7 @@ type
      property CodigoNegativacao : TACBrCodigoNegativacao read fCodigoNegativacao write fCodigoNegativacao default cnNaoProtestar;
      
      property EspecieMod        : String      read fEspecieMod        write fEspecieMod;
-     property ValorDocumento    : Currency    read fValorDocumento    write fValorDocumento;
+     property ValorDocumento    : Currency    read fValorDocumento    write setValorDocumento;
      property Mensagem          : TStrings    read fMensagem          write fMensagem;
      property Informativo       : TStrings    read fInformativo       write fInformativo;
      property Instrucao1        : String      read fInstrucao1        write fInstrucao1;
@@ -1283,8 +1301,6 @@ type
     fLeCedenteRetorno: boolean;
     fHomologacao: Boolean;
     fRemoveAcentosArqRemessa: Boolean;
-    function GetAbout: String;
-    procedure SetAbout(const AValue: String);
     procedure SetACBrBoletoFC(const Value: TACBrBoletoFCClass);
     procedure SetMAIL(AValue: TACBrMail);
   protected
@@ -1318,7 +1334,6 @@ type
     procedure GravarArqIni(DirIniRetorno: string; const NomeArquivo: String);
 
   published
-    property About : String read GetAbout write SetAbout stored False ;
     property MAIL  : TACBrMail read FMAIL write SetMAIL;
 
     property Homologacao    : Boolean            read fHomologacao            write fHomologacao default False;
@@ -1360,16 +1375,13 @@ type
     fOnObterLogo : TACBrBoletoFCOnObterLogo ;
     fSoftwareHouse  : String;
     function ComponentStateDesigning: Boolean;
-    function GetAbout: String;
     function GetArqLogo: String;
     function GetDirLogo: String;
     function GetNomeArquivo: String;
-    procedure SetAbout(const AValue: String);
     procedure SetACBrBoleto(const Value: TACBrBoleto);
     procedure SetDirLogo(const AValue: String);
     procedure SetNomeArquivo(const AValue: String);
   protected
-    fpAbout : String ;
     fACBrBoleto : TACBrBoleto;
     procedure SetNumCopias(AValue: Integer);
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -1387,8 +1399,6 @@ type
 
     property ArquivoLogo : String read GetArqLogo;
   published
-    property About : String read GetAbout write SetAbout stored False ;
-
     property OnObterLogo     : TACBrBoletoFCOnObterLogo read fOnObterLogo write fOnObterLogo ;
     property ACBrBoleto      : TACBrBoleto     read fACBrBoleto       write SetACBrBoleto stored False;
     property LayOut          : TACBrBolLayOut  read fLayOut           write fLayOut           default lPadrao;
@@ -1847,16 +1857,6 @@ begin
   end;
 end;
 
-function TACBrBoleto.GetAbout: String;
-begin
-  Result := 'ACBrBoleto Ver: '+CACBrBoleto_Versao;
-end;
-
-procedure TACBrBoleto.SetAbout(const AValue: String);
-begin
-  {}
-end;
-
 procedure TACBrBoleto.Notification ( AComponent: TComponent;
    Operation: TOperation ) ;
 begin
@@ -1870,6 +1870,14 @@ begin
      if (FMAIL <> nil) and (AComponent is TACBrMail) then
        FMAIL := nil;
    end;
+end;
+
+procedure TACBrTitulo.setValorDocumento(const AValue: Currency);
+begin
+  // O arredondamento é com objetivo de remover as diferenças em arredondamentos posteriores,
+  //    que causa uma diferença entre o valor do documento e a linha digitável.
+  // Veja: https://www.projetoacbr.com.br/forum/topic/48941-erro-ao-gerar-boleto-linha-digitavél-diferente-do-valor-do-boleto-sicoob
+  fValorDocumento := RoundTo(AValue, -2);
 end;
 
 { TACBrBoleto }
@@ -2803,7 +2811,9 @@ begin
       end;
 
       if RemoveAcentosArqRemessa then
-        SLRemessa.Text := TiraAcentos(SLRemessa.Text);
+        SLRemessa.Text := TiraAcentos(SLRemessa.Text)
+      else
+        SLRemessa.Text := NativeStringToAnsi(SLRemessa.Text);
 
       SLRemessa.SaveToFile( NomeArq );
       Result:= NomeArq;
@@ -2907,9 +2917,9 @@ end;
 function TACBrBoleto.GetOcorrenciasRemessa(): TACBrOcorrenciasRemessa;
 var I: Integer;
 begin
-  SetLength(Result, 47);
+  SetLength(Result, 48);
 
-  for I:= 1 to 47 do
+  for I:= 1 to 48 do
   begin
     Result[I-1].Tipo := TACBrTipoOcorrencia(I-1);
     Result[I-1].descricao := cACBrTipoOcorrenciaDecricao[I-1];
@@ -2951,7 +2961,8 @@ var
   IniBoletos : TMemIniFile ;
   Titulo : TACBrTitulo;
   wTipoInscricao, wRespEmissao, wLayoutBoleto: Integer;
-  wNumeroBanco, wIndiceACBr, wCNAB: Integer;
+  wNumeroBanco, wIndiceACBr, wCNAB, wNumeroCorrespondente,
+  wVersaoLote, wVersaoArquivo: Integer;
   wLocalPagto, MemFormatada: String;
   Sessao, sFim: String;
   I: Integer;
@@ -3010,6 +3021,9 @@ begin
         wNumeroBanco := IniBoletos.ReadInteger(CBanco,'Numero', 0 );
         wIndiceACBr  := IniBoletos.ReadInteger(CBanco,'IndiceACBr', 0 );
         wCNAB        := IniBoletos.ReadInteger(CBanco,'CNAB', Integer(LayoutRemessa) );
+        wNumeroCorrespondente  := IniBoletos.ReadInteger(CBanco,'NumeroCorrespondente', 0 );
+        wVersaoArquivo := IniBoletos.ReadInteger(CBanco,'VersaoArquivo', 0 );
+        wVersaoLote := IniBoletos.ReadInteger(CBanco,'VersaoLote', 0 );
 
         if ( wCNAB = 0 ) then
            LayoutRemessa := c240
@@ -3024,6 +3038,15 @@ begin
         if (trim(Banco.Nome) = 'Não definido') then
            raise exception.Create('Banco não definido ou não '+
                                   'implementado no ACBrBoleto!');
+
+        if ( wNumeroCorrespondente > 0 ) then
+          Banco.NumeroCorrespondente:= wNumeroCorrespondente;
+
+        if ( wVersaoArquivo > 0 ) then
+          Banco.LayoutVersaoArquivo:= wVersaoArquivo;
+
+        if ( wVersaoLote > 0 ) then
+          Banco.LayoutVersaoLote:= wVersaoLote;
 
         Result := True;
       end;
@@ -3178,6 +3201,9 @@ begin
 
        IniRetorno.WriteInteger(CBanco,'Numero',Banco.Numero);
        IniRetorno.WriteInteger(CBanco,'IndiceACBr',Integer(Banco.TipoCobranca));
+       IniRetorno.WriteInteger(CBanco,'NumeroCorrespondente',Banco.NumeroCorrespondente);
+       IniRetorno.WriteInteger(CBanco,'VersaoArquivo',Banco.LayoutVersaoArquivo);
+       IniRetorno.WriteInteger(CBanco,'VersaoLote',Banco.LayoutVersaoLote);
 
        IniRetorno.WriteString(CConta,'Conta',Cedente.Conta);
        IniRetorno.WriteString(CConta,'DigitoConta',Cedente.ContaDigito);
@@ -3234,7 +3260,6 @@ constructor TACBrBoletoFCClass.Create ( AOwner: TComponent ) ;
 begin
    inherited Create ( AOwner ) ;
 
-   fpAbout           := 'ACBrBoletoFCClass' ;
    fACBrBoleto       := nil;
    fLayOut           := lPadrao;
    fNumCopias        := 1;
@@ -3314,11 +3339,6 @@ begin
    Result := PathWithDelim(DirLogo) + IntToStrZero( ACBrBoleto.Banco.Numero, 3)+'.bmp';
 end;
 
-function TACBrBoletoFCClass.GetAbout: String;
-begin
-  Result := fpAbout ;
-end;
-
 function TACBrBoletoFCClass.ComponentStateDesigning: Boolean;
 begin
   Result := (csDesigning in Self.ComponentState);
@@ -3360,11 +3380,6 @@ begin
 
     Result := fPathNomeArquivo;
   end;
-end;
-
-procedure TACBrBoletoFCClass.SetAbout(const AValue: String);
-begin
-  {}
 end;
 
 procedure TACBrBoletoFCClass.SetNumCopias ( AValue: Integer ) ;

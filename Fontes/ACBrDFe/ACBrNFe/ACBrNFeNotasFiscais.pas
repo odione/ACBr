@@ -83,8 +83,8 @@ type
     function GetMsg: String;
     function GetNumID: String;
     function GetXMLAssinado: String;
-    procedure SetXML(AValue: String);
-    procedure SetXMLOriginal(AValue: String);
+    procedure SetXML(const AValue: String);
+    procedure SetXMLOriginal(const AValue: String);
     function ValidarConcatChave: Boolean;
     function CalcularNomeArquivo: String;
     function CalcularPathArquivo: String;
@@ -1684,6 +1684,7 @@ begin
       if sCNPJCPF <> '' then
       begin
         Retirada.CNPJCPF := sCNPJCPF;
+        Retirada.xNome   := INIRec.ReadString( 'Retirada','xNome','');
         Retirada.xLgr    := INIRec.ReadString( 'Retirada','xLgr','');
         Retirada.nro     := INIRec.ReadString( 'Retirada','nro' ,'');
         Retirada.xCpl    := INIRec.ReadString( 'Retirada','xCpl','');
@@ -1691,12 +1692,19 @@ begin
         Retirada.cMun    := INIRec.ReadInteger('Retirada','cMun',0);
         Retirada.xMun    := INIRec.ReadString( 'Retirada','xMun','');
         Retirada.UF      := INIRec.ReadString( 'Retirada','UF'  ,'');
+        Retirada.CEP     := INIRec.ReadInteger('Retirada','CEP',0);
+        Retirada.cPais   := INIRec.ReadInteger('Retirada','PaisCod',INIRec.ReadInteger('Retirada','cPais',1058));
+        Retirada.xPais   := INIRec.ReadString( 'Retirada','Pais',INIRec.ReadString( 'Retirada','xPais','BRASIL'));
+        Retirada.Fone    := INIRec.ReadString( 'Retirada','Fone','');
+        Retirada.Email   := INIRec.ReadString( 'Retirada','Email','');
+        Retirada.IE      := INIRec.ReadString( 'Retirada','IE'  ,'');
       end;
 
       sCNPJCPF := INIRec.ReadString(  'Entrega','CNPJ',INIRec.ReadString(  'Entrega','CPF',INIRec.ReadString(  'Entrega','CNPJCPF','')));
       if sCNPJCPF <> '' then
       begin
         Entrega.CNPJCPF := sCNPJCPF;
+        Entrega.xNome   := INIRec.ReadString( 'Entrega','xNome','');
         Entrega.xLgr    := INIRec.ReadString(  'Entrega','xLgr','');
         Entrega.nro     := INIRec.ReadString(  'Entrega','nro' ,'');
         Entrega.xCpl    := INIRec.ReadString(  'Entrega','xCpl','');
@@ -1704,6 +1712,12 @@ begin
         Entrega.cMun    := INIRec.ReadInteger( 'Entrega','cMun',0);
         Entrega.xMun    := INIRec.ReadString(  'Entrega','xMun','');
         Entrega.UF      := INIRec.ReadString(  'Entrega','UF','');
+        Entrega.CEP     := INIRec.ReadInteger('Entrega','CEP',0);
+        Entrega.cPais   := INIRec.ReadInteger('Entrega','PaisCod',INIRec.ReadInteger('Entrega','cPais',1058));
+        Entrega.xPais   := INIRec.ReadString( 'Entrega','Pais',INIRec.ReadString( 'Entrega','xPais','BRASIL'));
+        Entrega.Fone    := INIRec.ReadString( 'Entrega','Fone','');
+        Entrega.Email   := INIRec.ReadString( 'Entrega','Email','');
+        Entrega.IE      := INIRec.ReadString( 'Entrega','IE'  ,'');
       end;
 
       I := 1 ;
@@ -1933,8 +1947,9 @@ begin
 
             with Prod.med.Add do
             begin
-              nLote := INIRec.ReadString(sSecao,'nLote','FIM') ;
+              nLote := INIRec.ReadString(sSecao,'nLote','') ;
               cProdANVISA:=  sFim;
+              xMotivoIsencao := INIRec.ReadString(sSecao,'xMotivoIsencao','') ;
               qLote := StringToFloatDef(INIRec.ReadString( sSecao,'qLote',''),0) ;
               dFab  := StringToDateTime(INIRec.ReadString( sSecao,'dFab','0')) ;
               dVal  := StringToDateTime(INIRec.ReadString( sSecao,'dVal','0')) ;
@@ -2524,6 +2539,18 @@ begin
         end;
 
         Inc(I);
+      end;
+
+      sSecao := 'infRespTec';
+      if INIRec.SectionExists(sSecao) then
+      begin
+        with infRespTec do
+        begin
+          CNPJ     := INIRec.ReadString(sSecao, 'CNPJ', '');
+          xContato := INIRec.ReadString(sSecao, 'xContato', '');
+          email    := INIRec.ReadString(sSecao, 'email', '');
+          fone     := INIRec.ReadString(sSecao, 'fone', '');
+        end;
       end;
     end;
 
@@ -3399,7 +3426,7 @@ end;
 procedure NotaFiscal.EnviarEmail(const sPara, sAssunto: String; sMensagem: TStrings;
   EnviaPDF: Boolean; sCC: TStrings; Anexos: TStrings; sReplyTo: TStrings);
 var
-  NomeArq : String;
+  NomeArq_temp : String;
   AnexosEmail:TStrings;
   StreamNFe : TMemoryStream;
 begin
@@ -3422,8 +3449,8 @@ begin
         if Assigned(DANFE) then
         begin
           DANFE.ImprimirDANFEPDF(FNFe);
-          NomeArq := PathWithDelim(DANFE.PathPDF) + NumID + '-nfe.pdf';
-          AnexosEmail.Add(NomeArq);
+          NomeArq_temp := PathWithDelim(DANFE.PathPDF) + NumID + '-nfe.pdf';
+          AnexosEmail.Add(NomeArq_temp);
         end;
       end;
 
@@ -3450,7 +3477,11 @@ begin
     FNFeW.Opcoes.NormatizarMunicipios  := Configuracoes.Arquivos.NormatizarMunicipios;
     FNFeW.Opcoes.PathArquivoMunicipios := Configuracoes.Arquivos.PathArquivoMunicipios;
     FNFeW.Opcoes.CamposFatObrigatorios := Configuracoes.Geral.CamposFatObrigatorios;
+
     pcnAuxiliar.TimeZoneConf.Assign( Configuracoes.WebServices.TimeZoneConf );
+
+    FNFeW.idCSRT := Configuracoes.RespTec.IdCSRT;
+    FNFeW.CSRT   := Configuracoes.RespTec.CSRT;
   end;
 
   FNFeW.Opcoes.GerarTXTSimultaneamente := False;
@@ -3508,10 +3539,7 @@ begin
   if EstaVazio(xID) then
     raise EACBrNFeException.Create('ID Inválido. Impossível Salvar XML');
 
-//  if (Self.NFe.procNFe.cStat = 110) or (Self.NFe.procNFe.cStat = 301) then
-//    NomeXML := '-den.xml'
-//  else
-    NomeXML := '-nfe.xml';
+  NomeXML := '-nfe.xml';
 
   Result := xID + NomeXML;
 end;
@@ -3616,12 +3644,12 @@ begin
   Result := FXMLAssinado;
 end;
 
-procedure NotaFiscal.SetXML(AValue: String);
+procedure NotaFiscal.SetXML(const AValue: String);
 begin
   LerXML(AValue);
 end;
 
-procedure NotaFiscal.SetXMLOriginal(AValue: String);
+procedure NotaFiscal.SetXMLOriginal(const AValue: String);
 var
   XMLUTF8: String;
 begin
@@ -3938,6 +3966,5 @@ begin
     SL.Free;
   end;
 end;
-
 
 end.

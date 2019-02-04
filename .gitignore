@@ -5,3 +5,4 @@ ACBrBoleto/*.txt
 ACBrComum/*.txt
 Lib/
 Exemplos/**/*.exe
+*.dcu

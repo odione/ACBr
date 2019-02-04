@@ -289,10 +289,11 @@ type
     FWebFraseSecr: String;
     FWebChaveAcesso: String;
     FDadosSenhaParams: TDadosSenhaParamsCollection;
+    procedure SetDadosSenhaParams(const Value: TDadosSenhaParamsCollection);
 
   public
     Constructor Create;
-    destructor Destroy;
+    destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
   published
     property CNPJ: String         read FCNPJ         write FCNPJ;
@@ -302,7 +303,7 @@ type
     property WebSenha: String     read FWebSenha     write FWebSenha;
     property WebFraseSecr: String read FWebFraseSecr write FWebFraseSecr;
     property WebChaveAcesso: String read FWebChaveAcesso write FWebChaveAcesso;
-    property DadosSenhaParams: TDadosSenhaParamsCollection read FDadosSenhaParams write FDadosSenhaParams;
+    property DadosSenhaParams: TDadosSenhaParamsCollection read FDadosSenhaParams write SetDadosSenhaParams;
   end;
 
   { TGeralConfNFSe }
@@ -478,6 +479,12 @@ begin
   inherited;
 end;
 
+procedure TEmitenteConfNFSe.SetDadosSenhaParams(
+  const Value: TDadosSenhaParamsCollection);
+begin
+  FDadosSenhaParams := Value;
+end;
+
 { TConfiguracoesNFSe }
 
 constructor TConfiguracoesNFSe.Create(AOwner: TComponent);
@@ -645,7 +652,7 @@ begin
   FConfigAssinar.Lote := FPIniParams.ReadBool('Assinar', 'Lote', False);
   FConfigAssinar.URI := FPIniParams.ReadBool('Assinar', 'URI', False);
 
-  FConfigAssinar.URI := (SSLLib <> libCapicom) and (FConfigGeral.Identificador = 'id');
+//  FConfigAssinar.URI := (SSLLib <> libCapicom) and (FConfigGeral.Identificador = 'id');
 
   FConfigAssinar.ConsSit := FPIniParams.ReadBool('Assinar', 'ConsSit', False);
   FConfigAssinar.ConsLote := FPIniParams.ReadBool('Assinar', 'ConsLote', False);

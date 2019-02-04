@@ -144,7 +144,9 @@ type
   TVerbasResc = class;
   TQuarentena = class;
   TInfoProcJudCollection = class;
+  TInfoProcJCollection = class;
   TInfoProcJudItem = class;
+  TInfoProcJItem = class;
   TideEstabLotCollection = class;
   TideEstabLotItem = class;
   TinfoSimples = class;
@@ -420,10 +422,12 @@ type
     FTpContr: tpTpContr;
     FdtTerm: TDateTime;
     FclauAssec: tpSimNao;
+    FobjDet: string;
   public
     property TpContr: tpTpContr read FTpContr write FTpContr;
     property dtTerm: TDateTime read FdtTerm write FdtTerm;
     property clauAssec: tpSimNao read FclauAssec write FclauAssec;
+    property objDet: string read FobjDet write FobjDet;
   end;
 
   TEndereco = class
@@ -863,17 +867,27 @@ type
     FMatricAnt: string;
     FdtTransf: TDateTime;
     FObservacao: string;
-    FCnpjEmpSucessora: string;
   public
     constructor Create;
     destructor Destroy; override;
 
     property tpInscAnt: tpTpInsc read FtpInscAnt write FtpInscAnt;
     property cnpjEmpregAnt: string read FCnpjEmpregAnt write FCnpjEmpregAnt;
-    property CnpjEmpSucessora: string read FCnpjEmpSucessora write FCnpjEmpSucessora;
     property MatricAnt: string read FMatricAnt write FMatricAnt;
     property dtTransf: TDateTime read FdtTransf write FdtTransf;
     property Observacao: string read FObservacao write FObservacao;
+  end;
+
+  TSucessaoVinc2 = class
+  private
+    FcnpjSucessora: string;
+    FtpInscSuc: tpTpInsc;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    property tpInscSuc: tpTpInsc read FtpInscSuc write FtpInscSuc;
+    property cnpjSucessora: string read FcnpjSucessora write FcnpjSucessora;
   end;
 
   TOC = class
@@ -1102,6 +1116,24 @@ type
     property matricAnt: String read FmatricAnt write FmatricAnt;
     property dtAltCPF: TDate read FdtAltCPF write FdtAltCPF;
     property observacao: String read Fobservacao write Fobservacao;
+  end;
+
+  TMudancaCPF2 = class
+  private
+    FcpfAnt: String;
+    FdtAltCPF: TDate;
+    Fobservacao: String;
+  public
+    property cpfAnt: String read FcpfAnt write FcpfAnt;
+    property dtAltCPF: TDate read FdtAltCPF write FdtAltCPF;
+    property observacao: String read Fobservacao write Fobservacao;
+  end;
+
+  TMudancaCPF3 = class
+  private
+    FnovoCPF: String;
+  public
+    property novoCPF: String read FnovoCPF write FnovoCPF;
   end;
 
   TVinculo = class
@@ -1449,12 +1481,12 @@ type
   private
     FTpTrib: tpTpTributo;
     FNrProcJud: string;
-    FCodSusp: integer;
+    FCodSusp: string;
   published
     constructor create; reintroduce;
     property tpTrib: tpTpTributo read FTpTrib write FTpTrib;
     property nrProcJud: string read FNrProcJud write FNrProcJud;
-    property codSusp: Integer read FCodSusp write FCodSusp;
+    property codSusp: string read FCodSusp write FCodSusp;
   end;
 
   TinfoEstagiario = class(TPersistent)
@@ -1624,6 +1656,31 @@ type
     property vrCPSusp: Double read FvrCPSusp write FvrCPSusp;
     property vrRatSusp: Double read FvrRatSusp write FvrRatSusp;
     property vrSenarSusp: Double read FvrSenarSusp write FvrSenarSusp;
+  end;
+
+  TInfoProcJCollection = class(TCollection)
+  private
+    function GetItem(Index: Integer): TInfoProcJItem;
+    procedure SetItem(Index: Integer; Value: TInfoProcJItem);
+  public
+    constructor Create(AOwner: TPersistent);
+    function Add: TInfoProcJItem;
+    property Items[Index: Integer]: TInfoProcJItem read GetItem write SetItem; default;
+  end;
+
+  TInfoProcJItem=class(TCollectionItem)
+  private
+    FnrProcJud: string;
+    FCodSusp: Integer;
+    FvrCPNRet: Double;
+    FvrRatNRet: Double;
+    FvrSenarNRet: Double;
+  public
+    property nrProcJud: string read FnrProcJud write FnrProcJud;
+    property codSusp: Integer read FCodSusp write FCodSusp;
+    property vrCPNRet: Double read FvrCPNRet write FvrCPNRet;
+    property vrRatNRet: Double read FvrRatNRet write FvrRatNRet;
+    property vrSenarNRet: Double read FvrSenarNRet write FvrSenarNRet;
   end;
 
   TPensaoAlimCollection = class(TCollection)
@@ -2136,6 +2193,19 @@ end;
 destructor TSucessaoVinc.Destroy;
 begin
 
+end;
+
+{ TSucessaoVinc2 }
+
+constructor TSucessaoVinc2.Create;
+begin
+
+end;
+
+destructor TSucessaoVinc2.Destroy;
+begin
+
+  inherited;
 end;
 
 { TVinculo }
@@ -2981,6 +3051,29 @@ begin
   FprocJudTrab.Free;
 
   inherited;
+end;
+
+{ TInfoProcJCollection }
+
+function TInfoProcJCollection.Add: TInfoProcJItem;
+begin
+  Result:= TinfoProcJItem(inherited Add);
+  Result.Create(Self);
+end;
+
+constructor TInfoProcJCollection.Create(AOwner: TPersistent);
+begin
+  inherited Create(TinfoProcJItem);
+end;
+
+function TInfoProcJCollection.GetItem(Index: Integer): TInfoProcJItem;
+begin
+  Result := TInfoProcJItem(inherited GetItem(Index));
+end;
+
+procedure TInfoProcJCollection.SetItem(Index: Integer; Value: TInfoProcJItem);
+begin
+  inherited SetItem(Index, Value);
 end;
 
 end.

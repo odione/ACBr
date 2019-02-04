@@ -322,11 +322,10 @@ begin
       else
          wRespEntrega := '1';
       
-      if (ACBrTitulo.CarteiraEnvio = tceBanco) then
-        strCarteiraEnvio := '1'
+      if (ACBrTitulo.CarteiraEnvio = tceCedente) then
+        strCarteiraEnvio := '2'
       else
-        strCarteiraEnvio := '2';
-
+        strCarteiraEnvio := '1';
 
       DiasProtesto := IntToStrZero(DiasDeProtesto,2);
          
@@ -914,10 +913,10 @@ begin
      else
        ValorMora := IntToStrZero(Round(ValorMoraJuros * 100), 15);
     
-     if (ACBrTitulo.CarteiraEnvio = tceBanco) then
-       strCarteiraEnvio := '1'
-     else
-       strCarteiraEnvio := '2';
+     if (ACBrTitulo.CarteiraEnvio = tceCedente) then
+        strCarteiraEnvio := '2'
+      else
+        strCarteiraEnvio := '1';
 
       Result:= IntToStrZero(ACBrBanco.Numero, 3)                             + //1 a 3 - Código do banco
                '0001'                                                        + //4 a 7 - Lote de serviço
@@ -1078,7 +1077,9 @@ begin
 
                Result := Result +
                space(20)                                                  + // 180-199 Uso da FEBRABAN "Brancos"
-               PadLeft('0', 08, '0')                                      + // 200-207 Código oco. sacado "0000000"
+              //   PadLeft('0', 8, '0')                                      + // 200-207 Código oco. sacado "0000000"
+              IfThen((DataLimitePagto > 0),
+                     FormatDateTime('ddmmyyyy', DataLimitePagto),'00000000') +
                PadLeft('0', 3, '0')                                       + // 208-210 Código do banco na conta de débito "000"
                PadLeft('0', 5, '0')                                       + // 211-215 Código da ag. debito
                ' '                                                        + // 216 Digito da agencia

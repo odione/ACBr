@@ -25,7 +25,6 @@ type
     btLimparLinha: TButton;
     btLimparLinha1: TButton;
     btPosicionarCursor: TButton;
-    clbConectados: TCheckListBox;
     dbgComandas: TDBGrid;
     dbgTerminais: TDBGrid;
     dsComandas: TDataSource;
@@ -46,41 +45,46 @@ type
     lbPosLinha: TLabel;
     lbQtdPosicoes: TLabel;
     lbSerial: TLabel;
-    mOutput: TMemo;
     PageControl2: TPageControl;
     pnAtivarFluxo: TPanel;
     pnComandas: TPanel;
     pnComandos: TPanel;
-    pnConectados: TPanel;
     pnLegenda: TPanel;
     pnTerminais: TPanel;
-    Splitter1: TSplitter;
     tsComandos: TTabSheet;
     tsFluxoVendas: TTabSheet;
     memComandas: TClientDataSet;
     memTerminais: TClientDataSet;
+    ACBrBAL1: TACBrBAL;
+    pLeft: TPanel;
+    pnConectados: TPanel;
+    Splitter1: TSplitter;
+    clbConectados: TCheckListBox;
+    mOutput: TMemo;
     pgConfigs: TPageControl;
     tsConfig: TTabSheet;
+    lbPorta: TLabel;
+    lbModelo: TLabel;
+    Label1: TLabel;
+    lbEchoMode: TLabel;
     btAtivar: TButton;
     btDesativar: TButton;
-    lbPorta: TLabel;
     edPorta: TEdit;
     cbModelo: TComboBox;
-    lbModelo: TLabel;
-    edTerminador: TEdit;
-    lbTerminador: TLabel;
     edTimeout: TEdit;
-    Label1: TLabel;
     btAtualizar: TButton;
     cbEchoMode: TComboBox;
-    lbEchoMode: TLabel;
     tsBalanca: TTabSheet;
-    cbBalanca: TComboBox;
     Label2: TLabel;
-    edSerialPeso: TSpinEdit;
     Label4: TLabel;
+    cbBalanca: TComboBox;
+    edSerialPeso: TSpinEdit;
     btSolicitarPeso: TButton;
-    ACBrBAL1: TACBrBAL;
+    Splitter2: TSplitter;
+    lbTerminador: TLabel;
+    edTerminador: TComboBox;
+    lbTerminador1: TLabel;
+    edTerminadorBalanca: TComboBox;
     procedure ACBrMTer1Conecta(const IP: String);
     procedure ACBrMTer1Desconecta(const IP: String; Erro: Integer;
       ErroDesc: String);
@@ -107,6 +111,10 @@ type
     procedure FormShow(Sender: TObject);
     procedure cbEchoModeChange(Sender: TObject);
     procedure btSolicitarPesoClick(Sender: TObject);
+    procedure ACBrMTer1RecebePeso(const IP: String;
+      const PesoRecebido: Double);
+    procedure edTerminadorChange(Sender: TObject);
+    procedure edTerminadorBalancaChange(Sender: TObject);
   private
     procedure AtualizarConexoes;
     procedure VerificaSelecionado;
@@ -128,7 +136,7 @@ var
 implementation
 
 uses
-  strutils;
+  strutils, typinfo;
 
 {$R *.dfm}
 
@@ -142,6 +150,7 @@ begin
     Port       := edPorta.Text;
     EchoMode   := TACBrMterEchoMode(cbEchoMode.ItemIndex);
     Terminador := edTerminador.Text;
+    TerminadorBalanca := edTerminadorBalanca.Text;
     TimeOut    := StrToInt(edTimeout.Text);
     Ativar;
   end;
@@ -318,7 +327,41 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  I: TACBrBALModelo;
+  J: TACBrMTerModelo;
+  K: TACBrMTerEchoMode;
 begin
+  cbBalanca.Items.Clear;
+  // Preenchendo ComboBox de Modelos de Balança
+  for I := Low(TACBrBALModelo) to High(TACBrBALModelo) do
+    cbBalanca.Items.Add(GetEnumName(TypeInfo(TACBrBALModelo), Integer(I)));
+
+  cbModelo.Items.Clear;
+  // Preenchendo ComboBox de Modelos de Balança
+  for J := Low(TACBrMTerModelo) to High(TACBrMTerModelo) do
+    cbModelo.Items.Add(GetEnumName(TypeInfo(TACBrMTerModelo), Integer(J)));
+
+  cbEchoMode.Items.Clear;
+  // Preenchendo ComboBox de Modelos de Balança
+  for K := Low(TACBrMTerEchoMode) to High(TACBrMTerEchoMode) do
+    cbEchoMode.Items.Add(GetEnumName(TypeInfo(TACBrMTerEchoMode), Integer(K)));
+
+
+  edTerminador.Items.Clear;
+  edTerminador.Items.Add('');
+  edTerminador.Items.Add('#13 | CR');
+  edTerminador.Items.Add('#10 | LF');
+  edTerminador.Items.Add('#13,#10 | CR+LF');
+  edTerminador.Items.Add('#3 | ETX');
+
+  edTerminadorBalanca.Items.Assign(edTerminador.Items);
+  edTerminadorBalanca.ItemIndex := 4;
+
+  cbModelo.ItemIndex := 0;
+  cbEchoMode.ItemIndex := 0;
+
+  pgConfigs.ActivePageIndex := 0;
   PageControl2.ActivePageIndex := 0;
 end;
 
@@ -592,6 +635,22 @@ begin
     if clbConectados.Checked[I] then
       ACBrMTer1.SolicitarPeso(wIP, edSerialPeso.Value);
   end;    
+end;
+
+procedure TForm1.ACBrMTer1RecebePeso(const IP: String;
+  const PesoRecebido: Double);
+begin
+  mOutput.Lines.Add('IP: '+IP+' - Peso: '+ FormatFloat('##0.000', PesoRecebido)); 
+end;
+
+procedure TForm1.edTerminadorChange(Sender: TObject);
+begin
+  ACBrMTer1.Terminador := edTerminador.Text;
+end;
+
+procedure TForm1.edTerminadorBalancaChange(Sender: TObject);
+begin
+  ACBrMTer1.TerminadorBalanca := edTerminadorBalanca.Text;
 end;
 
 end.

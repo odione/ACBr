@@ -1488,7 +1488,7 @@ begin
     NFSe.Servico.Discriminacao             := Leitor.rCampo(tcStr, 'Discriminacao');
     NFSe.Servico.Descricao                 := '';
     if FProvedor = proISSNet then
-      NFSe.Servico.CodigoMunicipio := Leitor.rCampo(tcStr, 'CodigoTributacaoMunicipio')
+      NFSe.Servico.CodigoMunicipio := Leitor.rCampo(tcStr, 'MunicipioPrestacaoServico')
     else
       NFSe.Servico.CodigoMunicipio := Leitor.rCampo(tcStr, 'CodigoMunicipio');
 
@@ -1978,7 +1978,7 @@ begin
 
       if (FProvedor in [proActconv202, proISSe, proVersaTecnologia, proNEAInformatica,
                         proFiorilli, proPronimv2, proVitoria, proSmarAPDABRASF,
-                        proGovDigital]) then
+                        proGovDigital, proDataSmart, proTecnos]) then
       begin
         if NFSe.Servico.Valores.IssRetido = stRetencao then
           NFSe.Servico.Valores.ValorIssRetido := Leitor.rCampo(tcDe2, 'ValorIss')
@@ -3031,6 +3031,7 @@ begin
     if( Leitor.rExtrai( 2, 'nf' ) <> '' )then
     begin
       NFSe.Numero := Leitor.rCampo( tcStr, 'numero');
+      NFSe.CodigoVerificacao := Leitor.rCampo( tcStr, 'codigo_autenticidade');
 
       // campos presentes ao baixar do site da prefeitura
       if (NFSe.Numero = '') then 

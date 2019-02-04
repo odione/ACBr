@@ -48,11 +48,10 @@ uses
   ACBrCTeConfiguracoes, ACBrCTeWebServices, ACBrCTeConhecimentos,
   ACBrCTeDACTEClass, ACBrDFeException,
   pcteCTe, pcnConversao, pcteConversaoCTe,
-  pcteEnvEventoCTe, pcteInutCTe, pcteRetDistDFeInt,
+  pcteEnvEventoCTe, pcteInutCTe, 
   ACBrDFeUtil, ACBrUtil;
 
 const
-  ACBRCTE_VERSAO = '2.0.0a';
   ACBRCTE_NAMESPACE = 'http://www.portalfiscal.inf.br/cte';
   ACBRCTE_CErroAmbDiferente = 'Ambiente do XML (tpAmb) é diferente do '+
      'configurado no Componente (Configuracoes.WebServices.Ambiente)';
@@ -70,7 +69,6 @@ type
     FConhecimentos: TConhecimentos;
     FEventoCTe: TEventoCTe;
     FInutCTe: TInutCTe;
-    FRetDistDFeInt: TRetDistDFeInt;
     FStatus: TStatusACBrCTe;
     FWebServices: TWebServices;
 
@@ -84,7 +82,6 @@ type
   protected
     function CreateConfiguracoes: TConfiguracoes; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    function GetAbout: String; override;
     function NomeServicoToNomeSchema(const NomeServico: String): String; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -144,7 +141,6 @@ type
     property Conhecimentos: TConhecimentos read FConhecimentos write FConhecimentos;
     property EventoCTe: TEventoCTe         read FEventoCTe     write FEventoCTe;
     property InutCTe: TInutCTe             read FInutCTe       write FInutCTe;
-    property RetDistDFeInt: TRetDistDFeInt read FRetDistDFeInt write FRetDistDFeInt;
     property Status: TStatusACBrCTe        read FStatus;
 
   published
@@ -177,7 +173,6 @@ begin
   FConhecimentos := TConhecimentos.Create(Self, Conhecimento);
   FEventoCTe := TEventoCTe.Create;
   FInutCTe := TInutCTe.Create;
-  FRetDistDFeInt := TRetDistDFeInt.Create;
   FWebServices := TWebServices.Create(Self);
 end;
 
@@ -186,7 +181,6 @@ begin
   FConhecimentos.Free;
   FEventoCTe.Free;
   FInutCTe.Free;
-  FRetDistDFeInt.Free;
   FWebServices.Free;
 
   inherited;
@@ -238,11 +232,6 @@ begin
   if (Operation = opRemove) and (FDACTE <> nil) and
      (AComponent is TACBrCTeDACTEClass) then
     FDACTE := nil;
-end;
-
-function TACBrCTe.GetAbout: String;
-begin
-  Result := 'ACBrCTe Ver: ' + ACBRCTE_VERSAO;
 end;
 
 function TACBrCTe.GetNomeModeloDFe: String;

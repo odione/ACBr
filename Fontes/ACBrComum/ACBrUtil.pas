@@ -154,7 +154,11 @@ function CompareVersions( const VersionStr1, VersionStr2 : String;
   Delimiter: char = '.' ) : Extended;
 function ComparaValor(const ValorUm, ValorDois : Double; const Tolerancia : Double = 0 ): Integer;
 
-function TestBit(const Value: Integer; const Bit: Byte): Boolean;
+function TestBit(const AValue: Integer; const AIndex: Byte): Boolean;
+procedure ClearBit(var AValue: Integer; const AIndex: Byte);
+procedure SetBit(var AValue: Integer; const AIndex: Byte);
+procedure PutBit(var AValue: Integer; const AIndex: Byte; State: Boolean);
+
 function IntToBin (value: LongInt; digits: integer ): string;
 function BinToInt(Value: String): LongInt;
 
@@ -255,10 +259,14 @@ function StrIsAlpha(const S: String): Boolean;
 function StrIsAlphaNum(const S: String): Boolean;
 function StrIsNumber(const S: String): Boolean;
 function StrIsHexa(const S: String): Boolean;
+function StrIsBinary(const S: String): Boolean;
+function StrIsBase64(const S: String): Boolean;
 function CharIsAlpha(const C: Char): Boolean;
 function CharIsAlphaNum(const C: Char): Boolean;
 function CharIsNum(const C: Char): Boolean;
 function CharIsHexa(const C: Char): Boolean;
+function CharIsBinary(const C: Char): Boolean;
+function CharIsBase64(const C: Char): Boolean;
 function OnlyNumber(const AValue: String): String;
 function OnlyAlpha(const AValue: String): String;
 function OnlyAlphaNum(const AValue: String): String;
@@ -819,15 +827,42 @@ begin
 end;
 
 {-----------------------------------------------------------------------------
- *** Adaptado de JclLogic.pas  - Project JEDI Code Library (JCL) ***
- Retorna True se o nBit está ativo (ligado) dentro do valor Value. Inicia em 0
+ http://wiki.freepascal.org/Bit_manipulation
+ Retorna True se o Bit em Index está ativo (ligado) dentro do valor Value. Inicia em 0
  ---------------------------------------------------------------------------- }
-function TestBit(const Value: Integer; const Bit: Byte): Boolean;
-Var Base : Byte ;
+function TestBit(const AValue: Integer; const AIndex: Byte): Boolean;
 begin
-  Base := (Trunc(Bit/8)+1) * 8 ;
-  Result := (Value and (1 shl (Bit mod Base))) <> 0;
+  Result := ((AValue shr AIndex) and 1) = 1;
 end;
+
+{-----------------------------------------------------------------------------
+ http://wiki.freepascal.org/Bit_manipulation
+ Desliga um Bit especificado em  "Index", em "Value" (passado por referencia)
+ ---------------------------------------------------------------------------- }
+procedure ClearBit(var AValue: Integer; const AIndex: Byte);
+begin
+  AValue := AValue and ((Integer(1) shl AIndex) xor High(Integer));
+end;
+
+{-----------------------------------------------------------------------------
+ http://wiki.freepascal.org/Bit_manipulation
+ Liga um Bit especificado em  "Index", em "Value" (passado por referencia)
+ ---------------------------------------------------------------------------- }
+procedure SetBit(var AValue: Integer; const AIndex: Byte);
+begin
+  AValue:=  AValue or (Integer(1) shl AIndex);
+end;
+
+{-----------------------------------------------------------------------------
+ http://wiki.freepascal.org/Bit_manipulation
+ Liga ou Desliga um Bit especificado em  "Index", em "Value", (passado por
+ referencia), e de acordo com o Boleano "State".
+ ---------------------------------------------------------------------------- }
+procedure PutBit(var AValue: Integer; const AIndex: Byte; State: Boolean);
+begin
+  AValue := (AValue and ((Integer(1) shl AIndex) xor High(Integer))) or (Integer(State) shl AIndex);
+end;
+
 
 {-----------------------------------------------------------------------------
  Extraido de  http://delphi.about.com/od/mathematics/a/baseconvert.htm (Zago)
@@ -1957,6 +1992,49 @@ begin
 end;
 
 {-----------------------------------------------------------------------------
+  Retorna <True> se <S> contem apenas caracteres em Binário (0 e 1)
+ ---------------------------------------------------------------------------- }
+function StrIsBinary(const S: String): Boolean;
+Var
+  A : Integer ;
+begin
+  Result := True ;
+  A      := 1 ;
+  while Result and ( A <= Length( S ) )  do
+  begin
+     Result := CharIsBinary( S[A] ) ;
+     Inc(A) ;
+  end;
+end;
+
+{-----------------------------------------------------------------------------
+  Retorna <True> se <S> é uma String válidos para decodificação em Base64
+  https://stackoverflow.com/questions/12943971/validating-base64-input-with-free-pascal-and-decodestringbase64
+ ---------------------------------------------------------------------------- }
+function StrIsBase64(const S: String): Boolean;
+var
+  ValLen, A: Integer;
+begin
+  ValLen := Length(S);
+  // Tamanho de Strings em Base64 devem ser multiplos de 4
+  Result := (ValLen > 0) and (ValLen mod 4 = 0);
+
+  // Deve ter no máximo 2 sinais de '=' no final (padding)
+  while Result and (S[ValLen] = '=') do
+  begin
+    Dec(ValLen);
+    Result := (ValLen >= (Length(S) - 2)) ;
+  end;
+
+  A := 1 ;
+  while Result and ( A <= ValLen )  do
+  begin
+     Result := CharIsBase64( S[A] ) ;
+     Inc(A) ;
+  end;
+end;
+
+{-----------------------------------------------------------------------------
  *** Extraido de JclStrings.pas  - Project JEDI Code Library (JCL) ***
   Retorna <True> se <C> é Alpha maiusculo/minusculo 
  ---------------------------------------------------------------------------- }
@@ -1989,6 +2067,22 @@ end ;
 function CharIsHexa(const C: Char): Boolean;
 begin
   Result := CharInSet( C, ['0'..'9','A'..'F','a'..'f'] ) ;
+end;
+
+{-----------------------------------------------------------------------------
+  Retorna <True> se <C> é um char Binário válido (0 ou 1)
+ ---------------------------------------------------------------------------- }
+function CharIsBinary(const C: Char): Boolean;
+begin
+ Result := CharInSet( C, ['0','1'] ) ;
+end;
+
+{-----------------------------------------------------------------------------
+  Retorna <True> se <C> é um char válido em Strings codificadas em Base64
+ ---------------------------------------------------------------------------- }
+function CharIsBase64(const C: Char): Boolean;
+begin
+ Result := CharInSet( C, ['A'..'Z', 'a'..'z', '0'..'9', '+', '/'] ) ;
 end;
 
 {-----------------------------------------------------------------------------

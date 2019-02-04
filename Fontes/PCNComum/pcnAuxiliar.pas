@@ -93,6 +93,7 @@ function ValidarCodigoPais(const iPais: integer): smallint;
 function ValidarCodigoUF(const Codigo: integer): boolean;
 function ValidarCNPJ(const numero: string): boolean;
 function ValidarCPF(const numero: string): boolean;
+function ValidarCNPJouCPF(const numero: string): boolean;
 function ValidarMod(const modelo: integer; versao : Real): boolean;
 function ValidarMunicipio(const Municipio: integer): boolean;
 function ValidarNumeros(const s: string): boolean;
@@ -444,6 +445,11 @@ begin
   result := (ACBrValidador.ValidarPrefixoGTIN(numero) = '');
 end;
 
+function ValidarCNPJouCPF(const numero: string): boolean;
+begin
+  result := (ACBrValidador.ValidarCNPJouCPF(numero) = '');
+end;
+
 function ValidarMod(const modelo: integer; versao : Real): boolean;
 const
   MODELOS = '|1|';
@@ -564,15 +570,18 @@ begin
   Texto := Texto + '<';
   Texto := stringreplace(Texto, #$D#$A, '', [rfReplaceAll]);
   Xml := TStringList.create;
-  Result := '';
-  while length(texto) > 1 do
-  begin
-    i := pos('><', Texto);
-    Xml.Add(copy(Texto, 1, i));
-    Texto := copy(Texto, i + 1, maxInt);
+  try
+    Result := '';
+    while length(texto) > 1 do
+    begin
+      i := pos('><', Texto);
+      Xml.Add(copy(Texto, 1, i));
+      Texto := copy(Texto, i + 1, maxInt);
+    end;
+    Result := Xml.Text;
+  finally
+    Xml.Free;
   end;
-  Result := Xml.Text;
-  Xml.Free;
 end;
 
 function RetornarPosEx(const SubStr, S: String; Offset: Cardinal = 1): Integer;

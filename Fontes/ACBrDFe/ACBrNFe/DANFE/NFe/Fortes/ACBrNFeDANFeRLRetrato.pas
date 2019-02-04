@@ -705,11 +705,12 @@ procedure TfrlDANFeRLRetrato.InicializarDados;
 var
   i, b, h, iAlturaCanhoto, vWidthAux, vLeftAux: Integer;
   vAutoSizeAux: Boolean;
+  CarregouLogo: Boolean;
 begin
   TDFeReportFortes.AjustarMargem(RLNFe, fpDANFe);
-  TDFeReportFortes.CarregarLogo(rliLogo, fpDANFe.Logo);
+  CarregouLogo := TDFeReportFortes.CarregarLogo(rliLogo, fpDANFe.Logo);
 
-  if rliLogo.Picture.Bitmap.Empty then
+  if not CarregouLogo then
   begin
     rlmEndereco.Left := rlmEmitente.Left;
     rlmEndereco.Width := rlmEmitente.Width;
@@ -1260,7 +1261,7 @@ var
 begin
   with fpNFe.Transp do
   begin
-    rllTransModFrete.Caption := modFreteToDesStr(modFrete, StrToVersaoDF(ok, fpNFe.infNFe.VersaoStr));
+    rllTransModFrete.Caption := modFreteToDesStr(modFrete, DblToVersaoDF(ok, fpNFe.infNFe.Versao));
     with Transporta do
     begin
       rllTransCNPJ.Caption := FormatarCNPJouCPF(CNPJCPF);

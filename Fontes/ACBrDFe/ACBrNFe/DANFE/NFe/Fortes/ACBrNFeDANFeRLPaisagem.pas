@@ -563,7 +563,11 @@ var
   vAutoSizeAux: Boolean;
 begin
   TDFeReportFortes.AjustarMargem(RLNFe, fpDANFe);
-  TDFeReportFortes.CarregarLogo(rliLogo, fpDANFe.Logo);
+
+  if not TDFeReportFortes.CarregarLogo(rliLogo, fpDANFe.Logo) then
+  begin
+    //TODO: implementar algum tratamento para logo vazio? Ex.: Veja: TfrlDANFeRLRetrato.InicializarDados
+  end;
 
   if NaoEstaVazio(fpDANFe.MarcaDagua) and FileExists(fpDANFe.MarcaDagua) then
     rliMarcaDagua1.Picture.LoadFromFile(fpDANFe.MarcaDagua);
@@ -1205,7 +1209,7 @@ var
 begin
   with fpNFe.Transp do
   begin
-    rllTransModFrete.Caption := modFreteToDesStr(modFrete, StrToVersaoDF(ok, fpNFe.infNFe.VersaoStr));
+    rllTransModFrete.Caption := modFreteToDesStr(modFrete, DblToVersaoDF(ok, fpNFe.infNFe.Versao));
     with Transporta do
     begin
       if NaoEstaVazio(Trim(CNPJCPF)) then

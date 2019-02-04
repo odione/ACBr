@@ -139,7 +139,10 @@ begin
     TDFeReportFortes.AjustarReport(Report, ADANFe);
 
     if ADANFe.MostraPreview then
-      Report.PreviewModal
+    begin
+      SelectedFilter := DANFeReport.RLPDFFilter1;
+      Report.PreviewModal;
+    end
     else
       Report.Print;
   finally
@@ -192,6 +195,8 @@ begin
   {$IfNDef FPC}
   Self.Scaled := False;
   {$EndIf}
+  fpCorDestaqueProdutos := StringToColor('$00E5E5E5');
+
 end;
 
 procedure TfrlDANFeRL.ConfigurarVariavies(ATipoDANFE: TpcnTipoImpressao);
@@ -221,6 +226,7 @@ var
   sLinhaProvisoria, sLinha: String;
 begin
   iPosAtual := 1;
+  sTexto := StringReplace(sTexto, sLineBreak, ';', [rfReplaceAll]);
   iQuantCaracteres := Length(sTexto);
   if iQuantCaracteres <= fpLimiteLinhas then
     iTotalLinhas := 1

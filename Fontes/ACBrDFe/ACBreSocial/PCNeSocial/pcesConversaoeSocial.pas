@@ -99,7 +99,7 @@ type
                              teS1300, teS2190, teS2200, teS2205, teS2206, teS2210, teS2220, teS2230,
                              teS2240, teS2241, teS2250, teS2260, teS2298, teS2299, teS2300, teS2305,
                              teS2306, teS2399, teS2400, teS3000, teS4000, teS4999, teS5001, teS5002,
-                             teS5003, teS5011, teS5012);
+                             teS5003, teS5011, teS5012, teS5013);
 
   TpTpAmb                 = (taProducao, taProducaoRestrita);
 
@@ -109,7 +109,7 @@ type
 
   tpIndSegmento           = (isNormal );
 
-  tpTpInsc                = (tiCNPJ, tiCPF, tiCAEPF, tiCNO);
+  tpTpInsc                = (tiCNPJ, tiCPF, tiCAEPF, tiCNO, tiCGC);
 
   TpTpInscProp            = (tpCNPJ, tpCPF );
 
@@ -342,13 +342,13 @@ type
 
   tpUndSalFixo            = (sfPorHora, sfPorDia, sfPorSemana, sfPorQuinzena, sfPorMes, sfPorTarefa, sfNaoaplicavel);
 
-  tpTpContr               = (PrazoIndeterminado, PrazoDeterminado);
+  tpTpContr               = (PrazoIndeterminado, PrazoDeterminado, PrazoDeterminadoVincOcDeUmFato);
 
   tpTpJornada             = (tjJornadaComHorarioDiarioFolgaFixos, tjJornada12x36, tjJornadaComHorarioDiarioFixoFolgaVariavel, tjDemaisTiposJornada);
 
   tpTpDia                 = (diSegundaFeira, diTercaFeira, diQuartaFeira, diQuintaFeira, diSextaFeira, diSabado, diDomingo, diDiaVariavel);
 
-  tpTpAso                 = (taAdmissional, taPeriodico, taRetornoAoTrabalho, taMudancaDeFuncao, taMonitoracaoPontual, taDemissional);
+  tpTpExameOcup           = (taAdmissional, taPeriodico, taRetornoAoTrabalho, taMudancaDeFuncao, taMonitoracaoPontual, taDemissional);
 
   tpResAso                = (raApto, raInapto);
 
@@ -734,8 +734,8 @@ function eSStrToTpJornada(var ok: boolean; const s: string): tpTpJornada;
 function eSTpDiaToStr(const t: tpTpDia ): string;
 function eSStrToTpDia(var ok: boolean; const s: string): tpTpDia;
 
-function eSTpAsoToStr(const t: tpTpAso ): string;
-function eSStrToTpAso(var ok: boolean; const s: string): tpTpAso;
+function eSTpExameOcupToStr(const t: tpTpExameOcup ): string;
+function eSStrToTpExameOcup(var ok: boolean; const s: string): tpTpExameOcup;
 
 function eSResAsoToStr(const t: tpResAso ): string;
 function eSStrToResAso(var ok: boolean; const s: string): tpResAso;
@@ -885,7 +885,7 @@ uses
   pcnConversao, typinfo;
 
 const
-  TTipoEventoString   : array[0..50] of String =('S-1000', 'S-1005', 'S-1010', 'S-1020', 'S-1030',
+  TTipoEventoString   : array[0..51] of String =('S-1000', 'S-1005', 'S-1010', 'S-1020', 'S-1030',
                                                  'S-1035', 'S-1040', 'S-1050', 'S-1060', 'S-1070',
                                                  'S-1080', 'S-2100', 'S-1200', 'S-1202', 'S-1207',
                                                  'S-1210', 'S-1220', 'S-1250', 'S-1260', 'S-1270',
@@ -895,7 +895,7 @@ const
                                                  'S-2260', 'S-2298', 'S-2299', 'S-2300', 'S-2305',
                                                  'S-2306', 'S-2399', 'S-2400', 'S-3000', 'S-4000',
                                                  'S-4999', 'S-5001', 'S-5002', 'S-5003', 'S-5011',
-                                                 'S-5012');
+                                                 'S-5012', 'S-5013');
 
   TUFString           : array[0..26] of String = ('AC','AL','AP','AM','BA','CE','DF','ES','GO',
                                                   'MA','MT','MS','MG','PA','PB','PR','PE','PI',
@@ -1100,12 +1100,12 @@ end;
 
 function eSTpInscricaoToStr(const t:tpTpInsc ): string;
 begin
-  result := EnumeradoToStr2(t, TGenericosString1_4 );
+  result := EnumeradoToStr2(t, TGenericosString1_5 );
 end;
 
 function eSStrToTpInscricao(var ok: boolean; const s: string): tpTpInsc;
 begin
-  result := tpTpInsc( StrToEnumerado2(ok , s, TGenericosString1_4 ) );
+  result := tpTpInsc( StrToEnumerado2(ok , s, TGenericosString1_5 ) );
 end;
 
 function eStpOpcConsultToStr(const t: tpOpcConsult): string;
@@ -1270,12 +1270,12 @@ end;
 
 function eSTpContrToStr(const t: tpTpContr ): string;
 begin
-  result := EnumeradoToStr2(t,TGenericosString1_2 );
+  result := EnumeradoToStr2(t,TGenericosString1_3 );
 end;
 
 function eSStrToTpContr(var ok: boolean; const s: string): tpTpContr;
 begin
-  result := tpTpContr( StrToEnumerado2(ok , s, TGenericosString1_2 ) );
+  result := tpTpContr( StrToEnumerado2(ok , s, TGenericosString1_3 ) );
 end;
 
 function eSTpJornadaToStr(const t: tpTpJornada ): string;
@@ -1298,14 +1298,14 @@ begin
   result := tpTpDia( StrToEnumerado2(ok , s, TGenericosString1_8 ) );
 end;
 
-function eSTpAsoToStr(const t: tpTpAso ): string;
+function eSTpExameOcupToStr(const t: tpTpExameOcup ): string;
 begin
   result := EnumeradoToStr2(t,[ '0', '1', '2', '3', '4', '8' ] );
 end;
 
-function eSStrToTpAso(var ok: boolean; const s: string): tpTpAso;
+function eSStrToTpExameOcup(var ok: boolean; const s: string): tpTpExameOcup;
 begin
-  result := tpTpAso( StrToEnumerado2(ok , s, [ '0', '1', '2', '3', '4', '8' ] ) );
+  result := tpTpExameOcup( StrToEnumerado2(ok , s, [ '0', '1', '2', '3', '4', '8' ] ) );
 end;
 
 function eSResAsoToStr(const t: tpResAso ): string;
@@ -1882,12 +1882,12 @@ end;
 
 function eSTpAdmissaoToStr(const t: tpTpAdmissao ): string;
 begin
-  result := EnumeradoToStr2(t,TGenericosString1_5  );
+  result := EnumeradoToStr2(t,TGenericosString1_6  );
 end;
 
 function eSStrToTpAdmissao(var ok: boolean; const s: string): tpTpAdmissao;
 begin
-  result := tpTpAdmissao( StrToEnumerado2(ok , s,TGenericosString1_5 ));
+  result := tpTpAdmissao( StrToEnumerado2(ok , s,TGenericosString1_6 ));
 end;
 
 function eSTpAcordoToStr(const t:tpTpAcordo ): string;
@@ -2388,7 +2388,7 @@ end;
 
 function StrEventoToTipoEvento(var ok: boolean; const s: string): TTipoEvento;
 const
-  EventoString: array[0..50] of String =('evtInfoEmpregador', 'evtTabEstab',
+  EventoString: array[0..51] of String =('evtInfoEmpregador', 'evtTabEstab',
        'evtTabRubrica', 'evtTabLotacao', 'evtTabCargo', 'evtTabCarreira',
        'evtTabFuncao', 'evtTabHorContratual', 'evtTabAmbiente', 'evtTabProcesso',
        'evtTabOperPortuario', 'S-2100', 'evtRemun', 'evtRmnRPPS', 'evtBenPrRP',
@@ -2398,7 +2398,7 @@ const
        'evtAltContratual', 'evtCAT', 'evtASO', 'evtAfastTemp', 'evtExpRisco',
        'evtInsApo', 'evtAvPrevio', 'evtConvInterm', 'evtReintegr', 'evtDeslig',
        'evtTSVInicio', 'S-2305', 'evtTSVAltContr', 'evtTSVTermino', 'evtCdBenPrRP',
-       'evtExclusao', 'S-4000', 'S-4999', 'S-5001', 'S-5002', 'S-5003', 'S-5011', 'S-5012');
+       'evtExclusao', 'S-4000', 'S-4999', 'S-5001', 'S-5002', 'S-5003', 'S-5011', 'S-5012', 'S-5013');
 begin
   result := TTipoEvento( StrToEnumerado2(ok , s, EventoString ) );
 end;
@@ -2431,7 +2431,7 @@ begin
 
   try
     for i := 0 to 43 do
-      if Pos('<' + TEventoString[i], s) > 0 then
+      if Pos('<' + TEventoString[i]+ ' Id="', s) > 0 then
       begin
         ok := True;
         result := TTipoEvento( i );
