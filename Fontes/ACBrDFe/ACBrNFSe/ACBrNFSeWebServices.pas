@@ -932,8 +932,8 @@ begin
   FVersaoNFSe := StrToVersaoNFSe(Ok, FVersaoXML);
   FDefTipos   := FPConfiguracoesNFSe.Geral.ConfigSchemas.DefTipos;
 
-  if (FProvedor = proGinfes) and (FPLayout = LayNfseCancelaNfse) then
-    FDefTipos := 'tipos_v02.xsd';
+//  if (FProvedor = proGinfes) and (FPLayout = LayNfseCancelaNfse) then
+//    FDefTipos := 'tipos_v02.xsd';
 
   FCabecalho := FPConfiguracoesNFSe.Geral.ConfigSchemas.Cabecalho;
   FPrefixo2  := FPConfiguracoesNFSe.Geral.ConfigGeral.Prefixo2;
@@ -1506,7 +1506,8 @@ var
   TagGrupo, xmlns, xPrefixo, Identificador: String;
   i, j: Integer;
 begin
-  TagGrupo := RetirarPrefixos(TipoEnvio, FProvedor);
+  TagGrupo := RetirarPrefixos('<' + TipoEnvio, FProvedor);
+  TagGrupo := Copy(TagGrupo, 2, Length(TagGrupo));
 
   FxSignatureNode := '';
   FxDSIGNSLote := '';
@@ -1558,7 +1559,7 @@ begin
           end;
         end;
       end;
-
+     (*
     LayNfseCancelaNfse:
       begin
         if FPConfiguracoesNFSe.Geral.ConfigAssinar.Cancelar then
@@ -1603,6 +1604,7 @@ begin
           end;
         end;
       end;
+      *)
   end;
 end;
 
@@ -3435,6 +3437,9 @@ begin
 
   FDadosEnvelope := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Gerar;
 
+  if (FProvedor = proCenti) and (FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao) then
+    FDadosEnvelope := StringReplace(FDadosEnvelope, 'GerarNfse' , 'GerarNfseHomologacao', [rfReplaceAll]);
+
   if (FPDadosMsg <> '') and (FDadosEnvelope <> '') then
   begin
     DefinirSignatureNode(FTagGrupo);
@@ -3570,6 +3575,15 @@ begin
     end;
 
     FTagGrupo := FPrefixo3 + FTagGrupo;
+    {
+    case FProvedor of
+      proPublica: FdocElemento := FPrefixo3 + 'Protocolo></' + FTagGrupo;
+    else
+      FdocElemento := FTagGrupo;
+    end;
+    }
+
+      FdocElemento := FTagGrupo;
 
     case FProvedor of
       proPublica: FinfElemento := 'Prestador';
@@ -3601,16 +3615,30 @@ begin
 
   // O procedimento recebe como parametro o XML a ser assinado e retorna o
   // mesmo assinado da propriedade FPDadosMsg
+
+  DefinirSignatureNode(FTagGrupo);
+
+  FPDadosMsg := FNotasFiscais.AssinarXML(FPDadosMsg, FdocElemento, FinfElemento,
+                                FPConfiguracoesNFSe.Geral.ConfigAssinar.ConsSit,
+                                xSignatureNode, xDSIGNSLote, FxIdSignature);
+  (*
+  // O procedimento recebe como parametro o XML a ser assinado e retorna o
+  // mesmo assinado da propriedade FPDadosMsg
   if (FPConfiguracoesNFSe.Geral.ConfigAssinar.ConsSit) and (FPDadosMsg <> '') then
     AssinarXML(FPDadosMsg, FTagGrupo, FinfElemento, 'Falha ao Assinar - Consultar Situação do Lote: ');
-  
+  *)
+
   IncluirEncoding(FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsSit_IncluiEncodingDados);
 
   FDadosEnvelope := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsSit;
 
   case FProvedor of
+
     proPublica:
       begin
+        FPDadosMsg := StringReplace(FPDadosMsg,
+               '<Protocolo>' + FProtocolo + '</Protocolo>', '', [rfReplaceAll]);
+
         i := Pos('</Signature>', FPDadosMsg);
 
         FPDadosMsg := Copy(FPDadosMsg, 1, i -1) + '</Signature>' +
@@ -4412,7 +4440,10 @@ begin
       proDBSeller: FdocElemento := FPrefixo3 + 'Pedido></' + FTagGrupo + '></CancelarNfse';
 
       proBHISS,
-//      proPublica,
+      proPublica,
+      proBethav2,
+      proDigifred,
+      proISSJoinville,
       proSystemPro: FdocElemento := FPrefixo3 + 'Pedido></' + FTagGrupo;
 
       proGinfes,
@@ -4437,6 +4468,7 @@ begin
       proGINFES: FinfElemento := 'Prestador';
 
       proBetha,
+      proBethav2,
       proISSe,
       proFiorilli,
       proMetropolisWeb,

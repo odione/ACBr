@@ -114,8 +114,10 @@ function InserirDeclaracaoXMLSeNecessario(const AXML: String;
 
 function Split(const ADelimiter: Char; const AString: string): TSplitResult;
 function DecodeToString( const ABinaryString : AnsiString; const StrIsUTF8: Boolean ) : String ;
-function SeparaDados( const AString : String; const Chave : String; const MantemChave : Boolean = False ) : String;
-function SeparaDadosArray( const AArray : Array of String;const AString : String; const MantemChave : Boolean = False ) : String;
+function SeparaDados(const AString: String; const Chave: String; const MantemChave : Boolean = False;
+  const PermitePrefixo: Boolean = True) : String;
+function SeparaDadosArray(const AArray: Array of String; const AString: String; const MantemChave: Boolean = False;
+  const PermitePrefixo: Boolean = True) : String;
 function RetornarConteudoEntre(const Frase, Inicio, Fim: String; IncluiInicioFim: Boolean = False): string;
 procedure EncontrarInicioFinalTag(const aText, ATag: ansistring;
   var PosIni, PosFim: integer;const PosOffset: integer = 0);
@@ -183,7 +185,7 @@ function PadLeft(const AString : String; const nLen : Integer;
 function PadCenter(const AString : String; const nLen : Integer;
    const Caracter : Char = ' ') : String;
 function PadSpace(const AString : String; const nLen : Integer; Separador : String;
-   const Caracter : Char = ' ') : String ;
+   const Caracter : Char = ' '; const RemoverEspacos: Boolean = True) : String ;
 
 function RemoveString(const sSubStr, sString: String): String;
 function RemoveStrings(const AText: AnsiString; StringsToRemove: array of AnsiString): AnsiString;
@@ -1170,7 +1172,7 @@ end ;
   substituindo <Separador> por n X <Caracter>  (Justificado)
  ---------------------------------------------------------------------------- }
 function PadSpace(const AString : String; const nLen : Integer;
-   Separador : String; const Caracter : Char = ' ') : String ;
+   Separador : String; const Caracter : Char = ' '; const RemoverEspacos : Boolean = True) : String ;
 var StuffStr : String ;
     nSep, nCharSep, nResto, nFeito, Ini : Integer ;
     D : Double ;
@@ -1190,7 +1192,9 @@ begin
      exit ;
   end ;
 
-  Result   := Trim( Result ) ;
+  if RemoverEspacos then
+    Result := Trim( Result ) ;
+
   D        := (nLen - (LenghtNativeString(Result)-nSep)) / nSep ;
   nCharSep := Trunc( D ) ;
   nResto   := nLen - ( (LenghtNativeString(Result)-nSep) + (nCharSep*nSep) ) ;
@@ -2486,42 +2490,50 @@ end;
 {-----------------------------------------------------------------------------
   Traduz Strings do Tipo '#13,v,#10', substituindo #nn por chr(nn).
   Usar , para separar um campo do outro... No exemplo acima o resultado seria
-  chr(13)+'v'+chr(10) 
+  chr(13)+'v'+chr(10)
  ---------------------------------------------------------------------------- }
 function AscToString(const AString: String): AnsiString;
+
+   procedure ConverteToken(var AToken: AnsiString);
+   var
+     n: Integer;
+   begin
+     if AToken[1] = '#' then
+     begin
+       if TryStrToInt(copy(string(AToken), 2, Length(string(AToken))), n) then
+         AToken := AnsiChr(n);
+     end;
+   end;
+
 Var
-  A : Integer ;
+  posicao, tamanhoString : Integer ;
   Token : AnsiString ;
   VString : string;
   C : Char ;
 begin
-  VString := Trim( AString  );
-  Result  := '' ;
-  A       := 1  ;
-  Token   := '' ;
+  VString       := Trim( AString  );
+  Result        := '' ;
+  posicao       := 1  ;
+  Token         := '' ;
+  tamanhoString := Length( VString );
 
-  while A <= length( VString ) + 1 do
+  while posicao <= tamanhoString + 1 do
   begin
-     if A > length( VString ) then
-        C := ','
-     else
-        C := VString[A] ;
+    if posicao > tamanhoString then
+      C := ','
+    else
+      C := VString[posicao] ;
 
-     if (C = ',') and (Length( Token ) >= 1) then
-      begin
-        if Token[1] = '#' then
-        try
-           Token := AnsiChr(StrToInt(copy(String(Token),2,length(String(Token)))));
-        except
-        end ;
+    if (C = ',') and (Length( Token ) >= 1) then
+    begin
+      ConverteToken(Token);
+      Result := Result + Token;
+      Token  := '' ;
+    end
+    else
+      Token := Token + AnsiString(C) ;
 
-        Result := Result + Token ;
-        Token := '' ;
-      end
-     else
-        Token := Token + AnsiString(C) ;
-
-     A := A + 1 ;
+    posicao := posicao + 1 ;
   end ;
 end;
 
@@ -2677,8 +2689,12 @@ var Buffer : Pointer ;
 begin
 {$IFDEF MSWINDOWS}
   LoadInpOut;
-  if Assigned( xInp32 ) then
-     Result := xInp32(PortAddr)
+  if not Assigned( xInp32 ) then
+  begin
+    raise Exception.Create('Erro ao acessar a porta: '+IntToStr(PortAddr));
+  end;
+
+  Result := xInp32(PortAddr)
 {$ELSE}
   FDevice := '/dev/port' ;
   Buffer  := @Result ;
@@ -3487,6 +3503,7 @@ begin
   try
      WriteToTXT(ArqTXT, Buf, True, True);
   except
+     //Não parar o funcionamento de quem chamou WriteLog por erros causados por ela.
   end ;
 end;
 
@@ -3933,60 +3950,62 @@ begin
     Result := AnsiToNativeString(ABinaryString);
 end;
 
-function SeparaDados(const AString: String; const Chave: String;
-  const MantemChave: Boolean): String;
+function SeparaDados(const AString: String; const Chave: String; const MantemChave: Boolean = False;
+  const PermitePrefixo: Boolean = True): String;
 var
-  PosIni, PosFim : Integer;
-  UTexto, UChave :String;
+  PosIni, PosFim: Integer;
+  UTexto, UChave: String;
+  Prefixo: String;
 begin
+  Result := '';
   UTexto := AnsiUpperCase(AString);
   UChave := AnsiUpperCase(Chave);
   PosFim := 0;
+  Prefixo := '';
 
   if MantemChave then
-   begin
-     PosIni := Pos('<' + UChave, UTexto);
-     if PosIni > 0 then
-       PosFim := Pos('/' + UChave, UTexto) + length(UChave) + 3;
-
-     if (PosFim = 0) then
-      begin
-        PosIni := Pos('NS2:' + UChave, UTexto) - 1;
-        if PosIni > 0 then
-          PosFim := Pos('/NS2:' + UChave, UTexto) + length(UChave) + 3;
-      end;
-   end
+  begin
+    PosIni := Pos('<' + UChave, UTexto);
+    if PosIni > 0 then
+      PosFim := Pos('/' + UChave, UTexto) + length(UChave) + 3;
+  end
   else
-   begin
-     PosIni := Pos('<' + UChave, UTexto) ;
-     if PosIni > 0 then
-     begin
-       PosIni := PosIni + Pos('>', copy(UTexto, PosIni, length(UTexto)));
-       PosFim := Pos('/' + UChave, UTexto);
-     end;
+  begin
+    PosIni := Pos('<' + UChave, UTexto);
+    if PosIni > 0 then
+    begin
+      PosIni := PosIni + Pos('>', copy(UTexto, PosIni, length(UTexto)));
+      PosFim := Pos('/' + UChave, UTexto);
+    end;
+  end;
 
-     if (PosFim = 0) then
+  if (PosFim = 0) and PermitePrefixo then
+  begin
+    PosIni := Pos(':' + Chave, AString);
+    if PosIni > 1 then
+    begin
+      while (PosIni > 1) and (AString[PosIni - 1] <> '<') do
       begin
-        PosIni := Pos('NS2:' + UChave, UTexto) ;
-        if PosIni > 0 then
-        begin
-          PosIni := PosIni + Pos('>', copy(UTexto, PosIni, length(UTexto)));
-          PosFim := Pos('/NS2:' + UChave, UTexto);
-        end ;
+        Prefixo := AString[PosIni - 1] + Prefixo;
+        PosIni := PosIni - 1;
       end;
-   end;
+      Result := SeparaDados(AString, Prefixo + ':' + Chave, MantemChave, False);
+    end
+  end
+  else
+    Result := copy(AString, PosIni, PosFim - (PosIni + 1));
 
-  Result := copy(AString, PosIni, PosFim - (PosIni + 1));
 end;
 
-function SeparaDadosArray(const AArray: array of String; const AString: String;
-  const MantemChave: Boolean): String;
+function SeparaDadosArray(const AArray: array of String; const AString: String; const MantemChave: Boolean = False;
+  const PermitePrefixo: Boolean = True): String;
 var
   I : Integer;
 begin
+  Result := '';
  for I:=Low(AArray) to High(AArray) do
  begin
-   Result := Trim(SeparaDados(AString,AArray[I], MantemChave));
+   Result := Trim(SeparaDados(AString,AArray[I], MantemChave, PermitePrefixo));
    if Result <> '' then
       Exit;
  end;

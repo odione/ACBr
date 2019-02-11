@@ -66,14 +66,14 @@ type
     FModoDeteccao: TTimeZoneModoDeteccao;
     FTimeZoneStr: String;
     procedure SetModoDeteccao(AValue: TTimeZoneModoDeteccao);
-    procedure SetTimeZone(const AValue: String);
+    procedure SetTimeZoneStr(const AValue: String);
   public
     constructor Create;
     procedure Assign(Source: TPersistent); override;
   published
     property ModoDeteccao: TTimeZoneModoDeteccao read FModoDeteccao
       write SetModoDeteccao default tzSistema;
-    property TimeZoneStr: String read FTimeZoneStr write SetTimeZone;
+    property TimeZoneStr: String read FTimeZoneStr write SetTimeZoneStr;
   end;
 
 function CodigoParaUF(const codigo: integer): string;
@@ -716,7 +716,7 @@ begin
      (GetFimDoHorarioDeVerao(anoFim) >= dataHora) and
      (AnsiPos(UF, UFHV) > 0) then
     Result := True;
-  
+
 end;
 
 function GetInicioDoHorarioDeVerao(const ano: Integer): TDateTime;
@@ -859,7 +859,7 @@ function ExtrairTipoEmissaoChaveAcesso(aChave: String): Integer;
 begin
   AChave := OnlyNumber(AChave);
 
-  if (pos(ExtrairModeloChaveAcesso(AChave), '55,65') = 0) then
+  if ExtrairModeloChaveAcesso(AChave) = '59' then  //SAT
     Result := 0
   else
     Result := StrToIntDef(Copy(AChave, 35, 1), 0);
@@ -899,7 +899,7 @@ begin
  end;
 end;
 
-procedure TTimeZoneConf.SetTimeZone(const AValue: String);
+procedure TTimeZoneConf.SetTimeZoneStr(const AValue: String);
 var
   Hora, Minuto: Integer;
 begin
