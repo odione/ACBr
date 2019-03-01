@@ -62,7 +62,7 @@ type
 
   { TinutCTe }
 
-  TinutCTe = class(TPersistent)
+  TinutCTe = class(TObject)
   private
     FGerador: TGerador;
     FLeitor: TLeitor;
@@ -83,9 +83,8 @@ type
     constructor Create;
     destructor Destroy; override;
     function GerarXML: boolean;
-    function LerXML(CaminhoArquivo: String): boolean;
+    function LerXML(const CaminhoArquivo: String): boolean;
     function LerXMLFromString(const AXML: String): boolean;
-  published
     property Leitor: TLeitor         read FLeitor     write FLeitor;
     property Gerador: TGerador       read FGerador    write FGerador;
     property tpAmb: TpcnTipoAmbiente read FtpAmb      write FtpAmb;
@@ -109,6 +108,7 @@ implementation
 
 constructor TinutCTe.Create;
 begin
+  inherited Create;
   FGerador    := TGerador.Create;
   FRetInutCTe := TRetInutCTe.Create;
   FLeitor     := TLeitor.Create;
@@ -168,7 +168,7 @@ begin
   Result := (Gerador.ListaDeAlertas.Count = 0);
 end;
 
-function TinutCTe.LerXML(CaminhoArquivo: String): boolean;
+function TinutCTe.LerXML(const CaminhoArquivo: String): boolean;
 var
   ArqInut: TStringList;
 begin

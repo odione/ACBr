@@ -55,7 +55,7 @@ uses
   pcnLeitor,
   ACBreSocialLoteEventos, ACBreSocialConfiguracoes,
   pcesConversaoeSocial, pcesCommon, pcesRetEnvioLote, pcesRetConsultaLote,
-  pcesRetConsultaIdentEvt, pcesRetDownloadEvt;
+  pcesConsultaIdentEvt, pcesRetConsultaIdentEvt, pcesRetDownloadEvt;
 
 type
 
@@ -90,7 +90,6 @@ type
     FVersao: String;
     FLote: TLoteEventos;
     FRetEnvioLote: TRetEnvioLote;
-
   protected
     procedure DefinirURL; override;
     procedure DefinirServicoEAction; override;
@@ -143,9 +142,15 @@ type
 
   TConsultaIdentEventos = class(TeSocialWebService)
   private
-    FCnpj : String;
-    FPerApur : TDateTime;
-    FEvento : TTipoEvento;
+    FtipoConsulta: tpConsulta;
+    FCnpj: String;
+    FEvento: TTipoEvento;
+    FPerApur: TDateTime;
+    FchEvt: String;
+    FdtIni: TDateTime;
+    FdtFim: TDateTime;
+    FcpfTrab: String;
+
     FRetConsultaIdentEvt: TRetConsultaIdentEvt;
   protected
     procedure DefinirURL; override;
@@ -162,9 +167,16 @@ type
 
     procedure Clear; override;
     procedure BeforeDestruction; override;
+
+    property tipoConsulta: tpConsulta read FtipoConsulta write FtipoConsulta;
     property Cnpj: String read FCnpj write FCnpj;
-    property PerApur: TDateTime read FPerApur write FPerApur;
     property Evento: TTipoEvento read FEvento write FEvento;
+    property PerApur: TDateTime read FPerApur write FPerApur;
+    property chEvt: String read FchEvt write FchEvt;
+    property dtIni: TDateTime read FdtIni write FdtIni;
+    property dtFim: TDateTime read FdtFim write FdtFim;
+    property cpfTrab: String read FcpfTrab write FcpfTrab;
+
     property RetConsultaIdentEvt: TRetConsultaIdentEvt read FRetConsultaIdentEvt;
   end;
 
@@ -214,9 +226,12 @@ type
 
     function Envia(AGrupo: TeSocialGrupo): Boolean;
     function Consultar(const AProtocolo: string): Boolean;
-    function ConsultaIdentificadoresEventosEmpregador(const CnpjEstab : String;
+    function ConsultaIdentificadoresEventosEmpregador(const CnpjEstab: String;
         tpEvt : TTipoEvento; PerApur : TDateTime): boolean;
-
+    function ConsultaIdentificadoresEventosTabela(const CnpjEstab: String;
+        tpEvt: TTipoEvento; AchEvt: string; AdtIni, AdtFim: TDateTime): boolean;
+    function ConsultaIdentificadoresEventosTrabalhador(const CnpjEstab: String;
+        AcpfTrab: string; AdtIni, AdtFim: TDateTime): boolean;
     function DownloadEvento(const ACnpjEmpr, APorID, APorNrRecibo: String): boolean;
 
     property ACBreSocial: TACBrDFe read FACBreSocial write FACBreSocial;
@@ -399,6 +414,10 @@ begin
   Texto := ''; // Isso forçará a conversão para UTF8, antes do envio
 {$ENDIF}
 
+  FPSoapEnvelopeAtributtes :=
+    ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" ' +
+    ' xmlns:v1="http://www.esocial.gov.br/schema/lote/eventos/envio/v1_1_1"';
+
   Texto := Texto + '<' + FPSoapVersion + ':Envelope ' +
     FPSoapEnvelopeAtributtes + '>';
   Texto := Texto + '<' + FPSoapVersion + ':Body>';
@@ -456,7 +475,7 @@ end;
 
 function TEnvioLote.GerarPrefixoArquivo: String;
 begin
-  Result := FormatDateTime('yyyymmddhhnnss', Now);
+  Result := FormatDateTime('yymmddhhnnss', Now);
 end;
 
 function TEnvioLote.GerarVersaoDadosSoap: String;
@@ -517,6 +536,10 @@ begin
 {$ELSE}
   Texto := ''; // Isso forçará a conversão para UTF8, antes do envio
 {$ENDIF}
+
+  FPSoapEnvelopeAtributtes :=
+    ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" ' +
+    ' xmlns:v1="http://www.esocial.gov.br/schema/lote/eventos/envio/v1_1_1"';
 
   Texto := Texto + '<' + FPSoapVersion + ':Envelope ' +
     FPSoapEnvelopeAtributtes + '>';
@@ -622,6 +645,14 @@ begin
   FPArqEnv := 'ped-con';
   FPArqResp := 'con';
 
+  FCnpj    := '';
+  FEvento  := teS1000;
+  FPerApur := 0;
+  FchEvt   := '';
+  FdtIni   := 0;
+  FdtFim   := 0;
+  FcpfTrab := '';
+
   if Assigned(FRetConsultaIdentEvt) then
     FRetConsultaIdentEvt.Free;
 
@@ -635,7 +666,12 @@ end;
 
 procedure TConsultaIdentEventos.DefinirDadosMsg;
 var
+  Consulta: TConsultaIdentEvt;
+  ArqXSD: string;
   TpInsc : tpTpInsc;
+//  DadosMsg: AnsiString;
+  Erro : string;
+  EhValido : Boolean;
 begin
 
   if Length(FCnpj) = 14 then
@@ -643,22 +679,80 @@ begin
   else
     TpInsc := tiCPF;
 
+  Consulta := TConsultaIdentEvt.Create;
+  try
+    Consulta.SoapEnvelope := ACBRESOCIAL_NAMESPACE_RETEVT;
+    Consulta.tipoConsulta := tipoConsulta;
+
+    Consulta.tpInsc := eSTpInscricaoToStr(TpInsc);
+    Consulta.nrInsc := Cnpj;
+    Consulta.TipoEvento := Evento;
+    Consulta.perApur := FormatDateTime('yyyy-mm', FPerApur);
+    Consulta.chEvt := chEvt;
+    Consulta.dtIni := dtIni;
+    Consulta.dtFim := dtFim;
+    Consulta.cpfTrab := cpfTrab;
+
+    AjustarOpcoes( Consulta.Gerador.Opcoes );
+    Consulta.GerarXML;
+
+    // Atribuindo o XML para propriedade interna //
+    FPDadosMsg := Consulta.Gerador.ArquivoFormatoXML;
+  finally
+    Consulta.Free;
+  end;
+
+  (*
   FPDadosMsg :=
          '<eSocial xmlns="' + ACBRESOCIAL_NAMESPACE_RETEVT + '">' +
           '<consultaIdentificadoresEvts>' +
            '<ideEmpregador>' +
-            '<tpInsc>' + eSTpInscricaoToStr(TpInsc) + '<tpInsc>' +
-            '<nrInsc>' + FCnpj + '<nrInsc>' +
-           '</ideEmpregador>' +
-           '<consultaEvtsEmpregador>' +
-             '<tpEvt>' + TipoEventoToStr(FEvento) + '<tpEvt>' +
-             '<perApur>' + FormatDateTime('yyyy-mm', FPerApur) + '<perApur>' +
-           '</consultaEvtsEmpregador>' +
+            '<tpInsc>' + eSTpInscricaoToStr(TpInsc) + '</tpInsc>' +
+            '<nrInsc>' + FCnpj + '</nrInsc>' +
+           '</ideEmpregador>';
+
+  if FtpConsulta = 'Empregador' then
+    FPDadosMsg := FPDadosMsg +
+             '<consultaEvtsEmpregador>' +
+               '<tpEvt>' + TipoEventoToStr(FEvento) + '</tpEvt>' +
+               '<perApur>' + FormatDateTime('yyyy-mm', FPerApur) + '</perApur>' +
+             '</consultaEvtsEmpregador>';
+
+  if FtpConsulta = 'Tabela' then
+    FPDadosMsg := FPDadosMsg +
+             '<consultaEvtsTabela>' +
+               '<tpEvt>' + TipoEventoToStr(FEvento) + '</tpEvt>' +
+               '<chEvt>' + FchEvt + '</chEvt>' +
+               '<dtIni>' + FormatDateTime('yyyy-mm-dd', FdtIni) + '</dtIni>' +
+               '<dtFim>' + FormatDateTime('yyyy-mm-dd', FdtFim) + '</dtFim>' +
+             '</consultaEvtsTabela>';
+
+  FPDadosMsg := FPDadosMsg +
           '</consultaIdentificadoresEvts>' +
          '</eSocial>';
+  *)
+//  FPDadosMsg := AnsiToUtf8(DadosMsg);
 
-  if Assigned(TACBreSocial(FPDFeOwner).OnTransmissaoEventos) then
-    TACBreSocial(FPDFeOwner).OnTransmissaoEventos(FPDadosMsg, eseEnvioConsultaIdentEvt);
+  with TACBreSocial(FPDFeOwner) do
+  begin
+    FPDadosMsg := SSL.Assinar(String(FPDadosMsg),
+                    'eSocial', 'consultaIdentificadoresEvts', '', '', '', 'ID');
+
+    case tipoConsulta of
+      tcEmpregador: ArqXSD := 'ConsultaIdentificadoresEventosEmpregador-v1_0_0.xsd';
+      tcTabela: ArqXSD := 'ConsultaIdentificadoresEventosTabela-v1_0_0';
+      tcTrabalhador: ArqXSD := 'ConsultaIdentificadoresEventosTrabalhador-v1_0_0';
+    end;
+
+    EhValido := SSL.Validar(String(FPDadosMsg),
+                   Configuracoes.Arquivos.PathSchemas + ArqXSD, Erro);
+
+    if not EhValido then
+      raise EACBreSocialException.CreateDef(Erro);
+
+    if Assigned(OnTransmissaoEventos) then
+      OnTransmissaoEventos(FPDadosMsg, eseEnvioConsultaIdentEvt);
+  end;
 end;
 
 procedure TConsultaIdentEventos.DefinirEnvelopeSoap;
@@ -672,6 +766,10 @@ begin
 {$ELSE}
   Texto := ''; // Isso forçará a conversão para UTF8, antes do envio
 {$ENDIF}
+
+  FPSoapEnvelopeAtributtes :=
+    ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" ' +
+    ' xmlns:v1="http://www.esocial.gov.br/servicos/empregador/consulta/identificadores-eventos/v1_0_0"';
 
   Texto := Texto + '<' + FPSoapVersion + ':Envelope ' +
     FPSoapEnvelopeAtributtes + '>';
@@ -733,7 +831,7 @@ var
   i: Integer;
   AXML, NomeArq: String;
 begin
-  FPRetWS := SeparaDados(FPRetornoWS, 'ConsultarLoteEventosResult');
+  FPRetWS := SeparaDados(FPRetornoWS, 'ConsultarIdentificadoresEventosEmpregadorResult');
 
   FRetConsultaIdentEvt.Leitor.Arquivo := ParseText(FPRetWS);
   FRetConsultaIdentEvt.LerXml;
@@ -767,6 +865,8 @@ begin
   FEnvioLote    := TEnvioLote.Create(FACBreSocial);
   FConsultaLote := TConsultaLote.Create(FACBreSocial);
   FConsultaIdentEventos := TConsultaIdentEventos.Create(FACBreSocial);
+  FDownloadEventos := TDownloadEventos.Create(FACBreSocial);
+
 end;
 
 destructor TWebServices.Destroy;
@@ -774,6 +874,7 @@ begin
   FEnvioLote.Free;
   FConsultaLote.Free;
   FConsultaIdentEventos.Free;
+  FDownloadEventos.Free;
 
   inherited Destroy;
 end;
@@ -796,6 +897,8 @@ end;
 
 function TWebServices.Consultar(const AProtocolo: string): Boolean;
 begin
+  FConsultaLote.Clear;
+
 {$IFDEF FPC}
   Result := False;
 {$ENDIF}
@@ -811,25 +914,76 @@ end;
 function TWebServices.ConsultaIdentificadoresEventosEmpregador(const CnpjEstab: String;
   tpEvt: TTipoEvento; PerApur: TDateTime): boolean;
 begin
+  FConsultaIdentEventos.Clear;
+
 {$IFDEF FPC}
   Result := False;
 {$ENDIF}
 
+  FConsultaIdentEventos.FtipoConsulta := tcEmpregador;
   FConsultaIdentEventos.FCnpj := CnpjEstab;
   FConsultaIdentEventos.FEvento := tpEvt;
   FConsultaIdentEventos.FPerApur := PerApur;
 
   if not FConsultaIdentEventos.Executar then
-      FConsultaIdentEventos.GerarException(FConsultaIdentEventos.Msg);
+    FConsultaIdentEventos.GerarException(FConsultaIdentEventos.Msg);
+
+  Result := True;
+end;
+
+function TWebServices.ConsultaIdentificadoresEventosTabela(
+  const CnpjEstab: String; tpEvt: TTipoEvento; AchEvt: string; AdtIni,
+  AdtFim: TDateTime): boolean;
+begin
+  FConsultaIdentEventos.Clear;
+
+{$IFDEF FPC}
+  Result := False;
+{$ENDIF}
+
+  FConsultaIdentEventos.FtipoConsulta := tcTabela;
+  FConsultaIdentEventos.FCnpj := CnpjEstab;
+  FConsultaIdentEventos.FEvento := tpEvt;
+  FConsultaIdentEventos.FchEvt := AchEvt;
+  FConsultaIdentEventos.FdtIni := AdtIni;
+  FConsultaIdentEventos.FdtFim := AdtFim;
+
+  if not FConsultaIdentEventos.Executar then
+    FConsultaIdentEventos.GerarException(FConsultaIdentEventos.Msg);
+
+  Result := True;
+end;
+
+function TWebServices.ConsultaIdentificadoresEventosTrabalhador(
+  const CnpjEstab: String; AcpfTrab: string; AdtIni,
+  AdtFim: TDateTime): boolean;
+begin
+  FConsultaIdentEventos.Clear;
+
+{$IFDEF FPC}
+  Result := False;
+{$ENDIF}
+
+  FConsultaIdentEventos.FtipoConsulta := tcTrabalhador;
+  FConsultaIdentEventos.FCnpj := CnpjEstab;
+  FConsultaIdentEventos.FcpfTrab := AcpfTrab;
+  FConsultaIdentEventos.FdtIni := AdtIni;
+  FConsultaIdentEventos.FdtFim := AdtFim;
+
+  if not FConsultaIdentEventos.Executar then
+    FConsultaIdentEventos.GerarException(FConsultaIdentEventos.Msg);
 
   Result := True;
 end;
 
 function TWebServices.DownloadEvento(const ACnpjEmpr, APorID, APorNrRecibo: String): boolean;
 begin
+  FDownloadEventos.Clear;
+
 {$IFDEF FPC}
   Result := False;
 {$ENDIF}
+
   if APorID <> '' then
     FDownloadEventos.FTipoDownload := 'PorId'
   else
@@ -877,7 +1031,8 @@ end;
 procedure TDownloadEventos.DefinirDadosMsg;
 var
   TpInsc: tpTpInsc;
-  NameSpace: string;
+  NameSpace, Erro, ArqXSD: string;
+  EhValido : boolean;
 begin
 
   if Length(FCnpj) = 14 then
@@ -886,33 +1041,53 @@ begin
     TpInsc := tiCPF;
 
   if FPorID <> '' then
-    NameSpace := ACBRESOCIAL_NAMESPACE_DOWEVTID
+  begin
+    NameSpace := ACBRESOCIAL_NAMESPACE_DOWEVTID;
+    ArqXSD    := 'SolicitacaoDownloadEventosPorId-v1_0_0.xsd';
+  end
   else
+  begin
     NameSpace := ACBRESOCIAL_NAMESPACE_DOWEVTREC;
+    ArqXSD    := 'SolicitacaoDownloadEventosPorNrRecibo-v1_0_0.xsd';
+  end;
 
   FPDadosMsg :=
          '<eSocial xmlns="' + NameSpace + '">' +
           '<download>' +
            '<ideEmpregador>' +
-            '<tpInsc>' + eSTpInscricaoToStr(TpInsc) + '<tpInsc>' +
-            '<nrInsc>' + FCnpj + '<nrInsc>' +
-           '</ideEmpregador>' +
-           '<solicDownloadEvts' + FTipoDownload + '>';
+            '<tpInsc>' + eSTpInscricaoToStr(TpInsc) + '</tpInsc>' +
+            '<nrInsc>' + FCnpj + '</nrInsc>' +
+           '</ideEmpregador>';
 
   if FPorID <> '' then
     FPDadosMsg := FPDadosMsg +
-               '<id>' + FPorID + '</id>'
+                  '<solicDownloadEvtsPorId>' +
+                    '<id>' + FPorID + '</id>' + // Pode ser uma lista
+                  '</solicDownloadEvtsPorId>'
   else
     FPDadosMsg := FPDadosMsg +
-               '<nrRec>' + FPorNrRecibo + '</nrRec>';
+                  '<solicDownloadEventosPorNrRecibo>' +
+                    '<nrRec>' + FPorNrRecibo + '</nrRec>' + // Pode ser uma lista
+                  '</solicDownloadEventosPorNrRecibo>';
 
   FPDadosMsg := FPDadosMsg +
-           '</solicDownloadEvts' + FTipoDownload + '>' +
           '</download>' +
          '</eSocial>';
 
-  if Assigned(TACBreSocial(FPDFeOwner).OnTransmissaoEventos) then
-    TACBreSocial(FPDFeOwner).OnTransmissaoEventos(FPDadosMsg, eseEnvioDownloadEvt);
+  with TACBreSocial(FPDFeOwner) do
+  begin
+    FPDadosMsg := SSL.Assinar(String(FPDadosMsg),
+                                        'eSocial', 'eSocial', '', '', '', 'ID');
+
+    EhValido := SSL.Validar(String(FPDadosMsg),
+                   Configuracoes.Arquivos.PathSchemas + ArqXSD, Erro);
+
+    if not EhValido then
+      raise EACBreSocialException.CreateDef(Erro);
+
+    if Assigned(OnTransmissaoEventos) then
+      OnTransmissaoEventos(FPDadosMsg, eseEnvioDownloadEvt);
+  end;
 end;
 
 procedure TDownloadEventos.DefinirEnvelopeSoap;
@@ -927,6 +1102,15 @@ begin
   Texto := ''; // Isso forçará a conversão para UTF8, antes do envio
 {$ENDIF}
 
+  FPSoapEnvelopeAtributtes :=
+    ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" ' +
+    ' xmlns:v1="http://www.esocial.gov.br/servicos/empregador/download/solicitacao/v1_0_0"';
+ {
+  if FTipoDownload = 'PorId' then
+    FPSoapEnvelopeAtributtes := FPSoapEnvelopeAtributtes + ACBRESOCIAL_NAMESPACE_DOWEVTID + '"'
+  else
+    FPSoapEnvelopeAtributtes := FPSoapEnvelopeAtributtes + ACBRESOCIAL_NAMESPACE_DOWEVTREC + '"';
+  }
   Texto := Texto + '<' + FPSoapVersion + ':Envelope ' +
     FPSoapEnvelopeAtributtes + '>';
   Texto := Texto + '<' + FPSoapVersion + ':Body>';

@@ -156,7 +156,7 @@ type
     procedure CarregaPagamento;
     procedure CarregaInformacoesAdicionais;
 
-    function CollateBr(Str: String): String;
+    function CollateBr(const Str: String): String;
 
   public
     constructor Create(AOwner: TComponent);
@@ -173,7 +173,7 @@ type
     procedure CarregaDadosNFe;
     procedure CarregaDadosEventos;
     procedure CarregaDadosInutilizacao;
-    procedure PintarQRCode(QRCodeData: String; APict: TPicture);
+    procedure PintarQRCode(const QRCodeData: String; APict: TPicture);
 
     property FastFile: String read FFastFile write FFastFile;
     property FastFileEvento: String read FFastFileEvento write FFastFileEvento;
@@ -421,7 +421,7 @@ begin
         FieldDefs.Add('dVal'      , ftDateTime);
         FieldDefs.Add('DescricaoProduto', ftString, 2000);
         FieldDefs.Add('Unidade'   , ftString, 14);
-        FieldDefs.Add('Quantidade', ftString, 18);
+        FieldDefs.Add('Quantidade', ftString, 50);
         FieldDefs.Add('ValorUnitario'   , ftString, 50);
         FieldDefs.Add('Valorliquido'    , ftString, 18);
         FieldDefs.Add('ValorAcrescimos' , ftString, 18);
@@ -540,6 +540,10 @@ begin
         FieldDefs.Add('vTotPago'    , ftFloat);
         FieldDefs.Add('vTroco'      , ftFloat);
         FieldDefs.Add('ValorApagar' , ftFloat);
+        FieldDefs.Add('VFCP'        , ftFloat);
+        FieldDefs.Add('VFCPST'      , ftFloat);
+        FieldDefs.Add('VFCPSTRet'   , ftFloat);
+        FieldDefs.Add('VIPIDevol'   , ftFloat);
         CreateDataSet;
      end;
    end;
@@ -703,6 +707,12 @@ begin
          FieldDefs.Add('CMun', ftString, 7);
          FieldDefs.Add('XMun', ftString, 60);
          FieldDefs.Add('UF', ftString, 2);
+         FieldDefs.Add('XNome', ftString, 60);
+         FieldDefs.Add('CEP', ftString, 9);
+         FieldDefs.Add('CPais', ftString, 4);
+         FieldDefs.Add('XPais', ftString, 60);
+         FieldDefs.Add('Fone', ftString, 15);
+         FieldDefs.Add('IE', ftString, 15);
          CreateDataSet;
       end;
    end;
@@ -730,6 +740,12 @@ begin
          FieldDefs.Add('CMun', ftString, 7);
          FieldDefs.Add('XMun', ftString, 60);
          FieldDefs.Add('UF', ftString, 2);
+         FieldDefs.Add('XNome', ftString, 60);
+         FieldDefs.Add('CEP', ftString, 9);
+         FieldDefs.Add('CPais', ftString, 4);
+         FieldDefs.Add('XPais', ftString, 60);
+         FieldDefs.Add('Fone', ftString, 15);
+         FieldDefs.Add('IE', ftString, 15);
          CreateDataSet;
       end;
    end;
@@ -863,7 +879,7 @@ begin
   frxReport.EnabledDataSets.Add(FfrxInutilizacao);
 end;
 
-function TACBrNFeFRClass.CollateBr(Str: String): String;
+function TACBrNFeFRClass.CollateBr(const Str: String): String;
 var
   Resultado,Temp: string;
   vChar: Char;
@@ -927,7 +943,10 @@ begin
       FieldByName('VNF').AsFloat          := VNF;
       FieldByName('VTotTrib').AsFloat     := VTotTrib;
       FieldByName('ValorApagar').AsFloat  := VProd - VDesc - vICMSDeson + VOutro;
-
+      FieldByName('VFCP').AsFloat         := VFCP;
+      FieldByName('VFCPST').AsFloat       := VFCPST;
+      FieldByName('VFCPSTRet').AsFloat    := vFCPSTRet;
+      FieldByName('VIPIDevol').AsFloat    := vIPIDevol;
       if (FDANFEClassOwner is TACBrNFeDANFEClass) then
         FieldByName('VTribPerc').AsFloat := TACBrNFeDANFEClass(FDANFEClassOwner).ManterVTribPerc(VTotTrib, VProd, VNF);
 
@@ -1476,6 +1495,11 @@ begin
         FieldByName('CMun').AsString    := inttostr(CMun);
         FieldByName('XMun').AsString    := CollateBr(XMun);
         FieldByName('UF').AsString      := UF;
+        FieldByName('XNome').AsString   := xNome;
+        FieldByName('CEP').AsString     := FormatarCEP(CEP);
+        FieldByName('XPais').AsString   := XPais;
+        FieldByName('Fone').AsString    := FormatarFone(Fone);
+        FieldByName('IE').AsString      := IE;
       end;
       Post;
     end;
@@ -1504,6 +1528,11 @@ begin
         FieldByName('CMun').AsString    := inttostr(CMun);
         FieldByName('XMun').AsString    := CollateBr(XMun);
         FieldByName('UF').AsString      := UF;
+        FieldByName('XPais').AsString   := XPais;
+        FieldByName('XNome').AsString   := xNome;
+        FieldByName('CEP').AsString     := FormatarCEP(CEP);
+        FieldByName('Fone').AsString    := FormatarFone(Fone);
+        FieldByName('IE').AsString      := IE;
       end;
       Post;
     end;
@@ -1871,7 +1900,7 @@ begin
           CondicoesUso := StringReplace(CondicoesUso, 'com: I', 'com:'+#13+' I', [rfReplaceAll]);
           CondicoesUso := StringReplace(CondicoesUso, ';', ';' + #13, [rfReplaceAll]);
 
-          Correcao := InfEvento.detEvento.xCorrecao;
+//          Correcao := InfEvento.detEvento.xCorrecao;
           Correcao := StringReplace(InfEvento.detEvento.xCorrecao, ';', #13, [rfReplaceAll]);
 
           FieldByName('xCondUso').AsString  := CondicoesUso;
@@ -1939,7 +1968,7 @@ begin
    end;
 end;
 
-procedure TACBrNFeFRClass.PintarQRCode(QRCodeData: String; APict: TPicture);
+procedure TACBrNFeFRClass.PintarQRCode(const QRCodeData: String; APict: TPicture);
 var
   QRCode: TDelphiZXingQRCode;
   QRCodeBitmap: TBitmap;

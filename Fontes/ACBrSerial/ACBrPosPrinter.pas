@@ -160,7 +160,7 @@ type
   TACBrPosPrinter = class;
 
   TACBrPosPrinterModelo = (ppTexto, ppEscPosEpson, ppEscBematech, ppEscDaruma,
-                           ppEscVox, ppEscDiebold, ppEscEpsonP2);
+                           ppEscVox, ppEscDiebold, ppEscEpsonP2, ppCustomPos);
 
   { TACBrPosPrinterClass }
 
@@ -482,9 +482,8 @@ uses
   {$EndIf}
   ACBrUtil, ACBrImage, ACBrConsts,
   synacode,
-  ACBrEscPosEpson, ACBrEscBematech, ACBrEscDaruma, ACBrEscElgin, ACBrEscDiebold,
-  ACBrEscEpsonP2,
-  ACBrEscPosHookElginDLL, ACBrEscPosHookEpsonDLL;
+  ACBrEscPosEpson, ACBrEscEpsonP2, ACBrEscBematech, ACBrEscDaruma,
+  ACBrEscElgin, ACBrEscDiebold, ACBrEscCustomPos;
 
 { TACBrConfigModoPagina }
 
@@ -793,7 +792,7 @@ begin
   {$Else}
    MS := TMemoryStream.Create;
    try
-     MS.LoadFromFile(ArquivoBMP);
+     MS.LoadFromFile(ArquivoImagem);
      BMPMonoToRasterStr(MS, True, AWidth, AHeight, ARasterStr );
    finally
      MS.Free;
@@ -1132,6 +1131,7 @@ begin
     ppEscVox : FPosPrinterClass := TACBrEscElgin.Create(Self);
     ppEscDiebold : FPosPrinterClass := TACBrEscDiebold.Create(Self);
     ppEscEpsonP2 : FPosPrinterClass := TACBrEscEpsonP2.Create(self);
+    ppCustomPos : FPosPrinterClass := TACBrEscCustomPos.Create(self);
   else
     FPosPrinterClass := TACBrPosPrinterClass.Create(Self);
   end;

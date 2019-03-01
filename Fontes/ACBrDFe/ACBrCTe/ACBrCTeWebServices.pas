@@ -282,7 +282,7 @@ type
     FprotCTe: TProcCTe;
     FretCancCTe: TRetCancCTe;
     FprocEventoCTe: TRetEventoCTeCollection;
-    procedure SetCTeChave(AValue: String);
+    procedure SetCTeChave(const AValue: String);
   protected
     procedure DefinirURL; override;
     procedure DefinirServicoEAction; override;
@@ -338,7 +338,7 @@ type
 
     FXML_ProcInutCTe: String;
 
-    procedure SetJustificativa(AValue: String);
+    procedure SetJustificativa(const AValue: String);
     function GerarPathPorCNPJ: String;
   protected
     procedure DefinirURL; override;
@@ -552,10 +552,10 @@ type
     destructor Destroy; override;
 
     function Envia(ALote: Integer): Boolean; overload;
-    function Envia(ALote: String): Boolean; overload;
+    function Envia(const ALote: String): Boolean; overload;
     function EnviaOS(ALote: Integer): Boolean; overload;
-    function EnviaOS(ALote: String): Boolean; overload;
-    procedure Inutiliza(CNPJ, AJustificativa: String;
+    function EnviaOS(const ALote: String): Boolean; overload;
+    procedure Inutiliza(const CNPJ, AJustificativa: String;
       Ano, Modelo, Serie, NumeroInicial, NumeroFinal: Integer);
 
     property ACBrCTe: TACBrDFe read FACBrCTe write FACBrCTe;
@@ -1710,12 +1710,12 @@ begin
   if Assigned(FprocEventoCTe) then
     FprocEventoCTe.Free;
 
-  FprotCTe := TProcCTe.Create;
-  FretCancCTe := TRetCancCTe.Create;
-  FprocEventoCTe := TRetEventoCTeCollection.Create(FOwner);
+  FprotCTe       := TProcCTe.Create;
+  FretCancCTe    := TRetCancCTe.Create;
+  FprocEventoCTe := TRetEventoCTeCollection.Create;
 end;
 
-procedure TCTeConsulta.SetCTeChave(AValue: String);
+procedure TCTeConsulta.SetCTeChave(const AValue: String);
 var
   NumChave: String;
 begin
@@ -1870,7 +1870,7 @@ begin
       FprocEventoCTe.Clear;
       for I := 0 to CTeRetorno.procEventoCTe.Count - 1 do
       begin
-        with FprocEventoCTe.Add.RetEventoCTe do
+        with FprocEventoCTe.New.RetEventoCTe do
         begin
           idLote := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.idLote;
           tpAmb := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.tpAmb;
@@ -1895,7 +1895,7 @@ begin
           InfEvento.DetEvento.infCorrecao.Clear;
           for k := 0 to CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.InfEvento.detEvento.infCorrecao.Count -1 do
           begin
-            InfEvento.DetEvento.infCorrecao.Add;
+            InfEvento.DetEvento.infCorrecao.New;
             InfEvento.DetEvento.infCorrecao.Items[k].grupoAlterado   := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.InfEvento.DetEvento.infCorrecao.Items[k].grupoAlterado;
             InfEvento.DetEvento.infCorrecao.Items[k].campoAlterado   := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.InfEvento.DetEvento.infCorrecao.Items[k].campoAlterado;
             InfEvento.DetEvento.infCorrecao.Items[k].valorAlterado   := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.InfEvento.DetEvento.infCorrecao.Items[k].valorAlterado;
@@ -1905,7 +1905,7 @@ begin
           retEvento.Clear;
           for J := 0 to CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.retEvento.Count-1 do
           begin
-            with retEvento.Add.RetInfEvento do
+            with retEvento.New.RetInfEvento do
             begin
               Id := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.retEvento.Items[J].RetInfEvento.Id;
               tpAmb := CTeRetorno.procEventoCTe.Items[I].RetEventoCTe.retEvento.Items[J].RetInfEvento.tpAmb;
@@ -2158,7 +2158,7 @@ begin
   end
 end;
 
-procedure TCTeInutilizacao.SetJustificativa(AValue: String);
+procedure TCTeInutilizacao.SetJustificativa(const AValue: String);
 var
   TrimValue: String;
 begin
@@ -2177,33 +2177,33 @@ end;
 
 function TCTeInutilizacao.GerarPathPorCNPJ(): String;
 var
-  CNPJ: String;
+  tempCNPJ: String;
 begin
   if FPConfiguracoesCTe.Arquivos.SepararPorCNPJ then
-    CNPJ := FCNPJ
+    tempCNPJ := FCNPJ
   else
-    CNPJ := '';
+    tempCNPJ := '';
 
-  Result := FPConfiguracoesCTe.Arquivos.GetPathInu(Now, CNPJ);
+  Result := FPConfiguracoesCTe.Arquivos.GetPathInu(Now, tempCNPJ);
 end;
 
 procedure TCTeInutilizacao.DefinirURL;
 var
   ok: Boolean;
   VerServ: Double;
-  Modelo: String;
+  ModeloTemp: String;
 begin
   FPVersaoServico := '';
   FPURL  := '';
 
-  Modelo := ModeloCTeToPrefixo( StrToModeloCTe(ok, IntToStr(FModelo) ));
+  ModeloTemp := ModeloCTeToPrefixo( StrToModeloCTe(ok, IntToStr(FModelo) ));
   if not ok then
     raise EACBrCTeException.Create( 'Modelo Inválido: '+IntToStr(FModelo) );
 
   VerServ := VersaoCTeToDbl(FPConfiguracoesCTe.Geral.VersaoDF);
 
   TACBrCTe(FPDFeOwner).LerServicoDeParams(
-    Modelo,
+    ModeloTemp,
     FPConfiguracoesCTe.WebServices.UF,
     FPConfiguracoesCTe.WebServices.Ambiente,
     LayOutToServico(FPLayout),
@@ -2424,11 +2424,11 @@ end;
 
 procedure TCTeConsultaCadastro.DefinirURL;
 var
-  Versao: Double;
+  VersaoTemp: Double;
 begin
   FPVersaoServico := '';
   FPURL := '';
-  Versao := VersaoCTeToDbl(FPConfiguracoesCTe.Geral.VersaoDF);
+  VersaoTemp := VersaoCTeToDbl(FPConfiguracoesCTe.Geral.VersaoDF);
 
   if EstaVazio(FUF) then
     FUF := FPConfiguracoesCTe.WebServices.UF;
@@ -2438,11 +2438,11 @@ begin
     FUF,
     FPConfiguracoesCTe.WebServices.Ambiente,
     LayOutToServico(FPLayout),
-    Versao,
+    VersaoTemp,
     FPURL
   );
 
-  FPVersaoServico := FloatToString(Versao, '.', '0.00');
+  FPVersaoServico := FloatToString(VersaoTemp, '.', '0.00');
 end;
 
 procedure TCTeConsultaCadastro.DefinirDadosMsg;
@@ -2652,7 +2652,7 @@ begin
 
     for I := 0 to FEvento.Evento.Count - 1 do
     begin
-      with EventoCTe.Evento.Add do
+      with EventoCTe.Evento.New do
       begin
         infEvento.tpAmb := FTpAmb;
         infEvento.CNPJ := FEvento.Evento[I].InfEvento.CNPJ;
@@ -2672,7 +2672,7 @@ begin
 
             for j := 0 to FEvento.Evento[i].InfEvento.detEvento.infCorrecao.Count - 1 do
              begin
-               with EventoCTe.Evento[i].InfEvento.detEvento.infCorrecao.Add do
+               with EventoCTe.Evento[i].InfEvento.detEvento.infCorrecao.New do
                 begin
                  grupoAlterado   := FEvento.Evento[i].InfEvento.detEvento.infCorrecao[j].grupoAlterado;
                  campoAlterado   := FEvento.Evento[i].InfEvento.detEvento.infCorrecao[j].campoAlterado;
@@ -2725,7 +2725,7 @@ begin
             SchemaEventoCTe := schevGTV;
             for j := 0 to FEvento.Evento[i].InfEvento.detEvento.infGTV.Count - 1 do
             begin
-              with EventoCTe.Evento[i].InfEvento.detEvento.infGTV.Add do
+              with EventoCTe.Evento[i].InfEvento.detEvento.infGTV.New do
               begin
                 nDoc     := FEvento.Evento[i].InfEvento.detEvento.infGTV[j].nDoc;
                 id       := FEvento.Evento[i].InfEvento.detEvento.infGTV[j].id;
@@ -2737,7 +2737,7 @@ begin
 
                 for k := 0 to FEvento.Evento[i].InfEvento.detEvento.infGTV.Items[j].infEspecie.Count - 1 do
                 begin
-                  with EventoCTe.Evento[i].InfEvento.detEvento.infGTV.Items[j].infEspecie.Add do
+                  with EventoCTe.Evento[i].InfEvento.detEvento.infGTV.Items[j].infEspecie.New do
                   begin
                     tpEspecie := FEvento.Evento[i].InfEvento.detEvento.infGTV[j].infEspecie[k].tpEspecie;
                     vEspecie  := FEvento.Evento[i].InfEvento.detEvento.infGTV[j].infEspecie[k].vEspecie;
@@ -3327,7 +3327,7 @@ begin
   Result := Envia(IntToStr(ALote));
 end;
 
-function TWebServices.Envia(ALote: String): Boolean;
+function TWebServices.Envia(const ALote: String): Boolean;
 begin
   FEnviar.Clear;
   FRetorno.Clear;
@@ -3350,7 +3350,7 @@ begin
   Result := EnviaOS(IntToStr(ALote));
 end;
 
-function TWebServices.EnviaOS(ALote: String): Boolean;
+function TWebServices.EnviaOS(const ALote: String): Boolean;
 begin
   FEnviar.Clear;
   FRetorno.Clear;
@@ -3363,20 +3363,22 @@ begin
   Result := True;
 end;
 
-procedure TWebServices.Inutiliza(CNPJ, AJustificativa: String;
+procedure TWebServices.Inutiliza(const CNPJ, AJustificativa: String;
   Ano, Modelo, Serie, NumeroInicial, NumeroFinal: Integer);
+var
+  CNPJ_temp: string;
 begin
-  CNPJ := OnlyNumber(CNPJ);
+  CNPJ_temp := OnlyNumber(CNPJ);
 
-  if not ValidarCNPJ(CNPJ) then
-    raise EACBrCTeException.Create('CNPJ: ' + CNPJ + ', inválido.');
+  if not ValidarCNPJ(CNPJ_temp) then
+    raise EACBrCTeException.Create('CNPJ: ' + CNPJ_temp + ', inválido.');
 
-  FInutilizacao.CNPJ := CNPJ;
-  FInutilizacao.Modelo := Modelo;
-  FInutilizacao.Serie := Serie;
-  FInutilizacao.Ano := Ano;
+  FInutilizacao.CNPJ          := CNPJ_temp;
+  FInutilizacao.Modelo        := Modelo;
+  FInutilizacao.Serie         := Serie;
+  FInutilizacao.Ano           := Ano;
   FInutilizacao.NumeroInicial := NumeroInicial;
-  FInutilizacao.NumeroFinal := NumeroFinal;
+  FInutilizacao.NumeroFinal   := NumeroFinal;
   FInutilizacao.Justificativa := AJustificativa;
 
   if not FInutilizacao.Executar then
