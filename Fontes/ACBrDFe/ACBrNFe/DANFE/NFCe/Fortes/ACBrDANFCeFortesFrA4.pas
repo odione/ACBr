@@ -819,8 +819,10 @@ begin
       RLLayout := rlReportA4;
       Resumido := DanfeResumido;
 
-      if NumCopias > 1 then
+      if RLPrinter.Copies <> NumCopias then
+      begin
         RLPrinter.Copies := NumCopias;
+      end;
 
       if FACBrNFeDANFCeFortesA4.Impressora <> '' then
         RLPrinter.PrinterName := FACBrNFeDANFCeFortesA4.Impressora;

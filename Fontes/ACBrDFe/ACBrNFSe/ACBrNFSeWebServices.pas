@@ -281,6 +281,7 @@ type
     // Entrada
     FNumeroLote: String;
     FqMaxRps: Integer;
+    FSincrono: Boolean;
 
   protected
     procedure DefinirURL; override;
@@ -298,6 +299,7 @@ type
 
     property NumeroLote: String read FNumeroLote;
     property qMaxRps: Integer read FqMaxRps;
+    property Sincrono: Boolean read FSincrono;
   end;
 
 { TNFSeConsultarSituacaoLoteRPS }
@@ -626,8 +628,10 @@ type
     constructor Create(AOwner: TACBrDFe); overload;
     destructor Destroy; override;
 
-    function GeraLote(ALote: Integer; AqMaxRps: Integer = 50): Boolean; overload;
-    function GeraLote(ALote: String; AqMaxRps: Integer = 50): Boolean; overload;
+    function GeraLote(ALote: Integer; AqMaxRps: Integer = 50;
+      ASincrono: Boolean = False): Boolean; overload;
+    function GeraLote(ALote: String; AqMaxRps: Integer = 50;
+      ASincrono: Boolean = False): Boolean; overload;
 
     function Envia(ALote: Integer): Boolean; overload;
     function Envia(ALote: String): Boolean; overload;
@@ -2372,6 +2376,10 @@ begin
   TNFSeEnviarLoteRPS(Self).FqMaxRps := qMaxRps;
 
   inherited DefinirDadosMsg;
+
+  if FSincrono then
+    FPDadosMsg := StringReplace(FPDadosMsg, 'EnviarLoteRpsEnvio',
+                            'EnviarLoteRpsSincronoEnvio', [rfReplaceAll]);
 end;
 
 function TNFSeGerarLoteRPS.TratarResposta: Boolean;
@@ -4264,11 +4272,12 @@ begin
 
   GerarDadosMsg := TNFSeG.Create;
   try
-   if (FTagGrupo <> '') and (FProvedor <> proGinfes) then
-     FTagGrupo := FPrefixo3 + FTagGrupo;
+    if (FTagGrupo <> '') and (FProvedor <> proGinfes) then
+      FTagGrupo := FPrefixo3 + FTagGrupo;
 
-    if (FdocElemento <> '') and not (FProvedor in [proBetha, proGinfes, proISSDSF,
-       proEquiplano]) then
+    // Removido o provedor proISSDSF para que será incluido o profixo em
+    // FdocElemento
+    if (FdocElemento <> '') and not (FProvedor in [proBetha, proGinfes, proEquiplano]) then
       FdocElemento := FPrefixo3 + FdocElemento;
 
     if FNotasFiscais.Count > 0 then
@@ -5258,15 +5267,18 @@ begin
   inherited Destroy;
 end;
 
-function TWebServices.GeraLote(ALote: Integer; AqMaxRps: Integer): Boolean;
+function TWebServices.GeraLote(ALote: Integer; AqMaxRps: Integer;
+  ASincrono: Boolean): Boolean;
 begin
-  Result := GeraLote(IntToStr(ALote), AqMaxRps);
+  Result := GeraLote(IntToStr(ALote), AqMaxRps, ASincrono);
 end;
 
-function TWebServices.GeraLote(ALote: String; AqMaxRps: Integer): Boolean;
+function TWebServices.GeraLote(ALote: String; AqMaxRps: Integer;
+  ASincrono: Boolean): Boolean;
 begin
   FGerarLoteRPS.FNumeroLote := ALote;
-  FGerarLoteRPS.FqMaxRps := AqMaxRps;
+  FGerarLoteRPS.FqMaxRps    := AqMaxRps;
+  FGerarLoteRPS.FSincrono   := ASincrono;
 
   Result := GerarLoteRPS.Executar;
 
@@ -5443,7 +5455,8 @@ begin
               // quando no retorno constar que o lote ainda se encontra em processamento
               // não sabemos se vai funcionar como o esperado.
               //****************************************************************
-              if ProvedorToVersaoNFSe(Configuracoes.Geral.Provedor) = ve200 then
+              if (ProvedorToVersaoNFSe(Configuracoes.Geral.Provedor) = ve200) or
+                 (Configuracoes.Geral.Provedor in [proIssDSF]) then
               begin
                 try
                   Tentativas := 0;
