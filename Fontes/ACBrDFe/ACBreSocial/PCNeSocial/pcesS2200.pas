@@ -49,7 +49,7 @@ unit pcesS2200;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Contnrs,
   pcnConversao, ACBrUtil,
   pcesCommon, pcesConversaoeSocial, pcesGerador;
 
@@ -58,27 +58,25 @@ type
   TS2200CollectionItem = class;
   TEvtAdmissao = class;
 
-  TS2200Collection = class(TOwnedCollection)
+  TS2200Collection = class(TeSocialCollection)
   private
     function GetItem(Index: Integer): TS2200CollectionItem;
     procedure SetItem(Index: Integer; Value: TS2200CollectionItem);
   public
-    function Add: TS2200CollectionItem;
+    function Add: TS2200CollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TS2200CollectionItem;
     property Items[Index: Integer]: TS2200CollectionItem read GetItem write SetItem; default;
   end;
 
-  TS2200CollectionItem = class(TCollectionItem)
+  TS2200CollectionItem = class(TObject)
   private
     FTipoEvento: TTipoEvento;
     FEvtAdmissao: TEvtAdmissao;
-
-    procedure setEvtAdmissao(const Value: TEvtAdmissao);
   public
-    constructor Create(AOwner: TComponent); reintroduce;
+    constructor Create(AOwner: TComponent);
     destructor Destroy; override;
-  published
     property TipoEvento: TTipoEvento read FTipoEvento;
-    property EvtAdmissao: TEvtAdmissao read FEvtAdmissao write setEvtAdmissao;
+    property EvtAdmissao: TEvtAdmissao read FEvtAdmissao write FEvtAdmissao;
   end;
 
   TEvtAdmissao = class(TeSocialEvento)
@@ -87,11 +85,10 @@ type
     FIdeEmpregador: TIdeEmpregador;
     FTrabalhador: TTrabalhador;
     FVinculo: TVinculo;
-    FACBreSocial: TObject;
 
   public
-    constructor Create(AACBreSocial: TObject);overload;
-    destructor destroy; override;
+    constructor Create(AACBreSocial: TObject); override;
+    destructor Destroy; override;
 
     function GerarXML: boolean; override;
     function LerArqIni(const AIniString: String): Boolean;
@@ -112,8 +109,7 @@ uses
 
 function TS2200Collection.Add: TS2200CollectionItem;
 begin
-  Result := TS2200CollectionItem(inherited Add);
-  Result.Create(TComponent(Self.Owner));
+  Result := Self.New;
 end;
 
 function TS2200Collection.GetItem(Index: Integer): TS2200CollectionItem;
@@ -127,10 +123,17 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+function TS2200Collection.New: TS2200CollectionItem;
+begin
+  Result := TS2200CollectionItem.Create(FACBreSocial);
+  Self.Add(Result);
+end;
+
 { TS2200CollectionItem }
 constructor TS2200CollectionItem.Create(AOwner: TComponent);
 begin
-  FTipoEvento := teS2200;
+  inherited Create;
+  FTipoEvento  := teS2200;
   FEvtAdmissao := TEvtAdmissao.Create(AOwner);
 end;
 
@@ -141,21 +144,15 @@ begin
   inherited;
 end;
 
-procedure TS2200CollectionItem.setEvtAdmissao(const Value: TEvtAdmissao);
-begin
-  FEvtAdmissao.Assign(Value);
-end;
-
 { TEvtAdmissao }
-constructor TEvtAdmissao.create(AACBreSocial: TObject);
+constructor TEvtAdmissao.Create(AACBreSocial: TObject);
 begin
-  inherited;
+  inherited Create(AACBreSocial);
 
-  FACBreSocial := AACBreSocial;
-  FIdeEvento := TIdeEvento2.Create;
+  FIdeEvento     := TIdeEvento2.Create;
   FIdeEmpregador := TIdeEmpregador.Create;
-  FTrabalhador := TTrabalhador.Create;
-  FVinculo := TVinculo.Create;
+  FTrabalhador   := TTrabalhador.Create;
+  FVinculo       := TVinculo.Create;
 end;
 
 destructor TEvtAdmissao.destroy;
@@ -172,7 +169,7 @@ function TEvtAdmissao.GerarXML: boolean;
 begin
   try
     Self.VersaoDF := TACBreSocial(FACBreSocial).Configuracoes.Geral.VersaoDF;
-     
+
     Self.Id := GerarChaveEsocial(now, self.ideEmpregador.NrInsc, self.Sequencial);
 
     GerarCabecalho('evtAdmissao');
@@ -204,7 +201,7 @@ var
   sSecao, sFim: String;
   I: Integer;
 begin
-  Result := False;
+  Result := True;
 
   INIRec := TMemIniFile.Create('');
   try
@@ -601,8 +598,6 @@ begin
     end;
 
     GerarXML;
-
-    Result := True;
   finally
      INIRec.Free;
   end;

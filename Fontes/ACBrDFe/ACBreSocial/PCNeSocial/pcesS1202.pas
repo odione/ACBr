@@ -49,7 +49,7 @@ unit pcesS1202;
 interface
 
 uses
-  SysUtils, Classes, Dialogs, Controls,
+  SysUtils, Classes, Dialogs, Controls, Contnrs,
   pcnConversao, pcnGerador, ACBrUtil,
   pcesCommon, pcesConversaoeSocial, pcesGerador;
 
@@ -68,46 +68,43 @@ type
   TeS1202IdeTrabalhador = class;
   TEvtRemunRPPS = class;
   TS1202CollectionItem = class;
-  TS1202Collection = class;
   TDMDevCollection = class;
   TDMDevCollectionItem = class;
 
-  TS1202Collection = class(TOwnedCollection)
+  TS1202Collection = class(TeSocialCollection)
   private
     function GetItem(Index: integer): TS1202CollectionItem;
     procedure SetItem(Index: integer; Value: TS1202CollectionItem);
   public
-    function Add: TS1202CollectionItem;
+    function Add: TS1202CollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TS1202CollectionItem;
     property Items[Index: integer]: TS1202CollectionItem read GetItem write SetItem;
       default;
   end;
 
-  TS1202CollectionItem = class(TCollectionItem)
+  TS1202CollectionItem = class(TObject)
   private
     FTipoEvento: TTipoEvento;
     FEvtRmnRPPS: TEvtRemunRPPS;
-
-    procedure seTEvtRemunRPPS(const Value: TEvtRemunRPPS);
   public
-    constructor Create(AOwner: TComponent); reintroduce;
+    constructor Create(AOwner: TComponent);
     destructor Destroy; override;
-  published
     property TipoEvento: TTipoEvento read FTipoEvento;
-    property evtRmnRPPS: TEvtRemunRPPS read FEvtRmnRPPS write seTEvtRemunRPPS;
+    property evtRmnRPPS: TEvtRemunRPPS read FEvtRmnRPPS write FEvtRmnRPPS;
   end;
 
-  TDMDevCollection = class(TCollection)
+  TDMDevCollection = class(TObjectList)
   private
     function GetItem(Index: integer): TDMDevCollectionItem;
     procedure SetItem(Index: integer; Value: TDMDevCollectionItem);
   public
-    constructor Create(); reintroduce;
-    function Add: TDMDevCollectionItem;
+    function Add: TDMDevCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TDMDevCollectionItem;
     property Items[Index: integer]: TDMDevCollectionItem read GetItem write SetItem;
       default;
   end;
 
-  TDMDevCollectionItem = class(TCollectionItem)
+  TDMDevCollectionItem = class(TObject)
   private
     FIdeDmDev: string;
     FInfoPerApur: TInfoPerApur;
@@ -116,12 +113,11 @@ type
     function getInfoPerApur: TInfoPerApur;
     function getInfoPerAnt: TInfoPerAnt;
   public
-    constructor Create; reintroduce;
+    constructor Create;
     destructor Destroy; override;
 
     function infoPerApurInst(): boolean;
     function infoPerAntInst(): boolean;
-  published
     property ideDmDev: string read FIdeDmDev write FIdeDmDev;
     property infoPerApur: TInfoPerApur read getInfoPerApur write FInfoPerApur;
     property infoPerAnt: TInfoPerAnt read getInfoPerAnt write FInfoPerAnt;
@@ -133,13 +129,12 @@ type
     FIdeEmpregador: TIdeEmpregador;
     FIdeTrabalhador: TeS1202IdeTrabalhador;
     FDMDev: TDMDevCollection;
-    FACBreSocial: TObject;
 
     {Geradores específicos desta classe}
     procedure GerarIdeEstab(objIdeEstab: TIdeEstabCollection;
-      nomeRemunPer: string = 'remunPerApur');
+      const nomeRemunPer: string = 'remunPerApur');
     procedure GerarRemunPer(objRemunPer: TRemunPer1202Collection;
-      nomeRemunPer: string = 'remunPerApur');
+      const nomeRemunPer: string = 'remunPerApur');
     procedure GerarIdePeriodo(objIdePeriodo: TIdePeriodoCollection);
     procedure GerarIdeADC(objIdeADC: TideADCCollection);
 
@@ -148,7 +143,7 @@ type
     procedure GerarInfoPerApur(pInfoPerApur: TInfoPerApur);
     procedure GerarInfoPerAnt(pInfoPerAnt: TInfoPerAnt);
   public
-    constructor Create(AACBreSocial: TObject); overload;
+    constructor Create(AACBreSocial: TObject); override;
     destructor Destroy; override;
 
     function GerarXML: boolean; override;
@@ -161,15 +156,15 @@ type
     property dmDev: TDMDevCollection read FDMDev write FDMDev;
   end;
 
-  TRemunPer1202Collection = class(TCollection)
+  TRemunPer1202Collection = class(TObjectList)
   private
     FNomeGrupoXML: string;
 
     function GetItem(Index: integer): TRemunPer1202CollectionItem;
     procedure SetItem(Index: integer; Value: TRemunPer1202CollectionItem);
   public
-    constructor Create(); reintroduce;
-    function Add: TRemunPer1202CollectionItem;
+    function Add: TRemunPer1202CollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TRemunPer1202CollectionItem;
     property Items[Index: integer]: TRemunPer1202CollectionItem read GetItem write SetItem;
     property grupoXML: string read FNomeGrupoXML;
   end;
@@ -181,25 +176,25 @@ type
     property codCateg: Integer read FCodCateg write FCodCateg;
   end;
 
-  TIdeEstabCollection = class(TCollection)
+  TIdeEstabCollection = class(TObjectList)
   private
     function GetItem(Index: integer): TIdeEstabCollectionItem;
     procedure SetItem(Index: integer; Value: TIdeEstabCollectionItem);
   public
-    constructor Create; reintroduce;
-    function Add: TIdeEstabCollectionItem;
+    function Add: TIdeEstabCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TIdeEstabCollectionItem;
     property Items[Index: integer]: TIdeEstabCollectionItem
       read GetItem write SetItem;
   end;
 
-  TIdeEstabCollectionItem = class(TCollectionItem)
+  TIdeEstabCollectionItem = class(TObject)
   private
     FTpInsc: TpTpInsc;
     FNrInsc: string;
     FRemunPerApur: TRemunPer1202Collection;
     FRemunPerAnt: TRemunPer1202Collection;
   public
-    constructor Create; reintroduce;
+    constructor Create;
     destructor Destroy; override;
 
     property tpInsc: TpTPInsc read FTpInsc write FTpInsc;
@@ -208,46 +203,46 @@ type
     property remunPerAnt: TRemunPer1202Collection read FRemunPerAnt write FRemunPerAnt;
   end;
 
-  TIdePeriodoCollection = class(TCollection)
+  TIdePeriodoCollection = class(TObjectList)
   private
     function GetItem(Index: integer): TIdePeriodoCollectionItem;
     procedure SetItem(Index: integer; Value: TIdePeriodoCollectionItem);
   public
-    constructor Create; reintroduce;
-    function Add: TIdePeriodoCollectionItem;
+    function Add: TIdePeriodoCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TIdePeriodoCollectionItem;
     property Items[Index: integer]: TIdePeriodoCollectionItem read GetItem write SetItem;
   end;
 
-  TIdePeriodoCollectionItem = class(TCollectionItem)
+  TIdePeriodoCollectionItem = class(TObject)
   private
     FPerRef: string;
     FIdeEstab: TIdeEstabCollection;
   public
-    constructor Create; reintroduce;
+    constructor Create;
     destructor Destroy; override;
     
     property perRef: string read FPerRef write FPerRef;
     property ideEstab: TIdeEstabCollection read FIdeEstab write FIdeEstab;
   end;
 
-  TIdeADCCollection = class(TCollection)
+  TIdeADCCollection = class(TObjectList)
   private
     function GetItem(Index: integer): TIdeADCCollectionItem;
     procedure SetItem(Index: integer; Value: TIdeADCCollectionItem);
   public
-    constructor Create; reintroduce;
-    function add: TIdeADCCollectionItem;
+    function Add: TIdeADCCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TIdeADCCollectionItem;
     property Items[Index: integer]: TIdeADCCollectionItem read GetItem write SetItem;
   end;
 
-  TIdeADCCollectionItem = class(TCollectionItem)
+  TIdeADCCollectionItem = class(TObject)
   private
     FDtLei: TDate;
     FNrLei: string;
     FDtEf: TDate;
     FIdePeriodo: TIdePeriodoCollection;
   public
-    constructor Create; reintroduce;
+    constructor Create;
 
     property DtLei: TDate read FDtLei write FDtLei;
     property nrLei: string read FNrLei write FNrLei;
@@ -255,7 +250,7 @@ type
     property idePeriodo: TIdePeriodoCollection read FIdePeriodo write FIdePeriodo;
   end;
 
-  TInfoPerAnt = class(TPersistent)
+  TInfoPerAnt = class(TObject)
   private
     FIdeADC: TIdeADCCollection;
   public
@@ -265,7 +260,7 @@ type
     property ideADC: TIdeADCCollection read FIdeADC write FIdeADC;
   end;
 
-  TInfoPerApur = class(TPersistent)
+  TInfoPerApur = class(TObject)
   private
     FIdeEstab: TIdeEstabCollection;
   public
@@ -301,13 +296,7 @@ uses
 
 function TRemunPer1202Collection.Add: TRemunPer1202CollectionItem;
 begin
-  Result := TRemunPer1202CollectionItem(inherited Add);
-  Result.Create;
-end;
-
-constructor TRemunPer1202Collection.Create();
-begin
-  inherited Create(TRemunPer1202CollectionItem);
+  Result := Self.New;
 end;
 
 function TRemunPer1202Collection.GetItem(Index: integer): TRemunPer1202CollectionItem;
@@ -320,12 +309,19 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+function TRemunPer1202Collection.New: TRemunPer1202CollectionItem;
+begin
+  Result := TRemunPer1202CollectionItem.Create;
+  Self.Add(Result);
+end;
+
 { TIdeEstabCollectionItem }
 
 constructor TIdeEstabCollectionItem.Create;
 begin
+  inherited Create;
   FRemunPerApur := TRemunPer1202Collection.Create;
-  FRemunPerAnt := TRemunPer1202Collection.Create;
+  FRemunPerAnt  := TRemunPer1202Collection.Create;
 end;
 
 destructor TIdeEstabCollectionItem.Destroy;
@@ -339,13 +335,7 @@ end;
 { TIdeEstabCollection }
 function TIdeEstabCollection.Add: TIdeEstabCollectionItem;
 begin
-  Result := TIdeEstabCollectionItem(inherited Add);
-  Result.Create;
-end;
-
-constructor TIdeEstabCollection.Create;
-begin
-  inherited Create(TIdeEstabCollectionItem);
+  Result := Self.New;
 end;
 
 function TIdeEstabCollection.GetItem(Index: integer): TIdeEstabCollectionItem;
@@ -359,9 +349,16 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+function TIdeEstabCollection.New: TIdeEstabCollectionItem;
+begin
+  Result := TIdeEstabCollectionItem.Create;
+  Self.Add(Result);
+end;
+
 { TIdePeriodoCollectionItem }
 constructor TIdePeriodoCollectionItem.Create;
 begin
+  inherited Create;
   FIdeEstab := TIdeEstabCollection.Create;
 end;
 
@@ -375,13 +372,7 @@ end;
 { TIdePeriodoCollection }
 function TIdePeriodoCollection.Add: TIdePeriodoCollectionItem;
 begin
-  Result := TIdePeriodoCollectionItem(inherited Add);
-  Result.Create;
-end;
-
-constructor TIdePeriodoCollection.Create;
-begin
-  inherited Create(TIdePeriodoCollectionItem);
+  Result := Self.New;
 end;
 
 function TIdePeriodoCollection.GetItem(Index: integer): TIdePeriodoCollectionItem;
@@ -395,22 +386,23 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+function TIdePeriodoCollection.New: TIdePeriodoCollectionItem;
+begin
+  Result := TIdePeriodoCollectionItem.Create;
+  Self.Add(Result);
+end;
+
 { TIdeADCCollectionItem }
 constructor TIdeADCCollectionItem.Create;
 begin
+  inherited Create;
   FIdePeriodo := TIdePeriodoCollection.Create;
 end;
 
 { TIdeADCCollection }
 function TIdeADCCollection.add: TIdeADCCollectionItem;
 begin
-  Result := TIdeADCCollectionItem(inherited add);
-  Result.Create;
-end;
-
-constructor TIdeADCCollection.Create;
-begin
-  inherited Create(TIdeADCCollectionItem);
+  Result := Self.New;
 end;
 
 function TIdeADCCollection.GetItem(Index: integer): TIdeADCCollectionItem;
@@ -421,6 +413,12 @@ end;
 procedure TIdeADCCollection.SetItem(Index: integer; Value: TIdeADCCollectionItem);
 begin
   inherited SetItem(Index, Value);
+end;
+
+function TIdeADCCollection.New: TIdeADCCollectionItem;
+begin
+  Result := TIdeADCCollectionItem.Create;
+  Self.Add(Result);
 end;
 
 { TInfoPerAnt }
@@ -456,6 +454,7 @@ end;
 { TideTrabalhador }
 constructor TeS1202IdeTrabalhador.Create;
 begin
+  inherited Create;
   FProcJudTrab := nil;
 end;
 
@@ -480,15 +479,9 @@ end;
 
 { TDMDevCollection }
 
-constructor TDMDevCollection.Create;
-begin
-  inherited Create(TDMDevCollectionItem);
-end;
-
 function TDMDevCollection.Add: TDMDevCollectionItem;
 begin
-  Result := TDMDevCollectionItem(inherited add());
-  Result.Create;
+  Result := Self.New;
 end;
 
 function TDMDevCollection.GetItem(Index: integer): TDMDevCollectionItem;
@@ -501,12 +494,19 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+function TDMDevCollection.New: TDMDevCollectionItem;
+begin
+  Result := TDMDevCollectionItem.Create;
+  Self.Add(Result);
+end;
+
 { TDMDevCollectionItem }
 
 constructor TDMDevCollectionItem.Create;
 begin
+  inherited Create;
   FInfoPerApur := nil;
-  FInfoPerAnt := nil;
+  FInfoPerAnt  := nil;
 end;
 
 destructor TDMDevCollectionItem.Destroy;
@@ -544,13 +544,12 @@ end;
 { TEvtRemunRPPS }
 constructor TEvtRemunRPPS.Create(AACBreSocial: TObject);
 begin
-  inherited;
+  inherited Create(AACBreSocial);
 
-  FACBreSocial := AACBreSocial;
-  FIdeEvento := TIdeEvento3.Create;
-  FIdeEmpregador := TIdeEmpregador.Create;
+  FIdeEvento      := TIdeEvento3.Create;
+  FIdeEmpregador  := TIdeEmpregador.Create;
   FIdeTrabalhador := TeS1202IdeTrabalhador.Create;
-  FDMDev := TDMDevCollection.Create;
+  FDMDev          := TDMDevCollection.Create;
 end;
 
 destructor TEvtRemunRPPS.Destroy;
@@ -585,7 +584,7 @@ begin
 end;
 
 procedure TEvtRemunRPPS.GerarIdeEstab(objIdeEstab: TIdeEstabCollection;
-  nomeRemunPer: string = 'remunPerApur');
+  const nomeRemunPer: string = 'remunPerApur');
 var
   i: integer;
 begin
@@ -682,7 +681,7 @@ begin
 end;
 
 procedure TEvtRemunRPPS.GerarRemunPer(objRemunPer: TRemunPer1202Collection;
-  nomeRemunPer: string = 'remunPerApur');
+  const nomeRemunPer: string = 'remunPerApur');
 var
   i: integer;
 begin
@@ -712,7 +711,7 @@ function TEvtRemunRPPS.GerarXML: boolean;
 begin
   try
     Self.VersaoDF := TACBreSocial(FACBreSocial).Configuracoes.Geral.VersaoDF;
-     
+
     Self.Id := GerarChaveEsocial(now, self.ideEmpregador.NrInsc, self.Sequencial);
 
     GerarCabecalho('evtRmnRPPS');
@@ -744,7 +743,7 @@ var
   sSecao, sFim: String;
   I, J, K, L, M, N: Integer;
 begin
-  Result := False;
+  Result := True;
 
   INIRec := TMemIniFile.Create('');
   try
@@ -1038,8 +1037,6 @@ begin
     end;
 
     GerarXML;
-
-    Result := True;
   finally
      INIRec.Free;
   end;
@@ -1048,6 +1045,7 @@ end;
 { TS1202CollectionItem }
 constructor TS1202CollectionItem.Create(AOwner: TComponent);
 begin
+  inherited Create;
   FTipoEvento := teS1202;
   FEvtRmnRPPS := TEvtRemunRPPS.Create(AOwner);
 end;
@@ -1059,16 +1057,10 @@ begin
   inherited;
 end;
 
-procedure TS1202CollectionItem.seTEvtRemunRPPS(const Value: TEvtRemunRPPS);
-begin
-  FEvtRmnRPPS.Assign(Value);
-end;
-
 { TS1202Collection }
 function TS1202Collection.Add: TS1202CollectionItem;
 begin
-  Result := TS1202CollectionItem(inherited Add);
-  Result.Create(TComponent(Self.Owner));
+  Result := Self.New;
 end;
 
 function TS1202Collection.GetItem(Index: integer): TS1202CollectionItem;
@@ -1079,6 +1071,12 @@ end;
 procedure TS1202Collection.SetItem(Index: integer; Value: TS1202CollectionItem);
 begin
   inherited SetItem(Index, Value);
+end;
+
+function TS1202Collection.New: TS1202CollectionItem;
+begin
+  Result := TS1202CollectionItem.Create(FACBreSocial);
+  Self.Add(Result);
 end;
 
 end.

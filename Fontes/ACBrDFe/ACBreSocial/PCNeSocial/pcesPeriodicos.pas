@@ -93,8 +93,8 @@ type
     procedure GerarXMLs;
     procedure SaveToFiles;
     procedure Clear;
-    function LoadFromString(AXMLString: String): Boolean;
-    function LoadFromIni(AIniString: String): Boolean;
+    function LoadFromString(const AXMLString: String): Boolean;
+    function LoadFromIni(const AIniString: String): Boolean;
 
   published
     property Count: Integer read GetCount;
@@ -140,18 +140,18 @@ constructor TPeriodicos.Create(AOwner: TComponent);
 begin
   inherited;
 
-  FS1200 := TS1200Collection.Create(AOwner, TS1200CollectionItem);
-  FS1202 := TS1202Collection.Create(AOwner, TS1202CollectionItem);
-  FS1207 := TS1207Collection.Create(AOwner, TS1207CollectionItem);
-  FS1210 := TS1210Collection.Create(AOwner, TS1210CollectionItem);
-  FS1250 := TS1250Collection.Create(AOwner, TS1250CollectionItem);
-  FS1260 := TS1260Collection.Create(AOwner, TS1260CollectionItem);
-  FS1270 := TS1270Collection.Create(AOwner, TS1270CollectionItem);
-  FS1280 := TS1280Collection.Create(AOwner, TS1280CollectionItem);
-  FS1295 := TS1295Collection.Create(AOwner, TS1295CollectionItem);
-  FS1298 := TS1298Collection.Create(AOwner, TS1298CollectionItem);
-  FS1299 := TS1299Collection.Create(AOwner, TS1299CollectionItem);
-  FS1300 := TS1300Collection.Create(AOwner, TS1300CollectionItem);
+  FS1200 := TS1200Collection.Create(AOwner);
+  FS1202 := TS1202Collection.Create(AOwner);
+  FS1207 := TS1207Collection.Create(AOwner);
+  FS1210 := TS1210Collection.Create(AOwner);
+  FS1250 := TS1250Collection.Create(AOwner);
+  FS1260 := TS1260Collection.Create(AOwner);
+  FS1270 := TS1270Collection.Create(AOwner);
+  FS1280 := TS1280Collection.Create(AOwner);
+  FS1295 := TS1295Collection.Create(AOwner);
+  FS1298 := TS1298Collection.Create(AOwner);
+  FS1299 := TS1299Collection.Create(AOwner);
+  FS1300 := TS1300Collection.Create(AOwner);
 end;
 
 destructor TPeriodicos.Destroy;
@@ -490,7 +490,7 @@ begin
   FS1300.Assign(Value);
 end;
 
-function TPeriodicos.LoadFromString(AXMLString: String): Boolean;
+function TPeriodicos.LoadFromString(const AXMLString: String): Boolean;
 var
   Ok: Boolean;
 begin
@@ -512,7 +512,7 @@ begin
   Result := (GetCount > 0);
 end;
 
-function TPeriodicos.LoadFromIni(AIniString: String): Boolean;
+function TPeriodicos.LoadFromIni(const AIniString: String): Boolean;
 var
   Ok: Boolean;
 begin

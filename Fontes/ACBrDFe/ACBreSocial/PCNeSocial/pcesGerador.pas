@@ -63,12 +63,8 @@ uses
   pcesCommon, pcesConversaoeSocial;
 
 type
-  TGeradorOpcoes = class;
-  TeSocialEvento = class;
-
   TeSocialEvento = class(TeSocial)
   private
-    FACBreSocial: TObject; //alimenta no create
     FXMLAssinado: String;
     FXMLOriginal: String;
     FAlertas: String;
@@ -83,25 +79,9 @@ type
 
 //    procedure SetXML(const Value: AnsiString);
     procedure SetXML(const Value: String);
-  public
-    constructor Create(AACBreSocial: TObject); overload;//->recebe a instancia da classe TACBreSocial
-    destructor Destroy; override;
-
-    function  GerarXML: boolean; virtual; abstract;
-    procedure SaveToFile(const CaminhoArquivo: string);
-    function  Assinar(XMLEvento: String; NomeEvento: String): AnsiString;
-    function  GerarChaveEsocial(const emissao: TDateTime;
-                                const CNPJF: string;
-                                sequencial: Integer): String;
-    procedure Validar(Schema: TeSocialSchema);
-
-    property Alertas: String read FAlertas;
-    property ErroValidacao: String read FErroValidacao;
-    property ErroValidacaoCompleto: String read FErroValidacaoCompleto;
-    property VersaoDF: TVersaoeSocial read FVersaoDF write FVersaoDF;
   protected
     {Geradores de Uso Comum}
-    procedure GerarCabecalho(Namespace: String);
+    procedure GerarCabecalho(const Namespace: String);
     procedure GerarRodape;
     procedure GerarAliqGilRat(pEmp: TIdeEmpregador; pAliqRat: TAliqGilRat; const GroupName: string = 'aliqGilRat');
     procedure GerarAlvaraJudicial(pAlvaraJudicial: TAlvaraJudicial);
@@ -143,8 +123,8 @@ type
     procedure GerarLocalTrabalho(pLocalTrabalho: TLocalTrabalho);
     procedure GerarModoAbertura(pModo: TModoLancamento);
     procedure GerarModoFechamento(pModo: TModoLancamento);
-    procedure GerarNascimento(pNasc: TNascimento; pGroupName: string = 'nascimento');
-    procedure GerarProcessoGenerico(pChave: string; pProcesso: TProcesso);
+    procedure GerarNascimento(pNasc: TNascimento; const pGroupName: string = 'nascimento');
+    procedure GerarProcessoGenerico(const pChave: string; pProcesso: TProcesso);
     procedure GerarProcessoAdmJudFap(pProcAdmJudFap: TProcAdmJudFap);
     procedure GerarProcessoAdmJudRat(pProcAdmJudRat: TProcAdmJudRat);
     procedure GerarRemuneracao(pRemuneracao: TRemuneracao);
@@ -189,7 +169,24 @@ type
     procedure GerarIdeEstabLot(pIdeEstabLot : TideEstabLotCollection);
     procedure GerarQuarentena(obj: TQuarentena);
     procedure GerarIdeRespInf(obj: TIdeRespInf);
-  published
+
+  public
+    FACBreSocial: TObject; //alimenta no create
+    constructor Create(AACBreSocial: TObject); reintroduce; virtual; //->recebe a instancia da classe TACBreSocial
+    destructor Destroy; override;
+
+    function  GerarXML: boolean; virtual; abstract;
+    procedure SaveToFile(const CaminhoArquivo: string);
+    function  Assinar(const XMLEvento, NomeEvento: String): AnsiString;
+    function  GerarChaveEsocial(const emissao: TDateTime;
+                                const CNPJF: string;
+                                sequencial: Integer): String;
+    procedure Validar(Schema: TeSocialSchema);
+
+    property Alertas: String read FAlertas;
+    property ErroValidacao: String read FErroValidacao;
+    property ErroValidacaoCompleto: String read FErroValidacaoCompleto;
+    property VersaoDF: TVersaoeSocial read FVersaoDF write FVersaoDF;
     property Gerador: TGerador  read FGerador write FGerador;
     property schema: TeSocialSchema read Fschema write Fschema;
 //    property XML: AnsiString read FXML write SetXML;
@@ -224,9 +221,9 @@ uses
 
 {TeSocialEvento}
 
-function TeSocialEvento.Assinar(XMLEvento, NomeEvento: String): AnsiString;
+function TeSocialEvento.Assinar(const XMLEvento, NomeEvento: String): AnsiString;
 var
-  XMLAss, ArqXML: string;
+  XMLAss, ArqXML, NomeEventoArquivo: string;
 begin
   Result := '';
 
@@ -251,7 +248,7 @@ begin
     XMLAss := StringReplace(XMLAss, '<' + ENCODING_UTF8_STD + '>', '', [rfReplaceAll]);
     XMLAss := StringReplace(XMLAss, '<' + XML_V01 + '>', '', [rfReplaceAll]);
 
-    NomeEvento := NomeEvento + '.xml';
+    NomeEventoArquivo := NomeEvento + '.xml';
 
 //    if Configuracoes.Arquivos.Salvar then
 //      Gravar(NomeEvento, XMLAss, Configuracoes.Arquivos.PathSalvar);
@@ -264,7 +261,7 @@ begin
       With TStringList.Create do
       try
         Text := XMLAss;
-        SaveToFile(IncludeTrailingPathDelimiter(Configuracoes.Arquivos.PathSalvar) + NomeEvento);
+        SaveToFile(IncludeTrailingPathDelimiter(Configuracoes.Arquivos.PathSalvar) + NomeEventoArquivo);
       finally
         Free;
       end;
@@ -275,14 +272,21 @@ end;
 
 constructor TeSocialEvento.Create(AACBreSocial: TObject);
 begin
-  FACBreSocial := AACBreSocial;
-  FGerador := TGerador.Create;
+  inherited Create;
+  if not(AACBreSocial is TACBreSocial) then
+  begin
+    raise Exception.Create('Parâmetro AACbreSocial precisa ser do tipo TACBreSocial.');
+  end;
+
+  FACBreSocial               := AACBreSocial;
+  FGerador                   := TGerador.Create;
   FGerador.ArquivoFormatoXML := '';
 end;
 
 destructor TeSocialEvento.Destroy;
 begin
   FGerador.Free;
+  inherited;
 end;
 
 procedure TeSocialEvento.SaveToFile(const CaminhoArquivo: string);
@@ -374,7 +378,7 @@ begin
   end;
 end;
 
-procedure TeSocialEvento.GerarCabecalho(Namespace: String);
+procedure TeSocialEvento.GerarCabecalho(const Namespace: String);
 begin
   with TACBreSocial(FACBreSocial) do
   begin
@@ -1407,7 +1411,7 @@ begin
   end;
 end;
 
-procedure TeSocialEvento.GerarNascimento(pNasc: TNascimento; pGroupName: string = 'nascimento');
+procedure TeSocialEvento.GerarNascimento(pNasc: TNascimento; const pGroupName: string = 'nascimento');
 begin
   Gerador.wGrupo(pGroupName);
 
@@ -1460,7 +1464,7 @@ begin
     Gerador.wAlerta('', GroupName, 'Lista de ' + GroupName, ERR_MSG_MAIOR_MAXIMO + '99');
 end;
 
-procedure TeSocialEvento.GerarProcessoGenerico(pChave: string; pProcesso: TProcesso);
+procedure TeSocialEvento.GerarProcessoGenerico(const pChave: string; pProcesso: TProcesso);
 begin
   Gerador.wGrupo(pChave);
 
@@ -1578,7 +1582,7 @@ begin
 
   Gerador.wCampo(tcStr, '', 'nmEmit', 1, 70, 1, pEmitente.nmEmit);
   Gerador.wCampo(tcStr, '', 'ideOC',  1,  1, 1, eSIdeOCToStr(pEmitente.ideOC));
-  Gerador.wCampo(tcStr, '', 'nrOC',   1, 14, 1, pEmitente.nrOc);
+  Gerador.wCampo(tcStr, '', 'nrOc',   1, 14, 1, pEmitente.nrOc);
   Gerador.wCampo(tcStr, '', 'ufOC',   2,  2, 0, pEmitente.ufOC);//eSufToStr(pEmitente.ufOC));
 
   Gerador.wGrupo('/emitente');

@@ -660,9 +660,9 @@ begin
       fObsFisco.Add( Msg_ICMS_123_2006 );
 
     // Copiando as Observações do Fisco para Lista Interna //
-    for I :=0 to InfAdic.obsFisco.Count - 1 do
-      fObsFisco.Add( InfAdic.obsFisco.Items[I].xCampo + '-' +
-                     InfAdic.obsFisco.Items[I].xTexto);
+    for I :=0 to obsFisco.Count - 1 do
+      fObsFisco.Add( obsFisco[I].xCampo + '-' +
+                     obsFisco[I].xTexto);
 
     lNomeFantasia.Lines.Text:= Emit.xFant ;
     lRazaoSocial.Lines.Text := Emit.xNome ;

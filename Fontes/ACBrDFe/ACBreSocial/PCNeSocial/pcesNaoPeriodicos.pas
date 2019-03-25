@@ -108,8 +108,8 @@ type
     procedure GerarXMLs;
     procedure SaveToFiles;
     procedure Clear;
-    function LoadFromString(AXMLString: String): Boolean;
-    function LoadFromIni(AIniString: String): Boolean;
+    function LoadFromString(const AXMLString: String): Boolean;
+    function LoadFromIni(const AIniString: String): Boolean;
 
   published
     property Count: Integer read GetCount;
@@ -169,25 +169,25 @@ constructor TNaoPeriodicos.Create(AOwner: TComponent);
 begin
   inherited;
 
-  FS2190 := TS2190Collection.Create(AOwner, TS2190CollectionItem);
-  FS2200 := TS2200Collection.Create(AOwner, TS2200CollectionItem);
-  FS2205 := TS2205Collection.Create(AOwner, TS2205CollectionItem);
-  FS2206 := TS2206Collection.Create(AOwner, TS2206CollectionItem);
-  FS2210 := TS2210Collection.Create(AOwner, TS2210CollectionItem);
-  FS2220 := TS2220Collection.Create(AOwner, TS2220CollectionItem);
-  FS2221 := TS2221Collection.Create(AOwner, TS2221CollectionItem);
-  FS2230 := TS2230Collection.Create(AOwner, TS2230CollectionItem);
-  FS2240 := TS2240Collection.Create(AOwner, TS2240CollectionItem);
-  FS2245 := TS2245Collection.Create(AOwner, TS2245CollectionItem);
-  FS2250 := TS2250Collection.Create(AOwner, TS2250CollectionItem);
-  FS2260 := TS2260Collection.Create(AOwner, TS2260CollectionItem);
-  FS2298 := TS2298Collection.Create(AOwner, TS2298CollectionItem);
-  FS2299 := TS2299Collection.Create(AOwner, TS2299CollectionItem);
-  FS2300 := TS2300Collection.Create(AOwner, TS2300CollectionItem);
-  FS2306 := TS2306Collection.Create(AOwner, TS2306CollectionItem);
-  FS2399 := TS2399Collection.Create(AOwner, TS2399CollectionItem);
-  FS2400 := TS2400Collection.Create(AOwner, TS2400CollectionItem);
-  FS3000 := TS3000Collection.Create(AOwner, TS3000CollectionItem);
+  FS2190 := TS2190Collection.Create(AOwner);
+  FS2200 := TS2200Collection.Create(AOwner);
+  FS2205 := TS2205Collection.Create(AOwner);
+  FS2206 := TS2206Collection.Create(AOwner);
+  FS2210 := TS2210Collection.Create(AOwner);
+  FS2220 := TS2220Collection.Create(AOwner);
+  FS2221 := TS2221Collection.Create(AOwner);
+  FS2230 := TS2230Collection.Create(AOwner);
+  FS2240 := TS2240Collection.Create(AOwner);
+  FS2245 := TS2245Collection.Create(AOwner);
+  FS2250 := TS2250Collection.Create(AOwner);
+  FS2260 := TS2260Collection.Create(AOwner);
+  FS2298 := TS2298Collection.Create(AOwner);
+  FS2299 := TS2299Collection.Create(AOwner);
+  FS2300 := TS2300Collection.Create(AOwner);
+  FS2306 := TS2306Collection.Create(AOwner);
+  FS2399 := TS2399Collection.Create(AOwner);
+  FS2400 := TS2400Collection.Create(AOwner);
+  FS3000 := TS3000Collection.Create(AOwner);
 end;
 
 destructor TNaoPeriodicos.Destroy;
@@ -708,7 +708,7 @@ begin
   FS3000.Assign(Value);
 end;
 
-function TNaoPeriodicos.LoadFromString(AXMLString: String): Boolean;
+function TNaoPeriodicos.LoadFromString(const AXMLString: String): Boolean;
 var
  Ok: Boolean;
 begin
@@ -737,7 +737,7 @@ begin
   Result := (GetCount > 0);
 end;
 
-function TNaoPeriodicos.LoadFromIni(AIniString: String): Boolean;
+function TNaoPeriodicos.LoadFromIni(const AIniString: String): Boolean;
 var
   Ok: Boolean;
 begin
