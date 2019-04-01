@@ -339,6 +339,7 @@ type
 
   TNFSeConsultarLoteRPS = Class(TNFSeWebService)
   private
+    FSituacao: String;
     // Entrada
     FNumeroLote: String;
 
@@ -356,6 +357,7 @@ type
     destructor Destroy; override;
     procedure Clear; override;
 
+    property Situacao: String     read FSituacao;
     //usado pelo provedor IssDsf
     property NumeroLote: String   read FNumeroLote   write FNumeroLote;
   end;
@@ -741,6 +743,12 @@ begin
   begin
     if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
       FPSoapAction := StringReplace(FPSoapAction, 'www.tinus', 'www2.tinus', [rfReplaceAll])
+  end;
+
+  if FProvedor = proEReceita then
+  begin
+    if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+      FPSoapAction := StringReplace(FPSoapAction, 'https://www.ereceita', 'http://www3.ereceita', [rfReplaceAll])
   end;
 
   if FProvedor = proActconv202 then
@@ -3826,6 +3834,7 @@ begin
   FaMsg := '';
   FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
   Result := ExtrairNotasRetorno;
+  FSituacao := FRetornoNFSe.Situacao;
 
   FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsLote);
 end;
