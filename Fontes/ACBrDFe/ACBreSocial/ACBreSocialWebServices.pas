@@ -913,7 +913,10 @@ var
 begin
 
   if Length(FCnpj) = 14 then
-    TpInsc := tiCNPJ
+  begin
+    TpInsc := tiCNPJ;
+    FCnpj  := Copy(FCnpj, 1, 8);
+  end
   else
     TpInsc := tiCPF;
 

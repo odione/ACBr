@@ -103,7 +103,7 @@ type
     procedure GerarInfAdic;
     procedure GerarinfRespTec;
 
-    procedure AjustarMunicipioUF(out xUF: String; out xMun: String; out cMun: Integer; cPais: Integer; vxUF, vxMun: String; vcMun: Integer);
+    procedure AjustarMunicipioUF(out xUF: String; out xMun: String; out cMun: Integer; cPais: Integer; const vxUF, vxMun: String; vcMun: Integer);
 
   public
     constructor Create(AOwner: TBPe);
@@ -148,17 +148,18 @@ uses
 
 constructor TBPeW.Create(AOwner: TBPe);
 begin
-  FBPe := AOwner;
-  FGerador := TGerador.Create;
+  inherited Create;
+  FBPe                      := AOwner;
+  FGerador                  := TGerador.Create;
   FGerador.FIgnorarTagNivel := '|?xml version|BPe xmlns|infBPe versao|obsCont|obsFisco|';
-  FOpcoes := TGeradorOpcoes.Create;
-  FOpcoes.FAjustarTagNro := True;
-  FOpcoes.FGerarTXTSimultaneamente := False;
+  FOpcoes                   := TGeradorOpcoes.Create;
+  FOpcoes.FAjustarTagNro               := True;
+  FOpcoes.FGerarTXTSimultaneamente     := False;
   FOpcoes.FGerarTagIPIparaNaoTributado := True;
-  FOpcoes.FNormatizarMunicipios := False;
-  FOpcoes.FGerarTagAssinatura := taSomenteSeAssinada;
-  FOpcoes.FValidarInscricoes := False;
-  FOpcoes.FValidarListaServicos := False;
+  FOpcoes.FNormatizarMunicipios        := False;
+  FOpcoes.FGerarTagAssinatura          := taSomenteSeAssinada;
+  FOpcoes.FValidarInscricoes           := False;
+  FOpcoes.FValidarListaServicos        := False;
 end;
 
 destructor TBPeW.Destroy;
@@ -833,7 +834,7 @@ end;
 // Outras //////////////////////////////////////////////////////////////////////
 
 procedure TBPeW.AjustarMunicipioUF(out xUF: String; out xMun: String; out
-  cMun: Integer; cPais: Integer; vxUF, vxMun: String; vcMun: Integer);
+  cMun: Integer; cPais: Integer; const vxUF, vxMun: String; vcMun: Integer);
 var
   PaisBrasil: Boolean;
 begin

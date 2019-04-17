@@ -276,7 +276,8 @@ begin
   Gerador.ListaDeAlertas.Clear;
   Gerador.ArquivoFormatoXML := '';
 
-  Gerador.wGrupo('TDadosGNRE versao="2.00"');
+//  Gerador.wGrupo('TDadosGNRE versao="2.00"');
+  Gerador.wGrupo('TDadosGNRE');
 
   Gerador.wCampo(tcStr, '', 'ufFavorecida', 2, 2, 1, GNRE.c01_UfFavorecida, DSC_UF + ' Favorecida');
 // <tipoGnre>...</tipoGnre>
@@ -336,7 +337,7 @@ begin
     Gerador.wGrupo('referencia');
 
     Gerador.wCampo(tcInt, '', 'periodo', 1, 1, 0, GNRE.referencia.periodo, '');
-    Gerador.wCampo(tcInt, '', 'mes    ', 2, 2, 0, GNRE.referencia.mes, '');
+    Gerador.wCampo(tcStr, '', 'mes    ', 2, 2, 0, GNRE.referencia.mes, '');
     Gerador.wCampo(tcInt, '', 'ano    ', 4, 4, 0, GNRE.referencia.ano, '');
     Gerador.wCampo(tcInt, '', 'parcela', 1, 3, 0, GNRE.referencia.parcela, '');
 

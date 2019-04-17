@@ -296,7 +296,7 @@ type
 implementation
 
 uses
-  strutils, dateutils, math,
+  strutils, dateutils, math, typinfo,
   ACBrMTerVT100, ACBrMTerPMTG, ACBrMTerStxEtx, ACBrMTerSB100,
   ACBrConsts, ACBrUtil;
 
@@ -831,7 +831,11 @@ begin
 
   wEchoMode := EchoMode;
   if Assigned(fOnRecebeDados) then
+  begin
+    GravaLog( '  OnRecebeDados');
     OnRecebeDados(aIP, DadosRecebidos, wEchoMode);
+    GravaLog( '    EchoMode: '+GetEnumName(TypeInfo(TACBrMTerEchoMode), Integer(wEchoMode)));
+  end;
 
   DadosEcho := fMTer.LimparConteudoParaEnviarEcho(DadosRecebidos);
   case wEchoMode of
@@ -1097,9 +1101,16 @@ begin
 end;
 
 procedure TACBrMTer.Ativar;
+var
+  wBalStr: String;
 begin
   if Ativo then
     Exit;
+
+  if Assigned(fACBrBAL) and Assigned(fACBrBAL.BAL) then
+    wBalStr := fACBrBAL.ModeloStr
+  else
+    wBalStr := 'Nenhuma';
 
   if (Modelo = mtrNenhum) then
     raise Exception.Create(ACBrStr('Modelo ainda não foi definido'));
@@ -1109,8 +1120,7 @@ begin
            ' - Modelo: ' + ModeloStr + ' - Porta: ' + fTCPServer.Port +
            ' - Terminador: ' + fTCPServer.Terminador +
            ' - Timeout: ' + IntToStr(fTCPServer.TimeOut) +
-           ' - Balança: ' + IfThen(Assigned(fACBrBAL), fACBrBAL.ModeloStr, 'Nenhuma')+
-           sLineBreak + StringOfChar('-', 80) + sLineBreak);
+           ' - Balança: ' + wBalStr +sLineBreak+ StringOfChar('-', 80)+sLineBreak);
 
   fTCPServer.Ativar;
 end;
