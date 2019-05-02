@@ -201,6 +201,8 @@ begin
                  protNFe.digVal   := Leitor.rCampo(tcStr, 'digVal');
                  protNFe.cStat    := Leitor.rCampo(tcInt, 'cStat');
                  protNFe.xMotivo  := Leitor.rCampo(tcStr, 'xMotivo');
+                 protNFe.cMsg     := Leitor.rCampo(tcInt, 'cMsg');
+                 protNFe.xMsg     := Leitor.rCampo(tcStr, 'xMsg');
                end;
              end;
            end;
