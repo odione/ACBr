@@ -739,37 +739,48 @@ begin
       FPSoapAction := StringReplace(FPSoapAction, '%NomeURL_HP%', FPConfiguracoesNFSe.Geral.xNomeURL_P, [rfReplaceAll]);
   end;
 
-  if FProvedor = proTinus then
-  begin
-    if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
-      FPSoapAction := StringReplace(FPSoapAction, 'www.tinus', 'www2.tinus', [rfReplaceAll])
-  end;
+  case FProvedor of
+    proTinus:
+      begin
+        if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+          FPSoapAction := StringReplace(FPSoapAction, 'www.tinus', 'www2.tinus', [rfReplaceAll]);
 
-  if FProvedor = proEReceita then
-  begin
-    if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
-      FPSoapAction := StringReplace(FPSoapAction, 'https://www.ereceita', 'http://www3.ereceita', [rfReplaceAll])
-  end;
-  {
-  if FProvedor = proActcon then
-  begin
-    if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
-      FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'homologacao', [rfReplaceAll])
-    else
-      FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'nfseserv', [rfReplaceAll]);
-  end;
-  }
-  if FProvedor = proActconv202 then
-  begin
-    if FPConfiguracoesNFSe.Geral.CodigoMunicipio = 3167202 then
-      Ambiente := 'nfse'
-    else
-      Ambiente := 'nfseserv';
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio = 2407104 then
+        begin
+          // Macaiba/RN
+          if FPConfiguracoesNFSe.WebServices.Ambiente = taProducao then
+            FPSoapAction := StringReplace(FPSoapAction, 'www.tinus.com.br', 'tempuri.org', [rfReplaceAll]);
+        end;
+      end;
 
-    if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
-      FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'homologacao', [rfReplaceAll])
-    else
-      FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', Ambiente, [rfReplaceAll]);
+    proEReceita:
+      begin
+        if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+          FPSoapAction := StringReplace(FPSoapAction, 'https://www.ereceita', 'http://www3.ereceita', [rfReplaceAll]);
+      end;
+
+    proActconv202:
+      begin
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio = 3167202 then
+          Ambiente := 'nfse'
+        else
+          Ambiente := 'nfseserv';
+
+        if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+          FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'homologacao', [rfReplaceAll])
+        else
+          FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', Ambiente, [rfReplaceAll]);
+      end;
+
+    proActcon:
+      begin
+      {
+        if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+          FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'homologacao', [rfReplaceAll])
+        else
+          FPSoapAction := StringReplace(FPSoapAction, '%Ambiente%', 'nfseserv', [rfReplaceAll]);
+      }
+      end;
   end;
 end;
 
@@ -1190,7 +1201,7 @@ var
   i, l, ii: Integer;
   xData: TDateTime;
   NovoRetorno, CondicaoNovoRetorno: Boolean;
-  Alerta203: Boolean;
+  Alerta203, ProcSucesso: Boolean;
 begin
   FRetornoNFSe := TRetornoNFSe.Create;
 
@@ -1480,6 +1491,7 @@ begin
 
   if FRetornoNFSe.ListaNFSe.MsgRetorno.Count > 0 then
   begin
+    ProcSucesso := False;
     for i := 0 to FRetornoNFSe.ListaNFSe.MsgRetorno.Count - 1 do
     begin
       if (FRetornoNFSe.ListaNFSe.MsgRetorno.Items[i].Codigo <> 'L000') and
@@ -1499,6 +1511,7 @@ begin
     end;
   end
   else begin
+    ProcSucesso := True;
     if FRetornoNFSe.ListaNFSe.CompNFSe.Count > 0 then
     begin
       if FProvedor = proEgoverneISS then
@@ -1527,7 +1540,7 @@ begin
 
     proISSDSF: Result := Alerta203;
 
-    proEgoverneISS: Result := (FRetornoNFSe.ListaNFSe.MsgRetorno.Items[0].Codigo <> 'Erro');
+    proEgoverneISS: Result := ProcSucesso;
   else
     Result := (FDataRecebimento <> 0);
   end;
@@ -4422,7 +4435,7 @@ begin
 
     // Removido o provedor proISSDSF para que será incluido o profixo em
     // FdocElemento
-    if (FdocElemento <> '') and not (FProvedor in [proBetha, proGinfes, proEquiplano]) then
+    if (FdocElemento <> '') and not (FProvedor in [proBetha, proGinfes]) then
       FdocElemento := FPrefixo3 + FdocElemento;
 
     if FNotasFiscais.Count > 0 then
@@ -4547,14 +4560,14 @@ begin
 
     InicializarGerarDadosMsg;
 
-    if FProvedor in [proSP, proNotaBlu] then
-    begin
-      sAssinatura := Poem_Zeros(GerarDadosMsg.IM, 8) + Poem_Zeros(TNFSeCancelarNfse(Self).NumeroNFSe, 12);
-      GerarDadosMsg.AssinaturaCan := FPDFeOwner.SSL.CalcHash(sAssinatura, dgstSHA1, outBase64, True);
-    end;
-
     with GerarDadosMsg do
     begin
+      if FProvedor in [proSP, proNotaBlu] then
+      begin
+        sAssinatura := Poem_Zeros(IM, 8) + Poem_Zeros(TNFSeCancelarNfse(Self).NumeroNFSe, 12);
+        AssinaturaCan := FPDFeOwner.SSL.CalcHash(sAssinatura, dgstSHA1, outBase64, True);
+      end;
+
       case FProvedor of
         proISSNet: if FPConfiguracoesNFSe.WebServices.AmbienteCodigo = 2 then
                      CodMunicipio := 999;

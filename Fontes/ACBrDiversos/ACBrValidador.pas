@@ -1552,7 +1552,6 @@ type
 var
   I: Integer;
   CodigoNormalizado: String;
-  IsGtin8: Boolean;
   sPrefixo: String;
   iPrefixo: Integer;
   bEncontrado: Boolean;
@@ -1692,12 +1691,13 @@ begin
   if fsMsgErro = '' then
   begin
     CodigoNormalizado := PadLeft(Trim(Documento), 14, '0');
-    IsGtin8           := StrToInt(Copy(CodigoNormalizado, 1, 6)) = 0;
 
-    if IsGtin8 then
-      sPrefixo := copy(CodigoNormalizado, 7, 3)
-    else
-      sPrefixo := copy(CodigoNormalizado, 2, 3);
+  if (StrToInt(Copy(CodigoNormalizado, 1, 6)) = 0) then //gtin8
+     sPrefixo := copy(CodigoNormalizado, 7, 3)
+   else if StrToInt(Copy(CodigoNormalizado, 1, 2)) = 0 then //gtin12
+     sPrefixo := copy(CodigoNormalizado, 3, 3)
+   else
+     sPrefixo := copy(CodigoNormalizado, 2, 3);
 
     iPrefixo := StrtoIntDef(sPrefixo, 0);
     if iPrefixo = 0 then
@@ -1709,10 +1709,7 @@ begin
 {$ENDIF}
       for I := Low(ARRAY_PREFIX_GTIN) to High(ARRAY_PREFIX_GTIN) do
       begin
-        bEncontrado :=
-          (iPrefixo >= ARRAY_PREFIX_GTIN[I].fxPrefixIni) and
-          (iPrefixo <= ARRAY_PREFIX_GTIN[I].fxPrefixFim);
-
+        bEncontrado := InRange(iPrefixo, ARRAY_PREFIX_GTIN[I].fxPrefixIni, ARRAY_PREFIX_GTIN[I].fxPrefixFim);
         if bEncontrado then
           Break;
       end;

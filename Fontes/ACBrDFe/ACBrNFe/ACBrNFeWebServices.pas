@@ -2270,6 +2270,12 @@ begin
       FPMsg := NFeRetorno.protNFe.xMotivo;
     end;
 
+    if not Assigned(FPDFeOwner) then //evita AV caso não atribua o Owner
+    begin
+     Result := True;
+     Exit;
+    end;
+
     with TACBrNFe(FPDFeOwner) do
     begin
       Result := CstatProcessado(NFeRetorno.CStat) or
@@ -3790,7 +3796,7 @@ var
 begin
   CNPJ := OnlyNumber(ACNPJ);
 
-  if not ValidarCNPJ(CNPJ) then
+  if not ValidarCNPJouCPF(CNPJ) then
     raise EACBrNFeException.Create('CNPJ: ' + CNPJ + ACBrStr(', inválido.'));
 
   FInutilizacao.CNPJ := CNPJ;

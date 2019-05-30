@@ -206,11 +206,11 @@ begin
     FNFe.Ide.modelo := StrToInt(ModeloDFToStr(Configuracoes.Geral.ModeloDF));
     FNFe.infNFe.Versao := VersaoDFToDbl(Configuracoes.Geral.VersaoDF);
 
-    FNFe.Ide.tpNF := tnSaida;
-    FNFe.Ide.indPag := ipVista;
-    FNFe.Ide.verProc := 'ACBrNFe';
-    FNFe.Ide.tpAmb := Configuracoes.WebServices.Ambiente;
-    FNFe.Ide.tpEmis := Configuracoes.Geral.FormaEmissao;
+    FNFe.Ide.tpNF    := tnSaida;
+    FNFe.Ide.indPag  := ipVista;
+    FNFe.Ide.verProc := 'ACBrNFe'; // 'ACBr'+ ModeloDFIntegerToPrefixo(FNFe.Ide.modelo);
+    FNFe.Ide.tpAmb   := Configuracoes.WebServices.Ambiente;
+    FNFe.Ide.tpEmis  := Configuracoes.Geral.FormaEmissao;
 
     if Assigned(DANFE) then
       FNFe.Ide.tpImp := DANFE.TipoDANFE;
@@ -237,7 +237,7 @@ begin
   with TACBrNFe(TNotasFiscais(Collection).ACBrNFe) do
   begin
     if not Assigned(DANFE) then
-      raise EACBrNFeException.Create('Componente DANFE não associado.')
+      raise EACBrNFeException.Create('Componente DA'+ModeloDFToPrefixo(Configuracoes.Geral.ModeloDF)+' não associado.')
     else
       DANFE.ImprimirDANFE(NFe);
   end;
@@ -248,7 +248,7 @@ begin
   with TACBrNFe(TNotasFiscais(Collection).ACBrNFe) do
   begin
     if not Assigned(DANFE) then
-      raise EACBrNFeException.Create('Componente DANFE não associado.')
+      raise EACBrNFeException.Create('Componente DA'+ModeloDFToPrefixo(Configuracoes.Geral.ModeloDF)+' não associado.')
     else
       DANFE.ImprimirDANFEPDF(NFe);
   end;
@@ -444,13 +444,6 @@ begin
       IntToStr(Configuracoes.WebServices.UFCodigo) then //B02-10
       AdicionaErro('226-Rejeição: Código da UF do Emitente diverge da UF autorizadora');
 
-//    702-Rejeição: NFC-e não é aceita pela UF do Emitente
-
-    GravaLog('Validar: 503-Serie');
-    if (NFe.Ide.serie > 899) and  //B07-20
-      (NFe.Ide.tpEmis <> teSCAN) then
-      AdicionaErro('503-Rejeição: Série utilizada fora da faixa permitida no SCAN (900-999)');
-
     GravaLog('Validar: 703-Data hora');
     if (NFe.Ide.dEmi > Agora) then  //B09-10
       AdicionaErro('703-Rejeição: Data-Hora de Emissão posterior ao horário de recebimento');
@@ -498,17 +491,6 @@ begin
       AdicionaErro('252-Rejeição: Ambiente informado diverge do Ambiente de recebimento '
         + '(Tipo do ambiente da NF-e difere do ambiente do Web Service)');
 
-    GravaLog('Validar: 266-Série');
-    if (not (NFe.Ide.procEmi in [peAvulsaFisco, peAvulsaContribuinte])) and
-      (NFe.Ide.serie > 889) then //B26-10
-      AdicionaErro('266-Rejeição: Série utilizada fora da faixa permitida no Web Service (0-889)');
-
-    GravaLog('Validar: 451-Processo de emissão');
-    if (NFe.Ide.procEmi in [peAvulsaFisco, peAvulsaContribuinte]) and
-      (NFe.Ide.serie < 890) and (NFe.Ide.serie > 899) then
-      //B26-20
-      AdicionaErro('451-Rejeição: Processo de emissão informado inválido');
-
     GravaLog('Validar: 370-Tipo de Emissão');
     if (NFe.Ide.procEmi in [peAvulsaFisco, peAvulsaContribuinte]) and
       (NFe.Ide.tpEmis <> teNormal) then //B26-30
@@ -535,7 +517,8 @@ begin
       AdicionaErro('559-Rejeição: Data de entrada em contingência muito atrasada');
 
     GravaLog('Validar: 207-CNPJ emitente');
-    if not ValidarCNPJ(NFe.Emit.CNPJCPF) then
+    // adicionado CNPJ por conta do produtor rural
+    if not ValidarCNPJouCPF(NFe.Emit.CNPJCPF) then
       AdicionaErro('207-Rejeição: CNPJ do emitente inválido');
 
     GravaLog('Validar: 272-Código Município');
@@ -2583,7 +2566,7 @@ begin
   Result := '';
 
   if not ValidarChave(NFe.infNFe.ID) then
-    raise EACBrNFeException.Create('NFe Inconsistente para gerar INI. Chave Inválida.');
+    raise EACBrNFeException.Create(ModeloDFToPrefixo(FConfiguracoes.Geral.ModeloDF)+' Inconsistente para gerar INI. Chave Inválida.');
 
   INIRec := TMemIniFile.Create('');
   try
@@ -3500,7 +3483,7 @@ begin
     FNFeW.Opcoes.NormatizarMunicipios  := Configuracoes.Arquivos.NormatizarMunicipios;
     FNFeW.Opcoes.PathArquivoMunicipios := Configuracoes.Arquivos.PathArquivoMunicipios;
     FNFeW.Opcoes.CamposFatObrigatorios := Configuracoes.Geral.CamposFatObrigatorios;
-    FNFeW.Opcoes.ForcarGerarTagRejeicao938          := Configuracoes.Geral.ForcarGerarTagRejeicao938;
+    FNFeW.Opcoes.ForcarGerarTagRejeicao938 := Configuracoes.Geral.ForcarGerarTagRejeicao938;
 
     pcnAuxiliar.TimeZoneConf.Assign( Configuracoes.WebServices.TimeZoneConf );
 
@@ -3798,7 +3781,7 @@ begin
 
   if Self.Count < 1 then
   begin
-    Erros := 'Nenhuma NFe carregada';
+    Erros := 'Nenhuma '+ModeloDFToPrefixo(Self.FConfiguracoes.Geral.ModeloDF)+' carregada';
     Result := False;
     Exit;
   end;
