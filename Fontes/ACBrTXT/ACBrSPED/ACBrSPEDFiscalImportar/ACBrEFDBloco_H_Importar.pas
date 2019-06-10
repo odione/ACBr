@@ -34,131 +34,94 @@
 {******************************************************************************
 |* Historico
 |*
-|* 23/02/2015: Macgayver Armini Apolonio
-|*  - Criação
-|* 30/04/2019: Rodrigo Coelho | Bunny Soft - Tratamento de exceção
-|*  - Verificação se o Índique que se está tentando ler não é maior que a quantidade
-|*  de colunas disponíveis no arquivo que está sendo importado. Isso pode acontecer
-|*  quando tentamos importar arquivos de SPED mais antigos que possuem menos colunas
-|*  que a definição atual
+|* 23/02/2015: Macgayver Armini Apolonio - Criação
+|* 03/07/2017: Rodrigo Buschmann | Digibyte - Importação ICMS Fiscal
 *******************************************************************************}
-unit ACBrEPCBase;
+unit ACBrEFDBloco_H_Importar;
 
 interface
 
 uses
   Classes,
   SysUtils,
-  Variants,
-  ACBrSpedPisCofins;
+
+  ACBrEFDBase,
+  ACBrUtil, ACBrSpedFiscal, ACBrEFDBlocos;
 
 type
-
-  // Permite interceptar os valores inseridos pela ACBR.
-  TACBrSpedPCImportarGetColumn = procedure(var Coluna: string; const ColunaI: integer) of Object;
-
-  TACBrSpedPCImportar_Base = class
+  TACBrSpedFiscalImportar_BlocoH = class(TACBrSpedFiscalImportar_Base)
   private
-    FAntesInserirValor: TACBrSpedPCImportarGetColumn;
-  protected
-    Indice: integer;
-    Delimitador: TStrings;
-    FACBrSPEDPisCofins: TACBrSPEDPisCofins;
-
-    function Head: string;
-    function Valor: string; // Procedimento Base para os outros valores
-    function ValorI: integer;
-    function ValorF: Currency;
-    function ValorFV: Variant;
-    function ValorD: TDateTime;
-
+    procedure RegH001;
+    procedure RegH005;
+    procedure RegH010;
+    procedure RegH020;
   public
-    constructor Create;
-
-    procedure AnalisaRegistro(const inDelimitador: TStrings); virtual;
-
-    property ACBrSpedPisCofins: TACBrSPEDPisCofins read FACBrSPEDPisCofins write FACBrSPEDPisCofins;
-    property AntesInserirValor: TACBrSpedPCImportarGetColumn read FAntesInserirValor write FAntesInserirValor;
+    procedure AnalisaRegistro(const inDelimitador: TStrings); override;
   end;
 
 implementation
 
-{ TBaseIndice }
-
-procedure TACBrSpedPCImportar_Base.AnalisaRegistro(const inDelimitador: TStrings);
-begin
-  Delimitador := inDelimitador;
-end;
-
-constructor TACBrSpedPCImportar_Base.Create;
-begin
-  Indice := 1;
-end;
-
-function TACBrSpedPCImportar_Base.Head: string;
-begin
-  Result := Delimitador[1];
-end;
-
-function TACBrSpedPCImportar_Base.Valor: string;
+procedure TACBrSpedFiscalImportar_BlocoH.AnalisaRegistro(const inDelimitador: TStrings);
 var
-  vValor: string;
+  vHead: string;
 begin
-  Indice := Indice + 1;
-  // Verificar se Índice a ser lido não é maior que a quantidade de colunas disponíveis no arquivo
-  if (Indice <= Delimitador.Count - 1) then
-    vValor := Delimitador[Indice]
-  else
-    vValor := '';
-
-  if Assigned(FAntesInserirValor) then
-    FAntesInserirValor(vValor, Indice);
-
-  Result := vValor;
+  inherited;
+  vHead := Head;
+  if (vHead = 'H001') then RegH001
+  else if (vHead = 'H005') then RegH005
+  else if (vHead = 'H010') then RegH010
+  else if (vHead = 'H020') then RegH020
 end;
 
-function TACBrSpedPCImportar_Base.ValorD: TDateTime;
-var
-  S: string;
+
+// abertura do bloco H
+procedure TACBrSpedFiscalImportar_BlocoH.RegH001;
 begin
-  S := Valor;
-  if S <> EmptyStr then
-    Result := EncodeDate(StrToInt(Copy(S, 5, 4)), StrToInt(Copy(S, 3, 2)),StrToInt(Copy(S, 1, 2)))
-  else
-    Result := 0;
+  with ACBrSpedFiscal.Bloco_H.RegistroH001New do
+  begin
+    IND_MOV := StrToIndMov(Valor);
+  end;
 end;
 
-function TACBrSpedPCImportar_Base.ValorI: integer;
-var
-  S: string;
+// dados totais do inventario
+procedure TACBrSpedFiscalImportar_BlocoH.RegH005;
 begin
-  S := Valor;
-  if S <> EmptyStr then
-    Result := StrToInt(S)
-  else
-    Result := 0;
+  with ACBrSpedFiscal.Bloco_H.RegistroH005New do
+  begin
+    DT_INV := ValorD;
+    VL_INV := ValorF;
+    MOT_INV := StrToMotInv(Valor);
+  end;
 end;
 
-function TACBrSpedPCImportar_Base.ValorF: Currency;
-var
-  S: string;
+// dados do inventario
+procedure TACBrSpedFiscalImportar_BlocoH.RegH010;
 begin
-  S := Valor;
-  if S <> EmptyStr then
-    Result := StrToFloat(S)
-  else
-    Result := 0;
+  with ACBrSpedFiscal.Bloco_H.RegistroH010New do
+  begin
+    COD_ITEM    := Valor;
+    UNID        := Valor;
+    QTD         := ValorF;
+    VL_UNIT     := ValorF;
+    VL_ITEM     := ValorF;
+    IND_PROP    := StrToIndProp( Valor );
+    COD_PART    := Valor;
+    TXT_COMPL   := Valor;
+    COD_CTA     := Valor;
+    VL_ITEM_IR  := ValorF;
+  end;
 end;
 
-function TACBrSpedPCImportar_Base.ValorFV: Variant;
-var
-  S: string;
+// dados de informacoes complementares do invetario
+procedure TACBrSpedFiscalImportar_BlocoH.RegH020;
 begin
-  S := Valor;
-  if S = EmptyStr then
-    Result := Null
-  else
-    Result := StrToFloat(S);
+  with ACBrSpedFiscal.Bloco_H.RegistroH020New do
+  begin
+    CST_ICMS := Valor;
+    BC_ICMS := ValorF;
+    VL_ICMS := ValorF;
+  end;
 end;
+
 
 end.
