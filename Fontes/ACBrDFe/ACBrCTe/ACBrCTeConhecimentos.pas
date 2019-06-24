@@ -277,6 +277,24 @@ begin
       Leitor.Free;
     end;
 
+    // Gera o QR-Code para adicionar no XML após ter a
+    // assinatura, e antes de ser salvo.
+
+    if ((Configuracoes.Geral.GerarInfCTeSupl = fgtSomenteProducao) and
+       (Configuracoes.WebServices.Ambiente = taProducao)) or
+       ((Configuracoes.Geral.GerarInfCTeSupl = fgtSomenteHomologacao) and
+       (Configuracoes.WebServices.Ambiente = taHomologacao)) or
+       (Configuracoes.Geral.GerarInfCTeSupl = fgtSempre) then
+    begin
+      with TACBrCTe(TConhecimentos(Collection).ACBrCTe) do
+      begin
+        CTe.infCTeSupl.qrCodCTe := GetURLQRCode(CTe.Ide.cUF, CTe.Ide.tpAmb,
+                  CTe.ide.tpEmis, CTe.infCTe.ID, CTe.infCTe.Versao);
+
+        GerarXML;
+      end;
+    end;
+
     if Configuracoes.Arquivos.Salvar and
       (not Configuracoes.Arquivos.SalvarApenasCTeProcessados) then
     begin
@@ -2722,7 +2740,8 @@ begin
         with infCTeSub do
         {$ENDIF}
         begin
-          chCte := INIRec.ReadString( 'infCteSub','chCte','');
+          chCte         := INIRec.ReadString( 'infCteSub','chCte','');
+          indAlteraToma := StrToTIndicador(Ok, INIRec.ReadString( 'infCteSub','indAlteraToma','0'));
 
           tomaICMS.refNFe := INIRec.ReadString( 'infCteSub','refNFe','');
 
@@ -2737,8 +2756,12 @@ begin
           tomaICMS.refNF.nro      := INIRec.ReadInteger( 'infCteSub','CNPJ',0);
           tomaICMS.refNF.valor    :=  StringToFloatDef(INIRec.ReadString('infCteSub','valor','') ,0);
           tomaICMS.refNF.dEmi     := StringToDateTime(INIRec.ReadString( 'infCteSub','dEmi','0'));
+          tomaICMS.refCte         := INIRec.ReadString( 'infCteSub','refCte','');
 
+          // Usado pela versão 2.00
           tomaNaoICMS.refCteAnu := INIRec.ReadString( 'infCteSub','refCteAnu','');
+          // Usado pela versão 3.00
+          refCteAnu := tomaNaoICMS.refCteAnu;
         end;
       end;
 

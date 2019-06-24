@@ -433,7 +433,7 @@ begin
       GerarException(WebServices.Consulta.Msg);
 
     EventoBPe.Evento.Clear;
-    with EventoBPe.Evento.Add do
+    with EventoBPe.Evento.New do
     begin
       infEvento.CNPJ := copy(OnlyNumber(WebServices.Consulta.BPeChave), 7, 14);
       infEvento.cOrgao := StrToIntDef(copy(OnlyNumber(WebServices.Consulta.BPeChave), 1, 2), 0);
@@ -506,11 +506,7 @@ begin
     for i := 0 to Bilhetes.Count - 1 do
     begin
       if Bilhetes.Items[i].Confirmada and Imprimir then
-      begin
         Bilhetes.Items[i].Imprimir;
-        if (DABPE.ClassName = 'TACBrBPeDABPERaveCB') then
-          Break;
-      end;
     end;
   end;
 end;
