@@ -54,17 +54,13 @@ type
   protected
     procedure GerarIdentificacaoHomologacao;
     procedure GerarIdentificacaoRPS;
-    procedure GerarRPSSubstituido;
 
     procedure GerarPrestador;
     procedure GerarTomador;
-    procedure GerarIntermediarioServico;
 
-    procedure GerarServicoValores;
     procedure GerarListaServicos;
     procedure GerarValoresServico;
 
-    procedure GerarConstrucaoCivil;
     procedure GerarCondicaoPagamento;
 
     procedure GerarXML_IPM;
@@ -112,11 +108,6 @@ begin
 
     Gerador.wGrupoNFSe('/rps');
   end;
-end;
-
-procedure TNFSeW_IPM.GerarRPSSubstituido;
-begin
-  // Não definido
 end;
 
 procedure TNFSeW_IPM.GerarPrestador;
@@ -168,16 +159,6 @@ begin
   Gerador.wCampoNFSe(tcStr, '', 'ddd_fax', 0, 03, 0, '', '');
   Gerador.wCampoNFSe(tcStr, '', 'fone_fax', 0, 09, 0, '', '');
   Gerador.wGrupoNFSe('/tomador');
-end;
-
-procedure TNFSeW_IPM.GerarIntermediarioServico;
-begin
-  // não definido
-end;
-
-procedure TNFSeW_IPM.GerarServicoValores;
-begin
-  // Não definido
 end;
 
 procedure TNFSeW_IPM.GerarListaServicos;
@@ -251,11 +232,6 @@ begin
   Gerador.wGrupoNFSe('/nf');
 end;
 
-procedure TNFSeW_IPM.GerarConstrucaoCivil;
-begin
-  // Não definido
-end;
-
 procedure TNFSeW_IPM.GerarCondicaoPagamento;
 var
   i: Integer;
@@ -297,7 +273,6 @@ begin
   GerarValoresServico;
   GerarPrestador;
   GerarTomador;
-  GerarIntermediarioServico;
   GerarListaServicos;
 
   if NFSe.Status = srNormal then

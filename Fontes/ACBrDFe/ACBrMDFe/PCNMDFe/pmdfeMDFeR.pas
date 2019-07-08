@@ -130,6 +130,11 @@ begin
         MDFe.ide.indCanalVerde := tiSim
       else
         MDFe.ide.indCanalVerde := tiNao;
+
+      if Leitor.rCampo(tcStr, 'indCarregaPosterior') = '1' then
+        MDFe.ide.indCarregaPosterior := tiSim
+      else
+        MDFe.ide.indCarregaPosterior := tiNao;
     end;
 
     i01 := 0;

@@ -45,10 +45,10 @@ type
 
   TNFSeG = class(TPersistent)
   private
-    aVersao: String;
-    aIdentificador: String;
-    aIdentificadorCanc: String;
-    aNameSpace: String;
+    FaVersao: String;
+    FaIdentificador: String;
+    FaIdentificadorCanc: String;
+    FaNameSpace: String;
 
     FGerador: TGerador;
 
@@ -277,6 +277,7 @@ end;
 
 constructor TNFSeG.Create;
 begin
+  inherited Create;
   FGerador := TGerador.Create;
 end;
 
@@ -299,25 +300,25 @@ begin
   if VersaoDados <> '' then
   begin
     if Provedor in [proFintelISS, proSP, proNotaBlu] then
-      aVersao := ' Versao="' + VersaoDados + '"'
+      FaVersao := ' Versao="' + VersaoDados + '"'
     else
-      aVersao := ' versao="' + VersaoDados + '"';
+      FaVersao := ' versao="' + VersaoDados + '"';
 
     if Provedor in [proAbaco, proBetha, proDBSeller, proGinfes, proGoiania,
                     proGovBR, proIssCuritiba, proISSNET, proLexsom, proNatal,
                     proTinus, proRecife, proRJ, proSimplISS, proThema, proTiplan,
                     proAgiliv2, proFISSLex, proSpeedGov, proPronim, proSalvador,
                     proSJP, proWebISS, proSystemPro, proMetropolisWeb] then
-      aVersao := '';
+      FaVersao := '';
   end
   else
-    aVersao := '';
+    FaVersao := '';
 
   // Atributo NameSapce ========================================================
   if Provedor in [proEL, proSimplISS] then
-    aNameSpace := ' ' + NameSpaceDad
+    FaNameSpace := ' ' + NameSpaceDad
   else
-    aNameSpace := '';
+    FaNameSpace := '';
 
   // Valor do atributo Id ======================================================
   case Provedor of
@@ -356,22 +357,22 @@ begin
   // Atributo Id ===============================================================
   if Identificador <> '' then
   begin
-    aIdentificador := ' ' + Identificador + '="' + IdLote + '"';
+    FaIdentificador := ' ' + Identificador + '="' + IdLote + '"';
 
     if Provedor in [proGovBR, proPronim{, proISSDigital}] then
-      aIdentificador := '';
+      FaIdentificador := '';
   end
   else
-    aIdentificador := '';
+    FaIdentificador := '';
 
   // Atributo Id do Cancelamento ===============================================
   if Identificador <> '' then
   begin
-    aIdentificadorCanc := ' ' + Identificador + '="' + IdCanc + '"';
+    FaIdentificadorCanc := ' ' + Identificador + '="' + IdCanc + '"';
 
   end
   else
-    aIdentificadorCanc := '';
+    FaIdentificadorCanc := '';
 
   // Redefine o Profixo 3 ======================================================
   if Provedor in [proBetha, proBethav2{, proSpeedGov}] then
@@ -562,7 +563,7 @@ begin
 
     proEL: begin
              Gerador.Prefixo := '';
-             Gerador.wGrupoNFSe('LoteRps' + aNameSpace);
+             Gerador.wGrupoNFSe('LoteRps' + FaNameSpace);
 
              Gerador.wCampoNFSe(tcStr, '#1', 'Id', 13, 32, 1, IdLote, ''); // ?? Código Verificação
              Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 14, 1, NumeroLote, '');
@@ -611,7 +612,7 @@ begin
               Gerador.wGrupoNFSe('/Cabecalho');
 
               Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
-                                          '<Lote' + aIdentificador + '>' +
+                                          '<Lote' + FaIdentificador + '>' +
                                             Notas +
                                           '</Lote>';
             end;
@@ -620,7 +621,7 @@ begin
                      Atributo_cMun := ' codMunicipio="' + IntToStr(CodMunicipio) + '"';
 
                      Gerador.Prefixo := Prefixo3;
-                     Gerador.wGrupoNFSe('LoteRps' + Atributo_cMun + aVersao + aIdentificador);
+                     Gerador.wGrupoNFSe('LoteRps' + Atributo_cMun + FaVersao + FaIdentificador);
 
                      Gerador.Prefixo := Prefixo4;
                      Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 15, 1, NumeroLote, '');
@@ -661,7 +662,7 @@ begin
     proSP: begin
              Gerador.Opcoes.SuprimirDecimais := True;
 
-             Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+             Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
              Gerador.wGrupoNFSe('CPFCNPJRemetente');
              Gerador.wCampoCNPJCPF('', '', Cnpj);
              Gerador.wGrupoNFSe('/CPFCNPJRemetente');
@@ -688,7 +689,7 @@ begin
 
      proISSJoinville:
           begin
-            Gerador.wGrupoNFSe('LoteRps' + aVersao + aIdentificador);
+            Gerador.wGrupoNFSe('LoteRps' + FaVersao + FaIdentificador);
             Gerador.Prefixo := Prefixo4;
             Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 15, 1, NumeroLote, '');
             Gerador.wGrupoNFSe('Prestador');
@@ -718,7 +719,7 @@ begin
      proSmarAPDABRASF:
           begin
            Gerador.Prefixo := Prefixo3;
-           Gerador.wGrupoNFSe('LoteRps' + aIdentificador + aVersao + aNameSpace);
+           Gerador.wGrupoNFSe('LoteRps' + FaIdentificador + FaVersao + FaNameSpace);
            Gerador.Prefixo := Prefixo4;
            Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 15, 1, NumeroLote, '');
            Gerador.wGrupoNFSe('Prestador');
@@ -757,11 +758,21 @@ begin
        end
   else
     begin
+      if Provedor = proSigep then
+      begin
+        Gerador.Prefixo := Prefixo4;
+        Gerador.wGrupoNFSe('credenciais');
+        Gerador.wCampoNFSe(tcStr, '#01', 'usuario     ', 01, 15, 1, UserWeb);
+        Gerador.wCampoNFSe(tcStr, '#02', 'senha       ', 01, 05, 1, SenhaWeb);
+        Gerador.wCampoNFSe(tcStr, '#03', 'chavePrivada', 01, 01, 1, ChaveAcessoPrefeitura);
+        Gerador.wGrupoNFSe('/credenciais');
+      end;
+
       Gerador.Prefixo := Prefixo3;
       if Provedor in [proCoplan, proSIAPNet] then
-        Gerador.wGrupoNFSe('LoteRps' + aVersao + aIdentificador)
+        Gerador.wGrupoNFSe('LoteRps' + FaVersao + FaIdentificador)
       else
-        Gerador.wGrupoNFSe('LoteRps' + aIdentificador + aVersao + aNameSpace);
+        Gerador.wGrupoNFSe('LoteRps' + FaIdentificador + FaVersao + FaNameSpace);
 
       Gerador.Prefixo := Prefixo4;
       Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 15, 1, NumeroLote, '');
@@ -862,7 +873,7 @@ begin
 
     proSP, 
     proNotaBlu: begin
-                  Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+                  Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
                   Gerador.wGrupoNFSe('CPFCNPJRemetente');
                   Gerador.wCampoCNPJCPF('', '', Cnpj);
                   Gerador.wGrupoNFSe('/CPFCNPJRemetente');
@@ -886,7 +897,7 @@ begin
                   Gerador.Prefixo := Prefixo3;
                   Gerador.wGrupoNFSe('/Prestador');
 
-                  Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, aNameSpace);
+                  Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, FaNameSpace);
                 end;
 
     proAssessorPublico:
@@ -908,7 +919,7 @@ begin
   else
     begin
       Gerador.Prefixo := Prefixo3;
-      Gerador.wGrupoNFSe('Prestador' + aNameSpace);
+      Gerador.wGrupoNFSe('Prestador' + FaNameSpace);
 
       Gerador.Prefixo := Prefixo4;
 
@@ -932,7 +943,7 @@ begin
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupoNFSe('/Prestador');
 
-      Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, aNameSpace);
+      Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, FaNameSpace);
     end;
   end;
 
@@ -974,7 +985,7 @@ begin
 
                   Gerador.wCampoNFSe(tcStr, '#4', 'InscricaoMunicipal', 01, 15, 1, IM, '');
                   Gerador.wGrupoNFSe('/IdentificacaoPrestador');
-                  Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, aNameSpace);
+                  Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, FaNameSpace);
 
                   if VersaoNFSe = ve100 then
                     Gerador.wCampoNFSe(tcStr, '', 'Versao', 4, 4, 1, '1.00', '');
@@ -1042,7 +1053,7 @@ begin
 
     proSP,
     proNotaBlu: begin
-                  Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+                  Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
                   Gerador.wGrupoNFSe('CPFCNPJRemetente');
                   Gerador.wCampoCNPJCPF('', '', Cnpj);
                   Gerador.wGrupoNFSe('/CPFCNPJRemetente');
@@ -1085,7 +1096,7 @@ begin
   else
     begin
       Gerador.Prefixo := Prefixo3;
-      Gerador.wGrupoNFSe('Prestador' + aNameSpace);
+      Gerador.wGrupoNFSe('Prestador' + FaNameSpace);
 
       Gerador.Prefixo := Prefixo4;
 
@@ -1109,7 +1120,7 @@ begin
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupoNFSe('/Prestador');
 
-      Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, aNameSpace);
+      Gerador.wCampoNFSe(tcStr, '#4', 'Protocolo', 01, 50, 1, Protocolo, '', True, FaNameSpace);
     end;
   end;
 
@@ -1136,7 +1147,7 @@ begin
                     Gerador.wCampoNFSe(tcStr, '#1', 'UnidadeGestora', 14, 14, 1, CNPJPrefeitura, '');
 
                   Gerador.Prefixo := Prefixo3;
-                  Gerador.wGrupoNFSe('IdentificacaoRps' + aNameSpace);
+                  Gerador.wGrupoNFSe('IdentificacaoRps' + FaNameSpace);
 
                   Gerador.Prefixo := Prefixo4;
                   Gerador.wCampoNFSe(tcStr, '#1', 'Numero', 01, 15, 1, NumeroRps, '');
@@ -1225,7 +1236,7 @@ begin
               Gerador.wGrupoNFSe('/Cabecalho');
 
               Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
-                                          '<Lote' + aIdentificador + '>' +
+                                          '<Lote' + FaIdentificador + '>' +
                                             Notas +
                                           '</Lote>';
             end;
@@ -1265,13 +1276,14 @@ begin
 
     proSP, 
     proNotaBlu: begin
-                  Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+                  Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
                   Gerador.wGrupoNFSe('CPFCNPJRemetente');
                   Gerador.wCampoCNPJCPF('', '', Cnpj);
                   Gerador.wGrupoNFSe('/CPFCNPJRemetente');
 //                  Gerador.wCampoNFSe(tcStr, '#2', 'CNPJRemetente', 14, 14, 1, Cnpj, '');
                   Gerador.wGrupoNFSe('/Cabecalho');
-                  Gerador.wGrupoNFSe('Detalhe');
+
+                  Gerador.wGrupoNFSe('Detalhe xmlns=""');
                   Gerador.wGrupoNFSe('ChaveRPS');
                   Gerador.wCampoNFSe(tcStr, '', 'InscricaoPrestador', 01, 11, 1, IM, '');
                   Gerador.wCampoNFSe(tcStr, '', 'SerieRPS', 01, 02, 1, SerieRPS, '');
@@ -1282,7 +1294,7 @@ begin
   else
     begin
       Gerador.Prefixo := Prefixo3;
-      Gerador.wGrupoNFSe('IdentificacaoRps' + aNameSpace);
+      Gerador.wGrupoNFSe('IdentificacaoRps' + FaNameSpace);
 
       Gerador.Prefixo := Prefixo4;
       Gerador.wCampoNFSe(tcStr, '#1', 'Numero', 01, 15, 1, NumeroRps, '');
@@ -1292,7 +1304,7 @@ begin
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupoNFSe('/IdentificacaoRps');
 
-      Gerador.wGrupoNFSe('Prestador' + aNameSpace);
+      Gerador.wGrupoNFSe('Prestador' + FaNameSpace);
 
       Gerador.Prefixo := Prefixo4;
 
@@ -1436,13 +1448,14 @@ begin
 
     proNotaBlu,
     proSP: begin
-             Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+             Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
              Gerador.wGrupoNFSe('CPFCNPJRemetente');
              Gerador.wCampoCNPJCPF('', '', Cnpj);
              Gerador.wGrupoNFSe('/CPFCNPJRemetente');
 //             Gerador.wCampoNFSe(tcStr, '#2', 'CNPJRemetente', 14, 14, 1, Cnpj, '');
              Gerador.wGrupoNFSe('/Cabecalho');
-             Gerador.wGrupoNFSe('Detalhe');
+
+             Gerador.wGrupoNFSe('Detalhe xmlns=""');
              Gerador.wGrupoNFSe('ChaveNFe');
              Gerador.wCampoNFSe(tcStr, '', 'InscricaoPrestador', 01, 11, 1, IM, '');
              Gerador.wCampoNFSe(tcStr, '', 'Numero', 01, 12, 1, NumeroNFSe, '');
@@ -1461,7 +1474,7 @@ begin
               end;
   else begin
          Gerador.Prefixo := Prefixo3;
-         Gerador.wGrupoNFSe('Prestador' + aNameSpace);
+         Gerador.wGrupoNFSe('Prestador' + FaNameSpace);
 
          Gerador.Prefixo := Prefixo4;
 
@@ -1489,12 +1502,12 @@ begin
              Gerador.wGrupoNFSe('/Faixa');
            end
            else
-             Gerador.wCampoNFSe(tcStr, '#5', 'NumeroNfse', 01, 15, 1, NumeroNFSe, '', True, aNameSpace);
+             Gerador.wCampoNFSe(tcStr, '#5', 'NumeroNfse', 01, 15, 1, NumeroNFSe, '', True, FaNameSpace);
          end;
 
          if ((DataInicial>0) and (DataFinal>0)) and (provedor <> proPVH) then
          begin
-           Gerador.wGrupoNFSe('PeriodoEmissao' + aNameSpace);
+           Gerador.wGrupoNFSe('PeriodoEmissao' + FaNameSpace);
            Gerador.wCampoNFSe(tcDat, '#5', 'DataInicial', 10, 10, 1, DataInicial, '');
            Gerador.wCampoNFSe(tcDat, '#6', 'DataFinal', 10, 10, 1, DataFinal, '');
            Gerador.wGrupoNFSe('/PeriodoEmissao');
@@ -1503,7 +1516,7 @@ begin
          if (CNPJTomador <> '') or (IMTomador <> '')then
          begin
            Gerador.Prefixo := Prefixo3;
-           Gerador.wGrupoNFSe('Tomador' + aNameSpace);
+           Gerador.wGrupoNFSe('Tomador' + FaNameSpace);
 
            Gerador.Prefixo := Prefixo4;
 
@@ -1534,7 +1547,7 @@ begin
          if (NomeInter <> '') and (CNPJInter <> '') then
          begin
            Gerador.Prefixo := Prefixo3;
-           Gerador.wGrupoNFSe('IntermediarioServico' + aNameSpace);
+           Gerador.wGrupoNFSe('IntermediarioServico' + FaNameSpace);
 
            Gerador.Prefixo := Prefixo4;
            Gerador.wCampoNFSe(tcStr, '#4', 'RazaoSocial', 01, 115, 1, NomeInter, '');
@@ -1742,7 +1755,7 @@ begin
         Gerador.wGrupoNFSe('/Cabecalho');
 
         Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
-                                          '<Lote' + aIdentificador + '>' +
+                                          '<Lote' + FaIdentificador + '>' +
                                             Notas +
                                           '</Lote>';
       end;
@@ -1772,10 +1785,10 @@ begin
                Gerador.wGrupoNFSe('/cancelaNota');
              end;
 
-	proNotaBlu,
+	  proNotaBlu,
     proSP:
       begin
-        Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+        Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
 
         Gerador.wGrupoNFSe('CPFCNPJRemetente');
         Gerador.wCampoCNPJCPF('', '', Cnpj);
@@ -1849,7 +1862,7 @@ begin
     proTecnos:
       begin
         TagI := '<' + Prefixo3 + 'Pedido>' +
-                   '<' + Prefixo4 + 'InfPedidoCancelamento ' + aIdentificadorCanc +
+                   '<' + Prefixo4 + 'InfPedidoCancelamento ' + FaIdentificadorCanc +
                       ' xmlns="http://www.abrasf.org.br/nfse.xsd">';
         TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
                 '</' + Prefixo3 + 'Pedido>';
@@ -1859,7 +1872,7 @@ begin
     proSimplISS:
       begin
         TagI := '<' + Prefixo3 + 'Pedido' + FNameSpaceDad + '>' +
-                   '<' + Prefixo4 + 'InfPedidoCancelamento' + aIdentificadorCanc + '>';
+                   '<' + Prefixo4 + 'InfPedidoCancelamento' + FaIdentificadorCanc + '>';
         TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
                 '</' + Prefixo3 + 'Pedido>';
       end;
@@ -1886,7 +1899,7 @@ begin
   else
     begin
       TagI := '<' + Prefixo3 + 'Pedido>' +
-                 '<' + Prefixo4 + 'InfPedidoCancelamento' + aIdentificadorCanc + '>';
+                 '<' + Prefixo4 + 'InfPedidoCancelamento' + FaIdentificadorCanc + '>';
       TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
               '</' + Prefixo3 + 'Pedido>';
     end;
@@ -1936,7 +1949,7 @@ begin
 
     proBHISS,
     proWebISS: begin
-                 Gerador.wGrupoNFSe('LoteRps' + aIdentificador + aVersao);
+                 Gerador.wGrupoNFSe('LoteRps' + FaIdentificador + FaVersao);
 
                  Gerador.Prefixo := Prefixo4;
                  Gerador.wCampoNFSe(tcStr, '#1', 'NumeroLote', 01, 15, 1, NumeroLote, '');
@@ -1955,7 +1968,7 @@ begin
 
     proSP, 
     proNotaBlu: begin
-             Gerador.wGrupoNFSe('Cabecalho' + aVersao + ' xmlns=""');
+             Gerador.wGrupoNFSe('Cabecalho' + FaVersao + ' xmlns=""');
              Gerador.wGrupoNFSe('CPFCNPJRemetente');
              Gerador.wCampoCNPJCPF('', '', Cnpj);
              Gerador.wGrupoNFSe('/CPFCNPJRemetente');

@@ -74,9 +74,9 @@ type
   private
     function CanonC14n(const aDoc: xmlDocPtr; const infElement: String): Ansistring; overload;
     function CanonC14n(const aNode: xmlNodePtr; const infElement: String): Ansistring; overload;
-    function AdicionarNode(var aDoc: xmlDocPtr; const ConteudoXML: String; docElement: String = ''): xmlNodePtr;
 
   protected
+    function AdicionarNode(var aDoc: xmlDocPtr; const ConteudoXML: String; docElement: String = ''): xmlNodePtr;
     procedure VerificarValoresPadrao(var SignatureNode: String;
       var SelectionNamespaces: String); virtual;
     function LibXmlFindSignatureNode(aDoc: xmlDocPtr;
@@ -269,6 +269,10 @@ var
   aDoc: xmlDocPtr;
   NewNode: xmlNodePtr;
 begin
+  Result  := '';
+  aDoc    := nil;
+  NewNode := nil;
+
   try
     aDoc := xmlNewDoc(PAnsichar(ansistring('1.0')));
     if (aDoc = nil) then

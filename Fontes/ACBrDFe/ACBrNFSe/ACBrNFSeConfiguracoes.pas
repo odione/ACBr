@@ -41,7 +41,7 @@ unit ACBrNFSeConfiguracoes;
 interface
 
 uses
-  Classes, SysUtils, IniFiles,
+  Classes, SysUtils, IniFiles, Contnrs,
   ACBrDFeConfiguracoes, ACBrDFeSSL, pcnConversao, pnfsConversao;
 
 type
@@ -265,8 +265,9 @@ type
     procedure SetItem(Index: Integer; Const Value: TDadosSenhaParamsCollectionItem);
   public
     constructor Create(AOwner: TEmitenteConfNFSe);
-
     function Add: TDadosSenhaParamsCollectionItem;
+//    function Add: TDadosSenhaParamsCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+//    function New: TDadosSenhaParamsCollectionItem;
     property Items[Index: Integer]: TDadosSenhaParamsCollectionItem read GetItem write SetItem; default;
   end;
 
@@ -395,10 +396,10 @@ type
     constructor Create(AOwner: TConfiguracoes); override;
     procedure Assign(DeArquivosConfNFSe: TArquivosConfNFSe); reintroduce;
 
-    function GetPathGer(Data: TDateTime = 0; CNPJ: String = ''): String;
-    function GetPathRPS(Data: TDateTime = 0; CNPJ: String = ''): String;
-    function GetPathNFSe(Data: TDateTime = 0; CNPJ: String = ''): String;
-    function GetPathCan(Data: TDateTime = 0; CNPJ: String = ''): String;
+    function GetPathGer(Data: TDateTime = 0; const CNPJ: String = ''): String;
+    function GetPathRPS(Data: TDateTime = 0; const CNPJ: String = ''): String;
+    function GetPathNFSe(Data: TDateTime = 0; const CNPJ: String = ''): String;
+    function GetPathCan(Data: TDateTime = 0; const CNPJ: String = ''): String;
   published
     property EmissaoPathNFSe: boolean read FEmissaoPathNFSe
       write FEmissaoPathNFSe default False;
@@ -443,13 +444,14 @@ uses
 
 constructor TEmitenteConfNFSe.Create;
 begin
-  FCNPJ := '';
-  FInscMun := '';
-  FRazSocial := '';
-  FWebUser := '';
-  FWebSenha := '';
-  FWebFraseSecr := '';
-  FWebChaveAcesso := '';
+  inherited Create;
+  FCNPJ             := '';
+  FInscMun          := '';
+  FRazSocial        := '';
+  FWebUser          := '';
+  FWebSenha         := '';
+  FWebFraseSecr     := '';
+  FWebChaveAcesso   := '';
   FDadosSenhaParams := TDadosSenhaParamsCollection.Create(Self);
 end;
 
@@ -1188,13 +1190,13 @@ begin
 end;
 
 function TArquivosConfNFSe.GetPathGer(Data: TDateTime;
-  CNPJ: String): String;
+  const CNPJ: String): String;
 begin
   Result := GetPath(FPathGer, 'NFSe', CNPJ, Data);
 end;
 
 function TArquivosConfNFSe.GetPathRPS(Data: TDateTime;
-  CNPJ: String): String;
+  const CNPJ: String): String;
 var
   Dir: String;
 begin
@@ -1214,7 +1216,7 @@ begin
 end;
 
 function TArquivosConfNFSe.GetPathNFSe(Data: TDateTime = 0;
-  CNPJ: String = ''): String;
+  const CNPJ: String = ''): String;
 var
   Dir: String;
 begin
@@ -1234,7 +1236,7 @@ begin
 end;
 
 function TArquivosConfNFSe.GetPathCan(Data: TDateTime = 0;
-  CNPJ: String = ''): String;
+  const CNPJ: String = ''): String;
 var
   Dir: String;
 begin
@@ -1258,6 +1260,7 @@ end;
 function TDadosSenhaParamsCollection.Add: TDadosSenhaParamsCollectionItem;
 begin
   Result := TDadosSenhaParamsCollectionItem(inherited Add);
+//  Result := Self.New;
 end;
 
 constructor TDadosSenhaParamsCollection.Create(
@@ -1277,7 +1280,13 @@ procedure TDadosSenhaParamsCollection.SetItem(Index: Integer;
 begin
   inherited SetItem(Index, Value);
 end;
-
+{
+function TDadosSenhaParamsCollection.New: TDadosSenhaParamsCollectionItem;
+begin
+  Result := TDadosSenhaParamsCollectionItem.Create;
+  Self.Add(Result);
+end;
+}
 { TConfigEnvelope }
 
 constructor TConfigEnvelope.Create;
