@@ -106,6 +106,7 @@ type
 
     FLoteNaoProc: Boolean;
     FNameSpaceCan: String;
+    FIntegridade: String;
 
     procedure DefinirURL; override;
     procedure DefinirServicoEAction; override;
@@ -116,7 +117,7 @@ type
     procedure InicializarDadosMsg(AIncluiEncodingCab: Boolean);
     procedure FinalizarServico; override;
     procedure IncluirEncoding(Incluir: Boolean);
-    function ExtrairRetorno(const GrupoMsgRet: String): String;
+    function ExtrairRetorno(const GrupoMsgRet, AGrupo: String): String;
     function ExtrairNotasRetorno: Boolean;
     function GerarRetornoNFSe(const ARetNFSe: String): String;
     procedure DefinirSignatureNode(const TipoEnvio: String);
@@ -165,6 +166,7 @@ type
     property IDLote: String          read FIDLote;
     property LoteNaoProc: Boolean    read FLoteNaoProc;
     property NameSpaceCan: String    read FNameSpaceCan;
+    property Integridade: String     read FIntegridade;
 
     property vNotas: String   read FvNotas;
     property XML_NFSe: String read FXML_NFSe;
@@ -1129,9 +1131,9 @@ begin
   Result := AXML;
 end;
 
-function TNFSeWebService.ExtrairRetorno(const GrupoMsgRet: String): String;
+function TNFSeWebService.ExtrairRetorno(const GrupoMsgRet, AGrupo: String): String;
 var
-  AuxXML, XMLRet: String;
+  AuxXML, XMLRet, aMsgRet: String;
 begin
   // Alguns provedores retornam a resposta em String
   // Aplicado a conversão de String para XML
@@ -1140,6 +1142,8 @@ begin
   FPRetornoWS := RemoverCharControle(FPRetornoWS);
 
   FPRetornoWS := RemoverDeclaracaoXML(FPRetornoWS);
+
+  FPRetornoWS := RemoverIdentacao(FPRetornoWS);
 
   if (FProvedor in [proNFSeBrasil, proIPM]) then
     AuxXML := ParseText(FPRetornoWS, true, false)
@@ -1189,6 +1193,15 @@ begin
   XMLRet := RemoverDeclaracaoXML(XMLRet);
 
   Result := XMLRet;
+
+  // Remove do Retorno o conteudo de AGrupo
+  if AGrupo <> '' then
+  begin
+    aMsgRet := SeparaDados(XMLRet, AGrupo);
+
+    if aMsgRet <> '' then
+      Result := aMsgRet;
+  end;
 end;
 
 function TNFSeWebService.ExtrairNotasRetorno: Boolean;
@@ -1872,6 +1885,9 @@ begin
                                     'xsi:schemaLocation="http://localhost:8080/WsNFe2/lote '+
                                     'http://localhost:8080/WsNFe2/xsd/ReqEnvioLoteRPS.xsd">';
 
+           proSaatri: FTagI := '<' + FTagGrupo + FNameSpaceDad +
+                                ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' +
+                                ' xmsns:xsd="http://www.w3.org/2001/XMLSchema">';
 
            proGoverna,
            proInfisc,
@@ -1909,7 +1925,10 @@ begin
                              ' xmlns="http://www.prefeitura.sp.gov.br/nfe">';
 
            proNotaBlu: FTagI := '<' + FTagGrupo +
-                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+                             ' xmlns="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+
+//           proNotaBlu: FTagI := '<' + FTagGrupo +
+//                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
            proFISSLex,
            proIPM,
@@ -1956,7 +1975,10 @@ begin
                              ' xmlns="http://www.prefeitura.sp.gov.br/nfe">';
 
            proNotaBlu: FTagI := '<' + FTagGrupo +
-                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+                             ' xmlns="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+
+//           proNotaBlu: FTagI := '<' + FTagGrupo +
+//                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
            proFISSLex,
            proIPM,
@@ -2002,7 +2024,10 @@ begin
 //                             ' xmlns:p1="http://www.prefeitura.sp.gov.br/nfe" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
            proNotaBlu: FTagI := '<' + FTagGrupo +
-                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+                             ' xmlns="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+
+//           proNotaBlu: FTagI := '<' + FTagGrupo +
+//                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
            proGoverna,
            proFISSLex,
@@ -2375,7 +2400,8 @@ begin
     // Agili, Agiliv2, CTA, Governa, proEGoverneISS
     ChaveAcessoPrefeitura := FPConfiguracoesNFSe.Geral.Emitente.WebChaveAcesso;
     if (ChaveAcessoPrefeitura = '') and
-       (Provedor in [proAgili, proAgiliv2, proCTA, proGoverna, proEgoverneISS, proGiap]) then
+       (Provedor in [proAgili, proAgiliv2, proCTA, proGoverna, proEgoverneISS,
+                     proGiap, proiiBrasilv2]) then
       GerarException(ACBrStr('O provedor ' + FPConfiguracoesNFSe.Geral.xProvedor +
         ' necessita que a propriedade: Configuracoes.Geral.Emitente.WebChaveAcesso seja informada.'));
   end;
@@ -2800,8 +2826,20 @@ begin
       begin
         FPDadosMsg := StringReplace(FPDadosMsg, 'EnviarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
-        if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
-          FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
+        case FPConfiguracoesNFSe.Geral.CodigoMunicipio of
+          2407104:  // Macaiba/RN
+            begin
+              FPDadosMsg := StringReplace(FPDadosMsg, ' xmlns="http://www.tinus.com.br"', '', [rfReplaceAll]);
+
+//              if FPConfiguracoesNFSe.WebServices.Ambiente = taProducao then
+//                FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus.com.br', 'tempuri.org', [rfReplaceAll]);
+            end;
+        else
+          begin
+            if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
+              FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll]);
+          end;
+        end;
       end;
 
     // Italo 25/06/2019 incluido para resolver o problema da cidade: Soledade/RS
@@ -2819,7 +2857,8 @@ function TNFSeEnviarLoteRPS.TratarResposta: Boolean;
 var
   i: Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
 
   if Assigned(FRetEnvLote) then
     FreeAndNil(FRetEnvLote);
@@ -2829,7 +2868,7 @@ begin
   FRetEnvLote.Provedor := FProvedor;
   FRetEnvLote.LerXml;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
 
   FDataRecebimento := RetEnvLote.InfRec.DataRecebimento;
   FProtocolo       := RetEnvLote.InfRec.Protocolo;
@@ -2868,7 +2907,7 @@ begin
         proSP,
         ProNotaBlu: begin
                       if (FProvedor in [proCTA]) or
-                         ((FProvedor in [ProNotaBlu, proSP]) and (RetEnvLote.InfRec.InformacoesLote.QtdNotasProcessadas > 0)) then
+                         ((FProvedor in [ProNotaBlu, proSP]) and (RetEnvLote.InfRec.ListaChaveNFeRPS.Count > i)) then
                       begin
                         FNotasFiscais.Items[i].NFSe.Numero := RetEnvLote.InfRec.ListaChaveNFeRPS[I].ChaveNFeRPS.Numero;
                         FNotasFiscais.Items[i].NFSe.CodigoVerificacao := RetEnvLote.InfRec.ListaChaveNFeRPS[I].ChaveNFeRPS.CodigoVerificacao;
@@ -3111,7 +3150,8 @@ function TNFSeTesteEnvioLoteRPS.TratarResposta: Boolean;
 var
   i : Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
 
   if Assigned(FRetEnvLote) then
     FreeAndNil(FRetEnvLote);
@@ -3121,7 +3161,7 @@ begin
   FRetEnvLote.Provedor := FProvedor;
   FRetEnvLote.LerXml;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Recepcionar);
 
   FDataRecebimento := RetEnvLote.InfRec.DataRecebimento;
   FProtocolo       := RetEnvLote.InfRec.Protocolo;
@@ -3310,13 +3350,14 @@ begin
   FPMsg := '';
   FaMsg := '';
 
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.RecSincrono);
 
   FNotaRetornada := (Pos('CompNfse', FPRetWS) > 0);
 
   if FNotaRetornada then
   begin
-    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.RecSincrono);
+//    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.RecSincrono);
     Result := ExtrairNotasRetorno;
   end
   else
@@ -3329,7 +3370,7 @@ begin
     FRetEnvLote.Provedor := FProvedor;
     FRetEnvLote.LerXml;
 
-    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.RecSincrono);
+//    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.RecSincrono);
 
     FDataRecebimento := RetEnvLote.InfRec.DataRecebimento;
     FProtocolo       := RetEnvLote.InfRec.Protocolo;
@@ -3448,6 +3489,7 @@ end;
 procedure TNFSeGerarNFSe.DefinirDadosMsg;
 var
   I: Integer;
+  Gerador: TGerador;
 begin
   if FNotasFiscais.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum RPS adicionado ao componente'));
@@ -3491,6 +3533,23 @@ begin
     else begin
       for I := 0 to FNotasFiscais.Count - 1 do
         GerarLoteRPSsemAssinatura(FNotasFiscais.Items[I].XMLOriginal);
+    end;
+
+    // Necessário para o provedor iiBrasil
+    if Provedor = proiiBrasilv2 then
+    begin
+      FIntegridade := TACBrNFSe(FPDFeOwner).GerarIntegridade(FvNotas);
+
+      Gerador := TGerador.Create;
+      try
+        Gerador.ArquivoFormatoXML := '';
+
+        Gerador.wCampoNFSe(tcStr, '', 'Integridade', 01, 2000, 1, FIntegridade);
+
+        FvNotas := FvNotas + Gerador.ArquivoFormatoXML;
+      finally
+        Gerador.Free;
+      end;
     end;
 
     InicializarTagITagF;
@@ -3562,8 +3621,9 @@ function TNFSeGerarNFSe.TratarResposta: Boolean;
 begin
   FPMsg := '';
   FaMsg := '';
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Gerar);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Gerar);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Gerar);
   Result := ExtrairNotasRetorno;
 end;
 
@@ -3770,14 +3830,15 @@ begin
   FRetSitLote.Free;
   FRetSitLote := TretSitLote.Create;
 
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsSit);
 
   FRetSitLote.Leitor.Arquivo := FPRetWS;
   FRetSitLote.Provedor       := FProvedor;
 
   RetSitLote.LerXml;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsSit);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsSit);
 
   FSituacao := RetSitLote.InfSit.Situacao;
   // FSituacao: 1 = Não Recebido
@@ -3969,11 +4030,12 @@ function TNFSeConsultarLoteRPS.TratarResposta: Boolean;
 begin
   FPMsg := '';
   FaMsg := '';
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsLote);
   Result := ExtrairNotasRetorno;
   FSituacao := FRetornoNFSe.Situacao;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsLote);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsLote);
 end;
 
 procedure TNFSeConsultarLoteRPS.FinalizarServico;
@@ -4041,6 +4103,7 @@ procedure TNFSeConsultarNfseRPS.DefinirDadosMsg;
 var
   i: Integer;
   Gerador: TGerador;
+  Consulta: string;
 begin
   if (FNotasFiscais.Count <= 0) and (FProvedor in [proGoverna,proIssDSF]) then
     GerarException(ACBrStr('ERRO: Nenhum RPS carregado ao componente'));
@@ -4146,7 +4209,26 @@ begin
 
     AjustarOpcoes( GerarDadosMsg.Gerador.Opcoes );
 
-    FPDadosMsg := FTagI + GerarDadosMsg.Gera_DadosMsgConsNFSeRPS + FTagF;
+    Consulta := GerarDadosMsg.Gera_DadosMsgConsNFSeRPS;
+
+    // Necessário para o provedor iiBrasil
+    if Provedor = proiiBrasilv2 then
+    begin
+      FIntegridade := TACBrNFSe(FPDFeOwner).GerarIntegridade(Consulta);
+
+      Gerador := TGerador.Create;
+      try
+        Gerador.ArquivoFormatoXML := '';
+
+        Gerador.wCampoNFSe(tcStr, '', 'Integridade', 01, 2000, 1, FIntegridade);
+
+        Consulta := Consulta + Gerador.ArquivoFormatoXML;
+      finally
+        Gerador.Free;
+      end;
+    end;
+
+    FPDadosMsg := FTagI + Consulta + FTagF;
 
     FIDLote := GerarDadosMsg.IdLote;
   finally
@@ -4182,10 +4264,11 @@ function TNFSeConsultarNfseRPS.TratarResposta: Boolean;
 begin
   FPMsg := '';
   FaMsg := '';
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSeRPS);
   Result := ExtrairNotasRetorno;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSeRPS);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSeRPS);
 end;
 
 procedure TNFSeConsultarNfseRPS.FinalizarServico;
@@ -4334,10 +4417,11 @@ function TNFSeConsultarNfse.TratarResposta: Boolean;
 begin
   FPMsg := '';
   FaMsg := '';
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSe);
   Result := ExtrairNotasRetorno;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSe);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsNFSe);
 end;
 
 procedure TNFSeConsultarNfse.FinalizarServico;
@@ -4469,6 +4553,7 @@ begin
       proTecnos: FURI := '2' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
                   IntToStrZero(StrToInt(TNFSeCancelarNfse(Self).FNumeroNFSe), 16);
 
+      proRecife,
       proRJ,
       proFriburgo: FURI := 'Cancelamento_NF' + TNFSeCancelarNfse(Self).FNumeroNFSe;
 
@@ -4697,7 +4782,8 @@ function TNFSeCancelarNfse.TratarResposta: Boolean;
 var
   i: Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Cancelar);
 
   if Assigned(FRetCancNFSe) then
     FRetCancNFSe.Free;
@@ -4709,7 +4795,7 @@ begin
 
   FRetCancNFSe.LerXml;
 
-  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Cancelar);
+//  FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Cancelar);
 
   FDataHora := RetCancNFSe.InfCanc.DataHora;
 
@@ -4965,7 +5051,8 @@ function TNFSeSubstituirNFSe.TratarResposta: Boolean;
 var
   i: Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Substituir);
 
   FNFSeRetorno := TRetSubsNfse.Create;
   try
@@ -4974,7 +5061,7 @@ begin
 
     FNFSeRetorno.LerXml;
 
-    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Substituir);
+//    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.Substituir);
 
 //      FDataHora := FNFSeRetorno.InfCanc.DataHora;
 
@@ -5119,7 +5206,8 @@ function TNFSeAbrirSessao.TratarResposta: Boolean;
 var
   i: Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.AbrirSessao);
 
   FRetAbrirSessao := TRetAbrirSessao.Create;
   try
@@ -5130,7 +5218,7 @@ begin
 
     FHashIdent := FRetAbrirSessao.InfAbrirSessao.HashIdent;
 
-    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.AbrirSessao);
+//    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.AbrirSessao);
 
     // Lista de Mensagem de Retorno
     FPMsg := '';
@@ -5273,7 +5361,8 @@ function TNFSeFecharSessao.TratarResposta: Boolean;
 //var
 //  i: Integer;
 begin
-  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg);
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.FecharSessao);
 
 //  FRetAbrirSessao := TRetAbrirSessao.Create;
 //  try
@@ -5282,7 +5371,7 @@ begin
 
 //    FRetAbrirSessao.LerXml;
 
-    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.FecharSessao);
+//    FPRetWS := ExtrairGrupoMsgRet(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.FecharSessao);
 
     // Lista de Mensagem de Retorno
     FPMsg := '';

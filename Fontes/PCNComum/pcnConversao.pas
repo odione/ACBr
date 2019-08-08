@@ -104,6 +104,8 @@ type
   TpcteTipoCarroceria = (tcNaoAplicavel, tcAberta, tcFechada, tcGraneleira, tcPortaContainer, tcSider);
 
   TPosRecibo = (prCabecalho, prRodape, prEsquerda);
+  TPosReciboLayout = (prlPadrao, prlBarra);
+
   TpcteModeloNF = (moNF011AAvulsa, moNFProdutor);
 
   TpcnTpEvento = (teNaoMapeado, teCCe, teCancelamento, teManifDestConfirmacao,
@@ -187,7 +189,7 @@ type
   end;
 
 const
-  TpcnTpEventoString : array[0..54] of String =('-99999', '110110', '110111',
+  TpcnTpEventoString : array[0..57] of String =('-99999', '110110', '110111',
                                                 '210200', '210210', '210220',
                                                 '210240', '110112', '110113',
                                                 '110114', '110160', '310620',
@@ -205,7 +207,8 @@ const
                                                 '240140', '240150', '240160',
                                                 '240170', '440130', '440140',
                                                 '440150', '440160', '110112',
-                                                '110116');
+                                                '110116', '110180', '110181',
+                                                '110115');
 
   DFeUF: array[0..26] of String =
   ('AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA',

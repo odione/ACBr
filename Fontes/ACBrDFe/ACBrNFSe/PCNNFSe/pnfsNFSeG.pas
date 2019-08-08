@@ -132,6 +132,9 @@ type
     FHashIdent: String;
     FIdCanc: String;
 
+    // Provedor iiBrasil
+//    FIntegridade: String;
+
     procedure SetAtributos;
     function GetIdEntidadeEquiplano(const IBGE: Integer): String;
     procedure SetCNPJ(const Value: String);
@@ -239,6 +242,9 @@ type
     // Layout - EL
     property HashIdent: String read FHashIdent write FHashIdent;
 
+    // Provedor iiBrasil
+//    property Integridade: String read FIntegridade write FIntegridade;
+
     property IdLote: String read FIdLote write FIdLote;
     property IdCanc: String read FIdCanc write FIdCanc;
    end;
@@ -332,11 +338,12 @@ begin
     proBethav2,
     proIssDSF,
     proSIAPNet,
-    proSaatri,
     proGiss,
     proRLZ,
+    proTinus,
     proSalvador: IdLote := 'lote' + NumeroLote;
 
+    proSaatri: IdLote := 'Lote_' + NumeroLote + '_' + CNPJ;
 
     proEL: begin
              IdLote := StringOfChar('0', 15) + OnlyNumber(NumeroRps) + SerieRps;
@@ -391,6 +398,7 @@ begin
     4120606: Result :=  '28'; // Prudentopolis/PR
     4122008: Result :=  '19'; // Rio Azul/PR
     4123501: Result :=  '54'; // Santa Helena/PR
+    4125209: Result := '163'; // São Jorge D Oeste/PR
     4126306: Result :=  '61'; // Senges/PR
     4127106: Result := '260'; // Telemaco Borba/PR
     4127700: Result := '136'; // Toledo/PR
@@ -1336,6 +1344,9 @@ begin
 
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupoNFSe('/Prestador');
+
+//      if Provedor = proiiBrasilv2 then
+//        Gerador.wCampoNFSe(tcStr, '', 'Integridade', 01, 2000, 1, Integridade);
     end;
   end;
 
@@ -1868,6 +1879,7 @@ begin
                 '</' + Prefixo3 + 'Pedido>';
       end;
 
+    proRecife,
     proRJ,
     proSimplISS:
       begin
@@ -1943,6 +1955,13 @@ begin
              // Nao Possui
            end;
 
+//    proiiBrasilv2:
+//      begin
+//        Gerador.wCampoNFSe(tcStr, '', 'Integridade', 01, 2000, 1, Integridade);
+
+//        Gerador.ArquivoFormatoXML := Notas + Gerador.ArquivoFormatoXML;
+//      end;
+
     proISSDSF: begin
                  // Nao Possui
                end;
@@ -2017,7 +2036,7 @@ begin
                   proBetim, proBHISS, proDBSeller, proEquiplano, profintelISS,
                   proFISSLex, proGinfes, proGoiania, proGovBR, proIssCuritiba,
                   proISSIntel, proISSNet, proLexsom, proNatal,
-                  proTinus, proProdemge, proPublica, proRecife, proRJ, proSaatri,
+                  proTinus, proProdemge, proPublica, proRecife, proRJ, //proSaatri,
                   proFreire, proSimplISS, proThema, proTiplan, proWebISS,
                   proProdata, proAgili, proSpeedGov, proPronim, proSalvador,
                   proNFSEBrasil] then

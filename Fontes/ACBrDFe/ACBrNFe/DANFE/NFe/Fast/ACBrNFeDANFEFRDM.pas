@@ -246,6 +246,7 @@ begin
   FfrxPDFExport := TfrxPDFExport.Create(nil);
   with FfrxPDFExport do
   begin
+     PrintOptimized := True;
      Background    := FIncorporarBackgroundPdf;
      EmbeddedFonts := FIncorporarFontesPdf;
      Subject       := 'Exportando DANFE para PDF';
@@ -418,17 +419,12 @@ begin
         FieldDefs.Add('pMVAST'    , ftString, 18);
         FieldDefs.Add('pICMSST'   , ftString, 18);
         FieldDefs.Add('vICMSST'   , ftString, 18);
-        FieldDefs.Add('nLote'     , ftString, 20);
-        FieldDefs.Add('qLote'     , ftFloat);
-        FieldDefs.Add('dFab'      , ftDateTime);
-        FieldDefs.Add('dVal'      , ftDateTime);
         FieldDefs.Add('DescricaoProduto', ftString, 2000);
         FieldDefs.Add('Unidade'   , ftString, 14);
         FieldDefs.Add('Quantidade', ftString, 50);
         FieldDefs.Add('ValorUnitario'   , ftString, 50);
         FieldDefs.Add('Valorliquido'    , ftString, 18);
         FieldDefs.Add('ValorAcrescimos' , ftString, 18);
-        FieldDefs.Add('vPMC', ftString, 18);
 
         CreateDataSet;
      end;
@@ -482,6 +478,7 @@ begin
         FieldDefs.Add('ImprimeDescAcrescItem', ftInteger);
         FieldDefs.Add('nProt', ftString, 30);
         FieldDefs.Add('dhRecbto', ftDateTime);
+        FieldDefs.Add('poscanhotolayout', ftString, 1);
         CreateDataSet;
      end;
    end;
@@ -947,7 +944,7 @@ begin
       FieldByName('VOutro').AsFloat       := VOutro;
       FieldByName('VNF').AsFloat          := VNF;
       FieldByName('VTotTrib').AsFloat     := VTotTrib;
-      FieldByName('ValorApagar').AsFloat  := VProd - VDesc - vICMSDeson + VOutro;
+      FieldByName('ValorApagar').AsFloat  := VNF;
       FieldByName('VFCP').AsFloat         := VFCP;
       FieldByName('VFCPST').AsFloat       := VFCPST;
       FieldByName('VFCPSTRet').AsFloat    := vFCPSTRet;
@@ -1098,15 +1095,6 @@ begin
         FieldByName('Valorliquido').AsString      := FormatFloatBr( Prod.vProd - Prod.vDesc ,'###,###,##0.00');
         FieldByName('ValorAcrescimos').AsString   := FormatFloatBr( Prod.vProd + Prod.vOutro,'###,###,##0.00');
 
-        if(FNFe.Det.Items[inItem].Prod.med.Count > 0)then
-        begin
-           FieldByName('vPMC').AsString := FormatFloatBr(FNFe.Det.Items[inItem].Prod.med.Items[0].vPMC,'###,###,##0.00');
-        end
-        else
-        begin
-           FieldByName('vPMC').AsString := '0.00';
-        end;
-
         Post;
       end;
     end;
@@ -1158,7 +1146,7 @@ begin
             FieldByName('Consumidor').AsString := ACBrStr('CONSUMIDOR NÃO IDENTIFICADO')
           else
             FieldByName('Consumidor').AsString :=
-              IfThen(Length(CNPJCPF) = 11, 'CPF: ', 'CNPJ: ') + Trim(FieldByName('CNPJCPF').AsString) + ' ' + trim(FieldByName('XNome').AsString);
+              IfThen(Length(CNPJCPF) = 11, 'CONSUMIDOR CPF: ', 'CONSUMIDOR CNPJ: ') + Trim(FieldByName('CNPJCPF').AsString) + ' ' + trim(FieldByName('XNome').AsString);
         end;
 
         if NaoEstaVazio(Trim(FieldByName('XLgr').AsString)) then
@@ -1386,15 +1374,15 @@ begin
     if (FNFe.Ide.Modelo = 65) then
     begin
       FieldByName('DEmi').AsString := FormatDateTimeBr(FNFe.Ide.DEmi);
+
+      if (FNFe.Ide.tpEmis <> teNormal) and EstaVazio(FNFe.procNFe.nProt) then
+        FieldByName('MensagemFiscal').AsString := ACBrStr('EMITIDA EM CONTINGÊNCIA'+LineBreak+'Pendente de autorização');
+
       if FNFe.Ide.TpAmb = taHomologacao then
-          FieldByName('MensagemFiscal').AsString := ACBrStr('EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL')
-      else
-      begin
-        if (FNFe.Ide.tpEmis <> teNormal) and EstaVazio(FNFe.procNFe.nProt) then
-          FieldByName('MensagemFiscal').AsString := ACBrStr('EMITIDA EM CONTINGÊNCIA'+LineBreak+'Pendente de autorização')
-        else
-          FieldByName('MensagemFiscal').AsString := ACBrStr('ÁREA DE MENSAGEM FISCAL');
-      end;
+        FieldByName('MensagemFiscal').AsString := FieldByName('MensagemFiscal').AsString+LineBreak+LineBreak+ACBrStr('EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL');
+
+      if EstaVazio(FieldByName('MensagemFiscal').AsString) then
+        FieldByName('MensagemFiscal').AsString := ACBrStr('ÁREA DE MENSAGEM FISCAL');
 
       if EstaVazio(FNFe.infNFeSupl.urlChave) then
         FieldByName('URL').AsString := TACBrNFe(DANFEClassOwner.ACBrNFe).GetURLConsultaNFCe(FNFe.Ide.cUF, FNFe.Ide.tpAmb, FNFe.infNFe.Versao)
@@ -1568,6 +1556,7 @@ begin
     Append;
 
     FieldByName('poscanhoto').AsString            := '';
+    FieldByName('poscanhotolayout').AsString         := '';
     FieldByName('ResumoCanhoto').AsString         := '';
     FieldByName('Mensagem0').AsString             := '';
     FieldByName('Contingencia_ID').AsString       := '';
@@ -1575,7 +1564,10 @@ begin
                                                      'www.nfe.fazenda.gov.br/portal ou no site da Sefaz autorizadora';
 
     if DANFEClassOwner is TACBrNFeDANFEClass then
-      FieldByName('poscanhoto').AsString := IntToStr( Ord(TACBrNFeDANFEClass(DANFEClassOwner).PosCanhoto))
+    begin
+      FieldByName('poscanhoto').AsString     := IntToStr( Ord(TACBrNFeDANFEClass(DANFEClassOwner).PosCanhoto));
+      FieldByName('poscanhotolayout').AsString  := IntToStr( Ord(TACBrNFeDANFEClass(DANFEClassOwner).PosCanhotoLayout));
+    end
     else if DANFEClassOwner is TACBrNFeDANFCEClass then
     begin
       if TACBrNFeDANFCEClass(DANFEClassOwner).ViaConsumidor then

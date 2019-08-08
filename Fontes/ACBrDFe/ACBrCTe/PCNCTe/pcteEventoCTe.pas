@@ -136,6 +136,7 @@ type
     FxOBS: String;    // Cancelamento
 
     FvICMS: Currency;  // EPEC
+    FvICMSST: Currency;
     FvTPrest: Currency;
     FvCarga: Currency;
     Ftoma: TpcteTomador;
@@ -163,6 +164,8 @@ type
     FhashEntrega: String;
     FdhHashEntrega: TDateTime;
     FinfEntrega: TInfEntregaCollection;
+     // Cancelamento do Comprovante de Entrega
+    FnProtCE: String;
 
     procedure SetinfCorrecao(const Value: TInfCorrecaoCollection);
     procedure SetxCondUso(const Value: String);
@@ -177,6 +180,7 @@ type
     property xOBS: String       read FxOBS       write FxOBS;
 
     property vICMS: Currency     read FvICMS      write FvICMS;
+    property vICMSST: Currency   read FvICMSST    write FvICMSST;
     property vTPrest: Currency   read FvTPrest    write FvTPrest;
     property vCarga: Currency    read FvCarga     write FvCarga;
     property toma: TpcteTomador  read Ftoma       write Ftoma;
@@ -204,6 +208,8 @@ type
 
     property infGTV: TInfGTVCollection         read FinfGTV     write FinfGTV;
     property infEntrega: TInfEntregaCollection read FinfEntrega write FinfEntrega;
+
+    property nProtCE: String read FnProtCE write FnProtCE;
   end;
 
   TInfCorrecaoCollection = class(TObjectList)
@@ -323,7 +329,8 @@ type
     FemailDest: String;
     FdhRegEvento: TDateTime;
     FnProt: String;
-    FXML: AnsiString;
+    FXML: String;
+//    FXML: AnsiString;
     FNomeArquivo: String;
   public
     property Id: String              read FId          write FId;
@@ -340,7 +347,8 @@ type
     property emailDest: String       read FemailDest   write FemailDest;
     property dhRegEvento: TDateTime  read FdhRegEvento write FdhRegEvento;
     property nProt: String           read FnProt       write FnProt;
-    property XML: AnsiString         read FXML         write FXML;
+    property XML: String             read FXML         write FXML;
+//    property XML: AnsiString         read FXML         write FXML;
     property NomeArquivo: String     read FNomeArquivo write FNomeArquivo;
   end;
 
@@ -455,6 +463,7 @@ begin
     teAutorizadoSubcontratacao    : Desc := 'Autorizado Subcontratacao';
     teautorizadoServMultimodal    : Desc := 'Autorizado Servico Vinculado Multimodal';
     teComprEntrega                : Desc := 'Comprovante de Entrega do CT-e';
+    teCancComprEntrega            : Desc := 'Cancelamento do Comprovante de Entrega do CT-e';
   else
     Result := '';
   end;
@@ -511,6 +520,7 @@ begin
     teAutorizadoSubcontratacao    : Result := 'Autorizado Subcontratacao';
     teautorizadoServMultimodal    : Result := 'Autorizado Servico Vinculado Multimodal';
     teComprEntrega                : Result := 'Comprovante de Entrega do CT-e';
+    teCancComprEntrega            : Result := 'Cancelamento do Comprovante de Entrega do CT-e';
   else
     Result := 'Não Definido';
   end;

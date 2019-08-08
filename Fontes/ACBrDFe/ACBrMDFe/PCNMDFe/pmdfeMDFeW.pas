@@ -113,9 +113,9 @@ type
     FValidarListaServicos: boolean;
   published
     property AjustarTagNro: boolean                read FAjustarTagNro;
-    property NormatizarMunicipios: boolean         read FNormatizarMunicipios    write FNormatizarMunicipios;
-    property GerarTagAssinatura: TpcnTagAssinatura read FGerarTagAssinatura;
-    property PathArquivoMunicipios: String         read FPathArquivoMunicipios   write FPathArquivoMunicipios;
+    property NormatizarMunicipios: boolean         read FNormatizarMunicipios  write FNormatizarMunicipios;
+    property GerarTagAssinatura: TpcnTagAssinatura read FGerarTagAssinatura    write FGerarTagAssinatura;
+    property PathArquivoMunicipios: String         read FPathArquivoMunicipios write FPathArquivoMunicipios;
     property ValidarInscricoes: boolean            read FValidarInscricoes;
     property ValidarListaServicos: boolean         read FValidarListaServicos;
   end;
@@ -149,7 +149,6 @@ end;
 
 function TMDFeW.GerarXml: boolean;
 var
-//  chave: String;
   Gerar, Ok: boolean;
   xProtMDFe: String;
 begin
@@ -221,6 +220,12 @@ begin
                '<cStat>'+IntToStr(MDFe.procMDFe.cStat)+'</cStat>'+
                '<xMotivo>'+MDFe.procMDFe.xMotivo+'</xMotivo>'+
              '</infProt>'+
+             IIF( (MDFe.procMDFe.cMsg > 0) or (MDFe.procMDFe.xMsg <> ''),
+             '<infFisco>' +
+               '<cMsg>' + IntToStr(MDFe.procMDFe.cMsg) + '</cMsg>' +
+               '<xMsg>' + MDFe.procMDFe.xMsg + '</xMsg>' +
+             '</infFisco>',
+             '') +
            '</protMDFe>';
 
      Gerador.wTexto(xProtMDFe);
@@ -265,7 +270,7 @@ begin
   Gerador.wCampo(tcInt, '#010', 'nMDF    ', 01, 09, 1, MDFe.ide.nMDF, DSC_NMDF);
   Gerador.wCampo(tcStr, '#011', 'cMDF    ', 08, 08, 1, IntToStrZero(ExtrairCodigoChaveAcesso(MDFe.infMDFe.ID), 8), DSC_CMDF);
   Gerador.wCampo(tcInt, '#012', 'cDV     ', 01, 01, 1, MDFe.Ide.cDV, DSC_CDV);
-  Gerador.wCampo(tcStr, '#013', 'modal   ', 02, 02, 1, ModalToStr(MDFe.Ide.modal), DSC_MODAL);
+  Gerador.wCampo(tcStr, '#013', 'modal   ', 01, 01, 1, ModalToStr(MDFe.Ide.modal), DSC_MODAL);
 
   if VersaoDF = ve100 then
     Gerador.wCampo(tcDatHor, '#014', 'dhEmi', 19, 19, 1, MDFe.ide.dhEmi, DSC_DEMI)
@@ -337,7 +342,6 @@ procedure TMDFeW.GerarEmit;
 begin
   Gerador.wGrupo('emit', '#025');
   Gerador.wCampoCNPJCPF('#026', '026a', MDFe.Emit.CNPJCPF);
-//  Gerador.wCampoCNPJ('#026', MDFe.Emit.CNPJ, CODIGO_BRASIL, True);
   Gerador.wCampo(tcStr, '#027', 'IE   ', 02, 14, 1, OnlyNumber(MDFe.Emit.IE), DSC_IE);
   if (FOpcoes.ValidarInscricoes)
    then if not ValidarIE(MDFe.Emit.IE, MDFe.Emit.enderEmit.UF) then

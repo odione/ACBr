@@ -483,6 +483,10 @@ begin
       AdicionaErro(
         '502-Rejeição: Erro na Chave de Acesso - Campo Id não corresponde à concatenação dos campos correspondentes');
 
+    GravaLog('Validar: 897-Código do documento: ' + IntToStr(CTe.Ide.nCT));
+    if not ValidarCodigoDFe(CTe.Ide.cCT, CTe.Ide.nCT) then
+      AdicionaErro('897-Rejeição: Código numérico em formato inválido ');
+
     GravaLog('Validar: 252-Ambiente');
     if (CTe.Ide.tpAmb <> Configuracoes.WebServices.Ambiente) then
       AdicionaErro('252-Rejeição: Ambiente informado diverge do Ambiente de recebimento '
@@ -2753,7 +2757,7 @@ begin
           tomaICMS.refNF.modelo   := INIRec.ReadString( 'infCteSub','mod','');
           tomaICMS.refNF.serie    := INIRec.ReadInteger( 'infCteSub','serie',0);
           tomaICMS.refNF.subserie := INIRec.ReadInteger( 'infCteSub','subserie',0);
-          tomaICMS.refNF.nro      := INIRec.ReadInteger( 'infCteSub','CNPJ',0);
+          tomaICMS.refNF.nro      := INIRec.ReadInteger( 'infCteSub','nro',0);
           tomaICMS.refNF.valor    :=  StringToFloatDef(INIRec.ReadString('infCteSub','valor','') ,0);
           tomaICMS.refNF.dEmi     := StringToDateTime(INIRec.ReadString( 'infCteSub','dEmi','0'));
           tomaICMS.refCte         := INIRec.ReadString( 'infCteSub','refCte','');

@@ -91,7 +91,8 @@ type
     FxMotivo: String;
     FInfEvento: TInfEvento;
     FretEvento: TRetInfEventoCollection;
-    FXML: AnsiString;
+    FXML: String;
+//    FXML: AnsiString;
     Fsignature: Tsignature;
   public
     constructor Create;
@@ -108,7 +109,8 @@ type
     property InfEvento: TInfEvento              read FInfEvento write FInfEvento;
     property signature: Tsignature              read Fsignature write Fsignature;
     property retEvento: TRetInfEventoCollection read FretEvento write FretEvento;
-    property XML: AnsiString                    read FXML       write FXML;
+    property XML: String                        read FXML       write FXML;
+//    property XML: AnsiString                    read FXML       write FXML;
   end;
 
 implementation
@@ -201,6 +203,7 @@ begin
            infEvento.detEvento.nProt      := Leitor.rCampo(tcStr, 'nProt');
            infEvento.detEvento.xJust      := Leitor.rCampo(tcStr, 'xJust');
            infEvento.detEvento.vICMS      := Leitor.rCampo(tcDe2, 'vICMS');
+           infEvento.detEvento.vICMSST    := Leitor.rCampo(tcDe2, 'vICMSST');
            infEvento.detEvento.vTPrest    := Leitor.rCampo(tcDe2, 'vTPrest');
            infEvento.detEvento.vCarga     := Leitor.rCampo(tcDe2, 'vCarga');
            infEvento.detEvento.toma       := StrToTpTomador(ok, Leitor.rCampo(tcStr, 'toma'));
@@ -219,6 +222,8 @@ begin
 
            infEvento.detEvento.hashEntrega   := Leitor.rCampo(tcStr, 'hashEntrega');
            infEvento.detEvento.dhHashEntrega := Leitor.rCampo(tcDatHor, 'dhHashEntrega');
+
+           infEvento.detEvento.nProtCE := Leitor.rCampo(tcStr, 'nProtCE');
 
            // Carrega os dados da informação da Correção aplicada
            i := 0;

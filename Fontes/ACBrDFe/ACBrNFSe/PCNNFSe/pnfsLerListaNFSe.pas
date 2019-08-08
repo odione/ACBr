@@ -519,7 +519,7 @@ begin
 //              if NFSe.XML = '' then
 //                FNFSe.XML := SeparaDados(Leitor.Grupo, 'tbnfd', True);
 
-              if Provedor = proSMARAPD then
+              if Provedor in [ proSMARAPD, proAGILI ] then
                 FNFSe.XML := Leitor.Grupo;
 
               if (Provedor = proAssessorPublico) and (NFSe.XML = '') then
@@ -1160,7 +1160,7 @@ begin
           end;
         end;
       except
-          Result := False;
+        Result := False;
       end;
     end;
 
@@ -1184,6 +1184,26 @@ begin
             Mensagem:= 'Nota Não Existe';
           end;
           Result := False;
+        end;
+      end;
+    end;
+
+    if FProvedor = proiiBrasilv2 then
+    begin
+      if (Leitor.rExtrai(1, 'InformacoesNfse') <> '') then
+      begin
+        with ListaNFSe.FCompNFSe.New do
+        begin
+          FNFSe.IdentificacaoRps.Numero := Leitor.rCampo(tcStr, 'NumeroRps');
+          FNFSe.IdentificacaoRps.Serie  := Leitor.rCampo(tcStr, 'SerieRps');
+
+          FNFSe.Prestador.Cnpj := Leitor.rCampo(tcStr, 'Cnpj');
+
+          FNFSe.Numero            := Leitor.rCampo(tcStr, 'NumeroNfse');
+          FNFSe.SeriePrestacao    := Leitor.rCampo(tcStr, 'SerieNfse');
+          FNFSe.CodigoVerificacao := Leitor.rCampo(tcStr, 'CodigoVerificacao');
+
+          FNFSe.Link := Leitor.rCampo(tcStr, 'LinkNfse');
         end;
       end;
     end;

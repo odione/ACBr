@@ -146,7 +146,7 @@ implementation
 
 uses
   strutils, dateutils, math,
-  pcnAuxiliar, synacode;
+  pcnAuxiliar, synacode, ACBrDFeSSL;
 
 {$IFDEF FPC}
  {$IFDEF CPU64}
@@ -250,7 +250,7 @@ function TACBrMDFe.GetURLQRCode(const CUF: integer;
   const AChaveMDFe: String; const Versao: Double): String;
 var
   idMDFe,
-  sEntrada, urlUF: String;
+  sEntrada, urlUF, Passo2, sign: String;
   VersaoDFe: TVersaoMDFe;
   ok: Boolean;
 begin
@@ -266,9 +266,18 @@ begin
   // Passo 1
   sEntrada := 'chMDFe=' + idMDFe + '&tpAmb=' + TpAmbToStr(TipoAmbiente);
 
-  // Passo 2 calcular o SHA-1 da string idMDFe se o Tipo de Emissão for EPEC ou FSDA
-  if TipoEmissao in [teDPEC, teFSDA] then
-    sEntrada := sEntrada + '&sign=' + AsciiToHex(SHA1(idMDFe));
+  // Passo 2 calcular o SHA-1 da string idMDFe se emissão em contingência
+  if TipoEmissao = teContingencia then
+  begin
+    // Tipo de Emissão em Contingência
+    SSL.CarregarCertificadoSeNecessario;
+    sign := SSL.CalcHash(idMDFe, dgstSHA1, outBase64, True);
+    Passo2 := '&sign='+sign;
+
+    sEntrada := sEntrada + Passo2;
+  end;
+
+
 
   Result := urlUF + sEntrada;
 end;
@@ -512,7 +521,7 @@ begin
     EventoMDFe.Evento.Clear;
     with EventoMDFe.Evento.New do
     begin
-      infEvento.CNPJCPF  := copy(OnlyNumber(WebServices.Consulta.MDFeChave), 7, 14);
+      infEvento.CNPJCPF  := Manifestos.Items[i].MDFe.Emit.CNPJCPF;
       infEvento.cOrgao   := StrToIntDef(copy(OnlyNumber(WebServices.Consulta.MDFeChave), 1, 2), 0);
       infEvento.dhEvento := now;
       infEvento.tpEvento := teCancelamento;

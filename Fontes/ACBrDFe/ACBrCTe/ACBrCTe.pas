@@ -117,8 +117,10 @@ type
 
     procedure SetStatus(const stNewStatus: TStatusACBrCTe);
 
-    function Enviar(ALote: Integer; Imprimir: Boolean = True): Boolean;  overload;
-    function Enviar(const ALote: String; Imprimir: Boolean = True): Boolean;  overload;
+    function Enviar(ALote: Integer; Imprimir: Boolean = True;
+      ASincrono: Boolean = False): Boolean;  overload;
+    function Enviar(const ALote: String; Imprimir: Boolean = True;
+      ASincrono: Boolean = False): Boolean;  overload;
 
     function Consultar( const AChave: String = ''): Boolean;
     function Cancelamento(const AJustificativa: String; ALote: Integer = 0): Boolean;
@@ -159,7 +161,7 @@ implementation
 
 uses
   strutils, dateutils, math,
-  pcnAuxiliar, synacode;
+  pcnAuxiliar, synacode, ACBrDFeSSL;
 
 {$IFDEF FPC}
  {$IFDEF CPU64}
@@ -248,11 +250,11 @@ end;
 
 function TACBrCTe.GetURLConsulta(const CUF: integer;
   const TipoAmbiente: TpcnTipoAmbiente; const Versao: Double): String;
-var
-  VersaoDFe: TVersaoCTe;
-  ok: Boolean;
+//var
+//  VersaoDFe: TVersaoCTe;
+//  ok: Boolean;
 begin
-  VersaoDFe := DblToVersaoCTe(ok, Versao);
+//  VersaoDFe := DblToVersaoCTe(ok, Versao);  // Deixado para usu futuro
   Result := LerURLDeParams('CTe', CUFtoUF(CUF), TipoAmbiente, 'URL-ConsultaCTe', 0);
 end;
 
@@ -260,11 +262,11 @@ function TACBrCTe.GetURLQRCode(const CUF: integer;
   const TipoAmbiente: TpcnTipoAmbiente; const TipoEmissao: TpcnTipoEmissao;
   const AChaveCTe: String; const Versao: Double): String;
 var
-  idCTe, sEntrada, urlUF: String;
-  VersaoDFe: TVersaoCTe;
-  ok: Boolean;
+  idCTe, sEntrada, urlUF, Passo2, sign: String;
+//  VersaoDFe: TVersaoCTe;
+//  ok: Boolean;
 begin
-  VersaoDFe := DblToVersaoCTe(ok, Versao);
+//  VersaoDFe := DblToVersaoCTe(ok, Versao);  // Deixado para usu futuro
 
   urlUF := LerURLDeParams('CTe', CUFtoUF(CUF), TipoAmbiente, 'URL-QRCode', 0);
 
@@ -278,7 +280,14 @@ begin
 
   // Passo 2 calcular o SHA-1 da string idCTe se o Tipo de Emissão for EPEC ou FSDA
   if TipoEmissao in [teDPEC, teFSDA] then
-    sEntrada := sEntrada + '&sign=' + AsciiToHex(SHA1(idCTe));
+  begin
+    // Tipo de Emissão em Contingência
+    SSL.CarregarCertificadoSeNecessario;
+    sign := SSL.CalcHash(idCTe, dgstSHA1, outBase64, True);
+    Passo2 := '&sign=' + sign;
+
+    sEntrada := sEntrada + Passo2;
+  end;
 
   Result := urlUF + sEntrada;
 end;
@@ -416,12 +425,16 @@ begin
         lTipoEvento := StrToTpEventoCTe(Ok, Trim(RetornarConteudoEntre(AXML, '<tpEvento>', '</tpEvento>')));
 
         case lTipoEvento of
-          teCCe:            Result := schEventoCTe;
-          teCancelamento:   Result := schEventoCTe;
-          teEPEC:           Result := schEventoCTe;
-          teMultiModal:     Result := schEventoCTe;
-          tePrestDesacordo: Result := schEventoCTe;
-          else              Result := schErro;
+          teCCe,
+          teCancelamento,
+          teEPEC,
+          teMultiModal,
+          tePrestDesacordo,
+          teGTV,
+          teComprEntrega,
+          teCancComprEntrega: Result := schEventoCTe;
+        else
+          Result := schErro;
         end;
       end
       else
@@ -681,12 +694,14 @@ begin
   end;
 end;
 
-function TACBrCTe.Enviar(ALote: Integer; Imprimir: Boolean = True): Boolean;
+function TACBrCTe.Enviar(ALote: Integer; Imprimir: Boolean = True;
+      ASincrono: Boolean = False): Boolean;
 begin
-  Result := Enviar(IntToStr(ALote), Imprimir);
+  Result := Enviar(IntToStr(ALote), Imprimir, ASincrono);
 end;
 
-function TACBrCTe.Enviar(const ALote: String; Imprimir: Boolean): Boolean;
+function TACBrCTe.Enviar(const ALote: String; Imprimir: Boolean = True;
+      ASincrono: Boolean = False): Boolean;
 var
   i: Integer;
 begin
@@ -696,9 +711,18 @@ begin
   if Conhecimentos.Count <= 0 then
     GerarException(ACBrStr('ERRO: Nenhum CT-e adicionado ao Lote'));
 
-  if Conhecimentos.Count > 50 then
-    GerarException(ACBrStr('ERRO: Conjunto de CT-e transmitidos (máximo de 50 CT-e)' +
-      ' excedido. Quantidade atual: ' + IntToStr(Conhecimentos.Count)));
+  if ASincrono then
+  begin
+    if Conhecimentos.Count > 1 then
+      GerarException(ACBrStr('ERRO: Conjunto de CT-e transmitidos (máximo de 1 CT-e)' +
+        ' excedido. Quantidade atual: ' + IntToStr(Conhecimentos.Count)));
+  end
+  else
+  begin
+    if Conhecimentos.Count > 50 then
+      GerarException(ACBrStr('ERRO: Conjunto de CT-e transmitidos (máximo de 50 CT-e)' +
+        ' excedido. Quantidade atual: ' + IntToStr(Conhecimentos.Count)));
+  end;
 
   Conhecimentos.Assinar;
   Conhecimentos.Validar;
@@ -706,7 +730,7 @@ begin
   if Configuracoes.Geral.ModeloDF = moCTeOS then
     Result := WebServices.EnviaOS(ALote)
   else
-    Result := WebServices.Envia(ALote);
+    Result := WebServices.Envia(ALote, ASincrono);
 
   if DACTE <> nil then
   begin
@@ -760,7 +784,7 @@ begin
     EventoCTe.Evento.Clear;
     with EventoCTe.Evento.New do
     begin
-      infEvento.CNPJ := copy(OnlyNumber(WebServices.Consulta.CTeChave), 7, 14);
+      infEvento.CNPJ := Conhecimentos.Items[i].CTe.Emit.CNPJ;
       infEvento.cOrgao := StrToIntDef(copy(OnlyNumber(WebServices.Consulta.CTeChave), 1, 2), 0);
       infEvento.dhEvento := now;
       infEvento.tpEvento := teCancelamento;
