@@ -393,8 +393,11 @@ begin
     4104501: Result :=  '50'; // Capanema/PR
     4104659: Result := '141'; // Carambei/PR
     4107207: Result :=  '68'; // Dois Vizinhos/PR
+    4107736: Result := '140'; // Fernandes Pinheiro/PR
     4108403: Result :=  '35'; // Francisco Beltrao/PR
     4109807: Result := '332'; // Ibipora/PR
+    4113304: Result :=  '53'; // Laranjeiras do Sul/PR
+    4119608: Result := '104'; // Pitanga/PR
     4120606: Result :=  '28'; // Prudentopolis/PR
     4122008: Result :=  '19'; // Rio Azul/PR
     4123501: Result :=  '54'; // Santa Helena/PR
@@ -402,8 +405,6 @@ begin
     4126306: Result :=  '61'; // Senges/PR
     4127106: Result := '260'; // Telemaco Borba/PR
     4127700: Result := '136'; // Toledo/PR
-    4119608: Result := '104'; // Pitanga/PR
-    4107736: Result := '140'; // Fernandes Pinheiro/PR
   else
     Result := '';
   end;
@@ -756,8 +757,8 @@ begin
 
      proAssessorPublico:
        begin
-         Gerador.Prefixo := 'nfse:';
-         Gerador.wGrupoNFSe('Nfse.Execute');
+//         Gerador.Prefixo := 'nfse:';
+         Gerador.wGrupoNFSe('Nfse.Execute xmlns="nfse"');
          Gerador.wCampoNFSe(tcStr, '', 'Operacao', 1, 1, 1, '1', '');
          Gerador.wCampoNFSe(tcStr, '', 'Usuario', 1, 1, 1, UserWeb, '');
          Gerador.wCampoNFSe(tcStr, '', 'Senha', 1, 1, 1, SenhaWeb, '');
@@ -916,8 +917,8 @@ begin
 //                                     '<SEQUENCIA>'+NUMERO DA NOTA+'</SEQUENCIA>'+
                    '</IDENTIFICACAO></NFSE>';
 
-        Gerador.Prefixo := 'nfse:';
-        Gerador.wGrupoNFSe('Nfse.Execute');
+//         Gerador.Prefixo := 'nfse:';
+        Gerador.wGrupoNFSe('Nfse.Execute xmlns="nfse"');
         Gerador.wCampoNFSe(tcStr, '', 'Operacao', 1, 1, 1, '3', '');
         Gerador.wCampoNFSe(tcStr, '', 'Usuario', 1, 1, 1, UserWeb, '');
         Gerador.wCampoNFSe(tcStr, '', 'Senha', 1, 1, 1, SenhaWeb, '');
@@ -1093,8 +1094,8 @@ begin
 //                                     '<SEQUENCIA>'+NUMERO DA NOTA+'</SEQUENCIA>'+
                    '</IDENTIFICACAO></NFSE>';
 
-        Gerador.Prefixo := 'nfse:';
-        Gerador.wGrupoNFSe('Nfse.Execute');
+//         Gerador.Prefixo := 'nfse:';
+        Gerador.wGrupoNFSe('Nfse.Execute xmlns="nfse"');
         Gerador.wCampoNFSe(tcStr, '', 'Operacao', 1, 1, 1, '3', '');
         Gerador.wCampoNFSe(tcStr, '', 'Usuario', 1, 1, 1, UserWeb, '');
         Gerador.wCampoNFSe(tcStr, '', 'Senha', 1, 1, 1, SenhaWeb, '');
@@ -1604,7 +1605,7 @@ end;
 
 function TNFSeG.Gera_DadosMsgCancelarNFSe: String;
 var
-  TagI, TagF: string;
+  TagI, TagF, strTemp: string;
 begin
   SetAtributos;
   Gerador.ArquivoFormatoXML := '';
@@ -1829,6 +1830,22 @@ begin
         Gerador.wGrupoNFSe('datacancelamento>' + FormatDateTime('dd/mm/yyyy', now) + '</datacancelamento');
         Gerador.wGrupoNFSe('/nfd');
       end;
+
+    proAssessorPublico:
+      begin
+        strTemp := '<NFSE><IDENTIFICACAO>' +
+                   '<INSCRICAO>' + IM + '</INSCRICAO>' +
+                   '<LOTE>' + NumeroLote + '</LOTE>' +
+                   '<SEQUENCIA>' + NumeroNfse + '</SEQUENCIA>' +
+                   '</IDENTIFICACAO></NFSE>';
+
+        Gerador.wGrupoNFSe('Nfse.Execute xmlns="nfse"');
+        Gerador.wCampoNFSe(tcStr, '', 'Operacao', 1, 1, 1, '2', '');
+        Gerador.wCampoNFSe(tcStr, '', 'Usuario', 1, 1, 1, UserWeb, '');
+        Gerador.wCampoNFSe(tcStr, '', 'Senha', 1, 1, 1, SenhaWeb, '');
+        Gerador.wCampoNFSe(tcStr, '', 'Webxml', 1, 1, 1, strTemp, '');
+        Gerador.wGrupoNFSe('/Nfse.Execute');
+      end;
   else
     begin
       Gerador.Prefixo := Prefixo4;
@@ -1889,20 +1906,9 @@ begin
                 '</' + Prefixo3 + 'Pedido>';
       end;
 
-    proEquiplano,
-    proGinfes,
-    proGoverna,
-    proEGoverneISS,
-    proISSDSF,
-    proCTA,
-    proCONAM,
-    proEL,
-    proInfisc,
-    proInfiscv11,
-    proSP,
-    proNotaBlu,
-    proSMARAPD,
-    proGiap,
+    proAssessorPublico, proEquiplano, proGinfes, proGoverna, proEGoverneISS,
+    proISSDSF, proCTA, proCONAM, proEL, proInfisc, proInfiscv11, proSP,
+    proNotaBlu, proSMARAPD, proGiap,
     proIPM:
       begin
         TagI := '';

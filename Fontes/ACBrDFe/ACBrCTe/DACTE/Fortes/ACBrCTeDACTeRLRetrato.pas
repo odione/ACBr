@@ -728,7 +728,6 @@ type
     Linhas: integer;
 
     procedure Itens;
-    procedure PintarQRCode(const QRCodeData: String; APict: TPicture);
   public
     constructor Create(TheOwner: TComponent); override;
 
@@ -739,7 +738,7 @@ implementation
 
 uses
   DateUtils, ACBrUtil, ACBrDFeUtil, ACBrValidador, pcteConversaoCTe, ACBrCTe,
-  ACBrDelphiZXingQRCode;
+  ACBrDFeReport, ACBrDFeReportFortes, ACBrDelphiZXingQRCode;
 
 {$IFnDEF FPC}
   {$R *.dfm}
@@ -1062,6 +1061,7 @@ end;
 procedure TfrmDACTeRLRetrato.rlb_02_CabecalhoBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 var
+  CarregouLogo: Boolean;
   strChaveContingencia: string;
   vStringStream: TStringStream;
 begin
@@ -1069,20 +1069,7 @@ begin
 
   if (fpDACTe.Logo <> '') then
   begin
-    if FilesExists(fpDACTe.Logo) then
-      rliLogo.Picture.LoadFromFile(fpDACTe.Logo)
-    else
-    begin
-      vStringStream := TStringStream.Create(fpDACTe.Logo);
-      try
-        try
-          rliLogo.Picture.Bitmap.LoadFromStream(vStringStream);
-        except
-        end;
-      finally
-        vStringStream.Free;
-      end;
-    end;
+    CarregouLogo := TDFeReportFortes.CarregarLogo(rliLogo, fpDACTe.Logo);
   end
   else
   begin
@@ -1100,17 +1087,8 @@ begin
     rliLogo.Left := 3;
     rliLogo.Height := 115;//91;
     rliLogo.Width := 324;//321
-  end;
-
-  rllModal.Caption := ACBrStr(TpModalToStrText(fpCTe.Ide.modal));
-  rllModelo.Caption := IntToStr(fpCTe.Ide.modelo);
-  rllSerie.Caption := IntToStr(fpCTe.Ide.serie);
-  rllNumCte.Caption := FormatFloat('000,000,000', fpCTe.Ide.nCT);
-  rllEmissao.Caption := FormatDateTimeBr(fpCTe.Ide.dhEmi);
-  rlbCodigoBarras.Caption := OnlyNumber(fpCTe.InfCTe.Id);
-  rllChave.Caption := FormatarChaveAcesso(OnlyNumber(fpCTe.InfCTe.Id));
-
-  if not fpDACTe.ExpandeLogoMarca then
+  end
+  else
   begin
     rlmEmitente.Enabled := True;
     rlmDadosEmitente.Enabled := True;
@@ -1140,6 +1118,14 @@ begin
         rlmDadosEmitente.Lines.Add('E-MAIL: ' + fpDACTe.Email);
     end;
   end;
+
+  rllModal.Caption := ACBrStr(TpModalToStrText(fpCTe.Ide.modal));
+  rllModelo.Caption := IntToStr(fpCTe.Ide.modelo);
+  rllSerie.Caption := IntToStr(fpCTe.Ide.serie);
+  rllNumCte.Caption := FormatFloat('000,000,000', fpCTe.Ide.nCT);
+  rllEmissao.Caption := FormatDateTimeBr(fpCTe.Ide.dhEmi);
+  rlbCodigoBarras.Caption := OnlyNumber(fpCTe.InfCTe.Id);
+  rllChave.Caption := FormatarChaveAcesso(OnlyNumber(fpCTe.InfCTe.Id));
 
   rllTipoCte.Caption := ACBrStr(tpCTToStrText(fpCTe.Ide.tpCTe));
   rllTipoServico.Caption := ACBrStr(TpServToStrText(fpCTe.Ide.tpServ));
@@ -2631,7 +2617,7 @@ begin
   RLCTe.Title := 'CT-e: ' + FormatFloat('000,000,000', fpCTe.Ide.nCT);
 
   if not EstaVazio(Trim(fpCTe.infCTeSupl.qrCodCTe)) then
-    PintarQRCode( fpCTe.infCTeSupl.qrCodCTe, imgQRCode.Picture )
+    PintarQRCode(fpCTe.infCTeSupl.qrCodCTe, imgQRCode.Picture, qrUTF8NoBOM)
   else
   begin
     rlsLinhaV07.Height     := 26;
@@ -2641,41 +2627,6 @@ begin
     rllVariavel1.Width     := 419;
     RLLabel198.Width       := 419;
     imgQRCode.Visible      := False;
-  end;
-end;
-
-procedure TfrmDACTeRLRetrato.PintarQRCode(const QRCodeData: String; APict: TPicture);
-var
-  QRCode: TDelphiZXingQRCode;
-  QRCodeBitmap: TBitmap;
-  Row, Column: Integer;
-begin
-  QRCode       := TDelphiZXingQRCode.Create;
-  QRCodeBitmap := TBitmap.Create;
-  try
-    QRCode.Encoding  := qrUTF8NoBOM;
-    QRCode.QuietZone := 1;
-    QRCode.Data      := WideString(QRCodeData);
-
-    //QRCodeBitmap.SetSize(QRCode.Rows, QRCode.Columns);
-    QRCodeBitmap.Width  := QRCode.Columns;
-    QRCodeBitmap.Height := QRCode.Rows;
-
-    for Row := 0 to QRCode.Rows - 1 do
-    begin
-      for Column := 0 to QRCode.Columns - 1 do
-      begin
-        if (QRCode.IsBlack[Row, Column]) then
-          QRCodeBitmap.Canvas.Pixels[Column, Row] := clBlack
-        else
-          QRCodeBitmap.Canvas.Pixels[Column, Row] := clWhite;
-      end;
-    end;
-
-    APict.Assign(QRCodeBitmap);
-  finally
-    QRCode.Free;
-    QRCodeBitmap.Free;
   end;
 end;
 

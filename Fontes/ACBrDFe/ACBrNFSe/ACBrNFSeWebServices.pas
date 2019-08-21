@@ -1889,6 +1889,7 @@ begin
                                 ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' +
                                 ' xmsns:xsd="http://www.w3.org/2001/XMLSchema">';
 
+           proAssessorPublico,
            proGoverna,
            proInfisc,
            proInfiscv11,
@@ -1930,15 +1931,12 @@ begin
 //           proNotaBlu: FTagI := '<' + FTagGrupo +
 //                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
+           proAssessorPublico,
            proFISSLex,
            proIPM,
            proGiap,
            proSMARAPD: FTagI := '';
 
-           proAssessorPublico: FTagI := '<soapenv:Envelope '+
-                                'xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="nfse">'+
-                                '<soapenv:Header/>'+
-                                '<soapenv:Body>';
          else
            FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
          end;
@@ -1980,15 +1978,12 @@ begin
 //           proNotaBlu: FTagI := '<' + FTagGrupo +
 //                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
+           proAssessorPublico,
            proFISSLex,
            proIPM,
            proGiap,
            proSMARAPD: FTagI := '';
 
-           proAssessorPublico: FTagI := '<soapenv:Envelope '+
-                                'xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="nfse">'+
-                                '<soapenv:Header/>'+
-                                '<soapenv:Body>';
          else
            FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
          end;
@@ -2029,16 +2024,13 @@ begin
 //           proNotaBlu: FTagI := '<' + FTagGrupo +
 //                             ' xmlns:p1="http://nfse.blumenau.sc.gov.br" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
 
+           proAssessorPublico,
            proGoverna,
            proFISSLex,
            proIPM,
            proGiap,
            proSMARAPD: FTagI := '';
 
-           proAssessorPublico: FTagI := '<soapenv:Envelope '+
-                                'xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="nfse">'+
-                                '<soapenv:Header/>'+
-                                '<soapenv:Body>';
          else
            FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
          end;
@@ -2063,6 +2055,7 @@ begin
            proTinus,
            proNotaBlu: FTagI := '<' + FTagGrupo + '>';
 
+           proAssessorPublico,
            proFISSLex,
            proIPM,
            proGiap,
@@ -2125,16 +2118,13 @@ begin
                         FTagI := '<p1:' + FTagGrupo + FNameSpaceCan + '>';
                       end;
 
+           proAssessorPublico,
            proBetha,
            proGoverna,
            proSMARAPD,
            proGiap,
            proIPM: FTagI := '';
 
-           proAssessorPublico: FTagI := '<soapenv:Envelope '+
-                                'xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="nfse">'+
-                                '<soapenv:Header/>'+
-                                '<soapenv:Body>';
          else
            begin
              FNameSpaceCan := FNameSpaceDad;
@@ -2161,6 +2151,7 @@ begin
            proTinus,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
+           proAssessorPublico,
            proSMARAPD,
            proGiap,
            proIPM: FTagI := '';
@@ -2173,9 +2164,7 @@ begin
        begin
          case FProvedor of
            proAssessorPublico:
-             FTagI := '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="nfse">'+
-                      '<soapenv:Header/>'+
-                      '<soapenv:Body>';
+             FTagI := '';
          else
            FTagI := '<' + FPrefixo3 + 'EnviarLoteRpsSincronoEnvio' + FNameSpaceDad + '>';
          end;	 
@@ -2197,6 +2186,7 @@ begin
                                  ifThen(FPConfiguracoesNFSe.Geral.ConfigGeral.Identificador <> '', ' ' +
                                         FPConfiguracoesNFSe.Geral.ConfigGeral.Identificador + '="' + FURI + '"', '') + '>'};
 
+           proAssessorPublico,
            proSMARAPD,
            proGiap,
            proIPM: FTagI := '';
@@ -2227,6 +2217,7 @@ begin
     LayNfseRecepcaoLote:
        begin
          case FProvedor of
+           proAssessorPublico,
            proInfisc,
            proInfiscv11,
            proGoverna,
@@ -2239,58 +2230,43 @@ begin
 
     LayNfseConsultaSitLoteRps:
        begin
-         case FProvedor of
-           proAssessorPublico: FTagF := '</soapenv:Body></soapenv:Envelope>';
-         else
-           FTagF := '</' + FTagGrupo + '>';
-         end;
+         FTagF := '</' + FTagGrupo + '>';
 
-         if FProvedor in [proFISSLex, proSMARAPD, proIPM, proGiap] then
+         if FProvedor in [proAssessorPublico, proFISSLex, proSMARAPD, proIPM, proGiap] then
            FTagF := '';
        end;
 
     LayNfseConsultaLote:
        begin
-         case FProvedor of
-           proAssessorPublico: FTagF := '</soapenv:Body></soapenv:Envelope>';
-         else
-           FTagF := '</' + FTagGrupo + '>';
-         end;
+         FTagF := '</' + FTagGrupo + '>';
 
-         if FProvedor in [proFISSLex, proSMARAPD, proIPM, proGiap] then
+         if FProvedor in [proAssessorPublico, proFISSLex, proSMARAPD, proIPM, proGiap] then
            FTagF := '';
        end;
 
     LayNfseConsultaNfseRps:
        begin
-         case FProvedor of
-           proAssessorPublico: FTagF := '</soapenv:Body></soapenv:Envelope>';
-         else
-           FTagF := '</' + FTagGrupo + '>';
-         end;
+         FTagF := '</' + FTagGrupo + '>';
 
          if FProvedor in [proDBSeller] then
            FTagF := FTagF + '</ConsultarNfsePorRps>';
 
-         if FProvedor in [proGoverna, proFISSLex, proSMARAPD, proIPM, proGiap] then
+         if FProvedor in [proAssessorPublico, proGoverna, proFISSLex, proSMARAPD, proIPM, proGiap] then
            FTagF := '';
        end;
 
     LayNfseConsultaNfse:
        begin
-         case FProvedor of
-           proAssessorPublico: FTagF := '</soapenv:Body></soapenv:Envelope>';
-         else
-           FTagF := '</' + FTagGrupo + '>';
-         end;
+         FTagF := '</' + FTagGrupo + '>';
 
-         if FProvedor in [proFISSLex, proSMARAPD, proIPM, proGiap] then
+         if FProvedor in [proAssessorPublico, proFISSLex, proSMARAPD, proIPM, proGiap] then
            FTagF := '';
        end;
 
     LayNfseCancelaNfse:
        begin
          case FProvedor of
+           proAssessorPublico,
            proBetha,
            proGoverna,
            proIPM,
@@ -2309,6 +2285,7 @@ begin
     LayNfseGerar:
        begin
          case FProvedor of
+           proAssessorPublico,
            proIPM: FTagF := '';
          else
            FTagF := '</' + FTagGrupo + '>';
@@ -2318,7 +2295,7 @@ begin
     LayNfseRecepcaoLoteSincrono:
        begin
          if FProvedor = proAssessorPublico then
-           FTagF := '</soapenv:Body></soapenv:Envelope>'
+           FTagF := ''
          else
            FTagF := '</' + FPrefixo3 + 'EnviarLoteRpsSincronoEnvio>';
        end;
@@ -2329,6 +2306,7 @@ begin
            proAgili,
            proAgiliv2: FTagF := '</' + FPrefixo3 + 'SubstituirNfseEnvio>';
 
+           proAssessorPublico,
            proSMARAPD,
            proGiap,
            proIPM: FTagF := '';
@@ -4670,10 +4648,12 @@ begin
       ValorNota  := FNotasFiscais.Items[0].NFSe.ValoresNfse.ValorLiquidoNfse;
 
       // Necessário para o provedor ISSDSF
-      NumeroLote := FNumeroLote;
       Transacao  := FNotasFiscais.Transacao;
-      NumeroLote := FNotasFiscais.NumeroLote;
       Notas      := FvNotas;
+
+      NumeroLote := FNotasFiscais.NumeroLote;
+      if NumeroLote = '' then
+        NumeroLote := FNumeroLote;
 
       if FProvedor = proEGoverneISS then
         Transacao := (SimNaoToStr(FNotasFiscais.Items[0].NFSe.Producao) = '2');
@@ -5860,7 +5840,8 @@ begin
           proInfisc,
           proInfiscv11,
           proSafeWeb,
-          proTiplanv2 : Result := True
+          proTiplanv2,
+          proWebISSv2 : Result := True
         else
           begin
             Sleep(Configuracoes.WebServices.AguardarConsultaRet);
