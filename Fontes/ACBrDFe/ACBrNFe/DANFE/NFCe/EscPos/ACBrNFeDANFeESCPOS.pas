@@ -641,7 +641,7 @@ begin
 
     InfoQrCode.Add( '<qrcode_tipo>2</qrcode_tipo>'+
                     '<qrcode_error>0</qrcode_error>'+
-                    '<qrcode_largura>'+IntToStr(min(4,FPosPrinter.ConfigQRCode.LarguraModulo))+'</qrcode_largura>'+
+                    '<qrcode_largura>'+IntToStr(FPosPrinter.ConfigQRCode.LarguraModulo)+'</qrcode_largura>'+
                     '<qrcode>'+DadosQRCode+'</qrcode>');
 
     if Cancelamento then
@@ -762,8 +762,13 @@ end;
 
 procedure TACBrNFeDANFeESCPOS.ImprimirDANFE(NFE: TNFe);
 begin
-  AtivarPosPrinter;
-  MontarEnviarDANFE(NFE, False);
+  IF Cancelada then
+    ImprimirDANFECancelado(NFE)
+  else
+  begin
+    AtivarPosPrinter;
+    MontarEnviarDANFE(NFE, False);
+  end;
 end;
 
 procedure TACBrNFeDANFeESCPOS.ImprimirDANFEResumido(NFE: TNFe);
@@ -824,7 +829,6 @@ begin
 
   FPosPrinter.Buffer.Add('</linha_simples>');
 end;
-
 
 procedure TACBrNFeDANFeESCPOS.GerarObservacoesEvento;
 begin

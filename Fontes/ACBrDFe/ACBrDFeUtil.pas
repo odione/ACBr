@@ -41,7 +41,7 @@ unit ACBrDFeUtil;
 interface
 
 uses
-  Classes, StrUtils, SysUtils, synacode,
+  Classes, StrUtils, SysUtils, synacode, synautil,
   {IniFiles,} ACBrDFeSSL, pcnAuxiliar;
 
 function FormatarNumeroDocumentoFiscal(AValue: String): String;
@@ -67,12 +67,14 @@ function ValidaNVE(const AValue: string): Boolean;
 function XmlEstaAssinado(const AXML: String): Boolean;
 function SignatureElement(const URI: String; AddX509Data: Boolean;
     const IdSignature: String = ''; const Digest: TSSLDgst = dgstSHA1): String;
-function ExtraiURI(const AXML: String; IdAttr: String = ''): String;
+function EncontrarURI(const AXML: String; docElement: String = ''; IdAttr: String = ''): String;
 function ObterNomeMunicipio(const AxUF: String; const AcMun: Integer;
                               const APathArqMun: String): String;
 function ObterCodigoMunicipio(const AxMun, AxUF, APathArqMun: String ): Integer;
 
 function CalcularHashCSRT(const ACSRT, AChave: String): string;
+function CalcularHashDados(const ADados: TStream; AChave: String): string;
+function CalcularHashArquivo(const APathArquivo: String; AChave: String): string;
 
 implementation
 
@@ -378,15 +380,21 @@ begin
   {*)}
 end;
 
-function ExtraiURI(const AXML: String; IdAttr: String): String;
+function EncontrarURI(const AXML: String; docElement: String; IdAttr: String
+  ): String;
 var
   I, J: integer;
 begin
   Result := '';
-  if IdAttr = '' then
+  if (IdAttr = '') then
     IdAttr := 'Id';
 
-  I := PosEx(IdAttr+'=', AXML);
+  if (docElement <> '') then
+    I := Pos('<'+docElement, AXML)
+  else
+    I := 0;
+
+  I := PosEx(IdAttr+'=', AXML, I);
   if I = 0 then       // XML não tem URI
     Exit;
 
@@ -479,8 +487,42 @@ begin
   Result := EncodeBase64(SHA1(ACSRT + AChave));
 end;
 
+function CalcularHashDados(const ADados: TStream; AChave: String): string;
+var
+  sAux: AnsiString;
+begin
+  if (ADados.Size = 0) then
+    raise EACBrDFeException.Create('Dados não especificados');
+
+  ADados.Position := 0;
+  sAux := ReadStrFromStream(ADados, ADados.Size);
+  sAux := EncodeBase64(sAux);
+
+  Result := EncodeBase64(SHA1(AnsiString(AChave) + sAux));
+end;
+
+function CalcularHashArquivo(const APathArquivo: String; AChave: String
+  ): string;
+var
+  FS: TFileStream;
+begin
+  if (APathArquivo = '') then
+    raise EACBrDFeException.Create('Path Arquivo não especificados');
+
+  if not FileExists(APathArquivo) then
+    raise EACBrDFeException.Create('Arquivo:  '+APathArquivo+'não encontrado');
+
+  FS := TFileStream.Create(APathArquivo, fmOpenRead);
+  try
+    Result := CalcularHashDados(FS, AChave);
+  finally
+    FS.Free;
+  end;
+end;
+
 initialization
 
   Randomize;
 
 end.
+
