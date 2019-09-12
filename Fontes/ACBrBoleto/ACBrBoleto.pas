@@ -63,7 +63,7 @@ const
   CConta = 'CONTA';
   CTitulo = 'TITULO';
 
-  cACBrTipoOcorrenciaDecricao: array[0..292] of String = (
+  cACBrTipoOcorrenciaDecricao: array[0..293] of String = (
     'Remessa Registrar',
     'Remessa Baixar',
     'Remessa Debitar Em Conta',
@@ -356,7 +356,8 @@ const
     'Retorno Exclusão e Negativação por Outros Motivos',
     'Retorno Ocorrência Informacional por Outros Motivos',
     'Retorno Inclusão de Negativação',
-    'Retorno Exclusão de Negativação'
+    'Retorno Exclusão de Negativação',
+    'Retorno Em Transito'
 );
 
 type
@@ -389,7 +390,8 @@ type
     cobCrediSIS,
     cobUnicredES,
     cobBancoCresolSCRS,
-    cobCitiBank
+    cobCitiBank,
+    cobBancoABCBrasil
     );
 
   TACBrTitulo = class;
@@ -409,6 +411,9 @@ type
     tdCancelamentoDesconto);
 
   TACBrLayoutRemessa = (c400, c240);
+
+  {Identificação da Distribuicao}
+  TACBrIdentDistribuicao = (tbBancoDistribui, tbClienteDistribui);
 
   {Tipos de ocorrências permitidas no arquivos remessa / retorno}
   TACBrTipoOcorrencia =
@@ -707,7 +712,11 @@ type
     toRetornoExcusaoNegativacaoOutrosMotivos,
     toRetornoOcorrenciaInfOutrosMotivos,
     toRetornoInclusaoNegativacao,
-    toRetornoExclusaoNegativacao
+    toRetornoExclusaoNegativacao,
+    toRetornoEmTransito,
+    toRemessaSustarProtestoBaixarTitulo,
+    toRemessaSustarProtestoManterCarteira,
+    toRemessaRecusaAlegacaoSacado
   );
 
   {TACBrOcorrencia}
@@ -902,7 +911,7 @@ type
     property CasasDecimaisMoraJuros: Integer read GetCasasDecimaisMoraJuros write SetCasasDecimaisMoraJuros;
   end;
 
-  TACBrResponEmissao = (tbCliEmite,tbBancoEmite,tbBancoReemite,tbBancoNaoReemite);
+  TACBrResponEmissao = (tbCliEmite,tbBancoEmite,tbBancoReemite,tbBancoNaoReemite, tbBancoPreEmite);
   TACBrCaracTitulo = (tcSimples,tcVinculada,tcCaucionada,tcDescontada,tcVendor);
   TACBrPessoa = (pFisica,pJuridica,pOutras);
   TACBrPessoaCedente = pFisica..pJuridica;
@@ -969,6 +978,8 @@ type
     fAcbrBoleto    : TACBrBoleto;
     fTipoCarteira: TACBrTipoCarteira;
     fDigitoVerificadorAgenciaConta: String;
+    fIdentDistribuicao: TACBrIdentDistribuicao;
+    fOperacao: string;
     procedure SetAgencia(const AValue: String);
     procedure SetCNPJCPF ( const AValue: String ) ;
     procedure SetConta(const AValue: String);
@@ -1004,6 +1015,8 @@ type
     property CEP         : String  read fCEP         write fCEP;
     property Telefone    : String  read fTelefone    write fTelefone;
     property DigitoVerificadorAgenciaConta  : String read fDigitoVerificadorAgenciaConta write fDigitoVerificadorAgenciaConta;
+    property IdentDistribuicao: TACBrIdentDistribuicao read fIdentDistribuicao  write fIdentDistribuicao default tbClienteDistribui;
+    property Operacao: string read fOperacao write fOperacao;
   end;
 
 
@@ -1451,7 +1464,7 @@ Uses Forms, Math, dateutils, strutils,
      ACBrBancoNordeste , ACBrBancoBRB, ACBrBancoBic, ACBrBancoBradescoSICOOB,
      ACBrBancoSafra, ACBrBancoSafraBradesco, ACBrBancoCecred, ACBrBancoBrasilSicoob,
      ACBrUniprime, ACBrBancoUnicredRS, ACBrBancoBanese, ACBrBancoCredisis, ACBrBancoUnicredES,
-     ACBrBancoCresol, ACBrBancoCitiBank;
+     ACBrBancoCresol, ACBrBancoCitiBank, ACBrBancoABCBrasil;
 
 {$IFNDEF FPC}
    {$R ACBrBoleto.dcr}
@@ -2426,6 +2439,7 @@ begin
      cobBanese              : fBancoClass := TACBrBancoBanese.Create(Self);         {047}
      cobBancoCresolSCRS     : fBancoClass := TACBrBancoCresol.create(Self);         {133 + 237}
      cobCitiBank            : fBancoClass := TACBrBancoCitiBank.Create(Self);       {745}
+     cobBancoABCBrasil      : fBancoClass := TACBrBancoABCBrasil.Create(Self);      {246}
 
    else
      fBancoClass := TACBrBancoClass.create(Self);
@@ -3066,6 +3080,7 @@ begin
     085: Result := cobBancoCECRED;
     047: Result := cobBanese;
     745: Result := cobCitiBank;
+    246: Result := cobBancoABCBrasil;
   else
     raise Exception.Create('Erro ao configurar o tipo de cobrança.'+
       sLineBreak+'Número do Banco inválido: '+IntToStr(NumeroBanco));
@@ -3079,7 +3094,7 @@ var
   wTipoInscricao, wRespEmissao, wLayoutBoleto: Integer;
   wNumeroBanco, wIndiceACBr, wCNAB, wNumeroCorrespondente,
   wVersaoLote, wVersaoArquivo: Integer;
-  wLocalPagto, MemFormatada: String;
+  wLocalPagto, MemFormatada, MemDetalhamento: String;
   Sessao, sFim: String;
   I: Integer;
 begin
@@ -3210,6 +3225,9 @@ begin
 
           MemFormatada := IniBoletos.ReadString(Sessao,'Mensagem','') ;
           MemFormatada := StringReplace( MemFormatada,'|',sLineBreak, [rfReplaceAll] );
+
+          MemDetalhamento := IniBoletos.ReadString(Sessao,'Detalhamento','') ;
+          MemDetalhamento := StringReplace( MemDetalhamento,'|',sLineBreak, [rfReplaceAll] );
           with Titulo do
           begin
             Aceite        := TACBrAceiteTitulo(IniBoletos.ReadInteger(Sessao,'Aceite',1));
@@ -3259,6 +3277,7 @@ begin
             Sacado.Email        := IniBoletos.ReadString(Sessao,'Sacado.Email',Sacado.Email);
             EspecieMod          := IniBoletos.ReadString(Sessao,'EspecieMod',EspecieMod);
             Mensagem.Text       := MemFormatada;
+            Detalhamento.Text   := MemDetalhamento;
             Instrucao1          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao1',Instrucao1),2);
             Instrucao2          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao2',Instrucao2),2);
             TotalParcelas       := IniBoletos.ReadInteger(Sessao,'TotalParcelas',TotalParcelas);

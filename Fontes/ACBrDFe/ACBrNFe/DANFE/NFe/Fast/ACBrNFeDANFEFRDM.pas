@@ -471,6 +471,8 @@ begin
         FieldDefs.Add('Mask_vUnCom', ftString, 30);
         FieldDefs.Add('LogoCarregado', ftBlob);
         FieldDefs.Add('QrCodeCarregado', ftGraphic, 1000);
+        FieldDefs.Add('QrCodeLateral', ftString, 1);
+        FieldDefs.Add('ImprimeEm1Linha', ftString, 1);
         FieldDefs.Add('DescricaoViaEstabelec', ftString, 30);
         FieldDefs.Add('QtdeItens', ftInteger);
         FieldDefs.Add('ExpandirDadosAdicionaisAuto', ftString, 1);
@@ -1395,6 +1397,8 @@ begin
         FieldByName('URL').AsString := TACBrNFe(DANFEClassOwner.ACBrNFe).GetURLConsultaNFCe(FNFe.Ide.cUF, FNFe.Ide.tpAmb, FNFe.infNFe.Versao)
       else
         FieldByName('URL').AsString := FNFe.infNFeSupl.urlChave;
+
+      FieldByName('MensagemFiscal').AsString := Trim(FieldByName('MensagemFiscal').AsString);
     end
     else
     begin
@@ -1733,6 +1737,10 @@ begin
     FieldByName('Mask_vUnCom').AsString                 := FDANFEClassOwner.CasasDecimais.MaskvUnCom;
     FieldByName('Casas_qCom').AsInteger                 := FDANFEClassOwner.CasasDecimais.qCom;
     FieldByName('Casas_vUnCom').AsInteger               := FDANFEClassOwner.CasasDecimais.vUnCom;
+    FieldByName('ImprimeEm1Linha').AsString             := IfThen(FDANFEClassOwner.ImprimeEmUmaLinha, 'S', 'N');
+
+    if (DANFEClassOwner is TACBrNFeDANFCEClass) then
+      FieldByName('QrCodeLateral').AsString := IfThen( TACBrNFeDANFCEClass(FDANFEClassOwner ).ImprimeQRCodeLateral, 'S', 'N');
 
     if (FDANFEClassOwner is TACBrNFeDANFCEClass) then
       FieldByName('ImprimeDescAcrescItem').AsInteger    := IfThen( TACBrNFeDANFCEFR(FDANFEClassOwner).ImprimeDescAcrescItem, 1 , 0 );
@@ -1986,6 +1994,7 @@ var
   I: Integer;
   wProjectStream: TStringStream;
   Page: TfrxReportPage;
+  MultiplicadorMargem: Integer;
 begin
   Result := False;
 
@@ -2020,6 +2029,7 @@ begin
   frxReport.PreviewOptions.ShowCaptions := FExibeCaptionButton;
   frxReport.PreviewOptions.ZoomMode     := FZoomModePadrao;
   frxReport.OnPreview := frxReportPreview;
+  frxReport.FileName := DANFEClassOwner.NomeDocumento;
 
   // Define a impressora
   if NaoEstaVazio(DANFEClassOwner.Impressora) then
@@ -2052,20 +2062,29 @@ begin
       raise EACBrNFeDANFEFR.Create('Propriedade ACBrNFe não assinalada.');
   end;
 
-  if Assigned(NFe) and (NFe.Ide.modelo = 55) then
+  if Assigned(NFe) then
+  begin
+
+    // Informar margem para NFe em cm, NFCe em mm
+    if NFe.Ide.modelo = 55 then
+	  MultiplicadorMargem := 10
+	else
+	  MultiplicadorMargem := 1;
+
     for i := 0 to (frxReport.PreviewPages.Count - 1) do
     begin
       Page := frxReport.PreviewPages.Page[i];
       if (DANFEClassOwner.MargemSuperior > 0) then
-        Page.TopMargin    := DANFEClassOwner.MargemSuperior * 10;
+        Page.TopMargin    := DANFEClassOwner.MargemSuperior * MultiplicadorMargem;
       if (DANFEClassOwner.MargemInferior > 0) then
-        Page.BottomMargin := DANFEClassOwner.MargemInferior * 10;
+        Page.BottomMargin := DANFEClassOwner.MargemInferior * MultiplicadorMargem;
       if (DANFEClassOwner.MargemEsquerda > 0) then
-        Page.LeftMargin   := DANFEClassOwner.MargemEsquerda * 10;
+        Page.LeftMargin   := DANFEClassOwner.MargemEsquerda * MultiplicadorMargem;
       if (DANFEClassOwner.MargemDireita > 0) then
-        Page.RightMargin  := DANFEClassOwner.MargemDireita * 10;
+        Page.RightMargin  := DANFEClassOwner.MargemDireita * MultiplicadorMargem;
       frxReport.PreviewPages.ModifyPage(i, Page);
     end;
+  end;
 
 end;
 
@@ -2100,6 +2119,7 @@ begin
   frxReport.PreviewOptions.ShowCaptions := ExibeCaptionButton;
   frxReport.PreviewOptions.ZoomMode     := ZoomModePadrao;
   frxReport.OnPreview := frxReportPreview;
+  frxReport.FileName := DANFEClassOwner.NomeDocumento;
 
   // Define a impressora
   if NaoEstaVazio(DANFEClassOwner.Impressora) then
@@ -2161,6 +2181,7 @@ begin
   frxReport.PreviewOptions.ShowCaptions := ExibeCaptionButton;
   frxReport.PreviewOptions.ZoomMode     := ZoomModePadrao;
   frxReport.OnPreview := frxReportPreview;
+  frxReport.FileName := DANFEClassOwner.NomeDocumento;
 
   // Define a impressora
   if NaoEstaVazio(DANFEClassOwner.Impressora) then
@@ -2230,7 +2251,10 @@ begin
               else
                 qrcode := NFe.infNFeSupl.qrCode;
 
-              if Assigned(Sender) and (Sender.Name = 'ImgQrCode') then
+              if Assigned(Sender) and (Sender.Name = 'ImgQrCode1') then
+                PintarQRCode(qrcode, TfrxPictureView(Sender).Picture, qrUTF8NoBOM);
+
+              if Assigned(Sender) and (Sender.Name = 'ImgQrCode2') then
                 PintarQRCode(qrcode, TfrxPictureView(Sender).Picture, qrUTF8NoBOM);
 
               CpDescrProtocolo := frxReport.FindObject('Memo25');
