@@ -232,9 +232,7 @@ procedure NotaFiscal.Assinar(Assina: Boolean);
 var
   XMLStr, DocElemento, InfElemento, IdAttr: String;
   XMLUTF8: AnsiString;
-//  Leitor: TLeitor;
   Ok: Boolean;
-//  i: Integer;
 begin
   // Verifica se foi informado o Numero de Série do Certificado.
   if ( TACBrNFSe(TNotasFiscais(Collection).ACBrNFSe).SSL.NumeroSerie <> '' ) then
@@ -280,14 +278,17 @@ begin
 
     case Configuracoes.Geral.Provedor of
       proEGoverneISS: InfElemento := Configuracoes.Geral.ConfigGeral.Prefixo4 + 'NotaFiscal';
+
       pro4R:          InfElemento := 'Rps';
+
       proCTA,
       proNotaBlu:     InfElemento := 'RPS';
+
       proIPM:         InfElemento := 'nfse';
+
       proSMARAPD:     InfElemento := 'nfd';
+
       proGiap:        InfElemento := 'notaFiscal';
-//    else
-//      InfElemento := InfElemento;
     end;
 
     if Configuracoes.Geral.ConfigAssinar.URI then
@@ -296,7 +297,8 @@ begin
       IdAttr := '';
 
     if Assina then
-      FXMLAssinado := SSL.Assinar(String(XMLUTF8), DocElemento, InfElemento, '', '', '', IdAttr)
+      FXMLAssinado := SSL.Assinar(String(XMLUTF8), DocElemento, InfElemento,
+                                  '', '', '', IdAttr)
     else
       FXMLAssinado := XMLOriginal;
 
@@ -474,6 +476,7 @@ begin
     FNFSeW.NFSeWClass.DefTipos      := Configuracoes.Geral.ConfigSchemas.DefTipos;
     FNFSeW.NFSeWClass.ServicoEnviar := Configuracoes.Geral.ConfigSchemas.ServicoEnviar;
     FNFSeW.NFSeWClass.VersaoDados   := Configuracoes.Geral.ConfigXML.VersaoDados;
+    FNFSeW.NFSeWClass.Ambiente      := Configuracoes.WebServices.Ambiente;
 
     FNFSeW.NFSeWClass.Gerador.Opcoes.FormatoAlerta  := Configuracoes.Geral.FormatoAlerta;
     FNFSeW.NFSeWClass.Gerador.Opcoes.RetirarAcentos := Configuracoes.Geral.RetirarAcentos;
@@ -661,6 +664,7 @@ begin
   begin
     if Self.FConfiguracoes.Geral.Provedor in [proSP, proNotaBlu] then
       Self.Items[i].AssinaturaAdicional;
+
     Self.Items[i].Assinar(Assina);
   end;
 end;

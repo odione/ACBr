@@ -40,7 +40,7 @@ uses
 
 {$ENDIF}
   SysUtils, Classes, StrUtils,
-  synacode, pcnGerador, pnfsNFSe, pnfsConversao;
+  synacode, pcnGerador, pnfsNFSe, pcnConversao, pnfsConversao;
 
 type
 
@@ -69,6 +69,7 @@ type
     FServicoEnviar: String;
     FQuebradeLinha: String;
     FVersaoDados: String;
+    FAmbiente: TpcnTipoAmbiente;
 
   public
     constructor Create(ANFSeW: TNFSeW); virtual;
@@ -92,6 +93,7 @@ type
     property ServicoEnviar: String   read FServicoEnviar write FServicoEnviar;
     property QuebradeLinha: String   read FQuebradeLinha write FQuebradeLinha;
     property VersaoDados: String     read FVersaoDados   write FVersaoDados;
+    property Ambiente: TpcnTipoAmbiente read FAmbiente write FAmbiente default taHomologacao;
   end;
 
   { TNFSeW }
@@ -140,7 +142,7 @@ uses
   pnfsNFSeW_ABRASFv1, pnfsNFSeW_ABRASFv2, pnfsNFSeW_EGoverneISS, pnfsNFSeW_EL,
   pnfsNFSeW_Equiplano, pnfsNFSeW_Infisc, pnfsNFSeW_ISSDSF, pnfsNFSeW_Governa,
   pnfsNFSeW_SP, pnfsNFSeW_CONAM, pnfsNFSeW_Agili, pnfsNFSeW_SMARAPD, pnfsNFSeW_IPM,
-  pnfsNFSeW_AssessorPublico, pnfsNFSeW_WEBFISCO;
+  pnfsNFSeW_AssessorPublico, pnfsNFSeW_WebFisco, pnfsNFSeW_Lencois;
 
 { TNFSeW }
 
@@ -199,7 +201,8 @@ begin
     loSMARAPD:     FNFSeWClass := TNFSeW_SMARAPD.Create(Self);
     loIPM:         FNFSeWClass := TNFSeW_IPM.Create(Self);
     loAssessorPublico : FNFSeWClass := TNFSeW_AssesorPublico.Create(Self);
-    loWEBFISCO:    FNFSeWClass := TNFSeW_WEBFISCO.Create(Self);
+    loWebFisco:    FNFSeWClass := TNFSeW_WebFisco.Create(Self);
+    loLencois:     FNFSeWClass := TNFSeW_Lencois.Create(Self);
   else
     FNFSeWClass := TNFSeWClass.Create(Self);
   end;
@@ -247,6 +250,7 @@ destructor TNFSeWClass.Destroy;
 begin
   FOpcoes.Free;
   FGerador.Free;
+
   inherited Destroy;
 end;
 

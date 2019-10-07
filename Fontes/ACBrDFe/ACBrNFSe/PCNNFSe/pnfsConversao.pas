@@ -114,7 +114,8 @@ type
                     proTiplanv2, proGiss, proDeISS, proTcheInfov2, proDataSmart,
                     proMetropolisWeb, proDesenvolve, proCenti, proRLZ, proSigCorp, 
                     proGiap, proAssessorPublico, proSigIss, proElotech,
-                    proSilTecnologia, proiiBrasilv2, proWEBFISCO, proDSFSJC );
+                    proSilTecnologia, proiiBrasilv2, proWebFisco, proDSFSJC,
+                    proSimplISSv2, proLencois, progeNFe );
 
   TnfseAcao = (acRecepcionar, acConsSit, acConsLote, acConsNFSeRps, acConsNFSe,
                acCancelar, acGerar, acRecSincrono, acConsSecRps, acSubstituir);
@@ -130,7 +131,8 @@ type
 
   TLayOutXML = (loNone, loABRASFv1, loABRASFv2, loEGoverneISS, loEL, loEquiplano,
                 loInfisc, loISSDSF, loGoverna, loSP, loCONAM, loAgili, loSMARAPD, 
-                loIPM, loGiap, loAssessorPublico, loSigIss, loElotech, loWEBFISCO);
+                loIPM, loGiap, loAssessorPublico, loSigIss, loElotech, loWebFisco,
+                loLencois);
 
   TnfseFrete = ( tfPrestador, tfTomador );
 
@@ -524,7 +526,8 @@ begin
          'SH3', 'SIAPNet', 'IPM', 'Belford', 'ISSJoinville', 'Asten', 'ELv2',
          'Tiplanv2', 'Giss', 'DeISS', 'TcheInfov2', 'DataSmart', 'MetropolisWeb',
          'Desenvolve', 'Centi', 'RLZ', 'SigCorp', 'Giap', 'AssessorPublico', 
-         'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC'],
+         'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
+         'SimplISSv2', 'Lencois', 'geNFe'],
         [proNenhum, proTiplan, proISSNET, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -543,7 +546,7 @@ begin
          proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
          proDataSmart, proMetropolisWeb, proDesenvolve, proCenti, proRLZ, proSigCorp, 
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
-         proiiBrasilv2, proWEBFISCO, proDSFSJC]);
+         proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe]);
 end;
 
 function StrToProvedor(out ok: boolean; const s: String): TnfseProvedor;
@@ -565,7 +568,8 @@ begin
          'SH3', 'SIAPNet', 'IPM', 'Belford', 'ISSJoinville', 'Asten', 'ELv2',
          'Tiplanv2', 'Giss', 'DeISS', 'TcheInfov2', 'DataSmart', 'MetropolisWeb',
          'Desenvolve', 'Centi', 'RLZ', 'SigCorp', 'Giap', 'AssessorPublico', 
-         'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC'],
+         'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
+         'SimplISSv2', 'Lencois', 'geNFe'],
         [proNenhum, proTiplan, proISSNET, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -584,7 +588,7 @@ begin
          proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
          proDataSmart, proMetropolisWeb, proDesenvolve, proCenti, proRLZ, proSigCorp, 
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
-         proiiBrasilv2, proWEBFISCO, proDSFSJC]);
+         proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe]);
 end;
 
 // Condição de pagamento ******************************************************
@@ -879,6 +883,7 @@ var
         25300: Cidade := 'Goiânia/GO';
         33800: Cidade := 'Aparecida de Goiânia/GO';
        530020: Cidade := 'Brazlandia/DF';
+        28800: Cidade := 'Trindade/GO';
    end;
  end;
 
@@ -6655,6 +6660,7 @@ var
         25300: CodSiafi := ''; // Goiânia/GO
         33800: CodSiafi := ''; // Aparecida de Goiânia/GO
        530020: CodSiafi := ''; // Brazlandia/DF
+        28800: CodSiafi := ''; // Trindade/GO
    end;
  end;
 
@@ -18449,7 +18455,7 @@ begin
     proNatal, proProdemge, proPronim, proPublica, proRecife, proRJ, proSalvador,
     proSimplISS, proSJP, proSpeedGov, proThema, proTinus, proTiplan, proWebISS,
     proCIGA, proNFSeBrasil, proMetropolisWeb, proSilTecnologia, 
-	proDSFSJC: Result := loABRASFv1;
+	  proDSFSJC, progeNFe: Result := loABRASFv1;
 
     proABRASFv2, pro4R, proABase, proActconv2, proBethav2, proCoplan, proDigifred,
     proEReceita, proFIntelISS, proFiorilli, proFriburgo, proGoiania, proGovDigital,
@@ -18459,8 +18465,8 @@ begin
     proActconv201, proActconv202, proVersaTecnologia, proSigep, proSafeWeb,
     proSH3, proSIAPNet, proBelford, proISSJoinville, proSmarAPDABRASF,
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
-    proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp,
-    proiiBrasilv2: Result := loABRASFv2;
+    proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, proiiBrasilv2,
+    proSimplISSv2: Result := loABRASFv2;
 
     proAgili,
     proAgiliv2:     Result := loAgili;
@@ -18481,7 +18487,8 @@ begin
     proAssessorPublico: Result := loAssessorPublico;
     proSigIss:      Result := loSigIss;
     proElotech:     Result := loElotech;
-    proWEBFISCO:    Result := loWEBFISCO;
+    proWebFisco:    Result := loWebFisco;
+    proLencois:     Result := loLencois;
 else
     Result := loNone;
   end;
@@ -18502,9 +18509,9 @@ begin
     proSH3, proSIAPNet, proBelford, proISSJoinville, proSmarAPDABRASF,
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
     proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, 
-	proGiap: Result := ve200;
+    proGiap: Result := ve200;
 
-    proInfiscv11: Result := ve110;
+    proInfiscv11, proLencois: Result := ve110;
   else
     Result := ve100;
   end;

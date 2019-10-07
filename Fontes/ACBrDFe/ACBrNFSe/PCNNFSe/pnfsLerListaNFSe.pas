@@ -299,6 +299,8 @@ begin
     Nivel1 := (leitor.rExtrai(1, 'GerarNfseResposta') <> '');
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'GerarNfseResponse') <> '');
+    if not Nivel1 then
+      Nivel1 := (leitor.rExtrai(1, 'GerarNotaFiscalResult') <> '');
 
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'RecepcionarLoteRpsResult') <> '');
@@ -756,7 +758,7 @@ begin
         ListaNFSe.FMsgRetorno[i].FMensagem := Leitor.rCampo(tcStr, 'Mensagem');
         ListaNFSe.FMsgRetorno[i].FCorrecao := Leitor.rCampo(tcStr, 'Correcao');
 
-        if FProvedor = proPronimv2 then
+        if FProvedor in [proPronimv2, proPVH] then
           if (leitor.rExtrai(3, 'IdentificacaoRps') <> '') then
             ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.Numero := Leitor.rCampo(tcStr, 'Numero');
 
@@ -847,6 +849,8 @@ begin
         ListaNfse.FMsgRetorno.New;
         ListaNfse.FMsgRetorno[i].FCodigo   := Leitor.rCampo(tcStr, 'Codigo');
         ListaNfse.FMsgRetorno[i].FMensagem := Leitor.rCampo(tcStr, 'Descricao');
+        ListaNfse.FMsgRetorno[i].FCorrecao := Leitor.rCampo(tcStr, 'AvisoTecnico');
+
         // Roberto Godinho - Provedor CTA pode retornar erros de schema substituindo a TAG <descricao> por <erro>
         // se não tratado resulta em exception vazio.
         if ListaNfse.FMsgRetorno[i].FMensagem = '' then
@@ -958,12 +962,39 @@ begin
       try
         if (Leitor.rExtrai(1, 'RetornoConsulta') <> '') or
            (Leitor.rExtrai(1, 'RetornoConsultaLote') <> '') or
-           (Leitor.rExtrai(1, 'RetornoEnvioRPS') <> '') then
+           (Leitor.rExtrai(1, 'RetornoEnvioRPS') <> '') or
+           (Leitor.rExtrai(1, 'EnvioRPSResult') <> '') then
         begin
           ListaNFSe.FSucesso := Leitor.rCampo(tcStr, 'Sucesso');
 
           i := 0;
-          while Leitor.rExtrai(2, 'Alerta', '', i + 1) <> '' do
+          while (Leitor.rExtrai(2, 'ChaveNFeRPS', '', i + 1) <> '') do
+          begin
+            ListaNFSe.FMsgRetorno.New;
+
+            if (leitor.rExtrai(3, 'ChaveNFe') <> '') then
+            begin
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.InscricaoPrestador := Leitor.rCampo(tcStr, 'InscricaoPrestador');
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.Numero := Leitor.rCampo(tcStr, 'Numero');
+
+              if ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.Numero = '' then
+                ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.Numero := Leitor.rCampo(tcStr, 'NumeroNFe');
+
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.CodigoVerificacao := Leitor.rCampo(tcStr, 'CodigoVerificacao');
+            end;
+
+            if (leitor.rExtrai(3, 'ChaveRPS') <> '') then
+            begin
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.InscricaoPrestador := Leitor.rCampo(tcStr, 'InscricaoPrestador');
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.SerieRPS := Leitor.rCampo(tcStr, 'SerieRPS');
+              ListaNFSe.FMsgRetorno[i].FChaveNFeRPS.NumeroRPS := Leitor.rCampo(tcStr, 'NumeroRPS');
+            end;
+
+            Inc(i);
+          end;
+
+          i := 0;
+          while (Leitor.rExtrai(2, 'Alerta', '', i + 1) <> '') do
           begin
             ListaNFSe.FMsgRetorno.New;
             ListaNFSe.FMsgRetorno[i].FCodigo   := Leitor.rCampo(tcStr, 'Codigo');
@@ -1205,6 +1236,23 @@ begin
 
           FNFSe.Link := Leitor.rCampo(tcStr, 'LinkNfse');
         end;
+      end;
+    end;
+
+    if FProvedor = proWebFisco then
+    begin
+      i := 0;
+      while Leitor.rExtrai(1, 'item xsi:type="tns:EnvNfe"', '', i + 1 ) <> '' do
+      begin
+        ListaNfse.FMsgRetorno.New;
+        ListaNfse.FMsgRetorno[i].FMensagem := Leitor.rCampo( tcStr, 'okk xsi:type="xsd:string"' );
+
+        if ListaNfse.FMsgRetorno[i].FMensagem = 'OK' then
+          ListaNfse.FMsgRetorno[i].FCodigo   := 'A0000'
+        else
+          ListaNfse.FMsgRetorno[i].FCodigo   := 'Erro';
+
+        Inc(i);
       end;
     end;
 

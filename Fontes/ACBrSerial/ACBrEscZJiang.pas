@@ -81,7 +81,7 @@ begin
     with Cmd  do
     begin
       CorteTotal        := GS  + 'V' + #1;        // Only the partial cut is available; there is no full cut
-      Beep              := ESC + 'B' + #1 + #4;   // n - Refers to the number of buzzer times,
+      Beep              := ESC + 'B' + #1 + #3;   // n - Refers to the number of buzzer times,
       LigaModoPagina    := '';
       DesligaModoPagina := '';
       ImprimePagina     := '';
