@@ -670,7 +670,7 @@ begin
           if NotasFiscais.Items[0].NFe.Det[i].Prod.cProd <> cItemCancelado then
           begin
             ItDescAcre[i] := RoundABNT(VlDescAcres * (NotasFiscais.Items[0].NFe.Det[i].Prod.vProd / Total), 2);
-            TotDescAcre := TotDescAcre + ItDescAcre[i];
+            TotDescAcre   := RoundABNT(TotDescAcre + ItDescAcre[i],2);
 
             if ItDescAcre[i] > VlItMaior then
             begin
@@ -680,6 +680,9 @@ begin
           end;
         end;
 
+        if (VlDescAcres > 0) and (TotDescAcre = 0) then
+          ItDescAcre[0] := VlDescAcres
+        else
         if TotDescAcre <> VlDescAcres then
           ItDescAcre[ItMaior] := ItDescAcre[ItMaior] -
             (TotDescAcre - VlDescAcres);
@@ -813,7 +816,7 @@ begin
         if Configuracoes.Geral.FormaEmissao = teOffLine then
         begin
           NotasFiscais.Assinar;
-          NotasFiscais.Validar;
+          //NotasFiscais.Validar;
           //NotasFiscais.Items[0].Confirmada := True;
 
           if DANFE is TACBrNFeDANFCEClass then
@@ -848,7 +851,7 @@ begin
 
         ChaveCupom := NotasFiscais.Items[0].NFe.infNFe.ID;
 
-        if NotasFiscais.Items[0].Confirmada then
+        if (NotasFiscais.Items[0].Confirmada) then
           FazerImpressaoDocumento;
     end;
     end;
