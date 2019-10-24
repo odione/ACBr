@@ -115,7 +115,7 @@ type
   TACBrCEPWSClass = class ;
 
   { TACBrCEP }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrCEP = class( TACBrHTTP )
@@ -154,7 +154,7 @@ type
   end ;
 
   { TACBrCEPWSClass }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrCEPWSClass = class

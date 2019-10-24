@@ -62,7 +62,7 @@ type
   { TACBrNFeDANFCeFortes }
   {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrNFeDANFCeFortes = class( TACBrNFeDANFCEClass )
   private
     FFonteLinhaItem: TFont;

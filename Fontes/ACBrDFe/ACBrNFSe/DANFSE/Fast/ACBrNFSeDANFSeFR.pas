@@ -44,16 +44,16 @@ uses
 
 type
   EACBrNFSeDANFSeFR = class(Exception);
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrNFSeDANFSeFR = class(TACBrNFSeDANFSeClass)
   private
     FFastFile        : String;
     FEspessuraBorda  : Integer;
     FDANFSeClassOwner: TACBrNFSeDANFSeClass;
     function GetPreparedReport: TfrxReport;
-    function PrepareReport(NFSe: TNFSe = nil): Boolean;
+    function PrepareReport(ANFSe: TNFSe = nil): Boolean;
     procedure CriarDataSetsFrx;
     procedure CarregaDados(ANFSe: TNFSe);
     procedure CarregaIdentificacao(ANFSe: TNFSe);
@@ -69,6 +69,7 @@ type
     function ManterDocumento(const sCpfCnpj: String): string;
     procedure frxReportBeforePrint(Sender: TfrxReportComponent);
 		procedure SetDataSetsToFrxReport;
+    procedure AjustaMargensReports;
   public
     frxReport   : TfrxReport; // Está como public, pois quando declarado em datamodule, tem acesso externo, e pode ser que alguem esteja usando.
     frxPDFExport: TfrxPDFExport;
@@ -208,6 +209,26 @@ begin
   end;
 end;
 
+procedure TACBrNFSeDANFSeFR.AjustaMargensReports;
+var
+  Page: TfrxReportPage;
+  I: Integer;
+begin
+  for I := 0 to (frxReport.PreviewPages.Count - 1) do
+  begin
+    Page := frxReport.PreviewPages.Page[I];
+    if (MargemSuperior > 0) then
+      Page.TopMargin := MargemSuperior;
+    if (MargemInferior > 0) then
+      Page.BottomMargin := MargemInferior;
+    if (MargemEsquerda > 0) then
+      Page.LeftMargin := MargemEsquerda;
+    if (MargemDireita > 0) then
+      Page.RightMargin := MargemDireita;
+    frxReport.PreviewPages.ModifyPage(I, Page);
+  end;
+end;
+
 procedure TACBrNFSeDANFSeFR.SetDataSetsToFrxReport;
 begin
   frxReport.EnabledDataSets.Clear;
@@ -220,7 +241,7 @@ begin
   frxReport.EnabledDataSets.Add(frxItensServico);
 end;
 
-function TACBrNFSeDANFSeFR.PrepareReport(NFSe: TNFSe): Boolean;
+function TACBrNFSeDANFSeFR.PrepareReport(ANFSe: TNFSe): Boolean;
 var
   I: Integer;
 	wProjectStream: TStringStream;
@@ -258,9 +279,9 @@ begin
   if NaoEstaVazio(frxReport.PrintOptions.Printer) then
     frxReport.PrintOptions.Printer := Impressora;
 
-  if Assigned(NFSe) then
+  if Assigned(ANFSe) then
   begin
-    CarregaDados(NFSe);
+    CarregaDados(ANFSe);
     Result := frxReport.PrepareReport;
   end
   else
@@ -269,7 +290,7 @@ begin
     begin
       for I := 0 to TACBrNFSe(ACBrNFSe).NotasFiscais.Count - 1 do
       begin
-        
+
         CarregaDados(TACBrNFSe(ACBrNFSe).NotasFiscais.Items[I].NFSe);
 
         if (I > 0) then
@@ -281,6 +302,9 @@ begin
     else
       raise EACBrNFSeDANFSeFR.Create('Propriedade ACBrNFSe não assinalada.');
   end;
+
+  AjustaMargensReports;
+
 end;
 
 procedure TACBrNFSeDANFSeFR.CriarDataSetsFrx;

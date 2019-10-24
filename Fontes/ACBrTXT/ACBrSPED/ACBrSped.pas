@@ -51,7 +51,7 @@ type
   EACBrSPEDException = class(Exception);
 
   { TACBrSPED }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrSPED = class(TACBrTXTClass)

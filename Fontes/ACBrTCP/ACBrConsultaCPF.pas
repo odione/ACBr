@@ -47,7 +47,7 @@ type
   EACBrConsultaCPFException = class ( Exception );
 
   { TACBrConsultaCPF }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrConsultaCPF = class(TACBrHTTP)

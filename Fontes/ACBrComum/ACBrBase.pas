@@ -69,7 +69,7 @@ type
 TACBrAboutInfo = (ACBrAbout);
 
 { ACBrComponente contém apenas a propriedade ACBrAbout }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
 TACBrComponent = class( TComponent )

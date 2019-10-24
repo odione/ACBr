@@ -52,7 +52,7 @@ uses
 type
 
   { TACBrBPeDABPEClass }
-   {$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrBPeDABPEClass = class( TACBrDFeReport )

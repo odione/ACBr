@@ -56,9 +56,9 @@ const
 
 type
   EACBrMDFeException = class(EACBrDFeException);
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrMDFe = class(TACBrDFe)
   private
     FDAMDFE: TACBrMDFeDAMDFEClass;

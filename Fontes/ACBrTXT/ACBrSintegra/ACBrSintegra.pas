@@ -1445,7 +1445,7 @@ type
       read GetObject write SetObject; default;
   end;
 
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrSintegra = class(TACBrComponent)

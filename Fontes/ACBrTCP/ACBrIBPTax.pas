@@ -142,9 +142,9 @@ type
 
   { TACBrIBPTax }
 
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrIBPTax = class(TACBrHTTP)
   private
     FArquivo: TStringList;

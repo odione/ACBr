@@ -49,7 +49,7 @@ uses
   Classes;
 
 type
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrFeriadoWSClass = class

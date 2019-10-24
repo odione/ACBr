@@ -60,7 +60,7 @@ type
   EACBrCTeException = class(EACBrDFeException);
 
   { TACBrCTe }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrCTe = class(TACBrDFe)
@@ -306,16 +306,18 @@ function TACBrCTe.GetURLQRCode(const CUF: integer;
 var
   idCTe, sEntrada, urlUF, Passo2, sign: String;
 //  VersaoDFe: TVersaoCTe;
-//  ok: Boolean;
 begin
 //  VersaoDFe := DblToVersaoCTe(ok, Versao);  // Deixado para usu futuro
-
+{
   if ( (TipoEmissao in [teSVCRS]) and (CUF in [31,41,50,51]) ) then
   begin
      urlUF := LerURLDeParams('CTe', CUFtoUF(CUF), TipoAmbiente, 'URL-QRCode', 0)
   end
   else
      urlUF := LerURLDeParams('CTe', GetUFFormaEmissao, TipoAmbiente, 'URL-QRCode', 0);
+}
+
+  urlUF := LerURLDeParams('CTe', CUFtoUF(CUF), TipoAmbiente, 'URL-QRCode', 0);
 
   if Pos('?', urlUF) <= 0 then
     urlUF := urlUF + '?';

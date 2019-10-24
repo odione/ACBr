@@ -153,10 +153,10 @@ type
     rlLabel20: TRLLabel;
     RLDraw32: TRLDraw;
     rlLabel91: TRLLabel;
-    rlLabel92: TRLLabel;
-    rlLabel96: TRLLabel;
-    rlLabel100: TRLLabel;
-    rlLabel106: TRLLabel;
+    rllTituloCNPJ1: TRLLabel;
+    rllTituloSerie1: TRLLabel;
+    rllTituloSerie2: TRLLabel;
+    rllTituloCNPJ2: TRLLabel;
     rlLabel109: TRLLabel;
     rld_07_headerItens: TRLDraw;
     rlb_09_Obs: TRLBand;
@@ -622,7 +622,7 @@ type
     RLDraw51: TRLDraw;
     RLDraw52: TRLDraw;
     RLDraw50: TRLDraw;
-    RLLabel198: TRLLabel;
+    rllVariavel2: TRLLabel;
     RLDraw108: TRLDraw;
     RLDraw109: TRLDraw;
     rlmComplChave1: TRLMemo;
@@ -767,6 +767,33 @@ begin
     exit;
 
   Item := 0;
+
+  if (fpCTe.infCTeNorm.infDoc.infNF.Count > 0) or
+     (fpCTe.infCTeNorm.docAnt.emiDocAnt.Count > 0) then
+  begin
+    rllTituloCNPJ1.Caption := 'CNPJ/CPF EMITENTE';
+    rllTituloCNPJ2.Caption := 'CNPJ/CPF EMITENTE';
+    rllTituloSerie1.Caption := 'SÉRIE/NRO. DOCUMENTO';
+    rllTituloSerie2.Caption := 'SÉRIE/NRO. DOCUMENTO';
+  end;
+
+  if (fpCTe.infCTeNorm.infDoc.infNFe.Count > 0) or
+     (fpCTe.infCTeNorm.docAnt.emiDocAnt.Count > 0) then
+  begin
+    rllTituloCNPJ1.Caption := 'CHAVE DO DF-e';
+    rllTituloCNPJ2.Caption := 'CHAVE DO DF-e';
+    rllTituloSerie1.Caption := '';
+    rllTituloSerie2.Caption := '';
+  end;
+
+  if fpCTe.infCTeNorm.infDoc.InfOutros.Count > 0 then
+  begin
+    rllTituloCNPJ1.Caption := 'CNPJ/CPF EMITENTE';
+    rllTituloCNPJ2.Caption := 'CNPJ/CPF EMITENTE';
+    rllTituloSerie1.Caption := '';
+    rllTituloSerie2.Caption := '';
+  end;
+
   //Varrendo NF comum
   for I := 0 to (fpCTe.infCTeNorm.infDoc.infNF.Count - 1) do
   begin
@@ -793,6 +820,7 @@ begin
       Inc(Item);
     end;
   end;
+
   //Varrendo NFe
   for I := 0 to (fpCTe.infCTeNorm.infDoc.InfNFE.Count - 1) do
   begin
@@ -813,6 +841,7 @@ begin
       Inc(Item);
     end;
   end;
+
   //Varrendo Outros
   for I := 0 to (fpCTe.infCTeNorm.infDoc.InfOutros.Count - 1) do
   begin
@@ -913,6 +942,7 @@ begin
       Inc(Item);
     end;
   end;
+
   //Varrendo Documentos de Transporte anterior
   for I := 0 to (fpCTe.infCTeNorm.docAnt.emiDocAnt.Count - 1) do
   begin
@@ -1063,7 +1093,7 @@ procedure TfrmDACTeRLRetrato.rlb_02_CabecalhoBeforePrint(Sender: TObject;
 var
   CarregouLogo: Boolean;
   strChaveContingencia: string;
-  vStringStream: TStringStream;
+//  vStringStream: TStringStream;
 begin
   inherited;
 
@@ -1148,8 +1178,10 @@ begin
   // Normal **************************************************************
   if fpCTe.Ide.tpEmis in [teNormal, teSCAN, teSVCSP, teSVCRS] then
   begin
-    rllVariavel1.Enabled := True;
-    RLBarcode1.Enabled := False;
+    rllVariavel1.Visible := True;
+    rllVariavel2.Visible := True;
+    RLBarcode1.Visible := False;
+
     if fpCTe.procCTe.cStat = 100 then
       rllDescricao.Caption := ACBrStr('PROTOCOLO DE AUTORIZAÇÃO DE USO');
 
@@ -1172,8 +1204,10 @@ begin
   begin
     if fpCTe.procCTe.cStat in [100, 101, 110] then
     begin
-      rllVariavel1.Enabled := True;
-      RLBarcode1.Enabled := False;
+      rllVariavel1.Visible := True;
+      rllVariavel2.Visible := True;
+      RLBarcode1.Visible := False;
+
       if fpCTe.procCTe.cStat = 100 then
         rllDescricao.Caption := ACBrStr('PROTOCOLO DE AUTORIZAÇÃO DE USO');
 
@@ -1192,8 +1226,9 @@ begin
     end
     else
     begin
-      rllVariavel1.Enabled := False;
-      RLBarcode1.Enabled := True;
+      rllVariavel1.Visible := False;
+      rllVariavel2.Visible := False;
+      RLBarcode1.Visible := True;
 
       strChaveContingencia := fpACBrCTe.GerarChaveContingencia(fpCTe);
       RLBarcode1.Caption := strChaveContingencia;
@@ -1205,8 +1240,9 @@ begin
   // EPEC ****************************************************************
   if fpCTe.Ide.tpEmis = teDPEC then
   begin
-    rllVariavel1.Enabled := False;
-    RLBarcode1.Enabled := True;
+    rllVariavel1.Visible := False;
+    rllVariavel2.Visible := False;
+    RLBarcode1.Visible := True;
 
     strChaveContingencia := fpACBrCTe.GerarChaveContingencia(fpCTe);
     RLBarcode1.Caption := strChaveContingencia;
@@ -2635,7 +2671,7 @@ begin
     RLDraw99.Width         := 427;
     rlbCodigoBarras.Width  := 419;
     rllVariavel1.Width     := 419;
-    RLLabel198.Width       := 419;
+    rllVariavel2.Width     := 419;
     imgQRCode.Visible      := False;
   end;
 end;

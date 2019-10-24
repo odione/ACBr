@@ -46,7 +46,7 @@ uses
 type
   {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
  TACBrNFSeDANFSeClass = class(TACBrDFeReport)
   private
     procedure SetACBrNFSe(const Value: TComponent);

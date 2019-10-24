@@ -56,7 +56,7 @@ type
   { TACBrBoletoFCFortesFr }
   {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrBoletoFCFortes = class(TACBrBoletoFCClass)
   private
     { Private declarations }

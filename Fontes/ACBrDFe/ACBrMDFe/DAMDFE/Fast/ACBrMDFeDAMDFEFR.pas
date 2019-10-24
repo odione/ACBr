@@ -46,9 +46,9 @@ uses
 
 type
   EACBrMDFeDAMDFEFR = class(Exception);
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF RTL230_UP}	
+  {$ENDIF RTL230_UP}
   TACBrMDFeDAMDFEFR = class(TACBrMDFeDAMDFEClass)
   private
     FDAMDFEClassOwner: TACBrMDFeDAMDFeClass;
@@ -124,10 +124,11 @@ type
 
     function  GetPreparedReport: TfrxReport;
     function  GetPreparedReportEvento: TfrxReport;
-    function  PrepareReport(MDFe: TMDFe = nil): Boolean;
+    function  PrepareReport(AMDFe: TMDFe = nil): Boolean;
     function  PrepareReportEvento: Boolean;
     procedure CriarDataSetsFrx;
     procedure frxReportBeforePrint(Sender: TfrxReportComponent);
+    procedure AjustaMargensReports;
   public
     frxReport: TfrxReport;
     frxPDFExport: TfrxPDFExport;
@@ -135,10 +136,10 @@ type
     VersaoDAMDFe: string;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure ImprimirDAMDFe(MDFe: TMDFe = nil); override;
-    procedure ImprimirDAMDFePDF(MDFe: TMDFe = nil); override;
-    procedure ImprimirEVENTO(MDFe: TMDFe = nil); override;
-    procedure ImprimirEVENTOPDF(MDFe: TMDFe = nil); override;
+    procedure ImprimirDAMDFe(AMDFe: TMDFe = nil); override;
+    procedure ImprimirDAMDFePDF(AMDFe: TMDFe = nil); override;
+    procedure ImprimirEVENTO(AMDFe: TMDFe = nil); override;
+    procedure ImprimirEVENTOPDF(AMDFe: TMDFe = nil); override;
 
     procedure CarregaDados;
     procedure LimpaDados;
@@ -724,6 +725,26 @@ begin
     Value := False;
 end;
 
+procedure TACBrMDFeDAMDFEFR.AjustaMargensReports;
+var
+  Page: TfrxReportPage;
+  I: Integer;
+begin
+  for I := 0 to (frxReport.PreviewPages.Count - 1) do
+  begin
+    Page := frxReport.PreviewPages.Page[I];
+    if (MargemSuperior > 0) then
+      Page.TopMargin := MargemSuperior;
+    if (MargemInferior > 0) then
+      Page.BottomMargin := MargemInferior;
+    if (MargemEsquerda > 0) then
+      Page.LeftMargin := MargemEsquerda;
+    if (MargemDireita > 0) then
+      Page.RightMargin := MargemDireita;
+    frxReport.PreviewPages.ModifyPage(I, Page);
+  end;
+end;
+
 function TACBrMDFeDAMDFEFR.GetPreparedReport: TfrxReport;
 begin
   if Trim(FFastFile) = '' then
@@ -750,9 +771,9 @@ begin
   end;
 end;
 
-procedure TACBrMDFeDAMDFEFR.ImprimirDAMDFe(MDFe: TMDFe);
+procedure TACBrMDFeDAMDFEFR.ImprimirDAMDFe(AMDFe: TMDFe);
 begin
-  if PrepareReport(MDFe) then
+  if PrepareReport(AMDFe) then
   begin
     if MostraPreview then
       frxReport.ShowPreparedReport
@@ -761,13 +782,13 @@ begin
   end;
 end;
 
-procedure TACBrMDFeDAMDFEFR.ImprimirDAMDFePDF(MDFe: TMDFe);
+procedure TACBrMDFeDAMDFEFR.ImprimirDAMDFePDF(AMDFe: TMDFe);
 var
   I:          Integer;
   TITULO_PDF: string;
   OldShowDialog : Boolean;
 begin
-  if PrepareReport(MDFe) then
+  if PrepareReport(AMDFe) then
   begin
     for I := 0 to TACBrMDFe(ACBrMDFe).Manifestos.Count - 1 do
     begin
@@ -796,7 +817,7 @@ begin
   end;
 end;
 
-procedure TACBrMDFeDAMDFEFR.ImprimirEVENTO(MDFe: TMDFe);
+procedure TACBrMDFeDAMDFEFR.ImprimirEVENTO(AMDFe: TMDFe);
 begin
   if PrepareReportEvento then
   begin
@@ -807,7 +828,7 @@ begin
   end;
 end;
 
-procedure TACBrMDFeDAMDFEFR.ImprimirEVENTOPDF(MDFe: TMDFe);
+procedure TACBrMDFeDAMDFEFR.ImprimirEVENTOPDF(AMDFe: TMDFe);
 const
   TITULO_PDF = 'Manifesto de Documento Eletrônico - Evento';
 var
@@ -839,7 +860,7 @@ begin
   end;
 end;
 
-function TACBrMDFeDAMDFEFR.PrepareReport(MDFe: TMDFe): Boolean;
+function TACBrMDFeDAMDFEFR.PrepareReport(AMDFe: TMDFe): Boolean;
 var
   i: Integer;
   Stream: TStringStream;
@@ -876,9 +897,9 @@ begin
   if NaoEstaVazio(frxReport.PrintOptions.Printer) then
     frxReport.PrintOptions.Printer := Impressora;
 
-  if Assigned(MDFe) then
+  if Assigned(AMDFe) then
   begin
-    FMDFe := MDFe;
+    FMDFe := AMDFe;
     CarregaDados;
     SetDataSetsToFrxReport;
     Result := frxReport.PrepareReport;
@@ -900,6 +921,9 @@ begin
     else
       raise EACBrMDFeDAMDFEFR.Create('Propriedade ACBrMDFe não assinalada.');
   end;
+
+  AjustaMargensReports;
+
 end;
 
 function TACBrMDFeDAMDFEFR.PrepareReportEvento: Boolean;
@@ -956,6 +980,8 @@ begin
   end
   else
     raise EACBrMDFeDAMDFEFR.Create('Propriedade ACBrMDFe não assinalada.');
+
+  AjustaMargensReports;
 end;
 
 procedure TACBrMDFeDAMDFEFR.SetDataSetsToFrxReport;

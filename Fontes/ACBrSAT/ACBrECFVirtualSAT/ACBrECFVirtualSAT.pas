@@ -56,7 +56,7 @@ type
   TACBrECFVirtualSATQuandoImprimirDocumento = procedure(var Tratado: Boolean) of object;
 
   { TACBrECFVirtualSAT }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrECFVirtualSAT = class(TACBrECFVirtualPrinter)
@@ -96,7 +96,7 @@ type
   end;
 
   { TACBrECFVirtualSATClass }
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrECFVirtualSATClass = class(TACBrECFVirtualPrinterClass)

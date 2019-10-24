@@ -60,7 +60,7 @@ uses
 type
   EACBrNFeDANFEFR = class(Exception);
 
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrNFeDANFEFR = class( TACBrNFeDANFEClass )
@@ -131,7 +131,7 @@ type
     property ZoomModePadrao: TfrxZoomMode read GetZoomModePadrao write SetZoomModePadrao default ZMDEFAULT;
   end;
 
-	{$IFDEF RTL230_UP}
+  {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
   {$ENDIF RTL230_UP}
   TACBrNFeDANFCEFR = class( TACBrNFeDANFCEClass )
