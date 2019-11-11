@@ -19,14 +19,20 @@ Version History
 
 unit StrUtilsEx;
 
-{$IFDEF FPC}
-  {$MODE Delphi}
-  {$DEFINE FPC_OR_LEGACY24}
-{$ELSE}
+{$IfDef CPUX64}
+ {$Define USE_FASTPOS}
+{$EndIf}
+
+{$IfDef FPC}
+  {$Mode Delphi}
+  {$Define FPC_OR_LEGACY24}
+  {$UnDef USE_FASTPOS}
+{$Else}
   {$IF CompilerVersion < 24}
-   {$DEFINE FPC_OR_LEGACY24}
-  {$IFEND}
-{$ENDIF}
+   {$Define FPC_OR_LEGACY24}
+   {$UnDef USE_FASTPOS}
+  {$IfEnd}
+{$EndIf}
 
 interface
 
@@ -34,7 +40,7 @@ uses
   SysUtils;
 
 function FastStringReplace(const S, OldPattern, NewPattern: string; Flags: TReplaceFlags): string;
-{$IFDEF CPUX64}
+{$IFDEF USE_FASTPOS}
 function FastPos(const SubStr, Str: UnicodeString; Offset: Integer = 1): Integer;
 function FastPosEx(const SubStr, Str: UnicodeString; Offset: Integer = 1): Integer;
 {$ENDIF}
@@ -94,7 +100,7 @@ begin
   ArrLen := 0;
   repeat
     //In x64 we call FastPos() directly. In XE3 or below, we call PosEx(). If IDE >= XE3, then call Pos()
-    i := {$IFDEF CPUX64}FastPos{$ELSE}
+    i := {$IFDEF USE_FASTPOS}FastPos{$ELSE}
          {$IFDEF FPC_OR_LEGACY24}PosEx{$ELSE}
          Pos{$ENDIF}
          {$ENDIF}(xOldPattern, Str, i);

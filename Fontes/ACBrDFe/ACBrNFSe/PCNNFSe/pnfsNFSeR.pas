@@ -198,12 +198,15 @@ end;
 
 function TNFSeR.LerXml: Boolean;
 begin
-  if (Pos('<Nfse', Leitor.Arquivo) > 0) or (Pos('<Notas>', Leitor.Arquivo) > 0) or
-     (Pos('<Nota>', Leitor.Arquivo) > 0) or (Pos('<NFS-e>', Leitor.Arquivo) > 0) or
-     (Pos('<nfse', Leitor.Arquivo) > 0) or (Pos('NumNot', Leitor.Arquivo) > 0) or
+  if (Pos('<Nfse', Leitor.Arquivo) > 0)          or (Pos('<Notas>', Leitor.Arquivo) > 0) or
+     (Pos('<Nota>', Leitor.Arquivo) > 0)         or (Pos('<NFS-e>', Leitor.Arquivo) > 0) or
+     (Pos('<nfse', Leitor.Arquivo) > 0)          or (Pos('NumNot', Leitor.Arquivo) > 0) or
      (Pos('<ConsultaNFSe>', Leitor.Arquivo) > 0) or (Pos('<Reg20Item>', Leitor.Arquivo) > 0) or
-     (Pos('<CompNfse', Leitor.Arquivo) > 0) or (Pos('<NFe', Leitor.Arquivo) > 0) or
-     (Pos('<notasFiscais>', Leitor.Arquivo) > 0) or (Pos('<nfeRpsNotaFiscal>', Leitor.Arquivo) > 0) or (Pos('<nfs', Leitor.Arquivo) > 0) then
+     (Pos('<CompNfse', Leitor.Arquivo) > 0)      or (Pos('<NFe', Leitor.Arquivo) > 0) or
+     (Pos('<notasFiscais>', Leitor.Arquivo) > 0) or (Pos('<nfeRpsNotaFiscal>', Leitor.Arquivo) > 0) or
+     (Pos('<infNFSe ', Leitor.Arquivo) > 0)      or (Pos('<nfs', Leitor.Arquivo) > 0) or
+     (Pos('<nota>', Leitor.Arquivo) > 0)         or (Pos('<nota_recebida>', Leitor.Arquivo) > 0) or
+     (Pos('NotaFiscalRelatorioDTO', Leitor.Arquivo) > 0) then
     Result := LerNFSe
   else
     if (Pos('<Rps', Leitor.Arquivo) > 0) or (Pos('<rps', Leitor.Arquivo) > 0) or
@@ -1645,6 +1648,21 @@ begin
     NFSe.IdentificacaoRps.Numero := Leitor.rCampo(tcStr, 'NumeroRps');
     if NFSe.InfID.ID = '' then
       NFSe.InfID.ID := OnlyNumber(NFSe.IdentificacaoRps.Numero) + NFSe.IdentificacaoRps.Serie;
+  end;
+
+  if FProvedor = proMegaSoft then
+  begin
+     if Leitor.rExtrai(FNivel +1, 'ValoresNfse') <> '' then
+     begin
+       NFSe.Servico.Valores.BaseCalculo      := Leitor.rCampo(tcDe2, 'BaseCalculo');
+       NFSe.Servico.Valores.Aliquota         := Leitor.rCampo(tcDe3, 'Aliquota');
+       NFSe.Servico.Valores.ValorIss         := Leitor.rCampo(tcDe2, 'ValorIss');
+       NFSe.Servico.Valores.ValorLiquidoNfse := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
+       if NFSe.Servico.Valores.ValorLiquidoNfse <= 0 then
+          NFSe.Servico.Valores.ValorLiquidoNfse := NFSe.Servico.Valores.ValorIss;
+     end;
+
+     NFSe.Servico.CodigoTributacaoMunicipio := Leitor.rCampo(tcStr, 'CodigoTributacao')
   end;
 
   if (Leitor.rExtrai(FNivel +1, 'Servico') <> '') then
@@ -3769,7 +3787,7 @@ begin
   Result := False;
   Leitor.Grupo := Leitor.Arquivo;
 
-  if (Pos('<NFS-e>', Leitor.Arquivo) > 0) then
+  if (Pos('<NFS-e>', Leitor.Arquivo) > 0) or (Pos('<infNFSe ', Leitor.Arquivo) > 0) then
   begin
     if VersaoNFSe = ve110 then
       Result := LerNFSe_Infisc_V11

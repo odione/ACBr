@@ -51,8 +51,8 @@ interface
 
 uses
   SysUtils, Classes,
-  ACBrDFeDANFeReport,
-  pcnNFe, pcnConversao, pcnConversaoNFe;
+  ACBrBase, ACBrDFeDANFeReport,
+  pcnNFe, pcnConversao, pcnConversaoNFe, StrUtilsEx;
 
 type
   TDetVeiculo = (dv_tpOp, dv_chassi, dv_cCor, dv_xCor, dv_pot, dv_cilin,
@@ -76,7 +76,7 @@ type
   { TACBrNFeDANFEClass }
 
   {$IFDEF RTL230_UP}
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  [ComponentPlatformsAttribute(piacbrAllPlatforms)]
   {$ENDIF RTL230_UP}
   TACBrNFeDANFEClass = class(TACBrDFeDANFeReport)
   private
@@ -119,6 +119,10 @@ type
     function ManterVTribPerc(dVTotTrib, dVProd, dVNF: Double): Double; virtual;
     function ManterValAprox(aNFE: TNFe; inItem: Integer): String; virtual;
     function ManterColunaDesconto( Value : Double): Boolean;
+    function ManterProtocolo(aNFE: TNFe): String;
+    function ManterSuframa(aNFE: TNFe): String;
+
+    function ManterInformacoesDadosAdicionais(aNFE: TNFe): String;
 
   published
     property FormularioContinuo: Boolean read FFormularioContinuo write FFormularioContinuo default False;
@@ -147,7 +151,7 @@ type
   { TACBrNFeDANFCEClass }
 
   {$IFDEF RTL230_UP}
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  [ComponentPlatformsAttribute(piacbrAllPlatforms)]
   {$ENDIF RTL230_UP}
   TACBrNFeDANFCEClass = class(TACBrDFeDANFeReport)
   private
@@ -160,7 +164,11 @@ type
     FImprimeQRCodeLateral: Boolean;
     FImprimeLogoLateral: Boolean;
     FDescricaoPagamentos: TDescricaoPagamentos;
+    FImprimeEmUmaLinha: Boolean;
+    FImprimeEmDuasLinhas: Boolean;
 
+    procedure setImprimeEmUmaLinha(const Value: Boolean);
+    procedure setImprimeEmDuasLinhas(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
 
@@ -176,6 +184,8 @@ type
     property ImprimeLogoLateral: Boolean read FImprimeLogoLateral write FImprimeLogoLateral default False;
     property EspacoFinal: Integer read FEspacoFinal write FEspacoFinal default 38;
     property DescricaoPagamentos: TDescricaoPagamentos read FDescricaoPagamentos write FDescricaoPagamentos default [icaTipo, icaBandeira];
+    property ImprimeEmUmaLinha: Boolean read FImprimeEmUmaLinha write setImprimeEmUmaLinha default False;
+    property ImprimeEmDuasLinhas: Boolean read FImprimeEmDuasLinhas write setImprimeEmDuasLinhas default False;
   end;
 
 implementation
@@ -646,15 +656,18 @@ constructor TACBrNFeDANFCEClass.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  FLarguraBobina := 302;
+  FLarguraBobina         := 302;
   FImprimeDescAcrescItem := True;
-  FImprimeItens := True;
-  FViaConsumidor := False;
-  FvTroco := 0;
-  FImprimeQRCodeLateral := False;
-  FImprimeLogoLateral := False;
-  FEspacoFinal := 38;
-  FDescricaoPagamentos := [icaTipo, icaBandeira];
+  FImprimeItens          := True;
+  FViaConsumidor         := False;
+  FvTroco                := 0;
+  FImprimeQRCodeLateral  := False;
+  FImprimeLogoLateral    := False;
+  FEspacoFinal           := 38;
+  FDescricaoPagamentos   := [icaTipo, icaBandeira];
+  FImprimeEmUmaLinha     := False;
+  FImprimeEmDuasLinhas   := False;
+
 end;
 
 function TACBrNFeDANFCEClass.ManterDescricaoPagamentos(aPagto: TpagCollectionItem
@@ -685,6 +698,30 @@ begin
 
 end;
 
+procedure TACBrNFeDANFCEClass.setImprimeEmDuasLinhas(const Value: Boolean);
+begin
+  if Value = FImprimeEmDuasLinhas then Exit;
+
+  FImprimeEmDuasLinhas := Value;
+  if Value then
+  begin
+    FImprimeEmUmaLinha := False;
+  end;
+end;
+
+procedure TACBrNFeDANFCEClass.setImprimeEmUmaLinha(const Value: Boolean);
+begin
+  if Value = FImprimeEmUmaLinha then Exit;
+
+  FImprimeEmUmaLinha := Value;
+  if Value then
+  begin
+    FImprimeEmDuasLinhas := False;
+  end;
+
+end;
+
+
 function TACBrNFeDANFEClass.ManterColunaDesconto(Value: Double): Boolean;
 begin
   //Por padrão a configuração atual é idaiSempre.
@@ -698,6 +735,43 @@ begin
     idaiNunca     : Result := False;
     idaiComValor  : Result := ( value > 0 );
   end;
+end;
+function TACBrNFeDANFEClass.ManterProtocolo(aNFE: TNFe): String;
+begin
+  // Protocolo de autorização, nos casos de emissão em contingência
+  if (aNFe.Ide.tpEmis in [teContingencia, teFSDA]) and (aNFe.procNFe.cStat = 100) then
+  begin
+    Result := ACBrStr('PROTOCOLO DE AUTORIZAÇÃO DE USO: ') +
+      aNFe.procNFe.nProt + ' ' + FormatDateTimeBr(aNFe.procNFe.dhRecbto);
+  end
+  else
+    Result := '';
+end;
+
+function TACBrNFeDANFEClass.ManterSuframa(aNFE: TNFe): String;
+begin
+  // Inscrição Suframa
+  if NaoEstaVazio(aNFe.Dest.ISUF) then
+  begin
+    Result := ACBrStr('INSCRIÇÃO SUFRAMA: ') + aNFe.Dest.ISUF;
+  end
+  else
+    Result := '';
+end;
+
+function TACBrNFeDANFEClass.ManterInformacoesDadosAdicionais( aNFE: TNFe): String;
+begin
+  Result := ManterProtocolo( aNFE ) +
+            ManterSuframa( aNFE ) +
+            ManterDocreferenciados(aNFE) +
+            ManterInfAdFisco(aNFE) +
+            ManterObsFisco(aNFE) +
+            ManterProcreferenciado(aNFE) +
+            ManterInfContr(aNFE) +
+            ManterInfCompl(aNFE) +
+            ManterContingencia(aNFE);
+
+  Result := FastStringReplace(Result, ';', sLineBreak, [rfReplaceAll]);
 end;
 
 

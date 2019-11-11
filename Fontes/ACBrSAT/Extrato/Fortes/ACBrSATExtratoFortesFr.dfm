@@ -2,7 +2,8 @@ object ACBrSATExtratoFortesFr: TACBrSATExtratoFortesFr
   Left = 444
   Top = 7
   Width = 781
-  Height = 1055
+  Height = 999
+  VertScrollBar.Position = 276
   Caption = 'ACBrSATExtratoFortes'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,7 +18,7 @@ object ACBrSATExtratoFortesFr: TACBrSATExtratoFortesFr
   TextHeight = 13
   object rlVenda: TRLReport
     Left = 40
-    Top = 8
+    Top = -268
     Width = 302
     Height = 1512
     AllowedBands = [btHeader, btDetail, btSummary, btFooter]
@@ -1346,7 +1347,7 @@ object ACBrSATExtratoFortesFr: TACBrSATExtratoFortesFr
   end
   object rlCancelamento: TRLReport
     Left = 360
-    Top = 8
+    Top = -268
     Width = 302
     Height = 1134
     AllowedBands = [btHeader, btDetail, btSummary, btFooter]
