@@ -113,7 +113,7 @@ begin
   fpTamanhoAgencia        := 5;
   fpTamanhoConta          := 8;
   fpTamanhoCarteira       := 1;
-  fpTamanhoMaximoNossoNum := 8;
+  fpTamanhoMaximoNossoNum := 9;
 end;
 
 function TACBrBancoSafra.CalcularDigitoVerificador(
@@ -754,17 +754,13 @@ begin
                  PadLeft(Conta, 12, '0')                                               + // 024-035 / Número da Conta Corrente
                  PadLeft(ContaDigito, 1)                                               + // 036-036 / Dígito Verificador da Conta
                  ' '                                                                   + // 037-037 / Dígito Verificador da Agência/Conta
-                 //PadRight(ACBrTitulo.NossoNumero, 20)                                  + // 038-057 / Identificação do Título no Banco NN com DV
-                 IfThen(ACBrTitulo.NossoNumero = '000000000', PadRight('0', 20, '0'),
-                        PadLeft(RightStr(ACBrTitulo.NossoNumero,TamanhoMaximoNossoNum),19,'0') +
-                        CalcularDigitoVerificador(ACBrTitulo))                         + // 038-057 / Identificação do Título no Banco NN com DV
-
+                 PadRight(ACBrTitulo.NossoNumero, 20)                                  + // 038-057 / Identificação do Título no Banco NN com DV
                  PadLeft(ACBrTitulo.Carteira, 1)                                       + // 058-058 / Código da Carteira
                  sTipoCarteira                                                         + // 059-059 / Forma de Cadastro do título no banco
                  sTipoDocto                                                            + // 060-060 / Tipo de Documento
                  sTipoCobranca                                                         + // 061-061 / Identificação da Emissão do Bloqueto
                  '2'                                                                   + // 062-062 / Identificação da Distribuição
-                 PadRight(ACBrTitulo.NumeroDocumento, 15)                                  + // 063-077 / Número do Documento de Cobrança
+                 PadRight(ACBrTitulo.NossoNumero, 15)                                  + // 063-077 / Número do Documento de Cobrança
                  FormatDateTime('ddmmyyyy', ACBrTitulo.Vencimento)                     + // 078-085 / Data de Vencimento do Título
                  IntToStrZero(round(ACBrTitulo.ValorDocumento * 100), 15)              + // 086-100 / Valor Nominal do Título
                  PadRight(Agencia, 5, '0')                                             + // 101-105 / Agência Encarregada da Cobrança
@@ -931,7 +927,7 @@ begin
               Space(6)                                                                       + //  32 a  37 - "Brancos"
               PadRight(SeuNumero,25)                                                         + //  38 a  62 - Uso exclusivo da Empresa
               IfThen(NossoNumero = '000000000', '000000000',
-                                 PadLeft(RightStr(NossoNumero,TamanhoMaximoNossoNum),TamanhoMaximoNossoNum,'0') +
+                                 PadLeft(RightStr(NossoNumero,8),8,'0') +
                                  CalcularDigitoVerificador(ACBrTitulo)) +                      //  63 a  71 - Número do título no banco
               Space(30)                                                                      + //  72 a 101 - "Brancos"
               '0'                                                                            + // 102 a 102 - Código de IOF sobre Operações de Seguro
@@ -1172,7 +1168,7 @@ begin
     with Titulo do
     begin
       SeuNumero      := Copy(Linha,38,62);
-      NossoNumero    := Copy(Linha, 63, TamanhoMaximoNossoNum);
+      NossoNumero    := Copy(Linha, 63, 8);
       CodOcorrencia  := StrToIntDef(copy(Linha, 109, 2),0);
       OcorrenciaOriginal.Tipo := CodOcorrenciaToTipo(CodOcorrencia);
 
@@ -1227,9 +1223,7 @@ function TACBrBancoSafra.MontarCampoNossoNumero(const ACBrTitulo: TACBrTitulo): 
 begin
   with ACBrTitulo do
   begin
-    //Result := PadLeft(RightStr(NossoNumero,9),9,'0');
-    Result := PadLeft(RightStr(NossoNumero,TamanhoMaximoNossoNum),TamanhoMaximoNossoNum,'0') +
-              CalcularDigitoVerificador(ACBrTitulo);
+    Result := PadLeft(RightStr(NossoNumero,9),9,'0');
   end;
 end;
 
@@ -1247,9 +1241,7 @@ begin
     agenciaDigito    := PadLeft(Cedente.AgenciaDigito, 1, '0');
     conta            := Cedente.Conta;
     ContaDigito      := PadLeft(Cedente.ContaDigito, 1, '0');
-    //NossoNumero      := PadLeft(RightStr(ACBrTitulo.NossoNumero,9),9,'0');
-    NossoNumero      := PadLeft(RightStr(ACBrTitulo.NossoNumero,TamanhoMaximoNossoNum),TamanhoMaximoNossoNum,'0') +
-                        CalcularDigitoVerificador(ACBrTitulo);
+    NossoNumero      := PadLeft(RightStr(ACBrTitulo.NossoNumero,9),9,'0');
 
     CodigoBarras := IntToStr(Banco.Numero) + '9' + FatorVencimento +
                     valorDocumento +

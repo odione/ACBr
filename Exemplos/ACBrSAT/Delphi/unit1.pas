@@ -1576,6 +1576,7 @@ begin
   tini := now;
   //ACBrSATExtratoFortes1.Filtro := fiPDF;
   //ACBrSATExtratoFortes1.ImprimirExtrato;
+
   ACBrSAT1.ImprimirExtrato;
   tfim := now;
   mLog.Lines.Add('Inciado em: '+DateTimeToStr(tini)) ;

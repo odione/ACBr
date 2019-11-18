@@ -31,7 +31,7 @@ object Form1: TForm1
     Left = 0
     Top = 248
     Width = 939
-    Height = 197
+    Height = 194
     ActivePage = tsRecebido
     Align = alClient
     TabOrder = 1
@@ -78,12 +78,12 @@ object Form1: TForm1
         Left = 0
         Top = 0
         Width = 931
-        Height = 169
+        Height = 166
         Cursor = crIBeam
         Align = alClient
         TabOrder = 0
         ControlData = {
-          4C00000039600000771100000000000000000000000000000000000000000000
+          4C00000039600000281100000000000000000000000000000000000000000000
           000000004C000000000000000000000001000000E0D057007335CF11AE690800
           2B2E126208000000000000004C0000000114020000000000C000000000000046
           8000000000000000000000000000000000000000000000000000000000000000
@@ -1422,7 +1422,7 @@ object Form1: TForm1
             MaxValue = 0
             MinValue = 10
             TabOrder = 2
-            Value = 0
+            Value = 10
           end
           object btMFEEnviarPagamento: TButton
             Left = 320
@@ -1546,7 +1546,7 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 445
+    Top = 442
     Width = 939
     Height = 23
     Panels = <
@@ -1777,24 +1777,28 @@ object Form1: TForm1
     Top = 280
   end
   object ACBrSATExtratoFortes1: TACBrSATExtratoFortes
-    Sistema = 'Projeto ACBr - www.projetoacbr.com.br'
-    Site = 'http://www.projetoacbr.com.br'
-    MargemInferior = 4.000000000000000000
-    MargemSuperior = 2.000000000000000000
-    MargemEsquerda = 2.000000000000000000
-    MargemDireita = 2.000000000000000000
+    PathPDF = 'C:\'
+    Sistema = 'BSNFe - Brazil Sistem'
+    Site = 'www.brazilsistem.com.br'
+    MargemInferior = 1.000000000000000000
+    MargemSuperior = 1.000000000000000000
+    MargemEsquerda = 1.000000000000000000
+    MargemDireita = 1.000000000000000000
     CasasDecimais.Formato = tdetInteger
     CasasDecimais.qCom = 2
     CasasDecimais.vUnCom = 2
     CasasDecimais.MaskqCom = ',0.00'
     CasasDecimais.MaskvUnCom = ',0.00'
     ACBrSAT = ACBrSAT1
+    Filtro = fiPDF
     MsgAppQRCode = 
       'Consulte o QR Code pelo aplicativo  "De olho na nota", dispon'#237've' +
       'l na AppStore (Apple) e PlayStore (Android)'
+    ImprimeQRCodeLateral = False
     EspacoFinal = 50
     LogoWidth = 100
     LogoHeigth = 70
+    LogoVisible = False
     Left = 64
     Top = 344
   end
