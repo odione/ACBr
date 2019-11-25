@@ -238,6 +238,7 @@ type
     lObservacoesCanc: TRLMemo;
     RLBand12: TRLBand;
     RLDraw15: TRLDraw;
+    rllFisco: TRLLabel;
 
     procedure FormDestroy(Sender: TObject);
     procedure pAsteriscoBeforePrint(Sender: TObject; var PrintIt: boolean);
@@ -370,6 +371,8 @@ begin
         lMensagemFiscal1.Lines.Add(ACBrStr( 'SEM VALOR FISCAL'));
       end;
 
+      lMensagemFiscal1.Lines.Add(ACBrStr(procNFe.xMsg));
+
       if (Ide.tpEmis <> teNormal) and EstaVazio(procNFe.nProt) then
       begin
         lContingencia1.Lines.Add(ACBrStr('EMITIDA EM CONTINGÊNCIA'));
@@ -396,6 +399,8 @@ begin
         lMensagemFiscal.Lines.Add(ACBrStr( 'EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO'));
         lMensagemFiscal.Lines.Add(ACBrStr( 'SEM VALOR FISCAL'));
       end;
+
+      lMensagemFiscal.Lines.Add(ACBrStr(procNFe.xMsg));
 
       if (Ide.tpEmis <> teNormal) and EstaVazio(procNFe.nProt) then
       begin
@@ -573,6 +578,8 @@ begin
 
     if ACBrNFeDANFCeFortes.Cancelada then
       lCanceladaCanc.Caption := ACBrStr('NFC-e CANCELADA');
+
+    rllFisco.Caption := ACBrStr(procNFe.xMsg);
   end;
 end;
 

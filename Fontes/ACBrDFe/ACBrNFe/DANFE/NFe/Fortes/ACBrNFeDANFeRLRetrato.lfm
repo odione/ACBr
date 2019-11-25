@@ -1,9 +1,8 @@
 inherited frlDANFeRLRetrato: TfrlDANFeRLRetrato
-  Left = 597
-  Height = 827
-  Top = 72
+  Left = 455
+  Top = 184
   Caption = 'frlDANFeRLRetrato'
-  ClientHeight = 827
+  ClientHeight = 634
   ClientWidth = 810
   Font.Height = -18
   inherited RLNFe: TRLReport
@@ -1647,12 +1646,30 @@ inherited frlDANFeRLRetrato: TfrlDANFeRLRetrato
         Left = 562
         Height = 7
         Top = 158
-        Width = 176
+        Width = 177
         Alignment = taRightJustify
         Caption = 'DESENVOLVIDO POR: EMPRESA RRRRRRRRRRRR'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
+        ParentFont = False
+        RealBounds.Left = 0
+        RealBounds.Top = 0
+        RealBounds.Width = 0
+        RealBounds.Height = 0
+      end
+      object rlmDadosFisco: TRLMemo
+        Tag = 20
+        Left = 475
+        Height = 120
+        Top = 34
+        Width = 261
+        AutoSize = False
+        Behavior = [beSiteExpander]
+        Font.Color = clBlack
+        Font.Height = -9
+        Font.Name = 'Times New Roman'
+        IntegralHeight = True
         ParentFont = False
         RealBounds.Left = 0
         RealBounds.Top = 0

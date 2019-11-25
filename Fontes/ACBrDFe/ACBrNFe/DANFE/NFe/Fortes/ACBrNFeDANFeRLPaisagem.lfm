@@ -1,14 +1,12 @@
 inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
-  Left = 374
-  Height = 865
-  Top = 102
-  Width = 1177
+  Left = 413
+  Top = 253
   Caption = 'frlDANFeRLPaisagem'
-  ClientHeight = 865
-  ClientWidth = 1177
+  ClientHeight = 634
+  ClientWidth = 810
   inherited RLNFe: TRLReport
     Height = 794
-    Top = 0
+    Top = -500
     Width = 1123
     Background.Arrange = baDistributed
     Background.Height = 96
@@ -39,7 +37,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbContinuacaoInformacoesComplementares: TRLBand[1]
       Left = 99
       Height = 35
-      Top = 874
+      Top = 574
       Width = 998
       AutoSize = True
       BandType = btSummary
@@ -138,7 +136,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbCabecalhoItens: TRLBand[2]
       Left = 99
       Height = 35
-      Top = 689
+      Top = 389
       Width = 998
       AutoExpand = False
       Background.Arrange = baDistributed
@@ -1033,7 +1031,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbDadosAdicionais: TRLBand[3]
       Left = 99
       Height = 124
-      Top = 938
+      Top = 638
       Width = 998
       AlignToBottom = True
       AutoExpand = False
@@ -1201,11 +1199,29 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         RealBounds.Width = 0
         RealBounds.Height = 0
       end
+      object rlmDadosFisco: TRLMemo
+        Tag = 20
+        Left = 731
+        Height = 92
+        Top = 18
+        Width = 262
+        AutoSize = False
+        Behavior = [beSiteExpander]
+        Font.Color = clBlack
+        Font.Height = -9
+        Font.Name = 'Times New Roman'
+        IntegralHeight = True
+        ParentFont = False
+        RealBounds.Left = 0
+        RealBounds.Top = 0
+        RealBounds.Width = 0
+        RealBounds.Height = 0
+      end
     end
     object rlbDestinatario: TRLBand[4]
       Left = 99
-      Height = 80
-      Top = 184
+      Height = 1
+      Top = 27
       Width = 998
       BandType = btTitle
       RealBounds.Left = 0
@@ -1802,7 +1818,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbFatura: TRLBand[5]
       Left = 99
       Height = 54
-      Top = 439
+      Top = 139
       Width = 998
       BandType = btTitle
       RealBounds.Left = 0
@@ -2670,7 +2686,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 3
         Width = 54
         Alignment = taCenter
-        Caption = 'N° DUPLICATA'
+        Caption = 'Nº DUPLICATA'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
@@ -2721,7 +2737,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 3
         Width = 54
         Alignment = taCenter
-        Caption = 'N° DUPLICATA'
+        Caption = 'Nº DUPLICATA'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
@@ -2772,7 +2788,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 3
         Width = 54
         Alignment = taCenter
-        Caption = 'N° DUPLICATA'
+        Caption = 'Nº DUPLICATA'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
@@ -2823,7 +2839,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 3
         Width = 54
         Alignment = taCenter
-        Caption = 'N° DUPLICATA'
+        Caption = 'Nº DUPLICATA'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
@@ -2874,7 +2890,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 3
         Width = 54
         Alignment = taCenter
-        Caption = 'N° DUPLICATA'
+        Caption = 'Nº DUPLICATA'
         Font.Color = clBlack
         Font.Height = -7
         Font.Name = 'Arial'
@@ -2941,7 +2957,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbImposto: TRLBand[6]
       Left = 99
       Height = 58
-      Top = 493
+      Top = 193
       Width = 998
       BandType = btTitle
       RealBounds.Left = 0
@@ -3591,7 +3607,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbTransp: TRLBand[7]
       Left = 99
       Height = 80
-      Top = 551
+      Top = 251
       Width = 998
       BandType = btTitle
       RealBounds.Left = 0
@@ -4367,7 +4383,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbISSQN: TRLBand[8]
       Left = 99
       Height = 29
-      Top = 909
+      Top = 609
       Width = 998
       BandType = btFooter
       RealBounds.Left = 0
@@ -4599,7 +4615,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbAvisoContingencia: TRLBand[9]
       Left = 99
       Height = 28
-      Top = 661
+      Top = 361
       Width = 998
       BandType = btColumnHeader
       RealBounds.Left = 0
@@ -4727,7 +4743,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Top = 22
         Width = 16
         Angle = 90
-        Caption = 'N° 000.000.000'
+        Caption = 'Nº 000.000.000'
         Font.Color = clBlack
         Font.Height = -13
         Font.Name = 'Arial'
@@ -4858,7 +4874,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object RLBFaturaReal: TRLBand[12]
       Left = 99
       Height = 44
-      Top = 395
+      Top = 95
       Width = 998
       BandType = btTitle
       RealBounds.Left = 0
@@ -5114,7 +5130,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbCanceladaDenegada: TRLBand[13]
       Left = 99
       Height = 30
-      Top = 631
+      Top = 331
       Width = 998
       BandType = btColumnHeader
       RealBounds.Left = 0
@@ -5146,7 +5162,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object subItens: TRLSubDetail[14]
       Left = 99
       Height = 150
-      Top = 724
+      Top = 424
       Width = 998
       Borders.Sides = sdCustom
       Borders.DrawLeft = False
@@ -6005,7 +6021,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     end
     object rlbEmitente: TRLBand[15]
       Left = 99
-      Height = 158
+      Height = 1
       Top = 26
       Width = 998
       AutoExpand = False
@@ -6204,7 +6220,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
         Height = 15
         Top = 72
         Width = 87
-        Caption = 'N° 000.000.000'
+        Caption = 'Nº 000.000.000'
         Font.Color = clBlack
         Font.Height = -12
         Font.Name = 'Arial'
@@ -6673,8 +6689,8 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     end
     object rlbQuandoRetirada: TRLBand[16]
       Left = 99
-      Height = 65
-      Top = 264
+      Height = 1
+      Top = 28
       Width = 998
       BandType = btTitle
       Borders.Sides = sdCustom
@@ -7166,7 +7182,7 @@ inherited frlDANFeRLPaisagem: TfrlDANFeRLPaisagem
     object rlbQuandoEntrega: TRLBand[17]
       Left = 99
       Height = 66
-      Top = 329
+      Top = 29
       Width = 998
       BandType = btTitle
       Borders.Sides = sdCustom

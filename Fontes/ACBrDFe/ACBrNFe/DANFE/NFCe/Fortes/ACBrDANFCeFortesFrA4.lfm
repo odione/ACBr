@@ -1,7 +1,7 @@
 object frmACBrDANFCeFortesFrA4: TfrmACBrDANFCeFortesFrA4
-  Left = 0
+  Left = 437
   Height = 745
-  Top = 8
+  Top = 190
   Width = 1012
   Caption = 'frmACBrDANFCeFortesFrA4'
   ClientHeight = 745
@@ -11,11 +11,11 @@ object frmACBrDANFCeFortesFrA4: TfrmACBrDANFCeFortesFrA4
   Font.Height = -11
   Font.Name = 'Tahoma'
   OnCreate = FormCreate
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.6.0'
   object rlReportA4: TRLReport
     Left = 8
     Height = 1123
-    Top = 0
+    Top = -300
     Width = 794
     Font.Color = clBlack
     Font.Height = -13
@@ -866,7 +866,7 @@ object frmACBrDANFCeFortesFrA4: TfrmACBrDANFCeFortesFrA4
       end
       object RLBand11: TRLBand
         Left = 0
-        Height = 89
+        Height = 105
         Top = 142
         Width = 718
         AutoSize = True
@@ -993,11 +993,29 @@ object frmACBrDANFCeFortesFrA4: TfrmACBrDANFCeFortesFrA4
           RealBounds.Width = 0
           RealBounds.Height = 0
         end
+        object rllFisco: TRLLabel
+          Left = 1
+          Height = 16
+          Top = 88
+          Width = 716
+          Align = faTop
+          Alignment = taCenter
+          Caption = 'Dados do Fisco'
+          Font.Color = clBlack
+          Font.Height = -13
+          Font.Name = 'Arial'
+          Layout = tlCenter
+          ParentFont = False
+          RealBounds.Left = 0
+          RealBounds.Top = 0
+          RealBounds.Width = 0
+          RealBounds.Height = 0
+        end
       end
       object rlbConsumidor: TRLBand
         Left = 0
         Height = 44
-        Top = 231
+        Top = 247
         Width = 718
         AutoSize = True
         Borders.Sides = sdCustom
@@ -1072,7 +1090,7 @@ object frmACBrDANFCeFortesFrA4: TfrmACBrDANFCeFortesFrA4
       object rlbRodape: TRLBand
         Left = 0
         Height = 173
-        Top = 275
+        Top = 291
         Width = 718
         AutoSize = True
         BandType = btSummary

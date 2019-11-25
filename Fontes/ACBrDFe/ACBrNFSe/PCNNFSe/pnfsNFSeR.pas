@@ -1925,16 +1925,21 @@ begin
     NFSe.ValoresNfse.ValorIss         := Leitor.rCampo(tcDe2, 'ValorIss');
     NFSe.ValoresNfse.ValorLiquidoNfse := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
 
-    if (FProvedor in [proCoplan, proWebISSv2, proTiplanv2, proCenti, proRLZ]) then
+    if (FProvedor in [proCoplan, proWebISSv2, proTiplanv2, proCenti, proRLZ, proSystemPro]) then
     begin
       NFSe.Servico.Valores.BaseCalculo      := Leitor.rCampo(tcDe2, 'BaseCalculo');
       NFSe.Servico.Valores.Aliquota         := Leitor.rCampo(tcDe3, 'Aliquota');
       NFSe.Servico.Valores.ValorIss         := Leitor.rCampo(tcDe2, 'ValorIss');
       NFSe.Servico.Valores.ValorLiquidoNfse := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
+      if (FProvedor = proSystemPro) then
+         NFSe.Servico.Valores.ValorServicos := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
     end;
+
   end; // fim ValoresNfse
 
-  if (Leitor.rExtrai(3, 'PrestadorServico') <> '') or (Leitor.rExtrai(3, 'DadosPrestador') <> '') then
+  if (Leitor.rExtrai(3, 'PrestadorServico') <> '') or
+     (Leitor.rExtrai(3, 'DadosPrestador') <> '') or
+     (Leitor.rExtrai(3, 'Prestador') <> '') then
   begin
     NFSe.PrestadorServico.RazaoSocial  := Leitor.rCampo(tcStr, 'RazaoSocial');
     NFSe.PrestadorServico.NomeFantasia := Leitor.rCampo(tcStr, 'NomeFantasia');
@@ -2027,7 +2032,8 @@ begin
 
   end; // fim EnderecoPrestadorServico
 
-  if Leitor.rExtrai(3, 'ContatoPrestadorServico') <> '' then
+  if (Leitor.rExtrai(3, 'ContatoPrestadorServico') <> '') or
+     (Leitor.rExtrai(3, 'Contato') <> '') then
   begin
     NFSe.PrestadorServico.Contato.Telefone := Leitor.rCampo(tcStr, 'Telefone');
     NFSe.PrestadorServico.Contato.Email    := Leitor.rCampo(tcStr, 'Email');
@@ -2152,18 +2158,22 @@ begin
       NFSe.Servico.ItemServico.New;
       NFSe.Servico.Valores.IssRetido            := StrToSituacaoTributaria(ok, Leitor.rCampo(tcStr, 'IssRetido'));
       NFSe.Servico.ItemListaServico             := Leitor.rCampo(tcStr, 'ItemListaServico');
-      NFSe.Servico.ItemServico[i].Discriminacao := Leitor.rCampo(tcStr, 'Discriminacao');
+      NFSe.Servico.ItemServico[i].Descricao     := Leitor.rCampo(tcStr, 'Discriminacao');
       NFSe.Servico.CodigoMunicipio              := Leitor.rCampo(tcStr, 'CodigoMunicipio');
       NFSe.Servico.ExigibilidadeISS             := StrToExigibilidadeISS(ok, Leitor.rCampo(tcStr, 'ExigibilidadeISS'));
       NFSe.Servico.MunicipioIncidencia          := Leitor.rCampo(tcInt, 'MunicipioIncidencia');
       NFSe.Servico.CodigoCnae                   := Leitor.rCampo(tcStr, 'CodigoCnae');
       NFSe.Servico.CodigoTributacaoMunicipio    := Leitor.rCampo(tcStr, 'CodigoTributacaoMunicipio');
-      NFSe.Servico.CodigoPais                   := Leitor.rCampo(tcStr, 'CodigoPais');
+      NFSe.Servico.CodigoPais                   := Leitor.rCampo(tcInt, 'CodigoPais');
       NFSe.Servico.NumeroProcesso               := Leitor.rCampo(tcStr, 'NumeroProcesso');
       NFSe.Servico.ResponsavelRetencao          := StrToResponsavelRetencao(ok, Leitor.rCampo(tcStr, 'ResponsavelRetencao'));
 
       if (Leitor.rExtrai(NivelTemp + 1, 'Valores') <> '') then
       begin
+        NFSe.Servico.ItemServico[i].Quantidade := 1;
+        NFSe.Servico.ItemServico[i].ValorUnitario := Leitor.rCampo(tcDe2, 'ValorServicos');
+        NFSe.Servico.ItemServico[i].ValorTotal := Leitor.rCampo(tcDe2, 'ValorServicos');
+
         NFSe.Servico.ItemServico[i].ValorServicos          := Leitor.rCampo(tcDe2, 'ValorServicos');
         NFSe.Servico.ItemServico[i].ValorDeducoes          := Leitor.rCampo(tcDe2, 'ValorDeducoes');
         NFSe.Servico.ItemServico[i].ValorIss               := Leitor.rCampo(tcDe2, 'ValorInss');
