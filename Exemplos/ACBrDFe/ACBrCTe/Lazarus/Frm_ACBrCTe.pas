@@ -5,10 +5,10 @@ unit Frm_ACBrCTe;
 interface
 
 uses
-  IniFiles, LCLIntf, LCLType, LMessages, Messages, SysUtils, Variants, Classes,
+  IniFiles, LCLIntf, LCLType, SysUtils, Variants, Classes,
   Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Spin, Buttons, ExtCtrls,
-  SynEdit, SynHighlighterXML, zlib,
-  ACBrBase, ACBrUtil, ACBrMail, ACBrDFe, ACBrDFeSSL, ACBrDFeReport,
+  SynEdit, SynHighlighterXML,
+  ACBrUtil, ACBrMail, ACBrDFe, ACBrDFeSSL, ACBrDFeReport,
   ACBrCTe, ACBrCTeDACTEClass, ACBrCTeDACTeRLClass;
 
 type
@@ -303,10 +303,10 @@ var
 implementation
 
 uses
-  strutils, math, TypInfo, DateUtils, synacode, blcksock, FileCtrl, Grids,
+  strutils, math, TypInfo, DateUtils, blcksock, Grids,
   Printers,
-  pcnAuxiliar, pcteCTe, pcnConversao, pcteConversaoCTe, pcnRetConsReciDFe,
-  ACBrDFeConfiguracoes, ACBrDFeOpenSSL, ACBrDFeUtil,
+  pcnAuxiliar, pcteCTe, pcnConversao, pcteConversaoCTe,
+  ACBrDFeConfiguracoes, ACBrDFeUtil,
   ACBrCTeConhecimentos, ACBrCTeConfiguracoes,
   Frm_Status, Frm_SelecionarCertificado;
 
@@ -321,6 +321,7 @@ procedure TfrmACBrCTe.ACBrCTe1GerarLog(const ALogLine: string;
   var Tratado: Boolean);
 begin
   memoLog.Lines.Add(ALogLine);
+  Tratado := True;
 end;
 
 procedure TfrmACBrCTe.ACBrCTe1StatusChange(Sender: TObject);
@@ -1107,7 +1108,8 @@ procedure TfrmACBrCTe.btnCancelarChaveClick(Sender: TObject);
 var
   Chave, idLote, CNPJ, Protocolo, Justificativa: string;
 begin
-  if not(InputQuery('WebServices Eventos: Cancelamento', 'Chave da CT-e', Chave)) then
+  Chave := '';
+  if not(InputQuery('WebServices Eventos: Cancelamento', 'Chave do CT-e', Chave)) then
      exit;
   Chave := Trim(OnlyNumber(Chave));
   idLote := '1';
@@ -1171,6 +1173,7 @@ begin
     if not(InputQuery('WebServices Eventos: Cancelamento', 'Identificador de controle do Lote de envio do Evento', idLote)) then
        exit;
 
+    vAux := '';
     if not(InputQuery('WebServices Eventos: Cancelamento', 'Justificativa', vAux)) then
        exit;
 
@@ -1211,6 +1214,7 @@ begin
     ACBrCTe1.Conhecimentos.Clear;
     ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
+    vProt := '';
     if not(InputQuery('Comprovante de Entrega:', 'Numero do Protocolo', vProt)) then
       exit;
 
@@ -1314,15 +1318,19 @@ begin
     ACBrCTe1.Conhecimentos.Clear;
     ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
+    vGrupo := '';
     if not(InputQuery('Carta de Correção do CTe:', 'Grupo', vGrupo)) then
       exit;
 
+    vCampo := '';
     if not(InputQuery('Carta de Correção do CTe:', 'Campo', vCampo)) then
       exit;
 
+    vConteudo := '';
     if not(InputQuery('Carta de Correção do CTe:', 'Conteudo', vConteudo)) then
       exit;
 
+    vIndice := '';
     if not(InputQuery('Carta de Correção do CTe:', 'Indice (por padrão é 1)', vIndice)) then
       exit;
 
@@ -1383,18 +1391,23 @@ begin
     ACBrCTe1.Conhecimentos.Clear;
     ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
+    vData := '';
     if not(InputQuery('Comprovante de Entrega:', 'Data da Entrega (DD/MM/AAAA)', vData)) then
       exit;
 
+    vHora := '';
     if not(InputQuery('Comprovante de Entrega:', 'Hora da Entrega (HH:MM:SS)', vHora)) then
       exit;
 
+    vDoc := '';
     if not(InputQuery('Comprovante de Entrega:', 'Num. Doc. de quem recebeu', vDoc)) then
       exit;
 
+    vNome := '';
     if not(InputQuery('Comprovante de Entrega:', 'Nome de quem recebeu', vNome)) then
       exit;
 
+    vChaveNFe := '';
     if not(InputQuery('Comprovante de Entrega:', 'Chave da NFe Entregue', vChaveNFe)) then
       exit;
 
@@ -1413,7 +1426,7 @@ begin
 
     with ACBrCTe1.EventoCTe.Evento.New do
     begin
-      // Para o Evento de Cancelamento: nSeqEvento sempre = 1
+      // Para o Evento: nSeqEvento sempre = 1
       infEvento.nSeqEvento      := 1;
       infEvento.chCTe           := Copy(ACBrCTe1.Conhecimentos.Items[0].CTe.infCTe.Id, 4, 44);
       infEvento.CNPJ            := edtEmitCNPJ.Text;
@@ -1452,10 +1465,12 @@ procedure TfrmACBrCTe.btnConsCadClick(Sender: TObject);
 var
   UF, Documento: String;
 begin
- if not(InputQuery('WebServices Consulta Cadastro ', 'UF do Documento a ser Consultado:',    UF)) then
+ UF := '';
+ if not(InputQuery('WebServices Consulta Cadastro ', 'UF do Documento a ser Consultado:', UF)) then
     exit;
 
- if not(InputQuery('WebServices Consulta Cadastro ', 'Documento(CPF/CNPJ)',    Documento)) then
+ Documento := '';
+ if not(InputQuery('WebServices Consulta Cadastro ', 'Documento(CPF/CNPJ)', Documento)) then
     exit;
 
   Documento :=  Trim(OnlyNumber(Documento));
@@ -1489,7 +1504,8 @@ procedure TfrmACBrCTe.btnConsultarChaveClick(Sender: TObject);
 var
   vChave: String;
 begin
-  if not(InputQuery('WebServices Consultar', 'Chave da CT-e:', vChave)) then
+  vChave := '';
+  if not(InputQuery('WebServices Consultar', 'Chave do CT-e:', vChave)) then
     exit;
 
   ACBrCTe1.Conhecimentos.Clear;
@@ -1529,6 +1545,7 @@ procedure TfrmACBrCTe.btnConsultarReciboClick(Sender: TObject);
 var
   aux: String;
 begin
+  aux := '';
   if not(InputQuery('Consultar Recibo Lote', 'Número do Recibo', aux)) then
     exit;
 
@@ -1559,9 +1576,11 @@ procedure TfrmACBrCTe.btnCriarEnviarClick(Sender: TObject);
 var
   vAux, vNumLote: String;
 begin
+  vAux := '';
   if not(InputQuery('WebServices Enviar', 'Numero do Conhecimento', vAux)) then
     exit;
 
+  vNumLote := '';
   if not(InputQuery('WebServices Enviar', 'Numero do Lote', vNumLote)) then
     exit;
 
@@ -1613,9 +1632,11 @@ procedure TfrmACBrCTe.btnCriarEnviarSincronoClick(Sender: TObject);
 var
   vAux, vNumLote: String;
 begin
+  vAux := '';
   if not(InputQuery('WebServices Enviar Síncrono', 'Numero do Conhecimento', vAux)) then
     exit;
 
+  vNumLote := '';
   if not(InputQuery('WebServices Enviar Síncrono', 'Numero do Lote', vNumLote)) then
     exit;
 
@@ -1709,6 +1730,7 @@ begin
     ACBrCTe1.Conhecimentos.Clear;
     ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
+    vAux := '';
     if not(InputQuery('EPEC do CTe:', 'Justificativa', vAux)) then
       exit;
 
@@ -1766,6 +1788,7 @@ var
   Para: String;
   CC: Tstrings;
 begin
+  Para := '';
   if not(InputQuery('Enviar Email', 'Email de destino', Para)) then
     exit;
 
@@ -1782,24 +1805,24 @@ begin
     CC:=TstringList.Create;
 
     try
-      CC.Add('andrefmoraes@gmail.com'); //especifique um email vÃ¡lido
-      CC.Add('anfm@zipmail.com.br');    //especifique um email vÃ¡lido
+      CC.Add('andrefmoraes@gmail.com'); // especifique um email valido
+      CC.Add('anfm@zipmail.com.br');    // especifique um email valido
 
       ACBrMail1.Host := edtSmtpHost.Text;
       ACBrMail1.Port := edtSmtpPort.Text;
       ACBrMail1.Username := edtSmtpUser.Text;
       ACBrMail1.Password := edtSmtpPass.Text;
       ACBrMail1.From := edtSmtpUser.Text;
-      ACBrMail1.SetSSL := cbEmailSSL.Checked; // SSL - ConexÃ£o Segura
+      ACBrMail1.SetSSL := cbEmailSSL.Checked; // SSL - Conexao Segura
       ACBrMail1.SetTLS := cbEmailSSL.Checked; // Auto TLS
-      ACBrMail1.ReadingConfirmation := False; //Pede confirmaÃ§Ã£o de leitura do email
-      ACBrMail1.UseThread := False;           //Aguarda Envio do Email(nÃ£o usa thread)
+      ACBrMail1.ReadingConfirmation := False; // Pede confirmacao de leitura do email
+      ACBrMail1.UseThread := False;           // Aguarda Envio do Email(nao usa thread)
       ACBrMail1.FromName := 'Projeto ACBr - ACBrCTe';
 
       ACBrCTe1.Conhecimentos.Items[0].EnviarEmail( Para, edtEmailAssunto.Text,
                                                mmEmailMsg.Lines
                                                , True  // Enviar PDF junto
-                                               , CC    // Lista com emails que serÃ£o enviado cÃ³pias - TStrings
+                                               , CC    // Lista com emails que serao enviado copias - TStrings
                                                , nil); // Lista de anexos - TStrings
     finally
       CC.Free;
@@ -1812,6 +1835,7 @@ var
   Para: String;
   CC, Evento: Tstrings;
 begin
+  Para := '';
   if not(InputQuery('Enviar Email', 'Email de destino', Para)) then
     exit;
 
@@ -1842,25 +1866,15 @@ begin
     ACBrCTe1.EventoCTe.LerXML(OpenDialog1.FileName);
 
     CC:=TstringList.Create;
-    CC.Add('andrefmoraes@gmail.com'); //especifique um email vÃ¡lido
-    CC.Add('anfm@zipmail.com.br');    //especifique um email vÃ¡lido
-    //TODO:
-    ////ACBrCTe1.EnviarEmailEvento(edtSmtpHost.Text
-    ////                         , edtSmtpPort.Text
-    ////                         , edtSmtpUser.Text
-    ////                         , edtSmtpPass.Text
-    ////                         , edtSmtpUser.Text
-    ////                         , Para
-    ////                         , edtEmailAssunto.Text
-    ////                         , mmEmailMsg.Lines
-    ////                         , cbEmailSSL.Checked // SSL - ConexÃ£o Segura
-    ////                         , True //Enviar PDF junto
-    ////                         , CC //Lista com emails que serÃ£o enviado cÃ³pias - TStrings
-    ////                         , Evento // Lista de anexos - TStrings
-    ////                         , False  //Pede confirmaÃ§Ã£o de leitura do email
-    ////                         , False  //Aguarda Envio do Email(nÃ£o usa thread)
-    ////                         , 'ACBrCTe2' // Nome do Rementente
-    ////                         , cbEmailSSL.Checked ); // Auto TLS
+    CC.Add('andrefmoraes@gmail.com'); // especifique um email valido
+    CC.Add('anfm@zipmail.com.br');    // especifique um email valido
+
+    ACBrCTe1.EnviarEmailEvento(Para, edtEmailAssunto.Text, mmEmailMsg.Lines,
+                               nil, // Lista com emails que serao enviado copias - TStrings
+                               nil, // Lista de anexos - TStrings
+                               nil  // ReplyTo
+                               );
+
     CC.Free;
     Evento.Free;
   end;
@@ -1883,7 +1897,7 @@ begin
     if OpenDialog1.Execute then
       ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
-    CarregarMaisXML := MessageDlg('Carregar mais Notas?', mtConfirmation, mbYesNoCancel, 0) = mrYes;
+    CarregarMaisXML := MessageDlg('Carregar mais Conhecimentos?', mtConfirmation, mbYesNoCancel, 0) = mrYes;
   end;
 
   ACBrCTe1.Conhecimentos.ImprimirPDF;
@@ -1933,7 +1947,8 @@ procedure TfrmACBrCTe.btnGerarXMLClick(Sender: TObject);
 var
   vAux: String;
 begin
-  if not(InputQuery('WebServices Enviar', 'Numero da Nota', vAux)) then
+  vAux := '';
+  if not(InputQuery('WebServices Enviar', 'Numero do Conhecimento', vAux)) then
     exit;
 
   ACBrCTe1.Conhecimentos.Clear;
@@ -1984,7 +1999,7 @@ end;
 
 procedure TfrmACBrCTe.btnImprimirClick(Sender: TObject);
 begin
-  OpenDialog1.Title := 'Selecione a CTe';
+  OpenDialog1.Title := 'Selecione o CTe';
   OpenDialog1.DefaultExt := '*-CTe.XML';
   OpenDialog1.Filter := 'Arquivos CTe (*-CTe.XML)|*-CTe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -2000,7 +2015,7 @@ end;
 
 procedure TfrmACBrCTe.btnImprimirEventoClick(Sender: TObject);
 begin
-  OpenDialog1.Title := 'Selecione a CTe';
+  OpenDialog1.Title := 'Selecione o CTe';
   OpenDialog1.DefaultExt := '*-CTe.XML';
   OpenDialog1.Filter := 'Arquivos CTe (*-CTe.XML)|*-CTe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -2030,16 +2045,22 @@ procedure TfrmACBrCTe.btnInutilizarClick(Sender: TObject);
 var
   Modelo, Serie, Ano, NumeroInicial, NumeroFinal, Justificativa: String;
 begin
+ Ano := '';
  if not(InputQuery('WebServices Inutilização ', 'Ano',    Ano)) then
     exit;
+ Modelo := '56';
  if not(InputQuery('WebServices Inutilização ', 'Modelo', Modelo)) then
     exit;
+ Serie := '';
  if not(InputQuery('WebServices Inutilização ', 'Serie',  Serie)) then
     exit;
+ NumeroInicial := '';
  if not(InputQuery('WebServices Inutilização ', 'Número Inicial', NumeroInicial)) then
     exit;
+ NumeroFinal := '';
  if not(InputQuery('WebServices Inutilização ', 'Número Inicial', NumeroFinal)) then
     exit;
+ Justificativa := '';
  if not(InputQuery('WebServices Inutilização ', 'Justificativa', Justificativa)) then
     exit;
 
@@ -2135,6 +2156,7 @@ begin
     ACBrCTe1.Conhecimentos.Clear;
     ACBrCTe1.Conhecimentos.LoadFromFile(OpenDialog1.FileName);
 
+    xObs := '';
     if not(InputQuery('Prestação de Serviço em Desacordo:', 'Observação do Tomador', xObs)) then
       exit;
 
@@ -2213,7 +2235,7 @@ procedure TfrmACBrCTe.btnValidarAssinaturaClick(Sender: TObject);
 var
   Msg: String;
 begin
-  OpenDialog1.Title := 'Selecione a CTe';
+  OpenDialog1.Title := 'Selecione o CTe';
   OpenDialog1.DefaultExt := '*-CTe.XML';
   OpenDialog1.Filter := 'Arquivos CTe (*-CTe.XML)|*-CTe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -2248,7 +2270,7 @@ var
   Inicio: TDateTime;
   Ok: Boolean;
 begin
-  OpenDialog1.Title := 'Selecione a CTe';
+  OpenDialog1.Title := 'Selecione o CTe';
   OpenDialog1.DefaultExt := '*-CTe.XML';
   OpenDialog1.Filter := 'Arquivos CTe (*-CTe.XML)|*-CTe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -2274,7 +2296,7 @@ end;
 
 procedure TfrmACBrCTe.btnValidarXMLClick(Sender: TObject);
 begin
-  OpenDialog1.Title := 'Selecione a CTe';
+  OpenDialog1.Title := 'Selecione o CTe';
   OpenDialog1.DefaultExt := '*-CTe.XML';
   OpenDialog1.Filter := 'Arquivos CTe (*-CTe.XML)|*-CTe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -2295,7 +2317,7 @@ begin
       if ACBrCTe1.Conhecimentos.Items[0].Alertas <> '' then
         MemoDados.Lines.Add('Alertas: '+ACBrCTe1.Conhecimentos.Items[0].Alertas);
 
-      ShowMessage('Nota Fiscal Eletrônica Valida');
+      ShowMessage('Conhecimento de Transporte Eletrônico Valido');
     except
       on E: Exception do
       begin
@@ -2494,8 +2516,8 @@ begin
 
     StreamMemo.Free;
 
-    Ini.WriteInteger('DACTe', 'Tipo',      rgTipoDaCTe.ItemIndex);
-    Ini.WriteString( 'DACTe', 'LogoMarca', edtLogoMarca.Text);
+    Ini.WriteInteger('DACTE', 'Tipo',      rgTipoDaCTe.ItemIndex);
+    Ini.WriteString( 'DACTE', 'LogoMarca', edtLogoMarca.Text);
 
     ConfigurarComponente;
   finally
@@ -2602,7 +2624,7 @@ begin
     edtEmitComp.Text       := Ini.ReadString('Emitente', 'Complemento', '');
     edtEmitBairro.Text     := Ini.ReadString('Emitente', 'Bairro',      '');
     edtEmitCodCidade.Text  := Ini.ReadString('Emitente', 'CodCidade',   '');
-    edtEmitCidade.Text     := Ini.ReadString( 'Emitente', 'Cidade',      '');
+    edtEmitCidade.Text     := Ini.ReadString('Emitente', 'Cidade',      '');
     edtEmitUF.Text         := Ini.ReadString('Emitente', 'UF',          '');
 
     edtSmtpHost.Text     := Ini.ReadString('Email', 'Host',    '');
@@ -2617,8 +2639,8 @@ begin
     mmEmailMsg.Lines.LoadFromStream(StreamMemo);
     StreamMemo.Free;
 
-    rgTipoDaCTe.ItemIndex := Ini.ReadInteger('DACTe', 'Tipo',       0);
-    edtLogoMarca.Text     := Ini.ReadString( 'DACTe', 'LogoMarca',  '');
+    rgTipoDaCTe.ItemIndex := Ini.ReadInteger('DACTE', 'Tipo',      0);
+    edtLogoMarca.Text     := Ini.ReadString( 'DACTE', 'LogoMarca', '');
 
     ConfigurarComponente;
   finally
@@ -2786,7 +2808,7 @@ end;
 procedure TfrmACBrCTe.sbtnNumSerieClick(Sender: TObject);
 var
   I: Integer;
-  ASerie: String;
+//  ASerie: String;
   AddRow: Boolean;
 begin
   ACBrCTe1.SSL.LerCertificadosStore;
@@ -2811,7 +2833,7 @@ begin
   begin
     with ACBrCTe1.SSL.ListaCertificados[I] do
     begin
-      ASerie := NumeroSerie;
+//      ASerie := NumeroSerie;
 
       if (CNPJ <> '') then
       begin

@@ -5,11 +5,11 @@ unit Frm_ACBrBPe;
 interface
 
 uses
-  IniFiles, LCLIntf, LCLType, LMessages, Messages, SysUtils, Variants, Classes,
+  IniFiles, LCLIntf, LCLType, SysUtils, Variants, Classes,
   Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Spin, Buttons, ExtCtrls,
   SynEdit, SynHighlighterXML,
-  ACBrBPe, ACBrBPeDABPeClass, ACBrBPeDABPeESCPOS, ACBrMail, ACBrBase, ACBrUtil,
-  ACBrDFe, ACBrDFeSSL, ACBrDFeReport, ACBrPosPrinter, zlib;
+  ACBrBPe, ACBrBPeDABPEClass, ACBrBPeDABPeESCPOS, ACBrMail, ACBrUtil,
+  ACBrDFe, ACBrDFeSSL, ACBrDFeReport, ACBrPosPrinter;
 
 type
 
@@ -296,10 +296,10 @@ var
 implementation
 
 uses
-  strutils, math, TypInfo, DateUtils, synacode, blcksock, FileCtrl, Grids,
+  strutils, math, TypInfo, DateUtils, blcksock, Grids,
   Printers,
-  pcnAuxiliar, pcnBPe, pcnConversao, pcnConversaoBPe, pcnRetConsReciDFe,
-  ACBrDFeConfiguracoes, ACBrDFeOpenSSL, ACBrDFeUtil,
+  pcnAuxiliar, pcnBPe, pcnConversao, pcnConversaoBPe,
+  ACBrDFeConfiguracoes, ACBrDFeUtil,
   ACBrBPeBilhetes, ACBrBPeConfiguracoes,
   Frm_Status, Frm_SelecionarCertificado, Frm_ConfiguraSerial;
 
@@ -314,6 +314,7 @@ procedure TfrmACBrBPe.ACBrBPe1GerarLog(const ALogLine: string;
   var Tratado: Boolean);
 begin
   memoLog.Lines.Add(ALogLine);
+  Tratado := True;
 end;
 
 procedure TfrmACBrBPe.ACBrBPe1StatusChange(Sender: TObject);
@@ -668,6 +669,7 @@ procedure TfrmACBrBPe.btnAlteracaoPoltronaClick(Sender: TObject);
 var
   Chave, idLote, CNPJ, Protocolo, NumPoltrona: string;
 begin
+  Chave := '';
   if not(InputQuery('WebServices Eventos: Alteração de Poltrona', 'Chave da BP-e', Chave)) then
      exit;
   Chave := Trim(OnlyNumber(Chave));
@@ -724,6 +726,7 @@ procedure TfrmACBrBPe.btnCancelarChaveClick(Sender: TObject);
 var
   Chave, idLote, CNPJ, Protocolo, Justificativa: string;
 begin
+  Chave := '';
   if not(InputQuery('WebServices Eventos: Cancelamento', 'Chave da BP-e', Chave)) then
      exit;
   Chave := Trim(OnlyNumber(Chave));
@@ -787,6 +790,7 @@ begin
     if not(InputQuery('WebServices Eventos: Cancelamento', 'Identificador de controle do Lote de envio do Evento', idLote)) then
        exit;
 
+    vAux := '';
     if not(InputQuery('WebServices Eventos: Cancelamento', 'Justificativa', vAux)) then
        exit;
 
@@ -877,7 +881,8 @@ procedure TfrmACBrBPe.btnConsultarChaveClick(Sender: TObject);
 var
   vChave: String;
 begin
-  if not(InputQuery('WebServices Consultar', 'Chave da BP-e:', vChave)) then
+  vChave := '';
+  if not(InputQuery('WebServices Consultar', 'Chave do BP-e:', vChave)) then
     exit;
 
   ACBrBPe1.Bilhetes.Clear;
@@ -914,9 +919,11 @@ procedure TfrmACBrBPe.btnCriarEnviarClick(Sender: TObject);
 var
   vAux, vNumLote: String;
 begin
+  vAux := '';
   if not(InputQuery('WebServices Enviar', 'Numero do Bilhete', vAux)) then
     exit;
 
+  vNumLote := '1';
   if not(InputQuery('WebServices Enviar', 'Numero do Lote', vNumLote)) then
     exit;
 
@@ -939,7 +946,7 @@ begin
   LoadXML(MemoResp, WBResposta);
 
   MemoDados.Lines.Add('');
-  MemoDados.Lines.Add('Envio NFCe');
+  MemoDados.Lines.Add('Envio BPe');
   MemoDados.Lines.Add('tpAmb: ' + TpAmbToStr(ACBrBPe1.WebServices.Enviar.TpAmb));
   MemoDados.Lines.Add('verAplic: ' + ACBrBPe1.WebServices.Enviar.verAplic);
   MemoDados.Lines.Add('cStat: ' + IntToStr(ACBrBPe1.WebServices.Enviar.cStat));
@@ -995,6 +1002,7 @@ var
   Para: String;
   CC: Tstrings;
 begin
+  Para := '';
   if not(InputQuery('Enviar Email', 'Email de destino', Para)) then
     exit;
 
@@ -1011,24 +1019,24 @@ begin
     CC:=TstringList.Create;
 
     try
-      CC.Add('andrefmoraes@gmail.com'); //especifique um email vÃ¡lido
-      CC.Add('anfm@zipmail.com.br');    //especifique um email vÃ¡lido
+      CC.Add('andrefmoraes@gmail.com'); // especifique um email valido
+      CC.Add('anfm@zipmail.com.br');    // especifique um email valido
 
       ACBrMail1.Host := edtSmtpHost.Text;
       ACBrMail1.Port := edtSmtpPort.Text;
       ACBrMail1.Username := edtSmtpUser.Text;
       ACBrMail1.Password := edtSmtpPass.Text;
       ACBrMail1.From := edtSmtpUser.Text;
-      ACBrMail1.SetSSL := cbEmailSSL.Checked; // SSL - ConexÃ£o Segura
+      ACBrMail1.SetSSL := cbEmailSSL.Checked; // SSL - Conexao Segura
       ACBrMail1.SetTLS := cbEmailSSL.Checked; // Auto TLS
-      ACBrMail1.ReadingConfirmation := False; //Pede confirmaÃ§Ã£o de leitura do email
-      ACBrMail1.UseThread := False;           //Aguarda Envio do Email(nÃ£o usa thread)
+      ACBrMail1.ReadingConfirmation := False; // Pede confirmacao de leitura do email
+      ACBrMail1.UseThread := False;           // Aguarda Envio do Email(nao usa thread)
       ACBrMail1.FromName := 'Projeto ACBr - ACBrBPe';
 
       ACBrBPe1.Bilhetes.Items[0].EnviarEmail( Para, edtEmailAssunto.Text,
                                                mmEmailMsg.Lines
                                                , True  // Enviar PDF junto
-                                               , CC    // Lista com emails que serÃ£o enviado cÃ³pias - TStrings
+                                               , CC    // Lista com emails que serao enviado copias - TStrings
                                                , nil); // Lista de anexos - TStrings
     finally
       CC.Free;
@@ -1041,6 +1049,7 @@ var
   Para: String;
   CC, Evento: Tstrings;
 begin
+  Para := '';
   if not(InputQuery('Enviar Email', 'Email de destino', Para)) then
     exit;
 
@@ -1071,25 +1080,15 @@ begin
     ACBrBPe1.EventoBPe.LerXML(OpenDialog1.FileName);
 
     CC:=TstringList.Create;
-    CC.Add('andrefmoraes@gmail.com'); //especifique um email vÃ¡lido
-    CC.Add('anfm@zipmail.com.br');    //especifique um email vÃ¡lido
-    //TODO:
-    ////ACBrBPe1.EnviarEmailEvento(edtSmtpHost.Text
-    ////                         , edtSmtpPort.Text
-    ////                         , edtSmtpUser.Text
-    ////                         , edtSmtpPass.Text
-    ////                         , edtSmtpUser.Text
-    ////                         , Para
-    ////                         , edtEmailAssunto.Text
-    ////                         , mmEmailMsg.Lines
-    ////                         , cbEmailSSL.Checked // SSL - ConexÃ£o Segura
-    ////                         , True //Enviar PDF junto
-    ////                         , CC //Lista com emails que serÃ£o enviado cÃ³pias - TStrings
-    ////                         , Evento // Lista de anexos - TStrings
-    ////                         , False  //Pede confirmaÃ§Ã£o de leitura do email
-    ////                         , False  //Aguarda Envio do Email(nÃ£o usa thread)
-    ////                         , 'ACBrBPe2' // Nome do Rementente
-    ////                         , cbEmailSSL.Checked ); // Auto TLS
+    CC.Add('andrefmoraes@gmail.com'); // especifique um email valido
+    CC.Add('anfm@zipmail.com.br');    // especifique um email valido
+
+    ACBrBPe1.EnviarEmailEvento(Para, edtEmailAssunto.Text, mmEmailMsg.Lines,
+                               nil, // Lista com emails que serao enviado copias - TStrings
+                               nil, // Lista de anexos - TStrings
+                               nil  // ReplyTo
+                               );
+
     CC.Free;
     Evento.Free;
   end;
@@ -1122,6 +1121,7 @@ procedure TfrmACBrBPe.btnGerarXMLClick(Sender: TObject);
 var
   vAux: String;
 begin
+  vAux := '';
   if not(InputQuery('WebServices Enviar', 'Numero do Bilhete', vAux)) then
     exit;
 
@@ -1270,6 +1270,7 @@ procedure TfrmACBrBPe.btnNaoEmbarqueClick(Sender: TObject);
 var
   Chave, idLote, CNPJ, Protocolo, Justificativa: string;
 begin
+  Chave := '';
   if not(InputQuery('WebServices Eventos: Não Embarque', 'Chave da BP-e', Chave)) then
      exit;
   Chave := Trim(OnlyNumber(Chave));
@@ -1354,20 +1355,6 @@ begin
   MemoDados.Lines.Add('tMed: '     +IntToStr(ACBrBPe1.WebServices.StatusServico.TMed));
   MemoDados.Lines.Add('dhRetorno: '+DateTimeToStr(ACBrBPe1.WebServices.StatusServico.dhRetorno));
   MemoDados.Lines.Add('xObs: '     +ACBrBPe1.WebServices.StatusServico.xObs);
-  {
-  if (ACBrBPe1.Integrador= ACBrIntegrador1) then
-  begin
-    if (ACBrIntegrador1.ComandoIntegrador.IntegradorResposta.Codigo <> '') then
-    begin
-      MemoDados.Lines.Add('[Integrador]');
-      MemoDados.Lines.Add('Codigo=' + ACBrIntegrador1.ComandoIntegrador.IntegradorResposta.Codigo);
-      MemoDados.Lines.Add('Valor=' + ACBrIntegrador1.ComandoIntegrador.IntegradorResposta.Valor);
-
-      ACBrIntegrador1.ComandoIntegrador.IntegradorResposta.Codigo := '';
-      ACBrIntegrador1.ComandoIntegrador.IntegradorResposta.Valor := '';
-    end;
-  end;
-  }
 end;
 
 procedure TfrmACBrBPe.btnSubNameClick(Sender: TObject);
@@ -1441,7 +1428,7 @@ end;
 
 procedure TfrmACBrBPe.btnValidarXMLClick(Sender: TObject);
 begin
-  OpenDialog1.Title := 'Selecione a BPe';
+  OpenDialog1.Title := 'Selecione o BPe';
   OpenDialog1.DefaultExt := '*-BPe.XML';
   OpenDialog1.Filter := 'Arquivos BPe (*-BPe.XML)|*-BPe.XML|Arquivos XML (*.XML)|*.XML|Todos os Arquivos (*.*)|*.*';
 
@@ -1694,9 +1681,9 @@ begin
 
     StreamMemo.Free;
 
-    Ini.WriteInteger('DABPe', 'Tipo',       rgTipoDaBPe.ItemIndex);
-    Ini.WriteString( 'DABPe', 'LogoMarca',  edtLogoMarca.Text);
-    Ini.WriteInteger('DABPe', 'TipoDANFCE', rgComponenteDABPE.ItemIndex);
+    Ini.WriteInteger('DABPE', 'Tipo',      rgTipoDaBPe.ItemIndex);
+    Ini.WriteString( 'DABPE', 'LogoMarca', edtLogoMarca.Text);
+    Ini.WriteInteger('DABPE', 'TipoDABPE', rgComponenteDABPE.ItemIndex);
 
     INI.WriteInteger('PosPrinter', 'Modelo',            cbxModeloPosPrinter.ItemIndex);
     INI.WriteString( 'PosPrinter', 'Porta',             cbxPorta.Text);
@@ -1825,9 +1812,9 @@ begin
     mmEmailMsg.Lines.LoadFromStream(StreamMemo);
     StreamMemo.Free;
 
-    rgTipoDaBPe.ItemIndex       := Ini.ReadInteger('DABPe', 'Tipo',       0);
-    edtLogoMarca.Text           := Ini.ReadString( 'DABPe', 'LogoMarca',  '');
-    rgComponenteDABPE.ItemIndex := Ini.ReadInteger('DABPe', 'TipoDANFCE', 0);
+    rgTipoDaBPe.ItemIndex       := Ini.ReadInteger('DABPE', 'Tipo',       0);
+    edtLogoMarca.Text           := Ini.ReadString( 'DABPE', 'LogoMarca',  '');
+    rgComponenteDABPE.ItemIndex := Ini.ReadInteger('DABPE', 'TipoDABPE', 0);
 
     cbxModeloPosPrinter.ItemIndex := INI.ReadInteger('PosPrinter', 'Modelo',            Integer(ACBrPosPrinter1.Modelo));
     cbxPorta.Text                 := INI.ReadString( 'PosPrinter', 'Porta',             ACBrPosPrinter1.Porta);
@@ -1853,10 +1840,7 @@ begin
   ACBrBPe1.Configuracoes.Certificados.Senha       := edtSenha.Text;
   ACBrBPe1.Configuracoes.Certificados.NumeroSerie := edtNumSerie.Text;
 
-//  if rgDANFCE.ItemIndex = 0 then
-//    ACBrBPe1.DABPe := ACBrBPeDANFCeFortes1
-//  else
-    ACBrBPe1.DABPe := ACBrBPeDABPeESCPOS1;
+  ACBrBPe1.DABPe := ACBrBPeDABPeESCPOS1;
 
   ACBrBPe1.SSL.DescarregarCertificado;
 
@@ -2020,7 +2004,7 @@ end;
 procedure TfrmACBrBPe.sbtnNumSerieClick(Sender: TObject);
 var
   I: Integer;
-  ASerie: String;
+//  ASerie: String;
   AddRow: Boolean;
 begin
   ACBrBPe1.SSL.LerCertificadosStore;
@@ -2045,7 +2029,7 @@ begin
   begin
     with ACBrBPe1.SSL.ListaCertificados[I] do
     begin
-      ASerie := NumeroSerie;
+//      ASerie := NumeroSerie;
 
       if (CNPJ <> '') then
       begin
