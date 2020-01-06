@@ -34,7 +34,7 @@ unit pnfsEnvLoteRpsResposta;
 interface
 
 uses
-  SysUtils, Classes, Variants, Math, StrUtils, Contnrs,
+  SysUtils, Classes, Variants, StrUtils, Contnrs,
   ACBrUtil,
   pcnAuxiliar, pcnConversao, pcnLeitor, pnfsConversao, pnfsNFSe;
 
@@ -368,10 +368,11 @@ begin
       inc(i);
     end;
 
-    if Provedor = proISSDigital then
+    if Provedor in [proISSDigital, proElotech] then
     begin
       i := 0;
-      while Leitor.rExtrai(1, 'ListaMensagemRetorno', '', i + 1) <> '' do
+      while (Leitor.rExtrai(1, 'ListaMensagemRetorno', '', i + 1) <> '') or
+            (Leitor.rExtrai(1, 'ListaMensagemRetornoLote', '', i + 1) <> '') do
       begin
         InfRec.FMsgRetorno.New;
         InfRec.FMsgRetorno[i].FIdentificacaoRps.Numero := Leitor.rCampo(tcStr, 'Numero');

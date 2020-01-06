@@ -1039,7 +1039,7 @@ begin
         vWidthAux := TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).Width;
         vLeftAux := TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).Left;
         vAutoSizeAux := TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).AutoSize;
-        TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).AutoSize := True;
+//        TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).AutoSize := True;
         TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).AutoSize := vAutoSizeAux;
         TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).Left := vLeftAux;
         if (TRLLabel(TRLBand(RLNFe.Controls[b]).Controls[i]).Alignment = taLeftJustify) then
@@ -1469,7 +1469,7 @@ begin
     TextoOriginal := rlmDadosAdicionaisAuxiliar.Lines.Text;
     sTexto := TextoOriginal;
     repeat
-      PosUltimoEspaco := LastDelimiter(' ', sTexto);
+      PosUltimoEspaco := LastDelimiter(' '+sLineBreak, sTexto);
       sTexto          := LeftStr(TextoOriginal, PosUltimoEspaco -1 );
       //Debug
       //TextoContinuacao  := RightStr(TextoOriginal, Length(TextoOriginal)- PosUltimoEspaco);

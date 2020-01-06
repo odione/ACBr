@@ -786,6 +786,9 @@ begin
 
       if ACBrNFeDANFCeFortes.ImprimeLogoLateral then
       begin
+        pLogo.AutoSize   := imgLogo.AutoSize;
+        pLogo.AutoExpand := imgLogo.AutoSize;
+
         imgLogo.Center := True;
         pCliche.Align := faClientTop;
         pLogo.Align   := faLeftTop;

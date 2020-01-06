@@ -40,8 +40,7 @@ uses
 
 {$ENDIF}
   SysUtils, Classes, StrUtils,
-  synacode, ACBrConsts,
-  pcnAuxiliar, pcnConsts, pcnConversao, pcnGerador,
+  ACBrConsts, pcnAuxiliar, pcnConsts, pcnConversao, pcnGerador,
   pnfsNFSe, pnfsNFSeW, pnfsConversao, pnfsConsts;
 
 type
@@ -433,7 +432,6 @@ begin
     proFriburgo,
     proNEAInformatica,
     proNotaInteligente,
-    proPronimv2,
     proSisPMJP,
     proVitoria,
     proSmarAPDABRASF,
@@ -463,6 +461,12 @@ begin
     proVirtual,
     proVersaTecnologia,
     proSH3: Gerador.wCampoNFSe(tcDe4, '#25', 'Aliquota', 01, 05, 1, NFSe.Servico.Valores.Aliquota, DSC_VALIQ);
+
+    proPronimv2:
+      if NFSe.OptanteSimplesNacional = snSim then
+        Gerador.wCampoNFSe(tcDe4, '#25', 'Aliquota', 01, 05, 1, NFSe.Servico.Valores.Aliquota, DSC_VALIQ)
+      else
+        Gerador.wCampoNFSe(tcDe4, '#25', 'Aliquota', 01, 05, 0, NFSe.Servico.Valores.Aliquota, DSC_VALIQ);
 
     proGoiania:
       if NFSe.OptanteSimplesNacional = snSim then
@@ -538,6 +542,7 @@ begin
 
       proNotaInteligente: Gerador.wCampoNFSe(tcStr, '#29', 'ItemListaServico', 01, 05, 1, NFSe.Servico.ItemListaServico, DSC_CLISTSERV);
 
+      proISSJoinville,
       proVitoria:
         begin
           if copy(NFSe.Servico.ItemListaServico, 1, 1) = '0' then
