@@ -293,6 +293,12 @@ begin
       end;
 
       Gerador.wGrupoNFSe('/Contato');
+
+      if VersaoNFSe = ve100 then
+        Gerador.wCampoNFSe(tcStr, '', 'InscricaoEstadual', 01, 20, 0, NFSe.Tomador.IdentificacaoTomador.InscricaoEstadual, '')
+      else
+        Gerador.wCampoNFSe(tcStr, '', 'InscricaoEstadual', 01, 15, 0, NFSe.Tomador.IdentificacaoTomador.InscricaoEstadual, '');
+
     end;
 
     Gerador.wGrupoNFSe('/DadosTomador');
@@ -572,8 +578,11 @@ end;
 function TNFSeW_Agili.GerarXml: Boolean;
 begin
   Gerador.ListaDeAlertas.Clear;
+
   Gerador.ArquivoFormatoXML := '';
   Gerador.Prefixo           := FPrefixo4;
+
+  Gerador.Opcoes.QuebraLinha := FQuebradeLinha;
 
   FDefTipos := FServicoEnviar;
 

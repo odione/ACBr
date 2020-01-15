@@ -4,7 +4,7 @@
 { to de Transporte eletrônico - CTe - http://www.cte.fazenda.gov.br            }
 {                                                                              }
 { Direitos Autorais Reservados (c) 2014 Mark dos Santos Gonçalves              }
-{                                        Juliomar Marchetti                     }
+{                                       Juliomar Marchetti                     }
 {                                       Daniel Simoes de Almeida               }
 {                                       André Ferreira de Moraes               }
 {                                                                              }
@@ -1104,11 +1104,12 @@ begin
   begin
     rlmEmitente.Visible := False;
     rlmDadosEmitente.Visible := False;
-    rliLogo.Stretch := True;
-    rliLogo.top := 5;
-    rliLogo.Left := 3;
-    rliLogo.Height := 115;//91;
-    rliLogo.Width := 324;//321
+    rliLogo.top := 3;
+    rliLogo.Left := 2;
+    rliLogo.Height := 121;
+    rliLogo.Width := 311;
+
+    TDFeReportFortes.AjustarLogo(rliLogo, fpDACTe.ExpandeLogoMarcaConfig);
   end
   else
   begin
@@ -2647,7 +2648,7 @@ begin
   RLCTe.Title := 'CT-e: ' + FormatFloat('000,000,000', fpCTe.Ide.nCT);
 
   if not EstaVazio(Trim(fpCTe.infCTeSupl.qrCodCTe)) then
-    PintarQRCode(fpCTe.infCTeSupl.qrCodCTe, imgQRCode.Picture, qrUTF8NoBOM)
+    PintarQRCode(fpCTe.infCTeSupl.qrCodCTe, imgQRCode.Picture.Bitmap, qrUTF8NoBOM)
   else
   begin
     rlsLinhaV07.Height    := 26;

@@ -1,4 +1,4 @@
-
+{******************************************************************************}
 { Projeto: Componentes ACBr                                                    }
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
@@ -51,6 +51,9 @@ interface
 uses Classes, Graphics, Contnrs, IniFiles,
      {$IFDEF FPC}
        LResources,
+     {$ENDIF}
+     {$IfNDef MSWINDOWS}
+       ACBrConsts,
      {$ENDIF}
      SysUtils, typinfo,
      ACBrBase, ACBrMail, ACBrValidador;
@@ -916,7 +919,8 @@ type
   end;
 
   TACBrResponEmissao = (tbCliEmite,tbBancoEmite,tbBancoReemite,tbBancoNaoReemite, tbBancoPreEmite);
-  TACBrCaracTitulo = (tcSimples,tcVinculada,tcCaucionada,tcDescontada,tcVendor, tcDireta);
+  TACBrCaracTitulo = (tcSimples, tcVinculada, tcCaucionada, tcDescontada, tcVendor, tcDireta,  
+                      tcSimplesRapComReg, tcCaucionadaRapComReg, tcDiretaEspecial);
   TACBrPessoa = (pFisica,pJuridica,pOutras);
   TACBrPessoaCedente = pFisica..pJuridica;
 
@@ -1118,8 +1122,6 @@ type
     fNumNFe: String;
     fValorNFe: Currency;
   public
-   constructor Create;
-   destructor Destroy; override;
 
    property NumNFe     : String read fNumNFe write fNumNFe;
    property ValorNFe   : Currency read fValorNFe write fValorNFe;
@@ -1348,7 +1350,7 @@ type
       read GetObject write SetObject; default;
   end;
 
-  TACBrBolLayOut = (lPadrao, lCarne, lFatura, lPadraoEntrega, lReciboTopo, lPadraoEntrega2, lFaturaDetal) ;
+  TACBrBolLayOut = (lPadrao, lCarne, lFatura, lPadraoEntrega, lReciboTopo, lPadraoEntrega2, lFaturaDetal, lTermica80mm);
 
   {TACBrTipoOcorrenciaRemessa}
   TACBrOcorrenciaRemessa = Record
@@ -1456,6 +1458,8 @@ type
     fOnObterLogo : TACBrBoletoFCOnObterLogo ;
     fSoftwareHouse  : String;
     FPdfSenha: string;
+    FAlterarEscalaPadrao: Boolean;
+    FNovaEscala: Integer;
     function ComponentStateDesigning: Boolean;
     function GetArquivoLogo: String;
     function GetDirLogo: String;
@@ -1495,6 +1499,9 @@ type
     property DirLogo         : String          read GetDirLogo        write SetDirLogo;
     property NomeArquivo     : String          read GetNomeArquivo    write SetNomeArquivo ;
     property PdfSenha        : string          read FPdfSenha         write SetPdfSenha;
+    property AlterarEscalaPadrao: Boolean      read FAlterarEscalaPadrao write FAlterarEscalaPadrao default False;
+    property NovaEscala      : Integer         read FNovaEscala       write FNovaEscala        default 96;
+
   end;
 
 
@@ -1534,18 +1541,6 @@ begin
    Result := inherited Add(Obj) ;
 end;
 
-{ TACBrDadosNFe }
-
-constructor TACBrDadosNFe.Create;
-begin
-  inherited Create;
-
-end;
-
-destructor TACBrDadosNFe.Destroy;
-begin
-  inherited Destroy;
-end;
 
 {$IFNDEF FPC}
    {$R ACBrBoleto.dcr}
@@ -3015,6 +3010,10 @@ begin
 
    SLRemessa := TStringList.Create;
    try
+      {$IfNDef MSWINDOWS}
+      SLRemessa.LineBreak := CRLF;
+      {$EndIf}
+
       if LayoutRemessa = c400 then
       begin
          Banco.GerarRegistroHeader400( NumeroRemessa, SLRemessa );
@@ -3397,6 +3396,9 @@ begin
             PercentualMulta     := IniBoletos.ReadFloat(Sessao,'PercentualMulta',PercentualMulta);
             CodigoMora          := IniBoletos.ReadString(Sessao,'CodigoMora','1');
             CodigoGeracao       := IniBoletos.ReadString(Sessao,'CodigoGeracao','2');
+            Competencia         := IniBoletos.ReadString(Sessao,'Competencia', Competencia);
+            ArquivoLogoEmp      := IniBoletos.ReadString(Sessao,'ArquivoLogoEmp', ArquivoLogoEmp);
+            Verso               := IniBoletos.ReadBool(Sessao,'Verso', False);
             Sacado.SacadoAvalista.NomeAvalista  := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.NomeAvalista','');
             Sacado.SacadoAvalista.CNPJCPF       := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.CNPJCPF','');
             Sacado.SacadoAvalista.Logradouro    := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.Logradouro','');
@@ -3503,18 +3505,20 @@ end;
 
 constructor TACBrBoletoFCClass.Create ( AOwner: TComponent ) ;
 begin
-   inherited Create ( AOwner ) ;
+  inherited Create ( AOwner ) ;
 
-   fACBrBoleto       := nil;
-   fLayOut           := lPadrao;
-   fNumCopias        := 1;
-   fMostrarPreview   := True;
-   fMostrarSetup     := True;
-   fMostrarProgresso := True;
-   fFiltro           := fiNenhum;
-   fNomeArquivo      := '' ;
-   fPathNomeArquivo  := '' ;
-   fPrinterName      := '' ;
+  fACBrBoleto          := nil;
+  fLayOut              := lPadrao;
+  fNumCopias           := 1;
+  fMostrarPreview      := True;
+  fMostrarSetup        := True;
+  fMostrarProgresso    := True;
+  fFiltro              := fiNenhum;
+  fNomeArquivo         := '' ;
+  fPathNomeArquivo     := '' ;
+  fPrinterName         := '' ;
+  FAlterarEscalaPadrao := False;
+  FNovaEscala          := 96;
 end;
 
 procedure TACBrBoletoFCClass.Notification ( AComponent: TComponent;

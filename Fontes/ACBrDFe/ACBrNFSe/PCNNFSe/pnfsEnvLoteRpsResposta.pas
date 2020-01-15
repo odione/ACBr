@@ -397,6 +397,17 @@ begin
 
       inc(i);
     end;
+
+    i := 0;
+    while Leitor.rExtrai(iNivel, 'Erro', '', i + 1) <> '' do
+    begin
+      InfRec.FMsgRetorno.New;
+      InfRec.FMsgRetorno[i].FCodigo   := Leitor.rCampo(tcStr, 'ErroID');
+      InfRec.FMsgRetorno[i].FMensagem := Leitor.rCampo(tcStr, 'ErroMensagem');
+      InfRec.FMsgRetorno[i].FCorrecao := Leitor.rCampo(tcStr, 'ErroSolucao');
+
+      inc(i);
+    end;
     {
     i := 0;
     while (Leitor.rExtrai(1, 'Fault', '', i + 1) <> '') do
@@ -1154,6 +1165,16 @@ begin
           end;
         end;
       end;
+    end 
+    else 
+    begin
+      FInfRec.MsgRetorno.New;
+      FInfRec.FMsgRetorno[i].FCodigo   := '00002'; // não tem codigo...
+
+      if Pos('Nao foi encontrado na tb.dcarq.unico a cidade(codmun) do Usuario:', leitor.Arquivo) > 0 then
+        FInfRec.FMsgRetorno[i].FMensagem := 'Usuário e/ou senha informados são inválidos'
+      else
+        FInfRec.FMsgRetorno[i].FMensagem := leitor.Arquivo;
     end;
   except
     Result := False;

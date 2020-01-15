@@ -4,7 +4,7 @@
 { to de Transporte eletrônico - CTe - http://www.cte.fazenda.gov.br            }
 {                                                                              }
 { Direitos Autorais Reservados (c) 2014 Mark dos Santos Gonçalves              }
-{                                        Juliomar Marchetti                     }
+{                                       Juliomar Marchetti                     }
 {                                       Daniel Simoes de Almeida               }
 {                                       André Ferreira de Moraes               }
 {                                                                              }
@@ -527,7 +527,7 @@ implementation
 
 uses
   DateUtils, ACBrDFeUtil, ACBrUtil, ACBrValidador, pcteConversaoCTe,
-  pcteCTe;
+  pcteCTe, ACBrDFeReportFortes;
 
 {$IFnDEF FPC}
   {$R *.dfm}
@@ -807,11 +807,14 @@ begin
 
   if fpDACTe.ExpandeLogoMarca then
   begin
-    rliLogo.top := 2;
+    rliLogo.top := 3;
     rliLogo.Left := 2;
-    rliLogo.Height := 142;
-    rliLogo.Width := 330;
-    rliLogo.Stretch := True;
+    rliLogo.Height := 110;
+    rliLogo.Width := 329;
+
+
+    TDFeReportFortes.AjustarLogo(rliLogo, fpDACTe.ExpandeLogoMarcaConfig);
+
     rlmEmitente.Enabled := False;
     rlmDadosEmitente.Enabled := False;
   end;

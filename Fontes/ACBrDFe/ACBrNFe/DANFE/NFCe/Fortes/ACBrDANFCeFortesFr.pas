@@ -47,9 +47,13 @@ uses Classes, SysUtils,
      {$IFDEF FPC}
        LResources,
      {$ENDIF}
-     Forms, Graphics,
+     {$IfDef FMX}
+       FMX.Forms, FMX.Graphics,
+     {$Else}
+       Forms, Graphics,
+     {$EndIf}
      ACBrNFeDANFEClass, ACBrBase,
-     pcnNFe, pcnConversao, pcnAuxiliar, ACBrDFeUtil,
+     pcnNFe, pcnConversao, ACBrDFeUtil,
      RLConsts, RLReport, RLBarcode, RLPDFFilter, RLHTMLFilter,
      RLFilters, RLPrinters, RLTypes, Controls;
 
@@ -837,7 +841,7 @@ begin
       rlbConsumidor.Visible := False;
       rlbQRCode.Visible     := False;
       rlbQRLateral.Visible  := True;
-      PintarQRCode(qrcode, imgQRCodeLateral.Picture, qrUTF8NoBOM);
+      PintarQRCode(qrcode, imgQRCodeLateral.Picture.Bitmap, qrUTF8NoBOM);
 
       if (Dest.idEstrangeiro = '') and (Dest.CNPJCPF = '') then
       begin
@@ -897,7 +901,7 @@ begin
       rlbQRLateral.Visible  := False;
       rlbConsumidor.Visible := True;
       rlbQRCode.Visible     := True;
-      PintarQRCode(qrcode, imgQRCode.Picture, qrUTF8NoBOM);
+      PintarQRCode(qrcode, imgQRCode.Picture.Bitmap, qrUTF8NoBOM);
 
       if (Dest.idEstrangeiro = '') and (Dest.CNPJCPF = '') then
       begin
@@ -1211,7 +1215,7 @@ begin
     else
       qrcode := infNFeSupl.qrCode;
 
-    PintarQRCode(qrcode , imgQRCodeCanc.Picture, qrUTF8NoBOM);
+    PintarQRCode(qrcode , imgQRCodeCanc.Picture.Bitmap, qrUTF8NoBOM);
 
     lProtocoloCanc.Caption := ACBrStr('Protocolo de Autorização: '+procNFe.nProt+
                            ' '+ifthen(procNFe.dhRecbto<>0,DateTimeToStr(procNFe.dhRecbto),''));
@@ -1303,6 +1307,12 @@ begin
   try
     with frACBrNFeDANFCeFortesFr do
     begin
+      if AlterarEscalaPadrao then
+      begin
+        frACBrNFeDANFCeFortesFr.Scaled := False;
+        frACBrNFeDANFCeFortesFr.ScaleBy(NovaEscala , Screen.PixelsPerInch);
+      end;
+
       Filtro := AFiltro;
       if Cancelado then
         RLLayout := rlCancelamento

@@ -42,7 +42,7 @@ uses
   HTTPSend, ssl_openssl, ssl_openssl_lib, blcksock,
   ACBrDFeSSL,
   {$IfDef SYNADEBUG}synadbg,{$EndIf}
-  {$IfDef USE_libeay32}libeay32{$Else} OpenSSLExt{$EndIf};
+  OpenSSLExt;
 
 type
 
@@ -205,13 +205,19 @@ begin
       SSLMethod := ssl_openssl_lib.SslMethodTLSV11;
     LT_TLSv1_2:
       SSLMethod := ssl_openssl_lib.SslMethodTLSV12;
+    LT_TLSv1_3:
+      SSLMethod := ssl_openssl_lib.SslMethodTLSV13;
     LT_all:
-      SSLMethod := ssl_openssl_lib.SslMethodV23;
+      begin
+        SSLMethod := ssl_openssl_lib.SslMethodTLS;
+        if not Assigned(SSLMethod) then
+          SSLMethod := ssl_openssl_lib.SslMethodV23;
+      end;
   end;
 
-  if SSLMethod = Nil then
+  if not Assigned(SSLMethod) then
   begin
-    OpenSSLVersion := String(SSLeay_version( 0 ));
+    OpenSSLVersion := String(ssl_openssl_lib.OpenSSLVersion( 0 ));
 
     raise EACBrDFeException.CreateFmt(ACBrStr('%s, não suporta %s'),
           [OpenSSLVersion, GetEnumName(TypeInfo(TSSLType), integer(AValue) )]);
