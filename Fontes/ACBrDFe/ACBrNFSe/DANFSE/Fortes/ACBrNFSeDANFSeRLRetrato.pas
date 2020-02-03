@@ -226,6 +226,8 @@ type
     rlmServicoDescricao: TRLMemo;
     txtServicoUnitario: TRLLabel;
     txtServicoTotal: TRLLabel;
+    rllCodTributacaoMunicipio: TRLLabel;
+    rlmDescCodTributacaoMunicipio: TRLMemo;
     procedure rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbItensServicoBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbPrestadorBeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -353,8 +355,7 @@ begin
   rlbCanhoto.Visible:= fpDANFSe.ImprimeCanhoto;
 end;
 
-procedure TfrlDANFSeRLRetrato.rlbCabecalhoBeforePrint(Sender: TObject;
-  var PrintIt: Boolean);
+procedure TfrlDANFSeRLRetrato.rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
 var
   CarregouLogo: Boolean;
 begin
@@ -398,8 +399,7 @@ begin
   end;
 end;
 
-procedure TfrlDANFSeRLRetrato.rlbItensServicoBeforePrint(Sender: TObject;
-   var PrintIt: Boolean);
+procedure TfrlDANFSeRLRetrato.rlbItensServicoBeforePrint(Sender: TObject; var PrintIt: Boolean);
 begin
   with fpNFSe.Servico.ItemServico.Items[FNumItem] do
   begin
@@ -411,13 +411,14 @@ begin
   end;
 end;
 
-procedure TfrlDANFSeRLRetrato.rlbISSQNBeforePrint(Sender: TObject;
-  var PrintIt: Boolean);
+procedure TfrlDANFSeRLRetrato.rlbISSQNBeforePrint(Sender: TObject; var PrintIt: Boolean);
 var
   MostrarObra, MostrarNaturezaOperacao: Boolean;
 begin
   inherited;
   RLLabel16.Visible := False;
+  rllCodTributacaoMunicipio.Visible     := False;
+  rlmDescCodTributacaoMunicipio.Visible := False;
 
   With fpNFSe do
   begin
@@ -446,9 +447,18 @@ begin
       if Servico.xItemListaServico <> '' then
       begin
         RLLabel16.Visible := True;
+
         if fpDANFSe.Atividade <> '' then
           rlmCodServico.Lines.Append('Atividade: ' + fpDANFSe.Atividade);
+
         rlmCodServico.Lines.Append( Servico.ItemListaServico + ' - '+ Servico.xItemListaServico);
+
+        if (Servico.xCodigoTributacaoMunicipio <> '') then
+        begin
+          rllCodTributacaoMunicipio.Visible     := True;
+          rlmDescCodTributacaoMunicipio.Visible := True;
+          rlmDescCodTributacaoMunicipio.Lines.Append( Servico.xCodigoTributacaoMunicipio );
+        end;
       end
       else
       begin
@@ -487,8 +497,7 @@ begin
   end;
 end;
 
-procedure TfrlDANFSeRLRetrato.rlbItensBeforePrint(Sender: TObject;
-  var PrintIt: Boolean);
+procedure TfrlDANFSeRLRetrato.rlbItensBeforePrint(Sender: TObject; var PrintIt: Boolean);
 begin
   inherited;
 
@@ -509,18 +518,15 @@ begin
   begin
     with PrestadorServico do
     begin
+      rllPrestNome.Caption := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.RazaoSocial);
+
+      if rllPrestNome.Caption = '' then
+        rllPrestNome.Caption := IfThen(NomeFantasia <> '', NomeFantasia, fpDANFSe.RazaoSocial);
+
       with IdentificacaoPrestador do
       begin
         rllPrestCNPJ.Caption          := FormatarCNPJ( Cnpj );
         rllPrestInscMunicipal.Caption := IfThen(InscricaoMunicipal <> '', InscricaoMunicipal, fpDANFSe.InscMunicipal);
-
-        rllPrestNome.Caption := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.RazaoSocial);
-
-        if rllPrestNome.Caption = '' then
-          rllPrestNome.Caption := IfThen(NomeFantasia <> '', NomeFantasia, fpDANFSe.RazaoSocial);
-
-        with Tomador.IdentificacaoTomador do
-          rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> '', InscricaoEstadual, fpDANFSe.T_InscEstadual );
       end;
 
       with Endereco do
@@ -570,6 +576,8 @@ begin
           rllTomaCNPJ.Caption := FormatarCNPJ( CpfCnpj );
 
         rllTomaInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal , fpDANFSe.T_InscMunicipal);
+
+        rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> '', InscricaoEstadual, fpDANFSe.T_InscEstadual );
       end;
 
       with Endereco do
@@ -597,8 +605,8 @@ begin
         rllTomaEmail.Caption    := IfThen( Email    <> '' , Email , fpDANFSe.T_Email);
       end;
 
-      rllMsgTeste.Visible := False;
-      rllMsgTeste.Enabled := False;
+      rllMsgTeste.Visible := (Producao = snNao);
+      rllMsgTeste.Enabled := (Producao = snNao);
     end;
 
     if NfseCancelamento.DataHora<>0 then
@@ -637,9 +645,10 @@ end;
 Function TfrlDANFSeRLRetrato.ManterAliquota( dAliquota : Double ) : String;
 begin
   // thema precisa ser desta forma pois usa aliquota 2,5 => 0,025
-  if (dAliquota > 0) and (dAliquota < 1) then
-    Result := FormatFloat('###,##0.00', dAliquota * 100 )
-  else
+//  if (dAliquota > 0) and (dAliquota < 1) then
+//    Result := FormatFloat('###,##0.00', dAliquota * 100 )
+//  else
+  // Agora a multiplicação por 100 é feita pela rotina que lê o XML.
     Result := FormatFloat('###,##0.00', dAliquota );
 end;
 

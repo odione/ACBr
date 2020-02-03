@@ -192,20 +192,16 @@ begin
   HasPadBits := (BytesPerRow > (trunc(bWidth/8)));
   BytesPerRow := ceil(bWidth / 8);
   AWidth := BytesPerRow*8;
+  PadByte := 0;
   if HasPadBits then
   begin
-    PadBits := AWidth - bWidth;
+    PadBits := Cardinal(AWidth) - bWidth;
     PadByte := 1;
     for j := 2 to PadBits do
     begin
       PadByte := PadByte shl 1;
       PadByte := PadByte + 1;
     end;
-  end
-  else
-  begin
-    PadBits := 0;
-    PadByte := 0;
   end;
 
   if (bSizePixelArr <= 0) then

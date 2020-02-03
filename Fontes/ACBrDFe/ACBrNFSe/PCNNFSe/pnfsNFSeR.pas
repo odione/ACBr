@@ -58,6 +58,7 @@ type
     FPathIniCidades: String;
     FVersaoNFSe: TVersaoNFSe;
     FLayoutXML: TLayoutXML;
+    FProducao: TnfseSimNao;
 
     function LerRPS_ABRASF_V1: Boolean;
     function LerRPS_ABRASF_V2: Boolean;
@@ -111,6 +112,7 @@ type
     property PathIniCidades: String      read FPathIniCidades write FPathIniCidades;
     property VersaoNFSe: TVersaoNFSe     read FVersaoNFSe     write FVersaoNFSe;
     property LayoutXML: TLayoutXML       read FLayoutXML      write FLayoutXML;
+    property Producao: TnfseSimNao       read FProducao       write FProducao;
   end;
 
  TLeitorOpcoes = class(TPersistent)
@@ -369,6 +371,9 @@ begin
         NFSe.Servico.Valores.OutrasRetencoes        := Leitor.rCampo(tcDe2, 'OutrasRetencoes');
         NFSe.Servico.Valores.BaseCalculo            := Leitor.rCampo(tcDe2, 'BaseCalculo');
         NFSe.Servico.Valores.Aliquota               := Leitor.rCampo(tcDe3, 'Aliquota');
+        if (FProvedor in [proThema, proGINFES, proRJ, proPublica, proBHISS,
+            proAbaco]) then
+          NFSe.Servico.Valores.Aliquota := (NFSe.Servico.Valores.Aliquota * 100);
         NFSe.Servico.Valores.ValorLiquidoNfse       := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
         NFSe.Servico.Valores.ValorIssRetido         := Leitor.rCampo(tcDe2, 'ValorIssRetido');
         NFSe.Servico.Valores.DescontoCondicionado   := Leitor.rCampo(tcDe2, 'DescontoCondicionado');
@@ -546,7 +551,9 @@ begin
     NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
     NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
     NFSe.IncentivadorCultural     := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
-    NFSe.Producao                 := StrToSimNao(ok, Leitor.rCampo(tcStr, 'Producao'));
+
+    if FProvedor = proCONAM then
+      NFSe.Producao := StrToSimNao(ok, Leitor.rCampo(tcStr, 'Producao'));
 
     if (Leitor.rExtrai(3, 'Rps') <> '') or (Leitor.rExtrai(2, 'Rps') <> '') then
     begin
@@ -1464,7 +1471,7 @@ begin
     begin
       case FProvedor of
         proTecnos, 
-		proSigCorp: NFSe.Link := Leitor.rCampo(tcStr, 'LinkNota');
+        proSigCorp: NFSe.Link := Leitor.rCampo(tcStr, 'LinkNota');
 
         proPublica: NFSe.Link := Leitor.rCampo(tcStr, 'LinkVisualizacaoNfse');
       end;
@@ -1491,6 +1498,7 @@ begin
         proElotech: NFSe.DataEmissao := Leitor.rCampo(tcDat, 'DataEmissao');
 
         proNFSeBrasil,
+        proELv2,
         proSilTecnologia:
           begin
             DataHorBR := Leitor.rCampo(tcStr, 'DataEmissao');
@@ -1567,6 +1575,8 @@ begin
 
   NFSe.Cancelada := snNao;
   NFSe.Status := srNormal;
+
+  NFSe.Producao := Producao;
 
   if FProvedor = proGoverna then
     Leitor.rExtrai(1, 'RetornoConsultaRPS');
@@ -1699,6 +1709,10 @@ begin
       NFSe.Servico.Valores.OutrasRetencoes        := Leitor.rCampo(tcDe2, 'OutrasRetencoes');
       NFSe.Servico.Valores.BaseCalculo            := Leitor.rCampo(tcDe2, 'BaseCalculo');
       NFSe.Servico.Valores.Aliquota               := Leitor.rCampo(tcDe3, 'Aliquota');
+
+      if (FProvedor in [proThema, proGINFES, proRJ, proPublica, proBHISS, proEL,
+          proWebISS, proAbaco]) then
+        NFSe.Servico.Valores.Aliquota := (NFSe.Servico.Valores.Aliquota * 100);
 
       if NFSe.Servico.Valores.Aliquota = 0 then
         NFSe.Servico.Valores.Aliquota := Leitor.rCampo(tcDe3, 'AliquotaServicos');
@@ -2083,6 +2097,9 @@ begin
   NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
   NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
   NFSe.IncentivadorCultural     := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
+
+  if FProvedor = proCONAM then
+    NFSe.Producao := StrToSimNao(ok, Leitor.rCampo(tcStr, 'Producao'));
 
   if (FProvedor <> proABase) and (Leitor.rExtrai(NivelTemp, 'Rps') <> '') then
   begin

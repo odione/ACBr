@@ -167,6 +167,9 @@ type
     RLLabel51: TRLLabel;
     lCancelada: TRLLabel;
     rllFisco: TRLLabel;
+    RLBand17: TRLBand;
+    RLLabel43: TRLLabel;
+    RLLabel52: TRLLabel;
     procedure lNomeFantasiaBeforePrint(Sender: TObject; var Text: string;
       var PrintIt: Boolean);
     procedure RLBand9BeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -258,6 +261,9 @@ type
     procedure RLLabel51BeforePrint(Sender: TObject; var Text: string;
       var PrintIt: Boolean);
     procedure RLBand11BeforePrint(Sender: TObject; var PrintIt: Boolean);
+    procedure RLLabel52BeforePrint(Sender: TObject; var AText: string;
+      var PrintIt: Boolean);
+    procedure RLBand17BeforePrint(Sender: TObject; var PrintIt: Boolean);
   private
     FNumItem: Integer;
     FNumPag: Integer;
@@ -419,6 +425,12 @@ procedure TfrmACBrDANFCeFortesFrA4.RLBand15BeforePrint(Sender: TObject;
 begin
   with self.FACBrNFeDANFCeFortesA4 do
     PrintIt := (ImprimeTributos = trbSeparadamente);
+end;
+
+procedure TfrmACBrDANFCeFortesFrA4.RLBand17BeforePrint(Sender: TObject;
+  var PrintIt: Boolean);
+begin
+  PrintIt := self.FACBrNFeDANFCeFortesA4.FpNFe.Total.ICMSTot.vFrete > 0;
 end;
 
 procedure TfrmACBrDANFCeFortesFrA4.RLBand8BeforePrint(Sender: TObject;
@@ -702,14 +714,17 @@ procedure TfrmACBrDANFCeFortesFrA4.RLMemo2BeforePrint(Sender: TObject;
 var
   I:integer;
 begin
-  if self.FACBrNFeDANFCeFortesA4.FpNFe.InfAdic.obsCont.Count > 0 then
+  with self.FACBrNFeDANFCeFortesA4.FpNFe do
+  begin
+    if InfAdic.obsCont.Count > 0 then
     begin
-      for I := 0 to self.FACBrNFeDANFCeFortesA4.FpNFe.InfAdic.obsCont.Count - 1 do
-        Text := Text + StringReplace( self.FACBrNFeDANFCeFortesA4.FpNFe.InfAdic.obsCont[i].xCampo + ': ' +
-                                      self.FACBrNFeDANFCeFortesA4.FpNFe.InfAdic.obsCont[i].xTexto, ';', #13, [rfReplaceAll] ) + #13;
+      for I := 0 to InfAdic.obsCont.Count - 1 do
+        Text := Text + StringReplace(InfAdic.obsCont[i].xCampo + ': ' +
+                                     InfAdic.obsCont[i].xTexto, ';', #13, [rfReplaceAll] ) + #13;
     end;
 
-  Text := Text + StringReplace(self.FACBrNFeDANFCeFortesA4.FpNFe.InfAdic.infCpl, ';', #13, [rfReplaceAll] ) ;
+    Text := Text + StringReplace(InfAdic.infCpl, ';', #13, [rfReplaceAll] ) + #13;
+  end;
 end;
 
 procedure TfrmACBrDANFCeFortesFrA4.RLMemo3BeforePrint(Sender: TObject;
@@ -956,6 +971,12 @@ begin
 end;
 
 
+procedure TfrmACBrDANFCeFortesFrA4.RLLabel52BeforePrint(Sender: TObject;
+  var AText: string; var PrintIt: Boolean);
+begin
+  Text := FormatFloat('R$ ,0.00;R$ -,0.00', self.FACBrNFeDANFCeFortesA4.FpNFe.Total.ICMSTot.vFrete);
+end;
+
 procedure TfrmACBrDANFCeFortesFrA4.RlPelosProdutosBeforePrint(Sender: TObject;
   var Text: string; var PrintIt: Boolean);
 Var
@@ -964,13 +985,11 @@ begin
   With self.FACBrNFeDANFCeFortesA4 do
   begin
     With FpNFe.Total.ICMSTot do
-      dPelosProdutos := ( VProd - VDesc + VOutro); // Valor Total
+      dPelosProdutos := (vProd - vDesc + vOutro + vFrete); // Valor Total
 
     dPelosProdutos := dPelosProdutos - ( vTribFed + vTribEst + vTribMun) ;
   end;
   Text  := FormatFloat('R$ ,0.00', dPelosProdutos );
-
-
 end;
 
 

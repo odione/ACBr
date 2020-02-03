@@ -298,289 +298,702 @@ procedure TfrmACBrCIOT.AlimentarComponente;
 begin
   with ACBrCIOT1.Contratos.Add.CIOT do
   begin
+    Integradora.Token := '123456789';
+
     case rgOperacao.ItemIndex of
-      0: Integradora.Operacao := opObterPdf; //Busca e retorna uma Operação de Transporte em PDF.
-      1: Integradora.Operacao := opAdicionar; //Adicionar uma operação de transporte
-      2: Integradora.Operacao := opRetificar; //Retificar uma operação de transporte.
-      3: Integradora.Operacao := opCancelar; //Cancelar uma operação de transporte
-      4: Integradora.Operacao := opAdicionarViagem; //Adicionar uma Viagem a uma Operação de Transporte existente, desde que a mesma não tenha ultrapassado o prazo do fim da viagem, esteja cancelada ou encerrada.
-      5: Integradora.Operacao := opAdicionarPagamento; //Adicionar um registro para Pagamentos em uma Operação de Transporte.
-      6: Integradora.Operacao := opCancelarPagamento; //Cancelar um pagamento programado para uma operação de transporte.
-      7: Integradora.Operacao := opEncerrar; //Encerrar uma operação de transporte existente que não esteja cancelada.
+      0: begin
+           // Login - Solicita Token
+           Integradora.Operacao := opLogin;
+
+           ObterOperacaoTransportePDF.CodigoIdentificacaoOperacao := '123';
+           ObterOperacaoTransportePDF.DocumentoViagem := '456';
+         end;
+
+      1: begin
+           // Cadastrar Proprietário do Veículo
+           Integradora.Operacao := opGravarProprietario;
+
+           with GravarProprietario do
+           begin
+             CNPJ        := edtEmitCNPJ.Text;
+             TipoPessoa  := tpJuridica;
+             RazaoSocial := edtEmitRazao.Text;
+             RNTRC       := '123456789';
+
+             Endereco.Bairro          := edtEmitBairro.Text;
+             Endereco.Rua             := edtEmitLogradouro.Text;
+             Endereco.Numero          := edtEmitNumero.Text;
+             Endereco.Complemento     := edtEmitComp.Text;
+             Endereco.CEP             := edtEmitCEP.Text;
+             Endereco.CodigoMunicipio := StrToIntDef(edtEmitCodCidade.Text, 0);
+
+             Telefones.Celular.DDD := 11;
+             Telefones.Celular.Numero := StrToIntDef(edtEmitFone.Text, 0);
+
+             Telefones.Fixo.DDD := 0;
+             Telefones.Fixo.Numero := 0;
+
+             Telefones.Fax.DDD := 0;
+             Telefones.Fax.Numero := 0;
+           end;
+         end;
+
+      2: begin
+           // Cadastrar Veiculo
+           Integradora.Operacao := opGravarVeiculo;
+
+           with GravarVeiculo do
+           begin
+             Placa           := 'ABC-1234';
+             Renavam         := '123456789';
+             Chassi          := '123456789';
+             RNTRC           := '1234';
+             NumeroDeEixos   := 2;
+             CodigoMunicipio := 3512345;
+             Marca           := 'VW';
+             Modelo          := 'XYZ';
+             AnoFabricacao   := 2010;
+             AnoModelo       := 2010;
+             Cor             := 'Preto';
+             Tara            := 100;
+             CapacidadeKg    := 10000;
+             CapacidadeM3    := 10000;
+             TipoRodado      := trToco;
+             TipoCarroceria  := tcFechadaOuBau;
+           end;
+         end;
+
+      3: begin
+           // Cadastrar Motorista
+           Integradora.Operacao := opGravarMotorista;
+
+           with GravarMotorista do
+           begin
+             CPF                 := '12345678901';
+             Nome                := 'jose da silva';
+             CNH                 := '123456789';
+             DataNascimento      := StrToDate('10/10/1970');
+             NomeDeSolteiraDaMae := 'joana pereira';
+
+             Endereco.Bairro := 'teste';
+             Endereco.Rua := '';
+             Endereco.Numero := '';
+             Endereco.Complemento := '';
+             Endereco.CEP := '';
+             Endereco.CodigoMunicipio := 0;
+
+             Telefones.Celular.DDD := 0;
+             Telefones.Celular.Numero := 0;
+
+             Telefones.Fixo.DDD := 0;
+             Telefones.Fixo.Numero := 0;
+
+             Telefones.Fax.DDD := 0;
+             Telefones.Fax.Numero := 0;
+           end;
+         end;
+
+      4: begin
+           //Adicionar uma operação de transporte
+           Integradora.Operacao := opAdicionar;
+
+           with AdicionarOperacao do
+           begin
+             (****************  DADOS DO CONTRATO  **************)
+             TipoViagem := TAC_Agregado;
+             TipoPagamento := eFRETE;
+             BloquearNaoEquiparado := False;
+             MatrizCNPJ := edtEmitCNPJ.text;
+             FilialCNPJ := edtEmitCNPJ.text;
+             //Id / Chave primária da Tabela do banco de dados do CIOT
+             IdOperacaoCliente := '1';
+             DataInicioViagem := Now;
+             DataFimViagem := Now;
+             CodigoNCMNaturezaCarga := 0;
+             PesoCarga := 10;
+             //utilizado somente para as viagens do tipo Padrão
+             TipoEmbalagem := tePallet;
+
+             //Somente para TipoViagem TAC_Agregado
+             with Viagens.New do
+             begin
+               DocumentoViagem := 'CTe';
+               CodigoMunicipioOrigem := 4212908; //Pinhalzinho SC
+               CodigoMunicipioDestino := 4217303; //Saudades SC
+               CepOrigem := '';
+               CepDestino := '';
+               DistanciaPercorrida := 100;
+
+               Valores.TotalOperacao := 50;
+               Valores.TotalViagem := 50;
+               Valores.TotalDeAdiantamento := 10;
+               Valores.TotalDeQuitacao := 10;
+               Valores.Combustivel := 20;
+               Valores.Pedagio := 10;
+               Valores.OutrosCreditos := 1;
+               Valores.JustificativaOutrosCreditos := 'Teste';
+               Valores.Seguro := 10;
+               Valores.OutrosDebitos := 1;
+               Valores.JustificativaOutrosDebitos := 'Teste outros Debitos';
+
+               TipoPagamento := TransferenciaBancaria;
+
+               with NotasFiscais.New do
+               begin
+                 Numero := '12345';
+                 Serie := '1';
+                 Data := Date;
+                 ValorTotal := 100;
+
+                 ValorDaMercadoriaPorUnidade := 100;
+                 CodigoNCMNaturezaCarga := 5501;
+                 DescricaoDaMercadoria := 'Produto Teste';
+                 UnidadeDeMedidaDaMercadoria := umKg;
+                 TipoDeCalculo := SemQuebra;
+                 ValorDoFretePorUnidadeDeMercadoria := 0; //Se tiver quebra deve ser informado
+                 QuantidadeDaMercadoriaNoEmbarque := 1;
+
+                 ToleranciaDePerdaDeMercadoria.Tipo := tpPorcentagem;
+                 ToleranciaDePerdaDeMercadoria.Valor := 2; //Valor da tolerância admitido.
+
+                 DiferencaDeFrete.Tipo := Integral;
+                 DiferencaDeFrete.Base := QuantidadeDesembarque;
+
+                 DiferencaDeFrete.Tolerancia.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.Tolerancia.Valor := 5; //Valor da tolerância admitido(Nenhum: 0; Porcentagem: 0.00 – 100.00; Absoluto: Livre)
+
+                 DiferencaDeFrete.MargemGanho.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemGanho.Valor := 5;
+
+                 DiferencaDeFrete.MargemPerda.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemPerda.Valor := 5;
+               end;
+             end;
+
+             //Não esperado para TipoViagem Frota.
+             with Impostos do
+             begin
+               IRRF := 0;
+               SestSenat := 0;
+               INSS := 0;
+               ISSQN := 0;
+               OutrosImpostos := 0;
+               DescricaoOutrosImpostos := '';
+             end;
+
+             with Pagamentos.New do
+             begin
+               IdPagamentoCliente := '1';
+               DataDeLiberacao := Date;
+               Valor := 10;
+               TipoPagamento := TransferenciaBancaria; //TransferenciaBancaria(EmissaoGratuita = true); eFRETE (EmissaoGratuita = false)
+               Categoria := tcpSemCategoria;//Para os TipoViagem Frota e TAC_Agregado são suportadas as Categorias Frota e SemCategoria. Para o TipoViagem Padrão todas as categorias são suportadas.
+               Documento := ''; //Documento relacionado a viagem.
+
+               InformacoesBancarias.InstituicaoBancaria := '756'; //Bancoob
+               InformacoesBancarias.Agencia := '';
+               InformacoesBancarias.Conta := '';
+               InformacoesBancarias.TipoConta := tcContaCorrente;
+
+               InformacaoAdicional := '';
+               //CNPJ que deve ser gerada a Nota Fiscal do abastecimento,
+               //sendo da mesma raíz do CNPJ da matriz do contratante,
+               //apenas aplicável para Categoria Frota (Abastecimento)
+               CnpjFilialAbastecimento := AdicionarOperacao.MatrizCNPJ;
+             end;
+
+             //TAC ou seu equiparado, que efetuar o transporte rodoviário de cargas por
+             //conta de terceiros e mediante remuneração, indicado no cadastramento da Operação de Transporte.
+             //Para o TipoViagem Frota o Contratado será a própria empresa que está declarando a operação.
+             with Contratado do
+             begin
+               CpfOuCnpj := '12345678910';
+               RNTRC := '12345678';
+             end;
+
+             with Motorista do
+             begin
+               CpfOuCnpj := '12345678910';
+               CNH := '12345678910';
+
+               Celular.DDD := 49;
+               Celular.Numero := 123456789;
+             end;
+
+             //Destinatário da carga.
+             //Na emissão com TipoViagem Padrão seu preenchimento é obrigatório.
+             //Na emissão com TipoViagem TAC_Agregado o campo não deve ser preenchido.
+             //Não esperado para TipoViagem Frota.
+             with Destinatario do
+             begin
+               NomeOuRazaoSocial := '';
+               CpfOuCnpj := '';
+
+               EMail := '';
+               ResponsavelPeloPagamento := False;
+
+               Endereco.Bairro := 'teste';
+               Endereco.Rua := '';
+               Endereco.Numero := '';
+               Endereco.Complemento := '';
+               Endereco.CEP := '';
+               Endereco.CodigoMunicipio := 0;
+
+               Telefones.Celular.DDD := 0;
+               Telefones.Celular.Numero := 0;
+
+               Telefones.Fixo.DDD := 0;
+               Telefones.Fixo.Numero := 0;
+
+               Telefones.Fax.DDD := 0;
+               Telefones.Fax.Numero := 0;
+             end;
+
+             with Contratante do
+             begin
+               NomeOuRazaoSocial := 'teste';
+               CpfOuCnpj := '12345678910';
+
+               EMail := 'teste@teste.com.br';
+               ResponsavelPeloPagamento := False;
+               RNTRC := '12345678';
+
+               Endereco.Bairro := 'Bela Vista';
+               Endereco.Rua := 'Rua Vitória';
+               Endereco.Numero := '';
+               Endereco.Complemento := '';
+               Endereco.CEP := '89870000';
+               Endereco.CodigoMunicipio := 4212908;
+
+               Telefones.Celular.DDD := 0;
+               Telefones.Celular.Numero := 0;
+
+               Telefones.Fixo.DDD := 49;
+               Telefones.Fixo.Numero := 33661011;
+
+               Telefones.Fax.DDD := 0;
+               Telefones.Fax.Numero := 0;
+             end;
+
+             //É o transportador que contratar outro transportador para realização do
+             //transporte de cargas para o qual fora anteriormente contratado,
+             //indicado no cadastramento da Operação de Transporte.
+             //Não esperado para TipoViagem Frota.
+             with Subcontratante do
+             begin
+               NomeOuRazaoSocial := '';
+               CpfOuCnpj := '';
+
+               EMail := '';
+               ResponsavelPeloPagamento := False;
+
+               Endereco.Bairro := '';
+               Endereco.Rua := '';
+               Endereco.Numero := '';
+               Endereco.Complemento := '';
+               Endereco.CEP := '';
+               Endereco.CodigoMunicipio := 0;
+
+               Telefones.Celular.DDD := 0;
+               Telefones.Celular.Numero := 0;
+
+               Telefones.Fixo.DDD := 0;
+               Telefones.Fixo.Numero := 0;
+
+               Telefones.Fax.DDD := 0;
+               Telefones.Fax.Numero := 0;
+             end;
+
+             // Aquele que receberá as mercadorias transportadas em consignação,
+             //indicado no cadastramento da Operação de Transporte ou nos respectivos documentos fiscais.
+             //Não esperado para TipoViagem Frota
+             with Consignatario do
+             begin
+               NomeOuRazaoSocial := '';
+               CpfOuCnpj := '';
+
+               EMail := '';
+               ResponsavelPeloPagamento := False;
+
+               Endereco.Bairro := '';
+               Endereco.Rua := '';
+               Endereco.Numero := '';
+               Endereco.Complemento := '';
+               Endereco.CEP := '';
+               Endereco.CodigoMunicipio := 0;
+
+               Telefones.Celular.DDD := 0;
+               Telefones.Celular.Numero := 0;
+
+               Telefones.Fixo.DDD := 0;
+               Telefones.Fixo.Numero := 0;
+
+               Telefones.Fax.DDD := 0;
+               Telefones.Fax.Numero := 0;
+             end;
+
+             //Pessoa (física ou jurídica) que contratou o frete pela transportadora.
+             //Na emissão com TipoViagem Padrão seu preenchimento é obrigatório.
+             //Na emissão com TipoViagem TAC_Agregado o campo não deve ser preenchido.
+             with TomadorServico do
+             begin
+               NomeOuRazaoSocial := '';
+               CpfOuCnpj := '';
+
+               EMail := '';
+               ResponsavelPeloPagamento := False;
+
+               Endereco.Bairro := '';
+               Endereco.Rua := '';
+               Endereco.Numero := '';
+               Endereco.Complemento := '';
+               Endereco.CEP := '';
+               Endereco.CodigoMunicipio := 0;
+
+               Telefones.Celular.DDD := 0;
+               Telefones.Celular.Numero := 0;
+
+               Telefones.Fixo.DDD := 0;
+               Telefones.Fixo.Numero := 0;
+
+               Telefones.Fax.DDD := 0;
+               Telefones.Fax.Numero := 0;
+             end;
+
+             with Veiculos.New do
+             begin
+               Placa := 'AAA1234';
+             end;
+
+             //Informar um CIOT (se existente) que esteja relacionado à operação de transporte.
+             //Por exemplo: No caso da presença de um Subcontratante na operação de transporte
+             //informar o CIOT onde o Subcontratante foi o Contratado
+             CodigoIdentificacaoOperacaoPrincipal := '';
+
+             with ObservacoesAoTransportador.New do
+             begin
+               Mensagem := 'teste de obsevação ao transportador';
+             end;
+
+             with ObservacoesAoCredenciado.New do
+             begin
+               Mensagem := 'teste de obsevação ao Credenciado';
+             end;
+
+             EntregaDocumentacao := edRedeCredenciada; //Ver como funciona
+             QuantidadeSaques := 0; //Quantidade saques que serão realizados pelo Contratado na operação de transporte.
+             QuantidadeTransferencias := 0; //Quantidade de Transferências  Bancárias que serão solicitadas pelo Contratado na operação de transporte.
+             ValorSaques := 0;
+             ValorTransferencias := 0;
+             CodigoTipoCarga := 1;
+             AltoDesempenho := True;
+             DestinacaoComercial := True;
+             FreteRetorno := False;
+             CepRetorno := '';
+             DistanciaRetorno := 100;
+
+             Integrador := edtHashIntegrador.text;
+           end;
+         end;
+
+      5: begin
+           //Adicionar uma Viagem a uma Operação de Transporte existente,
+           //desde que a mesma não tenha ultrapassado o prazo do fim da viagem,
+           //esteja cancelada ou encerrada.
+           Integradora.Operacao := opAdicionarViagem;
+
+           with AdicionarViagem do
+           begin
+             CodigoIdentificacaoOperacao := '123';
+
+             //Somente para TipoViagem TAC_Agregado
+             with Viagens.New do
+             begin
+               DocumentoViagem := 'CTe';
+               CodigoMunicipioOrigem := 4212908; //Pinhalzinho SC
+               CodigoMunicipioDestino := 4217303; //Saudades SC
+               CepOrigem := '';
+               CepDestino := '';
+               DistanciaPercorrida := 100;
+
+               Valores.TotalOperacao := 50;
+               Valores.TotalViagem := 50;
+               Valores.TotalDeAdiantamento := 10;
+               Valores.TotalDeQuitacao := 10;
+               Valores.Combustivel := 20;
+               Valores.Pedagio := 10;
+               Valores.OutrosCreditos := 1;
+               Valores.JustificativaOutrosCreditos := 'Teste';
+               Valores.Seguro := 10;
+               Valores.OutrosDebitos := 1;
+               Valores.JustificativaOutrosDebitos := 'Teste outros Debitos';
+
+               TipoPagamento := TransferenciaBancaria;
+
+               with NotasFiscais.New do
+               begin
+                 Numero := '12345';
+                 Serie := '1';
+                 Data := Date;
+                 ValorTotal := 100;
+
+                 ValorDaMercadoriaPorUnidade := 100;
+                 CodigoNCMNaturezaCarga := 5501;
+                 DescricaoDaMercadoria := 'Produto Teste';
+                 UnidadeDeMedidaDaMercadoria := umKg;
+                 TipoDeCalculo := SemQuebra;
+                 ValorDoFretePorUnidadeDeMercadoria := 0; //Se tiver quebra deve ser informado
+                 QuantidadeDaMercadoriaNoEmbarque := 1;
+
+                 ToleranciaDePerdaDeMercadoria.Tipo := tpPorcentagem;
+                 ToleranciaDePerdaDeMercadoria.Valor := 2; //Valor da tolerância admitido.
+
+                 DiferencaDeFrete.Tipo := Integral;
+                 DiferencaDeFrete.Base := QuantidadeDesembarque;
+
+                 DiferencaDeFrete.Tolerancia.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.Tolerancia.Valor := 5; //Valor da tolerância admitido(Nenhum: 0; Porcentagem: 0.00 – 100.00; Absoluto: Livre)
+
+                 DiferencaDeFrete.MargemGanho.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemGanho.Valor := 5;
+
+                 DiferencaDeFrete.MargemPerda.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemPerda.Valor := 5;
+               end;
+             end;
+
+             with Pagamentos.New do
+             begin
+               IdPagamentoCliente := '1';
+               DataDeLiberacao := Date;
+               Valor := 10;
+               TipoPagamento := TransferenciaBancaria; //TransferenciaBancaria(EmissaoGratuita = true); eFRETE (EmissaoGratuita = false)
+               Categoria := tcpSemCategoria;//Para os TipoViagem Frota e TAC_Agregado são suportadas as Categorias Frota e SemCategoria. Para o TipoViagem Padrão todas as categorias são suportadas.
+               Documento := ''; //Documento relacionado a viagem.
+
+               InformacoesBancarias.InstituicaoBancaria := '756'; //Bancoob
+               InformacoesBancarias.Agencia := '';
+               InformacoesBancarias.Conta := '';
+               InformacoesBancarias.TipoConta := tcContaCorrente;
+
+               InformacaoAdicional := '';
+               //CNPJ que deve ser gerada a Nota Fiscal do abastecimento,
+               //sendo da mesma raíz do CNPJ da matriz do contratante,
+               //apenas aplicável para Categoria Frota (Abastecimento)
+               CnpjFilialAbastecimento := AdicionarOperacao.MatrizCNPJ;
+             end;
+
+             NaoAdicionarParcialmente := True;
+           end;
+         end;
+
+      6: begin
+           //Adicionar um registro para Pagamentos em uma Operação de Transporte.
+           Integradora.Operacao := opAdicionarPagamento;
+
+           with AdicionarPagamento do
+           begin
+             CodigoIdentificacaoOperacao := '123';
+
+             with Pagamentos.New do
+             begin
+               IdPagamentoCliente := '1';
+               DataDeLiberacao := Date;
+               Valor := 10;
+               TipoPagamento := TransferenciaBancaria; //TransferenciaBancaria(EmissaoGratuita = true); eFRETE (EmissaoGratuita = false)
+               Categoria := tcpSemCategoria;//Para os TipoViagem Frota e TAC_Agregado são suportadas as Categorias Frota e SemCategoria. Para o TipoViagem Padrão todas as categorias são suportadas.
+               Documento := ''; //Documento relacionado a viagem.
+
+               InformacoesBancarias.InstituicaoBancaria := '756'; //Bancoob
+               InformacoesBancarias.Agencia := '';
+               InformacoesBancarias.Conta := '';
+               InformacoesBancarias.TipoConta := tcContaCorrente;
+
+               InformacaoAdicional := '';
+               //CNPJ que deve ser gerada a Nota Fiscal do abastecimento,
+               //sendo da mesma raíz do CNPJ da matriz do contratante,
+               //apenas aplicável para Categoria Frota (Abastecimento)
+               CnpjFilialAbastecimento := AdicionarOperacao.MatrizCNPJ;
+             end;
+           end;
+         end;
+
+      7: begin
+           // Obter Código Identificação Operação Transp.
+           Integradora.Operacao := opObterCodigoIOT;
+
+           ObterCodigoOperacaoTransporte.MatrizCNPJ := edtEmitCNPJ.Text;
+           ObterCodigoOperacaoTransporte.IdOperacaoCliente := '123';
+         end;
+
+      8: begin
+           // Obter Pdf Operação Transporte
+           Integradora.Operacao := opObterPdf;
+
+           ObterOperacaoTransportePDF.CodigoIdentificacaoOperacao := '123';
+           ObterOperacaoTransportePDF.DocumentoViagem := '456';
+         end;
+
+      9: begin
+           // Retificar uma operação de transporte.
+           Integradora.Operacao := opRetificar;
+
+           with RetificarOperacao do
+           begin
+             CodigoIdentificacaoOperacao := '123';
+             DataInicioViagem := Now;
+             DataFimViagem := Now;
+             CodigoNCMNaturezaCarga := 0;
+             PesoCarga := 10;
+             CodigoMunicipioOrigem := 4212908; //Pinhalzinho SC
+             CodigoMunicipioDestino := 4217303; //Saudades SC
+
+             with Veiculos.New do
+             begin
+               Placa := 'AAA1234';
+             end;
+
+             QuantidadeSaques := 0;
+             QuantidadeTransferencias := 0;
+             ValorSaques := 0;
+             ValorTransferencias := 0;
+             CodigoTipoCarga := 1;
+             CepOrigem := '4800000';
+             CepDestino := '4800000';
+             DistanciaPercorrida := 100;
+           end;
+         end;
+
+     10: begin
+           //Cancelar uma operação de transporte
+           Integradora.Operacao := opCancelar;
+
+           CancelarOperacao.CodigoIdentificacaoOperacao := '123';
+           CancelarOperacao.Motivo := 'Erro na digitacao';
+         end;
+
+     11: begin
+           //Cancelar um pagamento programado para uma operação de transporte.
+           Integradora.Operacao := opCancelarPagamento;
+
+           CancelarPagamento.CodigoIdentificacaoOperacao := '123';
+           CancelarPagamento.IdPagamentoCliente := '456';
+           CancelarPagamento.Motivo := 'Erro na digitacao';
+         end;
+
+     12: begin
+           //Encerrar uma operação de transporte existente que não esteja cancelada.
+           Integradora.Operacao := opEncerrar;
+
+           with EncerrarOperacao do
+           begin
+             CodigoIdentificacaoOperacao := '123';
+             PesoCarga := 100;
+
+             //Somente para TipoViagem TAC_Agregado
+             with Viagens.New do
+             begin
+               DocumentoViagem := 'CTe';
+               CodigoMunicipioOrigem := 4212908; //Pinhalzinho SC
+               CodigoMunicipioDestino := 4217303; //Saudades SC
+               CepOrigem := '';
+               CepDestino := '';
+               DistanciaPercorrida := 100;
+
+               Valores.TotalOperacao := 50;
+               Valores.TotalViagem := 50;
+               Valores.TotalDeAdiantamento := 10;
+               Valores.TotalDeQuitacao := 10;
+               Valores.Combustivel := 20;
+               Valores.Pedagio := 10;
+               Valores.OutrosCreditos := 1;
+               Valores.JustificativaOutrosCreditos := 'Teste';
+               Valores.Seguro := 10;
+               Valores.OutrosDebitos := 1;
+               Valores.JustificativaOutrosDebitos := 'Teste outros Debitos';
+
+               TipoPagamento := TransferenciaBancaria;
+
+               with NotasFiscais.New do
+               begin
+                 Numero := '12345';
+                 Serie := '1';
+                 Data := Date;
+                 ValorTotal := 100;
+
+                 ValorDaMercadoriaPorUnidade := 100;
+                 CodigoNCMNaturezaCarga := 5501;
+                 DescricaoDaMercadoria := 'Produto Teste';
+                 UnidadeDeMedidaDaMercadoria := umKg;
+                 TipoDeCalculo := SemQuebra;
+                 ValorDoFretePorUnidadeDeMercadoria := 0; //Se tiver quebra deve ser informado
+                 QuantidadeDaMercadoriaNoEmbarque := 1;
+
+                 ToleranciaDePerdaDeMercadoria.Tipo := tpPorcentagem;
+                 ToleranciaDePerdaDeMercadoria.Valor := 2; //Valor da tolerância admitido.
+
+                 DiferencaDeFrete.Tipo := Integral;
+                 DiferencaDeFrete.Base := QuantidadeDesembarque;
+
+                 DiferencaDeFrete.Tolerancia.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.Tolerancia.Valor := 5; //Valor da tolerância admitido(Nenhum: 0; Porcentagem: 0.00 – 100.00; Absoluto: Livre)
+
+                 DiferencaDeFrete.MargemGanho.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemGanho.Valor := 5;
+
+                 DiferencaDeFrete.MargemPerda.Tipo := tpPorcentagem;
+                 DiferencaDeFrete.MargemPerda.Valor := 5;
+               end;
+             end;
+
+             with Pagamentos.New do
+             begin
+               IdPagamentoCliente := '1';
+               DataDeLiberacao := Date;
+               Valor := 10;
+               TipoPagamento := TransferenciaBancaria; //TransferenciaBancaria(EmissaoGratuita = true); eFRETE (EmissaoGratuita = false)
+               Categoria := tcpSemCategoria;//Para os TipoViagem Frota e TAC_Agregado são suportadas as Categorias Frota e SemCategoria. Para o TipoViagem Padrão todas as categorias são suportadas.
+               Documento := ''; //Documento relacionado a viagem.
+
+               InformacoesBancarias.InstituicaoBancaria := '756'; //Bancoob
+               InformacoesBancarias.Agencia := '';
+               InformacoesBancarias.Conta := '';
+               InformacoesBancarias.TipoConta := tcContaCorrente;
+
+               InformacaoAdicional := '';
+               //CNPJ que deve ser gerada a Nota Fiscal do abastecimento,
+               //sendo da mesma raíz do CNPJ da matriz do contratante,
+               //apenas aplicável para Categoria Frota (Abastecimento)
+               CnpjFilialAbastecimento := AdicionarOperacao.MatrizCNPJ;
+             end;
+
+             //Não esperado para TipoViagem Frota.
+             with Impostos do
+             begin
+               IRRF := 0;
+               SestSenat := 0;
+               INSS := 0;
+               ISSQN := 0;
+               OutrosImpostos := 0;
+               DescricaoOutrosImpostos := '';
+             end;
+
+             QuantidadeSaques := 0;
+             QuantidadeTransferencias := 0;
+             ValorSaques := 0;
+             ValorTransferencias := 0;
+           end;
+         end;
+
+     13: begin
+           // Logout - Encerra acesso ao Sistema
+           Integradora.Operacao := opLogout;
+
+           ObterOperacaoTransportePDF.CodigoIdentificacaoOperacao := '123';
+           ObterOperacaoTransportePDF.DocumentoViagem := '456';
+         end;
     end;
-
-    (****************  DADOS DO CONTRATO  **************)
-    OperacaoTransporte.TipoViagem := TAC_Agregado;
-    OperacaoTransporte.Integrador := edtHashIntegrador.text;
-    OperacaoTransporte.EmissaoGratuita := True;
-    OperacaoTransporte.BloquearNaoEquiparado := False;
-    OperacaoTransporte.MatrizCNPJ := edtEmitCNPJ.text;
-    OperacaoTransporte.FilialCNPJ := '';
-    OperacaoTransporte.IdOperacaoCliente := '1'; //Id / Chave primária da Tabela do banco de dados do CIOT
-    OperacaoTransporte.DataInicioViagem := Now;
-    OperacaoTransporte.DataFimViagem := Now;
-    OperacaoTransporte.CodigoNCMNaturezaCarga := 0;
-    OperacaoTransporte.PesoCarga := 10;
-    OperacaoTransporte.TipoEmbalagem := Nenhum; //utilizado somente para as viagens do tipo Padrão
-
-    //Somente para TipoViagem TAC_Agregado
-    with OperacaoTransporte.Viagens.Add do
-    begin
-      DocumentoViagem := 'CTe';
-      CodigoMunicipioOrigem := 4212908; //Pinhalzinho SC
-      CodigoMunicipioDestino := 4217303; //Saudades SC
-
-      Valores.TotalOperacao := 50;
-      Valores.TotalViagem := 50;
-      Valores.TotalDeAdiantamento := 10;
-      Valores.TotalDeQuitacao := 10;
-      Valores.Combustivel := 20;
-      Valores.Pedagio := 10;
-      Valores.OutrosCreditos := 1;
-      Valores.JustificativaOutrosCreditos := 'Teste';
-      Valores.Seguro := 10;
-      Valores.OutrosDebitos := 1;
-      Valores.JustificativaOutrosDebitos := 'Teste outros Debitos';
-
-      TipoPagamento := TransferenciaBancaria;
-
-      with NotasFiscais.Add do
-      begin
-        Numero := '12345';
-        Serie := '1';
-        Data := Date;
-        ValorTotal := 100;
-
-        ValorDaMercadoriaPorUnidade := 100;
-        CodigoNCMNaturezaCarga := 5501;
-        DescricaoDaMercadoria := 'Produto Teste';
-        UnidadeDeMedidaDaMercadoria := umKg;
-        TipoDeCalculo := SemQuebra;
-        ValorDoFretePorUnidadeDeMercadoria := 0; //Se tiver quebra deve ser informado
-        QuantidadeDaMercadoriaNoEmbarque := 1;
-
-        ToleranciaDePerdaDeMercadoria.Tipo := tpPorcentagem;
-        ToleranciaDePerdaDeMercadoria.Valor := 2; //Valor da tolerância admitido.
-
-        DiferencaDeFrete.Tipo := Integral;
-        DiferencaDeFrete.Base := QuantidadeDesembarque;
-
-        DiferencaDeFrete.Tolerancia.Tipo := tpPorcentagem;
-        DiferencaDeFrete.Tolerancia.Valor := 5; //Valor da tolerância admitido(Nenhum: 0; Porcentagem: 0.00 – 100.00; Absoluto: Livre)
-
-        DiferencaDeFrete.MargemGanho.Tipo := tpPorcentagem;
-        DiferencaDeFrete.MargemGanho.Valor := 5;
-
-        DiferencaDeFrete.MargemPerda.Tipo := tpPorcentagem;
-        DiferencaDeFrete.MargemPerda.Valor := 5;
-      end;
-    end;
-
-    //Não esperado para TipoViagem Frota.
-    with OperacaoTransporte.Impostos do
-    begin
-      IRRF := 0;
-      SestSenat := 0;
-      INSS := 0;
-      ISSQN := 0;
-      OutrosImpostos := 0;
-      DescricaoOutrosImpostos := '';
-    end;
-
-    with OperacaoTransporte.Pagamentos.Add do
-    begin
-      IdPagamentoCliente := '1';
-      DataDeLiberacao := Date;
-      Valor := 10;
-      TipoPagamento := TransferenciaBancaria; //TransferenciaBancaria(EmissaoGratuita = true); eFRETE (EmissaoGratuita = false)
-      Categoria := tcpSemCategoria;//Para os TipoViagem Frota e TAC_Agregado são suportadas as Categorias Frota e SemCategoria. Para o TipoViagem Padrão todas as categorias são suportadas.
-      Documento := ''; //Documento relacionado a viagem.
-      InformacaoAdicional := '';
-      //CNPJ que deve ser gerada a Nota Fiscal do abastecimento,
-      //sendo da mesma raíz do CNPJ da matriz do contratante,
-      //apenas aplicável para Categoria Frota (Abastecimento)
-      CnpjFilialAbastecimento := OperacaoTransporte.MatrizCNPJ;
-
-      InformacoesBancarias.InstituicaoBancaria := '756'; //Bancoob
-      InformacoesBancarias.Agencia := '';
-      InformacoesBancarias.Conta := '';
-    end;
-
-    //TAC ou seu equiparado, que efetuar o transporte rodoviário de cargas por
-    //conta de terceiros e mediante remuneração, indicado no cadastramento da Operação de Transporte.
-    //Para o TipoViagem Frota o Contratado será a própria empresa que está declarando a operação.
-    with OperacaoTransporte.Contratado do
-    begin
-      CpfOuCnpj := '12345678910';
-      RNTRC := '12345678';
-    end;
-
-    with OperacaoTransporte.Motorista do
-    begin
-      CpfOuCnpj := '12345678910';
-      CNH := '12345678910';
-      Celular.DDD := 49;
-      Celular.Numero := 123456789;
-    end;
-
-    //Destinatário da carga.
-    //Na emissão com TipoViagem Padrão seu preenchimento é obrigatório.
-    //Na emissão com TipoViagem TAC_Agregado o campo não deve ser preenchido.
-    //Não esperado para TipoViagem Frota.
-    with OperacaoTransporte.Destinatario do
-    begin
-      NomeOuRazaoSocial := '';
-      CpfOuCnpj := '';
-
-      EMail := '';
-      ResponsavelPeloPagamento := False;
-
-      Endereco.Bairro := 'teste';
-      Endereco.Rua := '';
-      Endereco.Numero := '';
-      Endereco.Complemento := '';
-      Endereco.CEP := '';
-      Endereco.CodigoMunicipio := 0;
-
-      Telefones.Celular.DDD := 0;
-      Telefones.Celular.Numero := 0;
-
-      Telefones.Fixo.DDD := 0;
-      Telefones.Fixo.Numero := 0;
-
-      Telefones.Fax.DDD := 0;
-      Telefones.Fax.Numero := 0;
-    end;
-
-    with OperacaoTransporte.Contratante do
-    begin
-      RNTRC := '12345678';
-      NomeOuRazaoSocial := 'teste';
-      CpfOuCnpj := '12345678910';
-
-      EMail := 'teste@teste.com.br';
-      ResponsavelPeloPagamento := False;
-
-      Endereco.Bairro := 'Bela Vista';
-      Endereco.Rua := 'Rua Vitória';
-      Endereco.Numero := '';
-      Endereco.Complemento := '';
-      Endereco.CEP := '89870000';
-      Endereco.CodigoMunicipio := 4212908;
-
-      Telefones.Celular.DDD := 0;
-      Telefones.Celular.Numero := 0;
-
-      Telefones.Fixo.DDD := 49;
-      Telefones.Fixo.Numero := 33661011;
-
-      Telefones.Fax.DDD := 0;
-      Telefones.Fax.Numero := 0;
-    end;
-
-    //É o transportador que contratar outro transportador para realização do
-    //transporte de cargas para o qual fora anteriormente contratado,
-    //indicado no cadastramento da Operação de Transporte.
-    //Não esperado para TipoViagem Frota.
-    with OperacaoTransporte.Subcontratante do
-    begin
-      NomeOuRazaoSocial := '';
-      CpfOuCnpj := '';
-
-      EMail := '';
-      ResponsavelPeloPagamento := False;
-
-      Endereco.Bairro := '';
-      Endereco.Rua := '';
-      Endereco.Numero := '';
-      Endereco.Complemento := '';
-      Endereco.CEP := '';
-      Endereco.CodigoMunicipio := 0;
-
-      Telefones.Celular.DDD := 0;
-      Telefones.Celular.Numero := 0;
-
-      Telefones.Fixo.DDD := 0;
-      Telefones.Fixo.Numero := 0;
-
-      Telefones.Fax.DDD := 0;
-      Telefones.Fax.Numero := 0;
-    end;
-
-    // Aquele que receberá as mercadorias transportadas em consignação,
-    //indicado no cadastramento da Operação de Transporte ou nos respectivos documentos fiscais.
-    //Não esperado para TipoViagem Frota
-    with OperacaoTransporte.Consignatario do
-    begin
-      NomeOuRazaoSocial := '';
-      CpfOuCnpj := '';
-
-      EMail := '';
-      ResponsavelPeloPagamento := False;
-
-      Endereco.Bairro := '';
-      Endereco.Rua := '';
-      Endereco.Numero := '';
-      Endereco.Complemento := '';
-      Endereco.CEP := '';
-      Endereco.CodigoMunicipio := 0;
-
-      Telefones.Celular.DDD := 0;
-      Telefones.Celular.Numero := 0;
-
-      Telefones.Fixo.DDD := 0;
-      Telefones.Fixo.Numero := 0;
-
-      Telefones.Fax.DDD := 0;
-      Telefones.Fax.Numero := 0;
-    end;
-
-    //Pessoa (física ou jurídica) que contratou o frete pela transportadora.
-    //Na emissão com TipoViagem Padrão seu preenchimento é obrigatório.
-    //Na emissão com TipoViagem TAC_Agregado o campo não deve ser preenchido.
-    with OperacaoTransporte.TomadorServico do
-    begin
-      NomeOuRazaoSocial := '';
-      CpfOuCnpj := '';
-
-      EMail := '';
-      ResponsavelPeloPagamento := False;
-
-      Endereco.Bairro := '';
-      Endereco.Rua := '';
-      Endereco.Numero := '';
-      Endereco.Complemento := '';
-      Endereco.CEP := '';
-      Endereco.CodigoMunicipio := 0;
-
-      Telefones.Celular.DDD := 0;
-      Telefones.Celular.Numero := 0;
-
-      Telefones.Fixo.DDD := 0;
-      Telefones.Fixo.Numero := 0;
-
-      Telefones.Fax.DDD := 0;
-      Telefones.Fax.Numero := 0;
-    end;
-
-    with OperacaoTransporte.Veiculos.Add do
-    begin
-      Placa := 'AAA1234';
-    end;
-
-    //Informar um CIOT (se existente) que esteja relacionado à operação de transporte.
-    //Por exemplo: No caso da presença de um Subcontratante na operação de transporte
-    //informar o CIOT onde o Subcontratante foi o Contratado
-    OperacaoTransporte.CodigoIdentificacaoOperacaoPrincipal := '';
-
-    OperacaoTransporte.ObservacoesAoTransportador := 'teste de obsevação ao transportador';
-    OperacaoTransporte.ObservacoesAoCredenciado := 'teste de obsevação ao Credenciado';
-    OperacaoTransporte.EntregaDocumentacao := ''; //Ver como funciona
-    OperacaoTransporte.QuantidadeSaques := 0; //Quantidade saques que serão realizados pelo Contratado na operação de transporte.
-    OperacaoTransporte.QuantidadeTransferencias := 0; //Quantidade de Transferências  Bancárias que serão solicitadas pelo Contratado na operação de transporte.
   end;
-
-//  ACBrCIOT1.Contratos.GerarCIOT;
 end;
 
 procedure TfrmACBrCIOT.AtualizarSSLLibsCombo;
@@ -599,60 +1012,61 @@ begin
 end;
 
 procedure TfrmACBrCIOT.btnCriarEnviarClick(Sender: TObject);
+var
+  i: Integer;
 begin
   ACBrCIOT1.Contratos.Clear;
   AlimentarComponente;
   ACBrCIOT1.Enviar;
 
-  MemoResp.Lines.Text   := UTF8Encode(ACBrCIOT1.WebServices.CIOTEnviar.RetWS);
+  MemoResp.Lines.Text   := UTF8Encode(ACBrCIOT1.WebServices.CIOTEnviar.RetornoWS);
   memoRespWS.Lines.Text := UTF8Encode(ACBrCIOT1.WebServices.CIOTEnviar.RetWS);
   LoadXML(MemoResp.Lines.Text, WBResposta);
 
- {
- pcRespostas.ActivePageIndex := 5;
- MemoDados.Lines.Add('');
- MemoDados.Lines.Add('Retorno da solicitação de Averbação');
- MemoDados.Lines.Add('Numero   : '+ ACBrCIOT1.WebServices.CIOTEnviar.RetornoEnvio.Numero);
- MemoDados.Lines.Add('Serie    : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Serie);
- MemoDados.Lines.Add('Filial   : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Filial);
- MemoDados.Lines.Add('CNPJ     : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.CNPJCli);
- MemoDados.Lines.Add('Tipo Doc : '+ IntToStr(ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.TpDoc));
- MemoDados.Lines.Add('Inf Adic : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.InfAdic);
- MemoDados.Lines.Add('Averbado : '+ DateTimeToStr(ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.dhAverbacao));
- MemoDados.Lines.Add('Protocolo: '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.Protocolo);
- MemoDados.Lines.Add(' ');
- MemoDados.Lines.Add('Dados do Seguro');
- MemoDados.Lines.Add(' ');
- for i := 0 to ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro.Count -1 do
- begin
-   MemoDados.Lines.Add('Numero Averbação: '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].NumeroAverbacao);
-   MemoDados.Lines.Add('CNPJ Seguradora : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].CNPJSeguradora);
-   MemoDados.Lines.Add('Nome Seguradora : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].NomeSeguradora);
-   MemoDados.Lines.Add('Numero Apolice  : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].NumApolice);
-   MemoDados.Lines.Add('Tipo Mov        : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].TpMov);
-   MemoDados.Lines.Add('Tipo DDR        : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].TpDDR);
-   MemoDados.Lines.Add('Valor Averbado  : '+ FloatToStr(ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].ValorAverbado));
-   MemoDados.Lines.Add('Ramo Averbado   : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Averbado.DadosSeguro[i].RamoAverbado);
- end;
- MemoDados.Lines.Add(' ');
- MemoDados.Lines.Add('Informações');
- MemoDados.Lines.Add(' ');
- for i := 0 to ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Infos.Info.Count -1 do
- begin
-   MemoDados.Lines.Add('Codigo   : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Infos.Info[i].Codigo);
-   MemoDados.Lines.Add('Descrição: '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Infos.Info[i].Descricao);
- end;
- MemoDados.Lines.Add(' ');
- MemoDados.Lines.Add('Erros');
- MemoDados.Lines.Add(' ');
- for i := 0 to ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Erros.Erro.Count -1 do
- begin
-   MemoDados.Lines.Add('Codigo         : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Erros.Erro[i].Codigo);
-   MemoDados.Lines.Add('Descrição      : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Erros.Erro[i].Descricao);
-   MemoDados.Lines.Add('Valor Esperado : '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Erros.Erro[i].ValorEsperado);
-   MemoDados.Lines.Add('Valor Informado: '+ ACBrCIOT1.WebServices.RegBolAverbar.RegBolRetorno.Erros.Erro[i].ValorInformado);
- end;
- }
+  pgRespostas.ActivePageIndex := 2;
+
+  with ACBrCIOT1.WebServices.CIOTEnviar.RetornoEnvio.RetEnvio do
+  begin
+    MemoDados.Lines.Clear;
+    MemoDados.Lines.Add('Retorno do Envio');
+    MemoDados.Lines.Add('Versão...........: '+ IntToStr(Versao));
+    MemoDados.Lines.Add('Sucesso..........: '+ Sucesso);
+    MemoDados.Lines.Add('Protocolo Serviço: '+ ProtocoloServico);
+    MemoDados.Lines.Add('');
+
+    if Mensagem <> '' then
+    begin
+      MemoDados.Lines.Add('Retorno do Envio (Exceção)');
+      MemoDados.Lines.Add('Mensagem: '+ Mensagem);
+      MemoDados.Lines.Add('Código..: '+ Codigo);
+    end
+    else
+    begin
+      MemoDados.Lines.Add('Token........................: '+ Token);
+      MemoDados.Lines.Add('Código Identificação Operação: '+ CodigoIdentificacaoOperacao);
+      MemoDados.Lines.Add('Data.........................: '+ DateTimeToStr(Data));
+      MemoDados.Lines.Add('Protocolo....................: '+ Protocolo);
+      MemoDados.Lines.Add('Data Retificação.............: '+ DateTimeToStr(DataRetificacao));
+      MemoDados.Lines.Add('Quantidade Viagens...........: '+ IntToStr(QuantidadeViagens));
+      MemoDados.Lines.Add('Quantidade Pagamentos,.......: '+ IntToStr(QuantidadePagamentos));
+      MemoDados.Lines.Add('Id Pagamento Cliente.........: '+ IdPagamentoCliente);
+
+      if DocumentoViagem.Count > 0 then
+      begin
+        MemoDados.Lines.Add('Documento Viagem');
+        for i := 0 to DocumentoViagem.Count -1 do
+           MemoDados.Lines.Add('Mensagem: '+ DocumentoViagem[i].Mensagem);
+      end;
+
+      if DocumentoPagamento.Count > 0 then
+      begin
+        MemoDados.Lines.Add('Documento Pagamento');
+        for i := 0 to DocumentoPagamento.Count -1 do
+           MemoDados.Lines.Add('Mensagem: '+ DocumentoPagamento[i].Mensagem);
+      end;
+    end;
+  end;
+
   ACBrCIOT1.Contratos.Clear;
 end;
 
@@ -897,7 +1311,7 @@ begin
   cbbIntegradora.ItemIndex := 0;
 
   LerConfiguracao;
-  pgRespostas.ActivePageIndex := 2;
+  pgRespostas.ActivePageIndex := 0;
 end;
 
 procedure TfrmACBrCIOT.GravarConfiguracao;

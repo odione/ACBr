@@ -37,9 +37,6 @@ unit ACBrDFeOpenSSL;
 interface
 
 uses
-  {$IFDEF DELPHIXE4_UP}
-   AnsiStrings,
-  {$ENDIF}
   Classes, SysUtils,
   ACBrDFeSSL,
   {$IfDef MSWINDOWS}ACBrDFeWinCrypt, ACBr_WinCrypt,{$EndIf}
@@ -72,6 +69,7 @@ type
     destructor Destroy; override;
     procedure Clear; override;
 
+    function Versao: String; override;
     function CalcHash( const AStream : TStream;
        const Digest: TSSLDgst;
        const Assina: Boolean =  False): AnsiString; override;
@@ -138,7 +136,7 @@ begin
     Exit;
   end;
 
-  Validade := {$IFDEF DELPHIXE4_UP}AnsiStrings.{$ENDIF}StrPas( PAnsiChar(notAfter^.data) );
+  Validade := String(PAnsiChar(notAfter^.data));
   SetLength(Validade, notAfter^.length);
   Validade := OnlyNumber(Validade);
   if notAfter^.asn1_type = V_ASN1_UTCTIME then  // anos com 2 dígitos
@@ -153,7 +151,7 @@ var
   s: AnsiString;
 begin
   SN := X509GetSerialNumber(cert);
-  s := {$IFDEF DELPHIXE4_UP}AnsiStrings.{$ENDIF}StrPas( PAnsiChar(SN^.data) );
+  s := AnsiString(PAnsiChar(SN^.data));
   SetLength(s,SN^.length);
   Result := AsciiToHex(s);
 end;
@@ -192,7 +190,7 @@ var
 
   procedure LoadExtension;
   begin
-    ext := X509GetExt( cert, ExtPos);
+    ext := X509GetExt(cert, ExtPos);
   end;
 
   function AdjustAnsiOID(aOID: AnsiString): AnsiString;
@@ -226,17 +224,20 @@ begin
   LoadExtension;
   while (ext <> nil) do
   begin
-    prop := ext^.value;
-    propStr := PAnsiChar(prop^.data);
-    SetLength(propStr, prop^.length);
-    P := pos(FlagExt, propStr);
-    if P > 0 then
+    prop := X509ExtensionGetData(ext);
+    if Assigned(prop) then
     begin
-      Result := AdjustOID( AnsiString( copy(propStr,P+Length(FlagExt),Length(propStr))));
-      exit;
+      propStr := PAnsiChar(prop^.data);
+      SetLength(propStr, prop^.length);
+      P := pos(FlagExt, propStr);
+      if P > 0 then
+      begin
+        Result := AdjustOID( AnsiString( copy(propStr,P+Length(FlagExt),Length(propStr))));
+        exit;
+      end;
     end;
 
-    inc( ExtPos );
+    inc(ExtPos);
     LoadExtension;
   end;
 end;
@@ -328,6 +329,11 @@ begin
   inherited Clear;
   FVersion := '';
   FOldVersion := False;
+end;
+
+function TDFeOpenSSL.Versao: String;
+begin
+  Result := OpenSSLVersion;
 end;
 
 procedure TDFeOpenSSL.DestroyKey;
@@ -509,28 +515,39 @@ end;
 
 function TDFeOpenSSL.OpenSSLVersion: String;
 begin
+  OpenSSLOldVersion;
   Result := OpenSSLExt.OpenSSLVersion(0);
 end;
 
 function TDFeOpenSSL.OpenSSLOldVersion: Boolean;
 var
   VersaoStr: String;
+  VersaoNum: Integer;
   P1, P2: Integer;
 begin
   if (FVersion = '') then
   begin
-    VersaoStr := OpenSSLExt.OpenSSLVersion(0);
-
-    P1 := pos(' ', VersaoStr);
-    P2 := Length(VersaoStr);
-    if P1 > 0 then
+    VersaoNum := OpenSSLExt.OpenSSLVersionNum;
+    if (VersaoNum > 0) then
     begin
-      P2 := PosEx(' ', VersaoStr, P1+1 );
-      if P2 = 0 then
-        P2 := Length(VersaoStr);
+      VersaoStr := IntToHex(VersaoNum, 9);
+      FVersion := copy(VersaoStr,1,2)+'.'+copy(VersaoStr,3,2)+'.'+copy(VersaoStr,5,2)+'.'+copy(VersaoStr,7,10);
+    end
+    else
+    begin
+      VersaoStr := OpenSSLExt.OpenSSLVersion(0);
+
+      P1 := pos(' ', VersaoStr);
+      if P1 > 0 then
+      begin
+        P2 := PosEx(' ', VersaoStr, P1+1 );
+        if P2 = 0 then
+          P2 := Length(VersaoStr);
+
+        FVersion := Trim(copy(VersaoStr, P1, P2-P1));
+      end;
     end;
 
-    FVersion := Trim(copy(VersaoStr, P1, P2-P1));
     FOldVersion := (CompareVersions(FVersion, '1.1.0') < 0);
   end;
 
