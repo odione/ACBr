@@ -1367,6 +1367,10 @@ begin
     Ini.WriteBool(  'Arquivos', 'AddLiteral',       cbxAdicionaLiteral.Checked);
     Ini.WriteBool(  'Arquivos', 'EmissaoPathCIOT',  cbxEmissaoPathCIOT.Checked);
     Ini.WriteBool(  'Arquivos', 'SalvarPathEvento', cbxSalvaPathEvento.Checked);
+
+    if (edtCaminho.Text = '') and (edtSenha.Text = '') and (edtNumSerie.Text = '') then
+      cbxSepararPorCNPJ.Checked := False;
+
     Ini.WriteBool(  'Arquivos', 'SepararPorCNPJ',   cbxSepararPorCNPJ.Checked);
     Ini.WriteBool(  'Arquivos', 'SepararPorModelo', cbxSepararPorModelo.Checked);
     Ini.WriteString('Arquivos', 'PathCIOT',         edtPathCIOT.Text);
@@ -1539,6 +1543,11 @@ begin
   ACBrCIOT1.Configuracoes.Certificados.NumeroSerie := edtNumSerie.Text;
 
   ACBrCIOT1.SSL.DescarregarCertificado;
+
+  // Não for informado nenhuma informação a respeito do certificado
+  // o componente será configurado para não carregar o certificado.
+  ACBrCIOT1.SSL.UseCertificateHTTP := (edtCaminho.Text <> '') or
+                              (edtSenha.Text <> '') or (edtNumSerie.Text <> '');
 
   with ACBrCIOT1.Configuracoes.Geral do
   begin

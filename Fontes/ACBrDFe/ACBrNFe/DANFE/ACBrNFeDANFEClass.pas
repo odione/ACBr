@@ -509,7 +509,7 @@ begin
         if (dr_dVal in FDetRastros) then
           Result := Result + 'VAL: ' + FormatDateBr(rastro.Items[i].dVal) + sQuebraLinha;
 
-        if (dr_cAgreg in FDetRastros) then
+        if (dr_cAgreg in FDetRastros) and NaoEstaVazio(rastro.Items[i].cAgreg) then
           Result := Result + ACBrStr('C.AGREGAÇÃO: ') + rastro.Items[i].cAgreg + sQuebraLinha;
       end;
     end;
@@ -683,7 +683,8 @@ begin
 
   with aPagto do
   begin
-    if ((tPag in [fpCartaoCredito, fpCartaoDebito]) and (tpIntegra = tiPagIntegrado)) then
+    if ((tPag in [fpCartaoCredito, fpCartaoDebito]) and (tpIntegra = tiPagIntegrado)) or
+       ((tPag in [fpCartaoCredito, fpCartaoDebito]) and (cAut <>'')) then
     begin
       descBandeira:= BandeiraCartaoToDescStr(tBand);
       CodigoAutorizacao := '- Aut: ' + cAut;
@@ -695,9 +696,7 @@ begin
       Result := Result + descBandeira + Space(1);
     if (icaAutorizacao in FDescricaoPagamentos) then
       Result := Result + CodigoAutorizacao;
-
   end;
-
 end;
 
 procedure TACBrNFeDANFCEClass.setImprimeEmDuasLinhas(const Value: Boolean);

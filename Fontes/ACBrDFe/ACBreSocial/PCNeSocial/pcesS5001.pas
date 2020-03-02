@@ -1,17 +1,17 @@
 {******************************************************************************}
-{ Projeto: Componente ACBreSocial                                              }
-{  Biblioteca multiplataforma de componentes Delphi para envio dos eventos do  }
-{ eSocial - http://www.esocial.gov.br/                                         }
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2008 Wemerson Souto                         }
-{                                       Daniel Simoes de Almeida               }
-{                                       André Ferreira de Moraes               }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
-{ Colaboradores nesse arquivo:                                                 }
+{ Colaboradores nesse arquivo: Italo Jurisato Junior                           }
+{                              Jean Carlo Cantu                                }
+{                              Tiago Ravache                                   }
+{                              Guilherme Costa                                 }
 {                                                                              }
-{  Você pode obter a última versão desse arquivo na pagina do Projeto ACBr     }
-{ Componentes localizado em http://www.sourceforge.net/projects/acbr           }
-{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
+{ Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
 {  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
 { sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
@@ -29,19 +29,10 @@
 { Você também pode obter uma copia da licença em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Simões de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
-{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
-{******************************************************************************
-|* Historico
-|*
-|* 27/10/2015: Jean Carlo Cantu, Tiago Ravache
-|*  - Doação do componente para o Projeto ACBr
-|* 29/02/2016: Guilherme Costa
-|*  - Alterado os atributos que não estavam de acordo com o leiaute/xsd
-******************************************************************************}
 {$I ACBr.inc}
 
 unit pcesS5001;
@@ -49,7 +40,13 @@ unit pcesS5001;
 interface
 
 uses
-  SysUtils, Classes, Contnrs,
+  SysUtils, Classes,
+  {$IF DEFINED(NEXTGEN)}
+   System.Generics.Collections, System.Generics.Defaults,
+  {$ELSEIF DEFINED(DELPHICOMPILER16_UP)}
+   System.Contnrs,
+  {$IfEnd}
+  ACBrBase,
   pcnConversao, pcnLeitor, ACBrUtil,
   pcesCommon, pcesConversaoeSocial;
 
@@ -84,7 +81,7 @@ type
 
   end;
 
-  TInfoCpCalcCollection = class(TObjectList)
+  TInfoCpCalcCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TInfoCpCalcCollectionItem;
     procedure SetItem(Index: Integer; Value: TInfoCpCalcCollectionItem);
@@ -117,7 +114,7 @@ type
     property IdeEstabLot: TIdeEstabLotCollection read FIdeEstabLot write SetIdeEstabLot;
   end;
 
-  TIdeEstabLotCollection = class(TObjectList)
+  TIdeEstabLotCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TIdeEstabLotCollectionItem;
     procedure SetItem(Index: Integer; Value: TIdeEstabLotCollectionItem);
@@ -145,7 +142,7 @@ type
     property InfoCategIncid: TInfoCategIncidCollection read FInfoCategIncid write SetInfoCategIncid;
   end;
 
-  TInfoCategIncidCollection = class(TObjectList)
+  TInfoCategIncidCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TInfoCategIncidCollectionItem;
     procedure SetItem(Index: Integer; Value: TInfoCategIncidCollectionItem);
@@ -176,7 +173,7 @@ type
     property CalcTerc: TCalcTercCollection read FCalcTerc write SetCalcTerc;
   end;
 
-  TInfoBaseCSCollection = class(TObjectList)
+  TInfoBaseCSCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TInfoBaseCSCollectionItem;
     procedure SetItem(Index: Integer; Value: TInfoBaseCSCollectionItem);
@@ -197,7 +194,7 @@ type
     property valor: Double read Fvalor;
   end;
 
-  TCalcTercCollection = class(TObjectList)
+  TCalcTercCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TCalcTercCollectionItem;
     procedure SetItem(Index: Integer; Value: TCalcTercCollectionItem);
@@ -328,13 +325,13 @@ end;
 function TInfoCpCalcCollection.GetItem(
   Index: Integer): TInfoCpCalcCollectionItem;
 begin
-  Result := TInfoCpCalcCollectionItem(inherited GetItem(Index));
+  Result := TInfoCpCalcCollectionItem(inherited Items[Index]);
 end;
 
 procedure TInfoCpCalcCollection.SetItem(Index: Integer;
   Value: TInfoCpCalcCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TInfoCpCalcCollection.New: TInfoCpCalcCollectionItem;
@@ -373,13 +370,13 @@ end;
 function TIdeEstabLotCollection.GetItem(
   Index: Integer): TIdeEstabLotCollectionItem;
 begin
-  Result := TIdeEstabLotCollectionItem(inherited GetItem(Index));
+  Result := TIdeEstabLotCollectionItem(inherited Items[Index]);
 end;
 
 procedure TIdeEstabLotCollection.SetItem(Index: Integer;
   Value: TIdeEstabLotCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TIdeEstabLotCollection.New: TIdeEstabLotCollectionItem;
@@ -419,13 +416,13 @@ end;
 function TInfoCategIncidCollection.GetItem(
   Index: Integer): TInfoCategIncidCollectionItem;
 begin
-  Result := TInfoCategIncidCollectionItem(inherited GetItem(Index));
+  Result := TInfoCategIncidCollectionItem(inherited Items[Index]);
 end;
 
 procedure TInfoCategIncidCollection.SetItem(Index: Integer;
   Value: TInfoCategIncidCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TInfoCategIncidCollection.New: TInfoCategIncidCollectionItem;
@@ -473,13 +470,13 @@ end;
 function TInfoBaseCSCollection.GetItem(
   Index: Integer): TInfoBaseCSCollectionItem;
 begin
-  Result := TInfoBaseCSCollectionItem(inherited GetItem(Index));
+  Result := TInfoBaseCSCollectionItem(inherited Items[Index]);
 end;
 
 procedure TInfoBaseCSCollection.SetItem(Index: Integer;
   Value: TInfoBaseCSCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TInfoBaseCSCollection.New: TInfoBaseCSCollectionItem;
@@ -498,13 +495,13 @@ end;
 function TCalcTercCollection.GetItem(
   Index: Integer): TCalcTercCollectionItem;
 begin
-  Result := TCalcTercCollectionItem(inherited GetItem(Index));
+  Result := TCalcTercCollectionItem(inherited Items[Index]);
 end;
 
 procedure TCalcTercCollection.SetItem(Index: Integer;
   Value: TCalcTercCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TCalcTercCollection.New: TCalcTercCollectionItem;

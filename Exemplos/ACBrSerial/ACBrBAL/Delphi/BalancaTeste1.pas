@@ -50,7 +50,7 @@ type
     procedure chbMonitorarClick(Sender: TObject);
     procedure FormCreate(Sender : TObject) ;
     procedure SbArqLogClick(Sender: TObject);
-    procedure ACBrBAL1LePeso(Peso: Double; Resposta: AnsiString);
+    procedure ACBrBAL1LePeso(Peso: Double; Resposta: String);
   private
     { private declarations }
     Function Converte( cmd : String) : String;
@@ -66,7 +66,8 @@ implementation
 {$R *.dfm}
 
 Uses
-  typinfo, ACBrUtil ;
+  typinfo,
+  ACBrUtil, ACBrDeviceSerial;
 
 function TForm1.Converte(cmd: String): String;
 var A : Integer ;
@@ -84,7 +85,7 @@ begin
   end ;
 end;
 
-procedure TForm1.ACBrBAL1LePeso(Peso: Double; Resposta: AnsiString);
+procedure TForm1.ACBrBAL1LePeso(Peso: Double; Resposta: String);
 var valid : integer;
 begin
    sttPeso.Caption     := formatFloat('##0.000', Peso );

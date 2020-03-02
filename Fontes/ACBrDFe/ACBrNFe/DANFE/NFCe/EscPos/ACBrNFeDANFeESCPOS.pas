@@ -120,19 +120,12 @@ type
     property PosPrinter : TACBrPosPrinter read FPosPrinter write SetPosPrinter;
   end;
 
-procedure Register;
-
 implementation
 
 uses
   strutils, Math,
   ACBrNFe, ACBrValidador, ACBrUtil, ACBrDFeUtil, ACBrConsts, ACBrDFeDANFeReport,
    pcnConversao, pcnAuxiliar;
-
-procedure Register;
-begin
-  RegisterComponents('ACBrNFe', [TACBrNFeDANFeESCPOS]);
-end;
 
 { TACBrNFeDANFeESCPOS }
 
@@ -385,18 +378,27 @@ end;
 procedure TACBrNFeDANFeESCPOS.GerarInformacoesTotais;
 var
   SufixoTitulo: String;
+  ImprimeTotalNoFinal: Boolean;
 begin
   if ImprimeDescAcrescItem then
     SufixoTitulo := ' total'
   else
     SufixoTitulo := '';
 
+  ImprimeTotalNoFinal := (FpNFe.Total.ICMSTot.vDesc > 0) or
+                         ((FpNFe.Total.ICMSTot.vOutro + FpNFe.Total.ICMSTot.vFrete + FpNFe.Total.ICMSTot.vSeg) > 0);
+
   FPosPrinter.Buffer.Add('<c>' + PadSpace('Qtde. total de itens|' +
      IntToStrZero(FpNFe.Det.Count, 3), FPosPrinter.ColunasFonteCondensada, '|'));
 
-  FPosPrinter.Buffer.Add('<c>' + PadSpace('Valor total R$|' +
-     FormatFloatBr(FpNFe.Total.ICMSTot.vProd + FpNFe.Total.ISSQNtot.vServ),
-     FPosPrinter.ColunasFonteCondensada, '|'));
+  if ImprimeTotalNoFinal then  // Se não for reimprimir o Total no Final, use Expandido
+    FPosPrinter.Buffer.Add('<c>' + PadSpace('Valor total R$|' +
+       FormatFloatBr(FpNFe.Total.ICMSTot.vProd + FpNFe.Total.ISSQNtot.vServ),
+       FPosPrinter.ColunasFonteCondensada, '|'))
+  else
+    FPosPrinter.Buffer.Add('</ae><e>' + PadSpace('Valor total R$|' +
+       FormatFloatBr(FpNFe.Total.ICMSTot.vProd + FpNFe.Total.ISSQNtot.vServ),
+       FPosPrinter.ColunasFonteCondensada div 2, '|') + '</e>');
 
   if (FpNFe.Total.ICMSTot.vDesc > 0) then
     FPosPrinter.Buffer.Add('<c>' + PadSpace('Desconto'+SufixoTitulo+'|' +
@@ -413,8 +415,7 @@ begin
        FormatFloatBr(FpNFe.Total.ICMSTot.vFrete, '+,0.00'),
        FPosPrinter.ColunasFonteCondensada, '|')));
 
-  if (FpNFe.Total.ICMSTot.vDesc > 0) or
-     ((FpNFe.Total.ICMSTot.vOutro+FpNFe.Total.ICMSTot.vFrete+FpNFe.Total.ICMSTot.vSeg) > 0) then
+  if ImprimeTotalNoFinal then
     FPosPrinter.Buffer.Add('</ae><e>' + PadSpace('Valor a Pagar R$|' +
        FormatFloatBr(FpNFe.Total.ICMSTot.vNF),
        FPosPrinter.ColunasFonteCondensada div 2, '|') + '</e>');
@@ -819,6 +820,9 @@ procedure TACBrNFeDANFeESCPOS.GerarDadosEvento;
 const
   TAMCOLDESCR = 11;
 begin
+  if FpEvento.Evento.Count < 1 then
+    Exit;
+
   // dados da nota eletrônica
   FPosPrinter.Buffer.Add('</fn></ce><n>Nota Fiscal para Consumidor Final</n>');
   FPosPrinter.Buffer.Add(ACBrStr('Número: ' + IntToStrZero(FpNFe.ide.nNF, 9) +
@@ -862,6 +866,9 @@ end;
 
 procedure TACBrNFeDANFeESCPOS.GerarObservacoesEvento;
 begin
+  if FpEvento.Evento.Count < 1 then
+    Exit;
+
   if FpEvento.Evento[0].InfEvento.detEvento.xJust <> '' then
   begin
     FPosPrinter.Buffer.Add('</linha_simples>');

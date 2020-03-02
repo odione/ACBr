@@ -779,14 +779,15 @@ function TACBrBancoob.GerarRegistroTransacao240(
   ACBrTitulo: TACBrTitulo): String;
 var AEspecieTitulo, ATipoInscricao, ATipoOcorrencia, ATipoBoleto, ADataMoraJuros,
     ADataDesconto,ADataDesconto2,ATipoAceite,NossoNum : string;
-    DiasProtesto: String;
-    ProtestoBaixa: String;
     ATipoInscricaoAvalista: Char;
     wModalidade, ValorMora: String;
     strCarteiraEnvio : Char;
     S :string;
     MsgBoleto: Array[1..5] of string;
     K: Integer;
+    ACodProtesto: Char;
+   DataProtestoNegativacao: string;
+   DiasProtestoNegativacao: string;
 begin
   if ( ACBrTitulo.NossoNumero <> IntToStrZero(0, length(ACBrTitulo.NossoNumero)) ) then
     NossoNum  := RemoveString('-', MontarCampoNossoNumero(ACBrTitulo))
@@ -836,6 +837,12 @@ begin
         tbBancoReemite    : ATipoBoleto := '3';
         tbBancoNaoReemite : ATipoBoleto := '4';
       end;
+
+      {Pegando Tipo de Sacado}
+      if Length(OnlyNumber(Sacado.CNPJCPF)) > 11 then
+         Sacado.Pessoa:= pJuridica
+      else
+         Sacado.Pessoa:= pFisica;
 
       {Pegando especie do titulo}
       if EspecieDoc = 'CH' then
@@ -912,12 +919,39 @@ begin
      else
        ADataDesconto := PadLeft('', 8, '0');
 
-     DiasProtesto  := IntToStrZero(DiasDeProtesto,2);
+     {Código para Protesto / Negativação}
+      case CodigoNegativacao of
+        cnProtestarCorrido :  ACodProtesto := '1';
+        cnProtestarUteis   :  ACodProtesto := '1'; // Não há no manual opção para dias uteis
+        cnNegativar        :  ACodProtesto := '8';
+      else
+        case TipoDiasProtesto of
+          diCorridos       : ACodProtesto := '1';
+          diUteis          : ACodProtesto := '2';
+        else
+          ACodProtesto := '3';
+        end;
+      end;
 
-     if (DataProtesto > 0) then
-       ProtestoBaixa:= '1'
-     else
-       ProtestoBaixa:= '3';
+      {Data e Dias de Protesto / Negativação}
+      if (ACodProtesto = '8') then
+      begin
+        DataProtestoNegativacao := DateToStr(DataNegativacao);
+        DiasProtestoNegativacao := IntToStr(DiasDeNegativacao);
+      end
+      else
+	  begin
+  	    if (ACodProtesto <> '3') then
+        begin
+          DataProtestoNegativacao := DateToStr(DataProtesto);
+          DiasProtestoNegativacao := IntToStr(DiasDeProtesto);
+        end
+        else
+        begin
+          DataProtestoNegativacao := '';
+          DiasProtestoNegativacao := '0';
+        end;
+	  end;
 
      if CodigoMora = '' then
      begin
@@ -994,8 +1028,11 @@ begin
                          IntToStrZero( round(ValorIOF * 100), 15)         + // 166 a 180 - Valor do IOF a ser recolhido
                          IntToStrZero( round(ValorAbatimento * 100), 15)  + // 181 a 195 - Valor do abatimento
                          PadRight(SeuNumero, 25, ' ')                     + // 196 a 220 - Identificação do título na empresa
-                         ProtestoBaixa                                    + // 221 - Código de protesto: "1"
-                         DiasProtesto                                     + // 222 a 223 - Prazo para protesto (em dias corridos)
+                         IfThen((DataProtestoNegativacao <> '') and
+                                 (StrToInt(DiasProtestoNegativacao) > 0), ACodProtesto, '3')       + // 221 - Código de protesto
+                         IfThen((DataProtestoNegativacao <> '') and
+                                (StrToInt(DiasProtestoNegativacao) > 0),
+                                 PadLeft(DiasProtestoNegativacao, 2, '0'), '00')                   + // 222 a 223 - Prazo para protesto (em dias)
                          '0'                                              + // 224 - Código de Baixa
                          space(3)                                         + // 225 A 227 - Dias para baixa
                          '09'                                             + //

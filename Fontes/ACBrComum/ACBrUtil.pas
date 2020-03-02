@@ -59,11 +59,14 @@ Uses
     ,Windows, ShellAPI
   {$Else}
     {$IfNDef FPC}
-      {$IFDEF  POSIX}
+      {$IfDef ANDROID}
+      ,System.IOUtils
+      {$EndIf}
+      {$IfDef  POSIX}
       ,Posix.Stdlib
       ,Posix.Unistd
       ,Posix.Fcntl
-      {$ELSE}
+      {$Else}
       ,Libc
       {$EndIf}
     {$Else}
@@ -193,7 +196,7 @@ function RemoveString(const sSubStr, sString: String): String;
 function RemoveStrings(const AText: AnsiString; StringsToRemove: array of AnsiString): AnsiString;
 function RemoverEspacosDuplos(const AString: String): String;
 function StripHTML(const AHTMLString : String) : String;
-procedure AcharProximaTag(const AString: String;
+procedure AcharProximaTag(const ABinaryString: AnsiString;
   const PosIni: Integer; var ATag: String; var PosTag: Integer);
 procedure RemoveEmptyLines( AStringList: TStringList) ;
 function RandomName(const LenName : Integer = 8) : String ;
@@ -1317,17 +1320,17 @@ end;
    Localiza uma Tag dentro de uma String, iniciando a busca em PosIni.
    Se encontrar uma Tag, Retorna a mesma em ATag, e a posição inicial dela em PosTag
  ---------------------------------------------------------------------------- }
-procedure AcharProximaTag(const AString: String;
+procedure AcharProximaTag(const ABinaryString: AnsiString;
   const PosIni: Integer; var ATag: String; var PosTag: Integer);
 var
    PosTagAux, FimTag, LenTag : Integer ;
 begin
   ATag   := '';
-  PosTag := PosEx( '<', AString, PosIni);
+  PosTag := PosEx( '<', ABinaryString, PosIni);
   if PosTag > 0 then
   begin
-    PosTagAux := PosEx( '<', AString, PosTag + 1);  // Verificando se Tag é inválida
-    FimTag    := PosEx( '>', AString, PosTag + 1);
+    PosTagAux := PosEx( '<', ABinaryString, PosTag + 1);  // Verificando se Tag é inválida
+    FimTag    := PosEx( '>', ABinaryString, PosTag + 1);
     if FimTag = 0 then                             // Tag não fechada ?
     begin
       PosTag := 0;
@@ -1337,11 +1340,11 @@ begin
     while (PosTagAux > 0) and (PosTagAux < FimTag) do  // Achou duas aberturas Ex: <<e>
     begin
       PosTag    := PosTagAux;
-      PosTagAux := PosEx( '<', AString, PosTag + 1);
+      PosTagAux := PosEx( '<', ABinaryString, PosTag + 1);
     end ;
 
     LenTag := FimTag - PosTag + 1 ;
-    ATag   := LowerCase( copy( AString, PosTag, LenTag ) );
+    ATag   := LowerCase( copy( ABinaryString, PosTag, LenTag ) );
   end ;
 end ;
 
@@ -2811,7 +2814,11 @@ end ;
 -----------------------------------------------------------------------------}
 function ApplicationPath: String;
 begin
+  {$IfDef ANDROID}
+  Result := PathWithDelim(TPath.GetHomePath);
+  {$Else}
   Result := PathWithDelim(ExtractFilePath(ParamStr(0)));
+  {$EndIf}
 end;
 
 {-----------------------------------------------------------------------------
@@ -3226,7 +3233,7 @@ end ;
    hDrive: THandle;
    AFileName: String;
  begin
-   AFileName := '\\.\' + ExtractFileDrive( sFile )[1] + ':';
+   AFileName := '\\.\' + copy(ExtractFileDrive(sFile),1,1) + ':';
 
    //NOTE: this may only work for the SYSTEM user
    hDrive := Windows.CreateFileW( PWideChar(WideString(AFileName)),
@@ -3489,7 +3496,7 @@ begin
                IfThen( AppendIfExists and ArquivoExiste,
                        Integer(fmOpenReadWrite), Integer(fmCreate)) or fmShareDenyWrite );
   try
-     FS.Seek(0, {$IFDEF COMPILER23_UP}soEnd{$ELSE}soFromEnd{$ENDIF});  // vai para EOF
+     FS.Seek(0, soEnd);  // vai para EOF
      FS.Write(Pointer(ABinaryString)^,Length(ABinaryString));
 
      if AddLineBreak then

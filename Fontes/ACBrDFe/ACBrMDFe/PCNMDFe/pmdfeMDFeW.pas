@@ -1,10 +1,14 @@
 {******************************************************************************}
-{ Projeto: Componente ACBrMDFe                                                 }
-{  Biblioteca multiplataforma de componentes Delphi                            }
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{  Você pode obter a última versão desse arquivo na pagina do Projeto ACBr     }
-{ Componentes localizado em http://www.sourceforge.net/projects/acbr           }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
+{ Colaboradores nesse arquivo: Italo Jurisato Junior                           }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
+{ Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
 {  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
 { sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
@@ -22,17 +26,9 @@
 { Você também pode obter uma copia da licença em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Simões de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
-{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
-
-{*******************************************************************************
-|* Historico
-|*
-|* 01/08/2012: Italo Jurisato Junior
-|*  - Doação do componente para o Projeto ACBr
-*******************************************************************************}
 
 {$I ACBr.inc}
 
@@ -107,14 +103,12 @@ type
 
   TGeradorOpcoes = class(TPersistent)
   private
-    FAjustarTagNro: boolean;
     FNormatizarMunicipios: boolean;
     FGerarTagAssinatura: TpcnTagAssinatura;
     FPathArquivoMunicipios: String;
     FValidarInscricoes: boolean;
     FValidarListaServicos: boolean;
   published
-    property AjustarTagNro: boolean                read FAjustarTagNro;
     property NormatizarMunicipios: boolean         read FNormatizarMunicipios  write FNormatizarMunicipios;
     property GerarTagAssinatura: TpcnTagAssinatura read FGerarTagAssinatura    write FGerarTagAssinatura;
     property PathArquivoMunicipios: String         read FPathArquivoMunicipios write FPathArquivoMunicipios;
@@ -129,13 +123,15 @@ implementation
 constructor TMDFeW.Create(AOwner: TMDFe);
 begin
   inherited Create;
-  FMDFe := AOwner;
 
-  FGerador                  := TGerador.Create;
-  FGerador.FIgnorarTagNivel := '|?xml version|MDFe xmlns|infMDFe versao|';
+  FMDFe    := AOwner;
+  FGerador := TGerador.Create;
 
-  FOpcoes                       := TGeradorOpcoes.Create;
-  FOpcoes.FAjustarTagNro        := True;
+  FGerador.FIgnorarTagNivel   := '|?xml version|MDFe xmlns|infMDFe versao|';
+  FGerador.Opcoes.QuebraLinha := ';';
+
+  FOpcoes := TGeradorOpcoes.Create;
+
   FOpcoes.FNormatizarMunicipios := False;
   FOpcoes.FGerarTagAssinatura   := taSomenteSeAssinada;
   FOpcoes.FValidarInscricoes    := False;
@@ -373,7 +369,7 @@ begin
                                       MDFe.Emit.EnderEmit.cMun);
   Gerador.wGrupo('enderEmit', '#030');
   Gerador.wCampo(tcStr, '#031', 'xLgr   ', 02, 60, 1, MDFe.Emit.enderEmit.xLgr, DSC_XLGR);
-  Gerador.wCampo(tcStr, '#032', 'nro    ', 01, 60, 1, ExecutarAjusteTagNro(FOpcoes.FAjustarTagNro, MDFe.Emit.enderEmit.nro), DSC_NRO);
+  Gerador.wCampo(tcStr, '#032', 'nro    ', 01, 60, 1, MDFe.Emit.enderEmit.nro, DSC_NRO);
   Gerador.wCampo(tcStr, '#033', 'xCpl   ', 01, 60, 0, MDFe.Emit.enderEmit.xCpl, DSC_XCPL);
   Gerador.wCampo(tcStr, '#034', 'xBairro', 02, 60, 1, MDFe.Emit.enderEmit.xBairro, DSC_XBAIRRO);
   Gerador.wCampo(tcInt, '#035', 'cMun   ', 07, 07, 1, cMun, DSC_CMUN);
@@ -1368,7 +1364,7 @@ begin
       Gerador.wAlerta('#', 'Comp', '', ERR_MSG_MAIOR_MAXIMO + '990');
 
     Gerador.wCampo(tcDe2, '#', 'vContrato', 01, 15, 1, MDFe.rodo.infANTT.infPag[i].vContrato, DSC_VCONTRATO);
-    Gerador.wCampo(tcStr, '#', 'indPag   ', 01, 01, 0, TIndPagToStr(MDFe.rodo.infANTT.infPag[i].indPag), DSC_INDPAG);
+    Gerador.wCampo(tcStr, '#', 'indPag   ', 01, 01, 1, TIndPagToStr(MDFe.rodo.infANTT.infPag[i].indPag), DSC_INDPAG);
 
     // Informações do pagamento a prazo. Obs: Informar somente se indPag for à Prazo
     if MDFe.rodo.infANTT.infPag[i].indPag = ipPrazo then

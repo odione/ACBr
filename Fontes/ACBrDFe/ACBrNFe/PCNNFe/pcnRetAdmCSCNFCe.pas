@@ -50,14 +50,21 @@ unit pcnRetAdmCSCNFCe;
 interface
 
 uses
-  SysUtils, Classes, Contnrs, pcnConversao, pcnLeitor;
+  SysUtils, Classes,
+  {$IF DEFINED(NEXTGEN)}
+   System.Generics.Collections, System.Generics.Defaults,
+  {$ELSEIF DEFINED(DELPHICOMPILER16_UP)}
+   System.Contnrs,
+  {$IfEnd}
+  pcnConversao, pcnLeitor,
+  ACBrBase;
 
 type
 
   TRetdadosCscCollectionItem = class;
   TRetAdmCSCNFCe             = class;
 
-  TRetdadosCscCollection = class(TObjectList)
+  TRetdadosCscCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TRetdadosCscCollectionItem;
     procedure SetItem(Index: Integer; Value: TRetdadosCscCollectionItem);
@@ -111,13 +118,13 @@ end;
 function TRetdadosCscCollection.GetItem(
   Index: Integer): TRetdadosCscCollectionItem;
 begin
-  Result := TRetdadosCscCollectionItem(inherited GetItem(Index));
+  Result := TRetdadosCscCollectionItem(inherited Items[Index]);
 end;
 
 procedure TRetdadosCscCollection.SetItem(Index: Integer;
   Value: TRetdadosCscCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TRetdadosCscCollection.New: TRetdadosCscCollectionItem;

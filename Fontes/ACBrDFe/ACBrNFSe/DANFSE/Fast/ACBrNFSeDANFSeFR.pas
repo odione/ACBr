@@ -1,10 +1,9 @@
 {******************************************************************************}
-{ Projeto: Componente ACBrNFSe                                                 }
-{ Biblioteca multiplataforma de componentes Delphi para                        }
-{ Emissão de Nota Fiscal de Serviço                                            }
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2015 Italo Jurisato Junior                  }
-{                                       Daniel Simoes de Almeida               }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
 { Colaboradores nesse arquivo:                                                 }
 {                                                                              }
@@ -27,9 +26,8 @@
 { Você também pode obter uma copia da licença em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Simões de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
-{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
 {$I ACBr.inc}
@@ -1009,6 +1007,30 @@ begin
         FieldByName('Email').AsString    := Email;
       end;
     end;
+
+    with TACBrNFSe(DANFSeClassOwner.ACBrNFSe).Configuracoes.Geral do
+      if Emitente.DadosEmitente.Endereco <> EmptyStr then
+      begin
+        FieldByName('RazaoSocial').AsString  := Emitente.RazSocial;
+        FieldByName('NomeFantasia').AsString := Emitente.DadosEmitente.NomeFantasia;
+
+        FieldByName('Cnpj').AsString               := FormatarCNPJ(Emitente.CNPJ);
+        FieldByName('InscricaoMunicipal').AsString := Emitente.InscMun;
+        FieldByName('InscricaoEstadual').AsString  := FormatarIE(Emitente.DadosEmitente.InscricaoEstadual, Emitente.DadosEmitente.UF);
+
+        FieldByName('Endereco').AsString        := Emitente.DadosEmitente.Endereco;
+        FieldByName('Numero').AsString          := Emitente.DadosEmitente.Numero;
+        FieldByName('Complemento').AsString     := Emitente.DadosEmitente.Complemento;
+        FieldByName('Bairro').AsString          := Emitente.DadosEmitente.Bairro;
+        FieldByName('CodigoMunicipio').AsString := Emitente.DadosEmitente.CodigoMunicipio;
+        FieldByName('UF').AsString              := Emitente.DadosEmitente.UF;
+        FieldByName('CEP').AsString             := FormatarCEP(Emitente.DadosEmitente.CEP);
+        FieldByName('xMunicipio').AsString      := Emitente.DadosEmitente.Municipio;
+
+        FieldByName('Telefone').AsString := FormatarFone(Emitente.DadosEmitente.Telefone);
+        FieldByName('Email').AsString    := Emitente.DadosEmitente.Email;
+      end;
+
     Post;
   end;
 end;

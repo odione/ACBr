@@ -1,10 +1,14 @@
 {******************************************************************************}
-{ Projeto: Componente ACBrNFSe                                                 }
-{  Biblioteca multiplataforma de componentes Delphi                            }
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{  Você pode obter a última versão desse arquivo na pagina do Projeto ACBr     }
-{ Componentes localizado em http://www.sourceforge.net/projects/acbr           }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
+{ Colaboradores nesse arquivo: Italo Jurisato Junior                           }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
+{ Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
 {  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
 { sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
@@ -22,9 +26,8 @@
 { Você também pode obter uma copia da licença em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Simões de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
-{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
 {$I ACBr.inc}
@@ -34,10 +37,16 @@ unit pnfsNFSe;
 interface
 
 uses
-  SysUtils, Classes, Contnrs,
+  SysUtils, Classes,
   {$IFNDEF VER130}
     Variants,
   {$ENDIF}
+  {$IF DEFINED(NEXTGEN)}
+   System.Generics.Collections, System.Generics.Defaults,
+  {$ELSEIF DEFINED(DELPHICOMPILER16_UP)}
+   System.Contnrs,
+  {$IFEND}
+  ACBrBase,
   pnfsConversao;
 
 type
@@ -182,6 +191,7 @@ type
     FvalorRepasse: Currency; //Governa
     FValorDespesasNaoTributaveis: Currency; //Governa
     FValorTotalRecebido: Currency;
+    FValorTotalTributos: currency;
   public
     property ValorServicos: Currency read FValorServicos write FValorServicos;
     property ValorDeducoes: Currency read FValorDeducoes write FValorDeducoes;
@@ -222,9 +232,11 @@ type
     property ValorDespesasNaoTributaveis: Currency read FValorDespesasNaoTributaveis write FValorDespesasNaoTributaveis;
     //Recife
     property ValorTotalRecebido: Currency read FValorTotalRecebido write FValorTotalRecebido;
+    //Provedor proSimplISSv2
+    property ValorTotalTributos: currency read FValorTotalTributos write FValorTotalTributos;
   end;
 
-  TItemServicoCollection = class(TObjectList)
+  TItemServicoCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TItemServicoCollectionItem;
     procedure SetItem(Index: Integer; Value: TItemServicoCollectionItem);
@@ -329,7 +341,7 @@ type
     property ItemListaServico: String read FItemListaServico write FItemListaServico;
   end;
 
- TDeducaoCollection = class(TObjectList)
+ TDeducaoCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TDeducaoCollectionItem;
     procedure SetItem(Index: Integer; Value: TDeducaoCollectionItem);
@@ -633,7 +645,7 @@ type
     property Valor: Currency read FValor write FValor;
   end;
 
-  TParcelasCollection = class(TObjectList)
+  TParcelasCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TParcelasCollectionItem;
     procedure SetItem(Index: Integer; Const Value: TParcelasCollectionItem);
@@ -658,7 +670,7 @@ type
     property Parcelas: TParcelasCollection read FParcelas write SetParcelas;
  end;
 
- TemailCollection = class(TObjectList)
+ TemailCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TemailCollectionItem;
     procedure SetItem(Index: Integer; Value: TemailCollectionItem);
@@ -702,7 +714,7 @@ type
     property vTipoFreteTrans: TnfseFrete read FvTipoFreteTrans write FvTipoFreteTrans;
   end;
 
-  TDespesaCollection = class(TObjectList)
+  TDespesaCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TDespesaCollectionItem;
     procedure SetItem(Index: Integer; Value: TDespesaCollectionItem);
@@ -734,7 +746,7 @@ type
     property Conteudo: String read FConteudo write FConteudo;
   end;
 
-  TAssinaComChaveParamsCollection = class(TObjectList)
+  TAssinaComChaveParamsCollection = class(TACBrObjectList)
   private
     function GetItem(Index: Integer): TAssinaComChaveParamsCollectionItem;
     procedure SetItem(Index: Integer; Const Value: TAssinaComChaveParamsCollectionItem);
@@ -814,6 +826,12 @@ type
     FInformacoesComplementares: String;
 
     FAssinaComChaveParams: TAssinaComChaveParamsCollection;
+    FPercentualCargaTributaria: Double;
+    FValorCargaTributaria: Double;
+    FPercentualCargaTributariaMunicipal: Double;
+    FValorCargaTributariaMunicipal: Double;
+    FPercentualCargaTributariaEstadual: Double;
+    FValorCargaTributariaEstadual: Double;
 
     procedure Setemail(const Value: TemailCollection);
     procedure SetInformacoesComplementares(const Value: String);
@@ -894,6 +912,13 @@ type
     property Assinatura: String read FAssinatura write FAssinatura;
     property RegRec: TnfseRegRec read FRegRec write FRegRec; //Governa
     property FrmRec: TnfseFrmRec read FFrmRec write FFrmRec; //Governa
+    // Provedor Techos
+    property PercentualCargaTributaria: Double read FPercentualCargaTributaria write FPercentualCargaTributaria;
+    property ValorCargaTributaria: Double read FValorCargaTributaria write FValorCargaTributaria;
+    property PercentualCargaTributariaMunicipal: Double read FPercentualCargaTributariaMunicipal write FPercentualCargaTributariaMunicipal;
+    property ValorCargaTributariaMunicipal: Double read FValorCargaTributariaMunicipal write FValorCargaTributariaMunicipal;
+    property PercentualCargaTributariaEstadual: Double read FPercentualCargaTributariaEstadual write FPercentualCargaTributariaEstadual;
+    property ValorCargaTributariaEstadual: Double read FValorCargaTributariaEstadual write FValorCargaTributariaEstadual;
   end;
 
  TLoteRps = class(TObject)
@@ -1249,13 +1274,13 @@ end;
 
 function TItemServicoCollection.GetItem(Index: Integer): TItemServicoCollectionItem;
 begin
-  Result := TItemServicoCollectionItem(inherited GetItem(Index));
+  Result := TItemServicoCollectionItem(inherited Items[Index]);
 end;
 
 procedure TItemServicoCollection.SetItem(Index: Integer;
   Value: TItemServicoCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TItemServicoCollection.New: TItemServicoCollectionItem;
@@ -1272,13 +1297,13 @@ end;
 
 function TDeducaoCollection.GetItem(Index: Integer): TDeducaoCollectionItem;
 begin
-  Result := TDeducaoCollectionItem(inherited GetItem(Index));
+  Result := TDeducaoCollectionItem(inherited Items[Index]);
 end;
 
 procedure TDeducaoCollection.SetItem(Index: Integer;
   Value: TDeducaoCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TDeducaoCollection.New: TDeducaoCollectionItem;
@@ -1307,13 +1332,13 @@ end;
 
 function TParcelasCollection.GetItem(Index: Integer): TParcelasCollectionItem;
 begin
-  Result := TParcelasCollectionItem(inherited GetItem(Index));
+  Result := TParcelasCollectionItem(inherited Items[Index]);
 end;
 
 procedure TParcelasCollection.SetItem(Index: Integer;
   const Value: TParcelasCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TParcelasCollection.New: TParcelasCollectionItem;
@@ -1351,13 +1376,13 @@ end;
 
 function TemailCollection.GetItem(Index: Integer): TemailCollectionItem;
 begin
-  Result := TemailCollectionItem(inherited GetItem(Index));
+  Result := TemailCollectionItem(inherited Items[Index]);
 end;
 
 procedure TemailCollection.SetItem(Index: Integer;
   Value: TemailCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TemailCollection.New: TemailCollectionItem;
@@ -1375,12 +1400,12 @@ end;
 
 function TDespesaCollection.GetItem(Index: Integer): TDespesaCollectionItem;
 begin
-  Result := Inherited GetItem(Index) as TDespesaCollectionItem;
+  Result := TDespesaCollectionItem(inherited Items[Index]);
 end;
 
 procedure TDespesaCollection.SetItem(Index: Integer; Value: TDespesaCollectionItem);
 begin
-  Inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TDespesaCollection.New: TDespesaCollectionItem;
@@ -1399,13 +1424,13 @@ end;
 function TAssinaComChaveParamsCollection.GetItem(
   Index: Integer): TAssinaComChaveParamsCollectionItem;
 begin
-  Result := TAssinaComChaveParamsCollectionItem(inherited GetItem(Index));
+  Result := TAssinaComChaveParamsCollectionItem(inherited Items[Index]);
 end;
 
 procedure TAssinaComChaveParamsCollection.SetItem(Index: Integer;
   const Value: TAssinaComChaveParamsCollectionItem);
 begin
-  inherited SetItem(Index, Value);
+  inherited Items[Index] := Value;
 end;
 
 function TAssinaComChaveParamsCollection.New: TAssinaComChaveParamsCollectionItem;

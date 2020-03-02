@@ -278,8 +278,6 @@ type
     { Public declarations }
   end;
 
-procedure Register;
-
 implementation
 
 {$ifdef FPC}
@@ -290,11 +288,6 @@ implementation
 
 uses RLPrinters, StrUtils,
      ACBrDFeDANFeReport, ACBrDFeReportFortes, ACBrDFeREport, ACBrDelphiZXingQRCode;
-
-procedure Register;
-begin
-  RegisterComponents('ACBrNFe',[TACBrNFeDANFCeFortesA4]);
-end;
 
 function TfrmACBrDANFCeFortesFrA4.CompoemEnderecoCFe: String;
 var
@@ -340,7 +333,12 @@ end;
 procedure TfrmACBrDANFCeFortesFrA4.lNomeFantasiaBeforePrint(Sender: TObject;
   var Text: string; var PrintIt: Boolean);
 begin
-  Text := self.FACBrNFeDANFCeFortesA4.FpNFe.Emit.xFant;
+  lNomeFantasia.Visible := FACBrNFeDANFCeFortesA4.ImprimeNomeFantasia;
+
+  if lNomeFantasia.Visible then
+     Text := self.FACBrNFeDANFCeFortesA4.FpNFe.Emit.xFant
+  else
+     Text := '';
 end;
 
 procedure TfrmACBrDANFCeFortesFrA4.RLBand9BeforePrint(Sender: TObject;
@@ -634,7 +632,7 @@ procedure TfrmACBrDANFCeFortesFrA4.RLLabel37BeforePrint(Sender: TObject;
 begin
   Text := FormatarChaveAcesso(OnlyNumber(self.FACBrNFeDANFCeFortesA4.FpNFe.infNFe.ID));
 
-  if FACBrNFeDANFCeFortesA4.FpNFe.procNFe.cStat = 0 then
+  if (FACBrNFeDANFCeFortesA4.FpNFe.Ide.tpEmis = teNormal) and (FACBrNFeDANFCeFortesA4.FpNFe.procNFe.cStat = 0) then
   begin
     Text  := ACBrStr('NFC-E NÃO ENVIADA PARA SEFAZ');
     RLLabel37.Font.Color := clRed;

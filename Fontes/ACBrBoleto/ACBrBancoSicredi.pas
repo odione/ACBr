@@ -680,9 +680,7 @@ begin
       ValorDesconto        := StrToFloatDef(Copy(Linha,241,13),0)/100;
       ValorRecebido        := StrToFloatDef(Copy(Linha,254,13),0)/100;
       ValorMoraJuros       := StrToFloatDef(Copy(Linha,267,13),0)/100;
-      PercentualMulta      := StrToFloatDef(Copy(Linha,280,13),0)/100;
-      MultaValorFixo       := True;
-      ValorOutrosCreditos  := 0;
+      ValorOutrosCreditos  := StrToFloatDef(Copy(Linha,280,13),0)/100;
       if StrToIntDef(Copy(Linha,329,8),0) <> 0 then
         DataCredito:= StringToDateTimeDef( Copy(Linha,335,2)+'/'+
                                           Copy(Linha,333,2)+'/'+
@@ -1740,13 +1738,20 @@ begin
       atNao: AceiteStr := 'N';
     end;
 
-    {Espécie}
-    if (EspecieDoc = 'DM') then
-      Especie := '03'
-    else if (EspecieDoc = 'DMI') then
-      Especie := '03'
+    case AnsiIndexStr(EspecieDoc, ['DMI', 'DSI', 'DR', 'LC', 'NP', 'NPR', 'NS', 'RC', 'ND', 'BP']) of
+      0 : Especie := '03'; //DMI duplicata mercantil por indicação
+      1 : Especie := '05'; //DSI duplicata de serviço por indicação
+      2 : Especie := '06'; //DR duplicata rural
+      3 : Especie := '07'; //LC letra de câmbio
+      4 : Especie := '12'; //NP nota promissóri
+      5 : Especie := '13'; //NPR nota promissória rural
+      6 : Especie := '16'; //NS nota de seguro
+      7 : Especie := '17'; //RC recibo
+      8 : Especie := '19'; //ND nota de débito
+      9 : Especie := '32'; //Boleto Proposta
     else
-      Especie := '99';
+      Especie := '99'; //Outros
+    end;
 
     {Pegando Código da Ocorrencia}
     case OcorrenciaOriginal.Tipo of
@@ -1887,7 +1892,7 @@ begin
              PadRight(TiraAcentos(Sacado.Cidade), 15)                       + // 137 a 151 - Cidade
              PadLeft(Sacado.UF, 2)                                          + // 152 a 153 - Unidade da Federação
              TipoAvalista                                                   + // 154 a 154 - Tipo de inscrição
-             PadRight(OnlyNumber(Sacado.SacadoAvalista.CNPJCPF), 15, '0')   + // 155 a 169 - Número de inscrição
+             PadLeft(OnlyNumber(Sacado.SacadoAvalista.CNPJCPF), 15, '0')    + // 155 a 169 - Número de inscrição
              PadRight(TiraAcentos(Sacado.SacadoAvalista.NomeAvalista),40,' ')            + // 170 a 209 - Nome do sacador/avalista
              PadRight('', 3, '0')                                           + // 210 a 212 - Cód. bco corresp. na compensação
              Space(20)                                                      + // 213 a 232 - Nosso nº no banco correspondente

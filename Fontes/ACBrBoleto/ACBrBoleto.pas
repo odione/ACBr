@@ -505,6 +505,9 @@ type
     toRemessaPedidoNegativacao,
     toRemessaExcluirNegativacaoBaixar,
     toRemessaExcluirNegativacaoManterEmCarteira,
+    toRemessaSustarProtestoBaixarTitulo,
+    toRemessaSustarProtestoManterCarteira,
+    toRemessaRecusaAlegacaoSacado,
 	
     {Ocorrências para arquivo retorno}
     toRetornoAbatimentoCancelado,
@@ -729,10 +732,7 @@ type
     toRetornoOcorrenciaInfOutrosMotivos,
     toRetornoInclusaoNegativacao,
     toRetornoExclusaoNegativacao,
-    toRetornoEmTransito,
-    toRemessaSustarProtestoBaixarTitulo,
-    toRemessaSustarProtestoManterCarteira,
-    toRemessaRecusaAlegacaoSacado
+    toRetornoEmTransito
   );
 
   {TACBrOcorrencia}
@@ -1259,6 +1259,11 @@ type
      destructor Destroy; override;
      procedure CarregaLogoEmp( const PictureLogo : TPicture );
 
+     procedure Imprimir();
+     procedure GerarPDF();
+     procedure EnviarEmail(const sPara, sAssunto: String; sMensagem: TStrings;
+      EnviaPDF: Boolean; sCC: TStrings = Nil; Anexos: TStrings = Nil);
+
      property ACBrBoleto        : TACBrBoleto read fACBrBoleto;
      property LocalPagamento    : String      read fLocalPagamento    write fLocalPagamento;
      property Vencimento        : TDateTime   read fVencimento        write SetVencimento;
@@ -1417,6 +1422,7 @@ type
     procedure AdicionarMensagensPadroes(Titulo : TACBrTitulo; AStringList: TStrings);
 
     function GerarRemessa(NumeroRemessa : Integer) : String;
+    function GerarRemessaStream(NumeroRemessa : Integer; Stream:TStream) : String;
     procedure LerRetorno(AStream : TStream = Nil);
     procedure ChecarDadosObrigatorios;
 
@@ -1454,29 +1460,35 @@ type
   {$ENDIF RTL230_UP}
  TACBrBoletoFCClass = class(TACBrComponent)
   private
-    fDirLogo        : String;
-    fFiltro: TACBrBoletoFCFiltro;
-    fLayOut         : TACBrBolLayOut;
-    fMostrarPreview : Boolean;
+    fDirLogo         : String;
+    fFiltro          : TACBrBoletoFCFiltro;
+    fLayOut          : TACBrBolLayOut;
+    fMostrarPreview  : Boolean;
     fMostrarProgresso: Boolean;
-    fMostrarSetup: Boolean;
-    fNomeArquivo    : String;
-    fPathNomeArquivo: String;
-    fNumCopias      : Integer;
-    fPrinterName    : String;
-    fOnObterLogo : TACBrBoletoFCOnObterLogo ;
-    fSoftwareHouse  : String;
-    FPdfSenha: string;
+    fMostrarSetup    : Boolean;
+    fNomeArquivo     : String;
+    fPathNomeArquivo : String;
+    fNumCopias       : Integer;
+    fPrinterName     : String;
+    fOnObterLogo     : TACBrBoletoFCOnObterLogo ;
+    fSoftwareHouse   : String;
+    FPdfSenha        : string;
+    FTituloPreview   : string;
     FAlterarEscalaPadrao: Boolean;
     FNovaEscala: Integer;
+    FIndiceImprimirIndividual: Integer;
     function ComponentStateDesigning: Boolean;
     function GetArquivoLogo: String;
     function GetDirLogo: String;
     function GetNomeArquivo: String;
+    function GetIndiceImprimirIndividual: Integer;
+    function GetNomeArquivoPdfIndividual(const ANomeArquivo: String; const AIndex: Integer): String;
     procedure SetACBrBoleto(const Value: TACBrBoleto);
     procedure SetDirLogo(const AValue: String);
     procedure SetNomeArquivo(const AValue: String);
     procedure SetPdfSenha(const Value: string);
+    procedure SetTituloPreview(const Value: string);
+    procedure SetIndiceImprimirIndividual(const Value: Integer);
   protected
     fACBrBoleto : TACBrBoleto;
     procedure SetNumCopias(AValue: Integer);
@@ -1494,6 +1506,8 @@ type
     procedure CarregaLogo( const PictureLogo : TPicture; const NumeroBanco: Integer ) ;
 
     property ArquivoLogo : String read GetArquivoLogo;
+    property IndiceImprimirIndividual: Integer read GetIndiceImprimirIndividual  write SetIndiceImprimirIndividual   default -1;
+
   published
     property OnObterLogo     : TACBrBoletoFCOnObterLogo read fOnObterLogo write fOnObterLogo ;
     property ACBrBoleto      : TACBrBoleto     read fACBrBoleto       write SetACBrBoleto stored False;
@@ -1510,7 +1524,7 @@ type
     property PdfSenha        : string          read FPdfSenha         write SetPdfSenha;
     property AlterarEscalaPadrao: Boolean      read FAlterarEscalaPadrao write FAlterarEscalaPadrao default False;
     property NovaEscala      : Integer         read FNovaEscala       write FNovaEscala        default 96;
-
+    property TituloPreview   : string          read FTituloPreview    write SetTituloPreview;
   end;
 
 
@@ -1917,6 +1931,64 @@ begin
     PictureLogo.LoadFromFile( ArquivoLogoEmp );
 end;
 
+procedure TACBrTitulo.Imprimir();
+begin
+  if not Assigned(ACBrBoleto.ACBrBoletoFC) then
+    raise Exception.Create( ACBrStr('Nenhum componente "ACBrBoletoFC" associado' ) );
+
+  if (fACBrBoleto.ListadeBoletos.Count <= 0)  then
+    raise Exception.Create( ACBrStr('Nenhum Título encontrado na Lista de Boletos' ) ) ;
+
+  ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual :=  fACBrBoleto.ListadeBoletos.IndexOf(Self);
+  try
+    ACBrBoleto.Imprimir;
+  finally
+    ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual:= -1;
+
+  end;
+
+end;
+
+procedure TACBrTitulo.GerarPDF();
+begin
+  if not Assigned(ACBrBoleto.ACBrBoletoFC) then
+    raise Exception.Create( ACBrStr('Nenhum componente "ACBrBoletoFC" associado' ) ) ;
+
+  if (fACBrBoleto.ListadeBoletos.Count <= 0)  then
+    raise Exception.Create( ACBrStr('Nenhum Título encontrado na Lista de Boletos' ) ) ;
+
+  ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual :=  fACBrBoleto.ListadeBoletos.IndexOf(Self);
+  try
+    ACBrBoleto.GerarPDF;
+  finally
+    ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual:= -1;
+
+  end;
+
+end;
+
+procedure TACBrTitulo.EnviarEmail(const sPara, sAssunto: String;
+  sMensagem: TStrings; EnviaPDF: Boolean; sCC: TStrings; Anexos: TStrings);
+begin
+  if not Assigned(ACBrBoleto.ACBrBoletoFC) then
+    raise Exception.Create( ACBrStr('Nenhum componente "ACBrBoletoFC" associado' ) );
+
+  if (fACBrBoleto.ListadeBoletos.Count <= 0)  then
+    raise Exception.Create( ACBrStr('Nenhum Título encontrado na Lista de Boletos' ) ) ;
+
+  if not Assigned(ACBrBoleto.MAIL) then
+    raise Exception.Create( ACBrStr('Nenhum componente "ACBrMail" associado' ) );
+
+  ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual :=  fACBrBoleto.ListadeBoletos.IndexOf(Self);
+  try
+    ACBrBoleto.EnviarEmail(sPara, sAssunto, sMensagem, EnviaPDF, sCC, Anexos);
+  finally
+    ACBrBoleto.ACBrBoletoFC.IndiceImprimirIndividual:= -1;
+
+  end;
+
+end;
+
 function TACBrTitulo.CriarNFeNaLista: TACBrDadosNFe;
 var
   I: Integer;
@@ -2202,7 +2274,12 @@ begin
   if (EnviaPDF) then
   begin
     GerarPDF;
-    FMAIL.AddAttachment(ACBrBoletoFC.NomeArquivo,
+    if ACBrBoletoFC.IndiceImprimirIndividual >= 0 then
+        FMAIL.AddAttachment( ACBrBoletoFC.GetNomeArquivoPdfIndividual(ACBrBoletoFC.NomeArquivo, ACBrBoletoFC.IndiceImprimirIndividual)  ,
+                        ExtractFileName( ACBrBoletoFC.GetNomeArquivoPdfIndividual(ACBrBoletoFC.NomeArquivo, ACBrBoletoFC.IndiceImprimirIndividual)) )
+
+    else
+      FMAIL.AddAttachment(ACBrBoletoFC.NomeArquivo,
                         ExtractFileName(ACBrBoletoFC.NomeArquivo) );
   end
   else
@@ -3000,6 +3077,7 @@ var
    SLRemessa   : TStringList;
    ContTitulos : Integer;
    NomeArq     : String ;
+   Stream:TMemoryStream;
 begin
    Result:= '';
    if ListadeBoletos.Count < 1 then
@@ -3012,6 +3090,31 @@ begin
 
    if not DirectoryExists( DirArqRemessa ) then
       raise Exception.Create( ACBrStr('Diretório inválido:' + sLineBreak + DirArqRemessa) );
+
+   Stream:= TMemoryStream.Create;
+  try
+    Result:= GerarRemessaStream(NumeroRemessa, Stream);
+    if Result <> '' then
+      Stream.SaveToFile(Result);
+  finally
+    Stream.Free;
+  end;
+
+end;
+
+function TACBrBoleto.GerarRemessaStream(NumeroRemessa: Integer;
+  Stream: TStream): String;
+var
+   SLRemessa   : TStringList;
+   ContTitulos : Integer;
+   NomeArq     : String ;
+begin
+   Result:= '';
+   if ListadeBoletos.Count < 1 then
+      raise Exception.Create(ACBrStr('Lista de Boletos está vazia'));
+
+   ChecarDadosObrigatorios;
+
 
    if ( NomeArqRemessa = '' ) then
       NomeArq := Banco.CalcularNomeArquivoRemessa
@@ -3049,7 +3152,7 @@ begin
       else
         SLRemessa.Text := NativeStringToAnsi(SLRemessa.Text);
 
-      SLRemessa.SaveToFile( NomeArq );
+      SLRemessa.SaveToStream( Stream );
       Result:= NomeArq;
    finally
       SLRemessa.Free;
@@ -3152,7 +3255,7 @@ end;
 function TACBrBoleto.GetOcorrenciasRemessa(): TACBrOcorrenciasRemessa;
 var I: Integer;
 begin
-  SetLength(Result, 48);
+  SetLength(Result, 77);
 
   for I:= 1 to 48 do
   begin
@@ -3264,7 +3367,7 @@ begin
       if IniBoletos.SectionExists('Banco') then
       begin
         wNumeroBanco := IniBoletos.ReadInteger(CBanco,'Numero', 0 );
-        wIndiceACBr  := IniBoletos.ReadInteger(CBanco,'IndiceACBr', 0 );
+        wIndiceACBr  := IniBoletos.ReadInteger(CBanco,'IndiceACBr', IniBoletos.ReadInteger(CBanco,'TipoCobranca', 0 ) );
         wCNAB        := IniBoletos.ReadInteger(CBanco,'CNAB', Integer(LayoutRemessa) );
         wNumeroCorrespondente  := IniBoletos.ReadInteger(CBanco,'NumeroCorrespondente', 0 );
         wVersaoArquivo := IniBoletos.ReadInteger(CBanco,'VersaoArquivo', 0 );
@@ -3529,6 +3632,8 @@ begin
   fPrinterName         := '' ;
   FAlterarEscalaPadrao := False;
   FNovaEscala          := 96;
+  FIndiceImprimirIndividual := -1;
+
 end;
 
 procedure TACBrBoletoFCClass.Notification ( AComponent: TComponent;
@@ -3641,6 +3746,20 @@ begin
   end;
 end;
 
+function TACBrBoletoFCClass.GetIndiceImprimirIndividual: Integer;
+begin
+   Result := FIndiceImprimirIndividual;
+end;
+
+function TACBrBoletoFCClass.GetNomeArquivoPdfIndividual(const ANomeArquivo: String;
+         const AIndex: Integer): String;
+begin
+  if ANomeArquivo = '' then
+    Result := PathWithDelim( ApplicationPath ) + ChangeFileExt(ACBrBoleto.ListadeBoletos[AIndex].NumeroDocumento, '.pdf')
+  else
+    Result := ChangeFileExt( ChangeFileExt(ANomeArquivo,'') + '_' + ACBrBoleto.ListadeBoletos[AIndex].NumeroDocumento, '.pdf');
+end;
+
 procedure TACBrBoletoFCClass.SetNumCopias ( AValue: Integer ) ;
 begin
   fNumCopias := max( 1, Avalue);
@@ -3649,6 +3768,18 @@ end;
 procedure TACBrBoletoFCClass.SetPdfSenha(const Value: string);
 begin
   FPdfSenha := Value;
+end;
+
+procedure TACBrBoletoFCClass.SetTituloPreview(const Value: string);
+begin
+  if Value <> FTituloPreview then
+    FTituloPreview := Value;
+end;
+
+procedure TACBrBoletoFCClass.SetIndiceImprimirIndividual(const Value: Integer);
+begin
+  if Value <> FIndiceImprimirIndividual then
+    FIndiceImprimirIndividual:= Value;
 end;
 
 procedure TACBrBoletoFCClass.Imprimir;
@@ -3666,22 +3797,42 @@ var
    MostrarPreviewAntigo : Boolean;
    MostrarSetupAntigo   : Boolean;
    PrinterNameAntigo    : String;
+   NomeArquivoAntigo    : String;
 begin
    if NomeArquivo = '' then
       raise Exception.Create( ACBrStr('NomeArquivo não especificado')) ;
 
-   NomeArquivo := ChangeFileExt(NomeArquivo, '.pdf');
+   if not Assigned(fACBrBoleto) then
+       raise Exception.Create(ACBrStr('Componente não está associado a ACBrBoleto'));
 
    FiltroAntigo         := Filtro;
    MostrarPreviewAntigo := MostrarPreview;
    MostrarSetupAntigo   := MostrarSetup;
    PrinterNameAntigo    := PrinterName;
+   NomeArquivoAntigo    := NomeArquivo;
    try
      Filtro         := fiPDF;
      MostrarPreview := false;
      MostrarSetup   := false;
      PrinterName    := '';
-     Imprimir;
+
+     if fACBrBoleto.ListadeBoletos.Count < 1 then
+       raise Exception.Create(ACBrStr('Lista de Boletos está vazia'));
+
+     if FIndiceImprimirIndividual >= 0 then
+     begin
+       fPathNomeArquivo:= '';
+       NomeArquivo := GetNomeArquivoPdfIndividual(NomeArquivoAntigo, FIndiceImprimirIndividual);
+       Imprimir;
+       NomeArquivo:= NomeArquivoAntigo;
+
+     end
+     else
+     begin
+       NomeArquivo := ChangeFileExt(NomeArquivo, '.pdf');
+       Imprimir;
+     end;
+
    finally
      Filtro         := FiltroAntigo;
      MostrarPreview := MostrarPreviewAntigo;

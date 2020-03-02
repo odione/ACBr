@@ -1,10 +1,14 @@
 {******************************************************************************}
-{ Projeto: Componente ACBrNFSe                                                 }
-{  Biblioteca multiplataforma de componentes Delphi                            }
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{  Você pode obter a última versão desse arquivo na pagina do Projeto ACBr     }
-{ Componentes localizado em http://www.sourceforge.net/projects/acbr           }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
+{ Colaboradores nesse arquivo: Italo Jurisato Junior                           }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
+{ Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
 {  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
 { sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
@@ -22,9 +26,8 @@
 { Você também pode obter uma copia da licença em:                              }
 { http://www.opensource.org/licenses/lgpl-license.php                          }
 {                                                                              }
-{ Daniel Simões de Almeida  -  daniel@djsystem.com.br  -  www.djsystem.com.br  }
-{              Praça Anita Costa, 34 - Tatuí - SP - 18270-410                  }
-{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
 {$I ACBr.inc}
@@ -394,16 +397,28 @@ begin
 
     if VersaoNFSe = ve100 then
     begin
-      if NFSe.PrestadorServico.Endereco.CodigoMunicipio <> '5104526' then // Ipiranga do Norte - MT
-        Gerador.wCampoNFSe(tcStr, '#30', 'CodigoCnae', 01, 0007, 0, FormatarCnae(NFSe.Servico.CodigoCnae), '');
-
-      Gerador.wCampoNFSe(tcStr, '#29', 'ItemLei116   ', 01, 140, 1, codLCServ, '');
-      Gerador.wCampoNFSe(tcDe4, '#13', 'Quantidade   ', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
+      case StrToIntDef(NFSe.PrestadorServico.Endereco.CodigoMunicipio, 0) of
+        // Ipiranga do Norte - MT
+        5104526:
+          begin
+            Gerador.wCampoNFSe(tcStr, '#29', 'ItemLei116', 01, 140, 1, codLCServ, '');
+            Gerador.wCampoNFSe(tcDe4, '#13', 'Quantidade', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
+          end;
+        // Juina - MT
+        5105150:
+          Gerador.wCampoNFSe(tcDe4, '#13', 'Quantidade', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
+      else
+        begin
+          Gerador.wCampoNFSe(tcStr, '#30', 'CodigoCnae', 01, 0007, 0, FormatarCnae(NFSe.Servico.CodigoCnae), '');
+          Gerador.wCampoNFSe(tcStr, '#29', 'ItemLei116', 01, 140, 1, codLCServ, '');
+          Gerador.wCampoNFSe(tcDe4, '#13', 'Quantidade', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
+        end;
+      end;
     end
     else
     begin
-      Gerador.wCampoNFSe(tcStr, '#29', 'ItemLei116   ', 01, 015, 0, codLCServ, '');
-      Gerador.wCampoNFSe(tcDe2, '#13', 'Quantidade   ', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
+      Gerador.wCampoNFSe(tcStr, '#29', 'ItemLei116', 01, 015, 0, codLCServ, '');
+      Gerador.wCampoNFSe(tcDe2, '#13', 'Quantidade', 01, 17, 1, NFSe.Servico.ItemServico[i].Quantidade, '');
     end;
 
     Gerador.wCampoNFSe(tcDe2, '#13', 'ValorServico ', 01, 15, 1, NFSe.Servico.ItemServico[i].ValorUnitario, '');
@@ -523,6 +538,7 @@ begin
 
   case StrToInt(NFSe.PrestadorServico.Endereco.CodigoMunicipio) of
     5104526: LTagAtividadeEconomica := 'CodigoCnaeAtividadeEconomica';
+    5105150,
     5107305: LTagAtividadeEconomica := 'ItemLei116AtividadeEconomica';
   else
     LTagAtividadeEconomica := 'CodigoAtividadeEconomica';
