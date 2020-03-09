@@ -595,6 +595,20 @@ begin
         FPSoapEnvelopeAtributtes := FPSoapEnvelopeAtributtes +
               ' xmlns:enc="http://schemas.ipc.adm.br/efrete/pef/' + Acao + '"';
       end;
+
+    opConsultarTipoCarga:
+      begin
+        FPArqEnv  := 'ped-ConsultarTipoCarga';
+        FPArqResp := 'res-ConsultarTipoCarga';
+        Acao      := 'ConsultarTipoCarga';
+      end;
+
+    opAlterarDataLiberacaoPagamento:
+      begin
+        FPArqEnv  := 'ped-AlterarDataLiberacaoPagamento';
+        FPArqResp := 'res-AlterarDataLiberacaoPagamento';
+        Acao      := 'AlterarDataLiberacaoPagamento';
+      end;
   end;
 
   FPServico := CURL_WSDL + Acao;
@@ -658,6 +672,8 @@ begin
 end;
 
 function TCIOTEnviar.TratarResposta: Boolean;
+var
+  NomeArq: string;
 begin
   FPRetWS := SeparaDados(FPRetornoWS, 'soap:Body');
 
@@ -666,9 +682,10 @@ begin
   FRetornoEnvio.LerXml;
 
   if FRetornoEnvio.RetEnvio.PDF <> '' then
-    FPDFeOwner.Gravar(FRetornoEnvio.RetEnvio.ProtocoloServico + '.pdf',
-                      FRetornoEnvio.RetEnvio.PDF,
-                      GerarPathDownload);
+  begin
+    NomeArq := GerarPathDownload + FRetornoEnvio.RetEnvio.ProtocoloServico + '.pdf';
+    WriteToTXT(NomeArq, FRetornoEnvio.RetEnvio.PDF, False, False, True);
+  end;
 
   FPMsg := '';
 
