@@ -184,7 +184,7 @@ implementation
 Uses
   dateutils, strutils,
   pcnConversao,
-  ACBrUtil;
+  ACBrUtil, Dialogs;
 
 { TComandoIntegrador }
 
@@ -409,7 +409,7 @@ begin
           Inc(J);
         end;
       end;
-
+      ShowMessage('Arquivo esta no output agora');
       FLeitor.Arquivo := Arquivo;
       if FLeitor.rExtrai(1, 'Identificador') <> '' then
       begin

@@ -53,18 +53,16 @@ package ACBr_SATWS;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'ACBr - SATWS - Consulta de lotes enviados de CF-e-SAT - (http://www.projetoacbr.com.br/)'}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
   vcl,
-  designide,
-  ACBr_DFeComum,
-  DCLACBr_Comum;
+  ACBr_DFeComum;
 
 contains
   ACBrSATWS in '..\..\..\..\Fontes\ACBrDFe\ACBrSATWS\ACBrSATWS.pas',
-  ACBrSATWS_Reg in '..\..\..\..\Fontes\ACBrDFe\ACBrSATWS\ACBrSATWS_Reg.pas',
   ACBrSATWS_WebServices in '..\..\..\..\Fontes\ACBrDFe\ACBrSATWS\ACBrSATWS_WebServices.pas',
   pcnSATConsulta in '..\..\..\..\Fontes\ACBrDFe\ACBrSATWS\PCNSATWS\pcnSATConsulta.pas',
   pcnSATConsultaRet in '..\..\..\..\Fontes\ACBrDFe\ACBrSATWS\PCNSATWS\pcnSATConsultaRet.pas';
