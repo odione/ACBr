@@ -1,3 +1,33 @@
+{******************************************************************************}
+{ Projeto: Componentes ACBr                                                    }
+{  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
+{ mentos de Automação Comercial utilizados no Brasil                           }
+{                                                                              }
+{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
+{																			   }
+{  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
+{ Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/lgpl-license.php                          }
+{                                                                              }
+{ Daniel Simões de Almeida - daniel@projetoacbr.com.br - www.projetoacbr.com.br}
+{       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
+{******************************************************************************}
+
 unit Frm_ACBrNFe;
 
 interface
@@ -245,6 +275,8 @@ type
     ACBrIntegrador1: TACBrIntegrador;
     btVersao: TButton;
     ACBrNFeDANFCeFortesA41: TACBrNFeDANFCeFortesA4;
+    Label51: TLabel;
+    edtURLPFX: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure btnSalvarConfigClick(Sender: TObject);
     procedure sbPathNFeClick(Sender: TObject);
@@ -3100,10 +3132,7 @@ end;
 procedure TfrmACBrNFe.btVersaoClick(Sender: TObject);
 begin
   pgRespostas.ActivePageIndex := 0;
- if ACBrNFe1.SSL.SSLCryptLib = cryOpenSSL then
-    MemoResp.Lines.Add(TDFeOpenSSL(ACBrNFe1.SSL.SSLCryptClass).OpenSSLVersion)
-  else
-    MemoResp.Lines.Add('Biblioteca de Criptografia Selecionada não é OpenSSL');
+  MemoResp.Lines.Add(ACBrNFe1.SSL.SSLCryptClass.Versao);
 end;
 
 procedure TfrmACBrNFe.cbCryptLibChange(Sender: TObject);
@@ -3250,6 +3279,7 @@ begin
     Ini.WriteInteger('Certificado', 'CryptLib',   cbCryptLib.ItemIndex);
     Ini.WriteInteger('Certificado', 'HttpLib',    cbHttpLib.ItemIndex);
     Ini.WriteInteger('Certificado', 'XmlSignLib', cbXmlSignLib.ItemIndex);
+    Ini.WriteString( 'Certificado', 'URL',        edtURLPFX.Text);
     Ini.WriteString( 'Certificado', 'Caminho',    edtCaminho.Text);
     Ini.WriteString( 'Certificado', 'Senha',      edtSenha.Text);
     Ini.WriteString( 'Certificado', 'NumSerie',   edtNumSerie.Text);
@@ -3369,6 +3399,7 @@ begin
     cbCryptLib.ItemIndex   := Ini.ReadInteger('Certificado', 'CryptLib',   0);
     cbHttpLib.ItemIndex    := Ini.ReadInteger('Certificado', 'HttpLib',    0);
     cbXmlSignLib.ItemIndex := Ini.ReadInteger('Certificado', 'XmlSignLib', 0);
+    edtURLPFX.Text         := Ini.ReadString( 'Certificado', 'URL',        '');
     edtCaminho.Text        := Ini.ReadString( 'Certificado', 'Caminho',    '');
     edtSenha.Text          := Ini.ReadString( 'Certificado', 'Senha',      '');
     edtNumSerie.Text       := Ini.ReadString( 'Certificado', 'NumSerie',   '');
@@ -3469,6 +3500,7 @@ var
   Ok: Boolean;
   PathMensal: string;
 begin
+  ACBrNFe1.Configuracoes.Certificados.URLPFX      := edtURLPFX.Text;
   ACBrNFe1.Configuracoes.Certificados.ArquivoPFX  := edtCaminho.Text;
   ACBrNFe1.Configuracoes.Certificados.Senha       := edtSenha.Text;
   ACBrNFe1.Configuracoes.Certificados.NumeroSerie := edtNumSerie.Text;

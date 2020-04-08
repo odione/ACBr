@@ -230,7 +230,7 @@ begin
    tePagamentoOperacao:
      begin
        Gerador.wGrupo('evPagtoOperMDFe');
-       Gerador.wCampo(tcStr, 'HP02', 'descEvento', 05, 13, 1, Evento.Items[0].InfEvento.DescEvento);
+       Gerador.wCampo(tcStr, 'HP02', 'descEvento', 05, 24, 1, Evento.Items[0].InfEvento.DescEvento);
        Gerador.wCampo(tcStr, 'HP03', 'nProt     ', 15, 15, 1, Evento.Items[0].InfEvento.detEvento.nProt);
 
        Gerador.wGrupo('infViagens', '#');
@@ -410,7 +410,7 @@ begin
           idEstrangeiro := RetEventoMDFe.InfEvento.detEvento.infPag[i].idEstrangeiro;
           CNPJCPF       := RetEventoMDFe.InfEvento.detEvento.infPag[i].CNPJCPF;
 
-          for j := 0 to Comp.Count - 1 do
+          for j := 0 to RetEventoMDFe.InfEvento.detEvento.infPag[i].Comp.Count - 1 do
           begin
             Comp.New;
 
@@ -424,7 +424,7 @@ begin
 
           if indPag = ipPrazo then
           begin
-            for j := 0 to infPrazo.Count - 1 do
+            for j := 0 to RetEventoMDFe.InfEvento.detEvento.infPag[i].infPrazo.Count - 1 do
             begin
               infPrazo.New;
 

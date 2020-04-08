@@ -30,13 +30,6 @@
 {       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
-{******************************************************************************
-|* Historico
-|*
-|* 12/08/2010: Primeira Versao
-|*    Daniel Simoes de Almeida e André Moraes
-******************************************************************************}
-
 unit ACBrIBGE ;
 
 {$I ACBr.inc}
@@ -224,6 +217,9 @@ type
     property ListaCidades: TACBrIBGECidades read fListaCidades ;
 
     property Cidades: TACBrIBGECidades read fCidadesEncontradas ;
+
+    function BuscarPorcUF( const AcUF: Integer ) : Integer ;
+    function BuscarPorUF( const AUF: string ) : Integer ;
 
     function BuscarPorCodigo( const ACodMun : Integer ) : Integer ;
     function BuscarPorNome( const ACidade : String; const AUF: String = '';
@@ -1027,7 +1023,7 @@ end;
 function TACBrIBGE.UnZipDoc: String;
 var
   CT: String;
-  UnZipStr: AnsiString;
+  Resp: AnsiString;
   RespIsUTF8: Boolean;
   zt: TCompressType;
 begin
@@ -1035,18 +1031,17 @@ begin
   if zt = ctUnknown then
   begin
     HTTPSend.Document.Position := 0;
-    Result := String(ReadStrFromStream(HTTPSend.Document, HTTPSend.Document.Size));
-    Exit;
-  end;
-
-  UnZipStr := UnZip(HTTPSend.Document);
+    Resp := ReadStrFromStream(HTTPSend.Document, HTTPSend.Document.Size);
+  end
+  else
+    Resp := UnZip(HTTPSend.Document);
 
   CT := LowerCase( GetHeaderValue('Content-Type:') );
   RespIsUTF8 := (pos('utf-8', CT) > 0);
   if RespIsUTF8 then
-    Result := UTF8ToNativeString(UnZipStr)
+    Result := UTF8ToNativeString(Resp)
   else
-    Result := String(UnZipStr);
+    Result := String(Resp);
 end;
 
 constructor TACBrIBGE.Create(AOwner : TComponent) ;
@@ -1099,6 +1094,31 @@ begin
 
   Result := fCidadesEncontradas.Count;
 end ;
+
+function TACBrIBGE.BuscarPorcUF(const AcUF: Integer): Integer;
+var
+  I, CidadeMin: Integer;
+begin
+  RespHTTP.Clear;
+  fCidadesEncontradas.Clear;
+  ObterCidades( AcUF );
+
+  CidadeMin := AcUF * 100000;
+  I := fListaCidades.Find(CidadeMin, False);
+  if (I >= 0) then
+  begin
+    while (I < fListaCidades.Count) and (fListaCidades[I].CodUF = AcUF) do
+    begin
+      fCidadesEncontradas.Copy(fListaCidades[I]);
+      Inc(I);
+    end;
+  end;
+
+  Result := fCidadesEncontradas.Count;
+
+  if Assigned( OnBuscaEfetuada ) then
+     OnBuscaEfetuada( Self );
+end;
 
 function TACBrIBGE.BuscarPorNome(const ACidade: String; const AUF: String;
   const Exata: Boolean): Integer;
@@ -1157,6 +1177,11 @@ begin
   if Assigned( OnBuscaEfetuada ) then
      OnBuscaEfetuada( Self );
 end ;
+
+function TACBrIBGE.BuscarPorUF(const AUF: string): Integer;
+begin
+  Result := BuscarPorcUF( UFToCodUF(Trim(AUF)) );
+end;
 
 procedure TACBrIBGE.ObterCidades;
 var
@@ -1463,6 +1488,9 @@ begin
 end;
 
 procedure TACBrIBGE.ObterUFs;
+var
+  UFsEmCache: String;
+  i: Integer;
 begin
   if not fCacheLido then
     CarregarCache;
@@ -1470,9 +1498,17 @@ begin
   if (fListaUFs.Count >= CIBGE_UF_COUNT) then  // Já fez a carga ?
     Exit;
 
+  UFsEmCache := '';
+  for i := 0 to fListaUFs.Count-1 do
+    UFsEmCache := UFsEmCache + fListaUFs[i].fUF + ',';
+
   fListaUFs.Clear;
   HTTPGet(CIBGE_URL_UF);
   fListaUFs.AddFromJSonStr(UnZipDoc);
+
+  if (UFsEmCache <> '') then
+    for i := 0 to fListaUFs.Count-1 do
+      fListaUFs[i].CidadesCarregadas := (pos(fListaUFs[i].fUF, UFsEmCache) > 0);
 end;
 
 procedure TACBrIBGE.ObterEstatisticasUF;

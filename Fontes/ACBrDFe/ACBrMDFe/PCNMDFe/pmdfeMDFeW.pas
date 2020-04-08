@@ -420,7 +420,8 @@ begin
     if (MDFe.Rodo.infANTT.RNTRC <> '') or
        (MDFe.Rodo.infANTT.infCIOT.Count > 0) or
        (MDFe.Rodo.infANTT.valePed.disp.Count > 0) or
-       (MDFe.rodo.infANTT.infContratante.Count > 0) then
+       (MDFe.rodo.infANTT.infContratante.Count > 0) or
+       (MDFe.rodo.infANTT.infPag.Count > 0) then
     begin
       Gerador.wGrupo('infANTT', '#02');
       Gerador.wCampo(tcStr, '#02', 'RNTRC', 08, 08, 0, OnlyNumber(MDFe.Rodo.infANTT.RNTRC), DSC_RNTRC);
@@ -1292,8 +1293,8 @@ begin
     Gerador.wGrupo('prodPred', '#');
     Gerador.wCampo(tcStr, '#', 'tpCarga', 02, 002, 1, TCargaToStr(MDFe.prodPred.tpCarga), DSC_TPCARGA);
     Gerador.wCampo(tcStr, '#', 'xProd  ', 06, 120, 1, MDFe.prodPred.xProd, DSC_XPROD);
-    Gerador.wCampo(tcStr, '#', 'cEAN   ', 14, 014, 0, MDFe.prodPred.cEAN, DSC_CEAN);
-    Gerador.wCampo(tcStr, '#', 'NCM    ', 08, 008, 0, MDFe.prodPred.NCM, DSC_NCM);
+    Gerador.wCampo(tcStr, '#', 'cEAN   ', 00, 014, 0, MDFe.prodPred.cEAN, DSC_CEAN);
+    Gerador.wCampo(tcStr, '#', 'NCM    ', 02, 008, 0, MDFe.prodPred.NCM, DSC_NCM);
 
     if (MDFe.prodPred.infLocalCarrega.CEP > 0) or
        (MDFe.prodPred.infLocalCarrega.latitude <> 0) or (MDFe.prodPred.infLocalCarrega.Longitude <> 0) or

@@ -705,7 +705,7 @@ var
 begin
   with self.FACBrNFeDANFCeFortesA4.FpNFe do
   begin
-    if InfAdic.obsCont.Count > 0 then
+    if FACBrNFeDANFCeFortesA4.ImprimeInfContr then
     begin
       for I := 0 to InfAdic.obsCont.Count - 1 do
         Text := Text + StringReplace(InfAdic.obsCont[i].xCampo + ': ' +
@@ -916,11 +916,11 @@ procedure TfrmACBrDANFCeFortesFrA4.RLLabel31BeforePrint(Sender: TObject;
         end;
 
         if vTribFed > 0 then
-          Result := Result + ' ' + FormatFloatBr( vTribFed,'###,###,##0.00') + sFederal ;
+          Result := Result + ' ' + FormatFloatBr( vTribFed,',0.00') + sFederal ;
         if vTribEst > 0 then
-          Result := Result + ' ' + FormatFloatBr( vTribEst,'###,###,##0.00') + sEstadual;
+          Result := Result + ' ' + FormatFloatBr( vTribEst,',0.00') + sEstadual;
         if vTribMun > 0 then
-          Result := Result + ' ' + FormatFloatBr( vTribMun,'###,###,##0.00') + sMunicipal;
+          Result := Result + ' ' + FormatFloatBr( vTribMun,',0.00') + sMunicipal;
       end
       else
         Result := '';

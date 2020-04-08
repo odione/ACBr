@@ -32,14 +32,6 @@
 {       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
-{******************************************************************************
-|* Historico
-|*
-|* 11/10/2013: Primeira Versao
-|*    Jean Patrick Figueiredo dos Santos
-|*
-******************************************************************************}
-
 unit ACBrMail;
 
 {$I ACBr.inc}
@@ -727,7 +719,6 @@ begin
     AAttachment.Stream.Position := 0;
     MimePartAttach := fMIMEMess.AddPart(MultiPartParent);
     MimePartAttach.DecodedLines.LoadFromStream(AAttachment.Stream);
-    MimePartAttach.MimeTypeFromExt(AAttachment.FileName);
     MimePartAttach.Description := AAttachment.Description;
     case AAttachment.Disposition of
       adInline: MimePartAttach.Disposition := 'inline';
@@ -743,6 +734,7 @@ begin
     MimePartAttach.CharsetCode := fIDECharsetCode;
     MimePartAttach.TargetCharset := fIDECharsetCode;
     MimePartAttach.ConvertCharset := False;
+    MimePartAttach.MimeTypeFromExt(AAttachment.FileName);
 
     MimePartAttach.EncodePart;
     MimePartAttach.EncodePartHeader;

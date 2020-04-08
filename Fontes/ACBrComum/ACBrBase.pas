@@ -187,7 +187,7 @@ TAnsiStringList = class
 
 { TACBrObjectList }
 
-TACBrObjectList = class(TObjectList{$IfDef NEXTGEN}<TObject>{$EndIf})
+  TACBrObjectList = class(TObjectList{$IfDef NEXTGEN}<TObject>{$EndIf})
   protected
     fIsSorted: Boolean;
   public
@@ -294,6 +294,17 @@ de campos quando necessário}
     property Items[Index: Integer]: TACBrInformacao read GetItem write SetItem;
     property Fields[Index: String]: TAcbrInformacao read GetFields; default;
   end;
+
+  { THttpHeader }
+
+  THttpHeader = class(TStringList)
+  public
+    function GetHeaderIndex(const AHeader: String): Integer;
+    function GetHeaderValue(const AHeader: String): String; overload;
+    function GetHeaderValue(const AIndex: Integer): String; overload;
+    function AddHeader(const AHeader, AValue: string): Integer;
+  end;
+
 
 procedure ACBrAboutDialog ;
 
@@ -823,5 +834,61 @@ begin
     Result := Result + GetItem(i)
 end;
 
+
+{ THttpHeader }
+
+function THttpHeader.GetHeaderIndex(const AHeader: String): Integer;
+var
+  I: Integer;
+  LinhaHeader: String;
+begin
+  Result := -1;
+  I := 0;
+  while (Result < 0) and (I < Count) do
+  begin
+    LinhaHeader := Strings[I];
+    if (pos(AHeader, LinhaHeader) = 1) then
+      Result := I;
+
+    Inc( I ) ;
+  end ;
+end;
+
+function THttpHeader.GetHeaderValue(const AHeader: String): String;
+var
+  I: Integer;
+begin
+  I := GetHeaderIndex(AHeader);
+  Result := GetHeaderValue(I)
+end;
+
+function THttpHeader.GetHeaderValue(const AIndex: Integer): String;
+var
+  LinhaHeader: String;
+  P: Integer;
+begin
+  Result := '';
+  if (AIndex >= 0) and (AIndex < Count) then
+  begin
+    LinhaHeader := Strings[AIndex];
+    P := pos(':', LinhaHeader);
+    if (P > 0) then
+      Result := Trim(copy(LinhaHeader, P+1, Length(LinhaHeader)));
+  end;
+end;
+
+function THttpHeader.AddHeader(const AHeader, AValue: string): Integer;
+var
+  LinhaHeader: String;
+begin
+  LinhaHeader := AHeader + ': ' + AValue;
+  Result := GetHeaderIndex(AHeader);
+  if Result < 0 then
+    Result := Add(LinhaHeader)
+  else
+    Strings[Result] := LinhaHeader;
+end;
+
 end.
+
 
