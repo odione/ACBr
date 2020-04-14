@@ -68,21 +68,19 @@ package ACBr_BPe;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'ACBr - Bilhete de Passagem Eletrônica - (http://www.projetoacbr.com.br/)'}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
   vcl,
-  designide,
   ACBr_DFeComum,
-  ACBr_PCNComum,
-  DCLACBr_Comum;
+  ACBr_PCNComum;
 
 contains
   ACBrBPe in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\ACBrBPe.pas',
   ACBrBPeBilhetes in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\ACBrBPeBilhetes.pas',
   ACBrBPeConfiguracoes in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\ACBrBPeConfiguracoes.pas',
-  ACBrBPeReg in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\ACBrBPeReg.pas',
   ACBrBPeWebServices in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\ACBrBPeWebServices.pas',
   pcnBPe in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\PCNBPe\pcnBPe.pas',
   pcnBPeR in '..\..\..\..\Fontes\ACBrDFe\ACBrBPe\PCNBPe\pcnBPeR.pas',

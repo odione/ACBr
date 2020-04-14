@@ -211,6 +211,8 @@ type
     btnEnviarCiotEmail: TButton;
     tsOperacao: TTabSheet;
     rgOperacao: TRadioGroup;
+    Button1: TButton;
+    Button2: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnSalvarConfigClick(Sender: TObject);
@@ -245,6 +247,7 @@ type
     procedure btnGerarCIOTClick(Sender: TObject);
     procedure btnCriarEnviarClick(Sender: TObject);
     procedure btnEnviarCiotEmailClick(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
     sToken: string;
@@ -252,6 +255,7 @@ type
     procedure GravarConfiguracao;
     procedure LerConfiguracao;
     procedure ConfigurarComponente;
+    procedure ConfigurarEmail;
     Procedure AlimentarComponente;
     procedure LoadXML(RetWS: String; MyWebBrowser: TWebBrowser);
     procedure AtualizarSSLLibsCombo;
@@ -432,7 +436,7 @@ begin
            with AdicionarOperacao do
            begin
              (****************  DADOS DO CONTRATO  **************)
-             TipoViagem := TAC_Agregado;
+             TipoViagem := Padrao; // TAC_Agregado;
              TipoPagamento := eFRETE;
              EmissaoGratuita := (TipoPagamento = TransferenciaBancaria);
              BloquearNaoEquiparado := False;
@@ -718,7 +722,15 @@ begin
              QuantidadeTransferencias := 0; //Quantidade de Transferências  Bancárias que serão solicitadas pelo Contratado na operação de transporte.
              ValorSaques := 0;
              ValorTransferencias := 0;
-             CodigoTipoCarga := tpCargaGeral;
+
+             // se o tipo de viagem for padrão (TipoViagem := Padrao) devemos
+             // informar o valor tpNaoAplicavel ao campo CodigoTipoCarga
+             // valores permitidos para o campo:
+             // tpNaoAplicavel, tpGranelsolido, tpGranelLiquido, tpFrigorificada,
+             // tpConteinerizada, tpCargaGeral, tpNeogranel, tpPerigosaGranelSolido,
+             // tpPerigosaGranelLiquido, tpPerigosaCargaFrigorificada,
+             // tpPerigosaConteinerizada, tpPerigosaCargaGeral
+             CodigoTipoCarga := tpNaoAplicavel;
              AltoDesempenho := True;
              DestinacaoComercial := True;
              FreteRetorno := False;
@@ -1154,22 +1166,24 @@ begin
   OpenDialog1.Filter := 'Arquivos RegBol (*-CIOT.xml)|*-CIOT.xml|Arquivos XML (*.xml)|*.xml|Todos os Arquivos (*.*)|*.*';
   OpenDialog1.InitialDir := ACBrCIOT1.Configuracoes.Arquivos.PathSalvar;
 
-  if OpenDialog1.Execute then
-  begin
-    ACBrCIOT1.Contratos.Clear;
-    ACBrCIOT1.Contratos.LoadFromFile(OpenDialog1.FileName);
-    CC:=TstringList.Create;
-    CC.Add('email_1@provedor.com'); //especifique um email válido
-    CC.Add('email_2@provedor.com.br'); //especifique um email válido
+  if not OpenDialog1.Execute then
+    Exit;
 
+  ACBrCIOT1.Contratos.Clear;
+  ACBrCIOT1.Contratos.LoadFromFile(OpenDialog1.FileName);
+  CC := TStringList.Create;
+  try
+    //CC.Add('email_1@provedor.com'); //especifique um email válido
+    //CC.Add('email_2@provedor.com.br'); //especifique um email válido
+    ConfigurarEmail;
     ACBrCIOT1.Contratos.Items[0].EnviarEmail(Para
-                                             , edtEmailAssunto.Text
-                                             , mmEmailMsg.Lines
-                                             , False // Enviar PDF junto
-                                             , nil   // Lista com emails que serão enviado cópias - TStrings
-                                             , nil   // Lista de RegBolxos - TStrings
-                                              );
-
+      , edtEmailAssunto.Text
+      , mmEmailMsg.Lines
+      , False // Enviar PDF junto
+      , CC   // Lista com emails que serão enviado cópias - TStrings
+      , nil   // Lista de RegBolxos - TStrings
+      );
+  finally
     CC.Free;
   end;
 end;
@@ -1177,21 +1191,16 @@ end;
 procedure TfrmACBrCIOT.btnGerarCIOTClick(Sender: TObject);
 var
   vAux : String;
+  Codigo: Integer;
+
 begin
   vAux := '';
-  if not (InputQuery('WebServices Enviar', 'ID do Contrato', vAux)) then
+  if not (InputQuery('Consultar por Descrição', 'Nome da Cidade', vAux)) then
     exit;
 
-  ACBrCIOT1.Contratos.Clear;
-  AlimentarComponente;
-  ACBrCIOT1.Contratos.Items[0].GravarXML('', '');
+  Codigo := ObterCodigoMunicipio(vAux, 'SP', 'C:\Erp\Txt\Blt' );
 
-  ShowMessage('Arquivo gerado em: '+ACBrCIOT1.Contratos.Items[0].NomeArq);
-  MemoDados.Lines.Add('Arquivo gerado em: '+ACBrCIOT1.Contratos.Items[0].NomeArq);
-  MemoResp.Lines.LoadFromFile(ACBrCIOT1.Contratos.Items[0].NomeArq);
-  LoadXML(MemoResp.Lines.Text, WBResposta);
-
-  pgRespostas.ActivePageIndex := 1;
+  ShowMessage('Codigo: ' + IntToStr(Codigo));
 end;
 
 procedure TfrmACBrCIOT.btnIssuerNameClick(Sender: TObject);
@@ -1248,6 +1257,22 @@ procedure TfrmACBrCIOT.btnSubNameClick(Sender: TObject);
 begin
   ShowMessage(ACBrCIOT1.SSL.CertSubjectName + sLineBreak + sLineBreak +
               'Razão Social: ' + ACBrCIOT1.SSL.CertRazaoSocial);
+end;
+
+procedure TfrmACBrCIOT.Button2Click(Sender: TObject);
+var
+  vAux : String;
+  Nome: string;
+  Codigo: Integer;
+begin
+  vAux := '';
+  if not (InputQuery('Consultar por Codigo', 'Codigo da Cidade', vAux)) then
+    exit;
+
+  Codigo := StrToInt(vAux);
+  Nome := ObterNomeMunicipio('SP', Codigo,'C:\Erp\Txt\Blt' );
+
+  ShowMessage('Nome: ' + Nome);
 end;
 
 procedure TfrmACBrCIOT.cbCryptLibChange(Sender: TObject);
@@ -1658,6 +1683,20 @@ begin
     PathMensal       := GetPathCIOT(0);
     PathSalvar       := PathMensal;
   end;
+end;
+
+procedure TfrmACBrCIOT.ConfigurarEmail;
+begin
+  ACBrMail1.Host := edtSmtpHost.Text;
+  ACBrMail1.Port := edtSmtpPort.Text;
+  ACBrMail1.Username := edtSmtpUser.Text;
+  ACBrMail1.Password := edtSmtpPass.Text;
+  ACBrMail1.From := edtSmtpUser.Text;
+  ACBrMail1.SetSSL := cbEmailSSL.Checked; // SSL - Conexao Segura
+  ACBrMail1.SetTLS := cbEmailSSL.Checked; // Auto TLS
+  ACBrMail1.ReadingConfirmation := False; // Pede confirmacao de leitura do email
+  ACBrMail1.UseThread := False;           // Aguarda Envio do Email(nao usa thread)
+  ACBrMail1.FromName := 'Projeto ACBr - ACBrCIOT';
 end;
 
 procedure TfrmACBrCIOT.LoadXML(RetWS: String; MyWebBrowser: TWebBrowser);

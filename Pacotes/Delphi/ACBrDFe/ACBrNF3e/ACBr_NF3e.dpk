@@ -35,6 +35,7 @@
 package ACBr_NF3e;
 
 {$R *.res}
+{$R *.otares}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -60,19 +61,18 @@ package ACBr_NF3e;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'ACBr - Nota Fiscal de Energia Eletrica Eletrônica - (http://www.projetoacbr.com.br/)'}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
   vcl,
-  designide,
   ACBr_DFeComum,
   ACBr_PCNComum;
 
 contains
   ACBrNF3eConfiguracoes in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\ACBrNF3eConfiguracoes.pas',
   ACBrNF3eNotasFiscais in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\ACBrNF3eNotasFiscais.pas',
-  ACBrNF3eReg in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\ACBrNF3eReg.pas',
   ACBrNF3eWebServices in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\ACBrNF3eWebServices.pas',
   ACBrNF3e in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\ACBrNF3e.pas',
   pcnNF3eConsts in '..\..\..\..\Fontes\ACBrDFe\ACBrNF3e\PCNNF3e\pcnNF3eConsts.pas',

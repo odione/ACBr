@@ -27,7 +27,7 @@ object frmACBrNFe: TfrmACBrNFe
       Top = 1
       Width = 295
       Height = 544
-      ActivePage = TabSheet1
+      ActivePage = TabSheet2
       TabOrder = 0
       object TabSheet1: TTabSheet
         Caption = 'Configura'#231#245'es'
@@ -36,7 +36,7 @@ object frmACBrNFe: TfrmACBrNFe
           Top = 0
           Width = 287
           Height = 516
-          ActivePage = TabSheet3
+          ActivePage = TabSheet12
           Align = alClient
           MultiLine = True
           TabOrder = 0
@@ -314,7 +314,7 @@ object frmACBrNFe: TfrmACBrNFe
               Width = 160
               Height = 21
               Style = csDropDownList
-              ItemHeight = 13
+              ItemHeight = 0
               TabOrder = 10
               OnChange = cbSSLLibChange
             end
@@ -324,7 +324,7 @@ object frmACBrNFe: TfrmACBrNFe
               Width = 160
               Height = 21
               Style = csDropDownList
-              ItemHeight = 13
+              ItemHeight = 0
               TabOrder = 11
               OnChange = cbCryptLibChange
             end
@@ -334,7 +334,7 @@ object frmACBrNFe: TfrmACBrNFe
               Width = 160
               Height = 21
               Style = csDropDownList
-              ItemHeight = 13
+              ItemHeight = 0
               TabOrder = 12
               OnChange = cbHttpLibChange
             end
@@ -344,7 +344,7 @@ object frmACBrNFe: TfrmACBrNFe
               Width = 160
               Height = 21
               Style = csDropDownList
-              ItemHeight = 13
+              ItemHeight = 0
               TabOrder = 13
               OnChange = cbXmlSignLibChange
             end
@@ -927,6 +927,19 @@ object frmACBrNFe: TfrmACBrNFe
               Height = 13
               Caption = 'Fone'
             end
+            object Label52: TLabel
+              Left = 8
+              Top = 289
+              Width = 83
+              Height = 13
+              Caption = 'Tipo de Empresa:'
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'MS Sans Serif'
+              Font.Style = []
+              ParentFont = False
+            end
             object edtEmitCNPJ: TEdit
               Left = 8
               Top = 20
@@ -1017,6 +1030,25 @@ object frmACBrNFe: TfrmACBrNFe
               Width = 35
               Height = 21
               TabOrder = 12
+            end
+            object cbTipoEmpresa: TComboBox
+              Left = 8
+              Top = 305
+              Width = 249
+              Height = 24
+              Style = csDropDownList
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -13
+              Font.Name = 'MS Sans Serif'
+              Font.Style = []
+              ItemHeight = 16
+              ParentFont = False
+              TabOrder = 13
+              Items.Strings = (
+                'Simples Nacional'
+                'Simples Nacional, excesso sublimite de receita bruta'
+                'Regime Normal')
             end
           end
           object TabSheet13: TTabSheet
@@ -1446,7 +1478,7 @@ object frmACBrNFe: TfrmACBrNFe
             Width = 233
             Height = 21
             Style = csDropDownList
-            ItemHeight = 0
+            ItemHeight = 13
             TabOrder = 1
           end
           object cbxPorta: TComboBox
@@ -1454,7 +1486,7 @@ object frmACBrNFe: TfrmACBrNFe
             Top = 88
             Width = 201
             Height = 21
-            ItemHeight = 0
+            ItemHeight = 13
             TabOrder = 2
           end
           object cbxPagCodigo: TComboBox
@@ -1463,7 +1495,7 @@ object frmACBrNFe: TfrmACBrNFe
             Width = 101
             Height = 21
             Style = csDropDownList
-            ItemHeight = 0
+            ItemHeight = 13
             TabOrder = 3
           end
           object seColunas: TSpinEdit
@@ -1516,11 +1548,12 @@ object frmACBrNFe: TfrmACBrNFe
           Width = 257
           Height = 49
           Caption = 'DANFCE'
-          Columns = 2
+          Columns = 3
           ItemIndex = 0
           Items.Strings = (
-            'Fortes Report'
-            'Esc Pos')
+            'Fortes'
+            'EscPos'
+            'A4')
           TabOrder = 3
         end
       end
