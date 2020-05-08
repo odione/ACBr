@@ -56,6 +56,7 @@ type
 
 TACBrETQClass = class
   private
+    fPaginaDeCodigo: TACBrETQPaginaCodigo;
     fUnidade: TACBrETQUnidade;
     fTemperatura: Integer;
     fVelocidade: Integer;
@@ -82,9 +83,12 @@ TACBrETQClass = class
     function ComandoBackFeed: AnsiString; virtual;
     function ComandoUnidade: AnsiString; virtual;
     function ComandoTemperatura: AnsiString; virtual;
+    function ComandoPaginaDeCodigo: AnsiString; virtual;
     function ComandoResolucao: AnsiString; virtual;
     function ComandoOrigemCoordenadas: AnsiString; virtual;
     function ComandoVelocidade: AnsiString; virtual;
+
+    function ConverterQRCodeErrorLevel(aErrorLevel: Integer): String; virtual;
   public
     constructor Create(AOwner: TComponent);
 
@@ -107,6 +111,9 @@ TACBrETQClass = class
       aTipoBarras: String; aBarraLarga, aBarraFina, aVertical,
       aHorizontal: Integer; aTexto: String; aAlturaBarras: Integer;
       aExibeCodigo: TACBrETQBarraExibeCodigo = becPadrao): AnsiString; virtual;
+    function ComandoImprimirQRCode(aVertical, aHorizontal: Integer;
+      const aTexto: String; aLarguraModulo: Integer; aErrorLevel: Integer;
+      aTipo: Integer): AnsiString; virtual;
 
     function ComandoImprimirLinha(aVertical, aHorizontal, aLargura,
       aAltura: Integer): AnsiString; virtual;
@@ -121,6 +128,7 @@ TACBrETQClass = class
       aFlipped: Boolean; aTipo: String): AnsiString; virtual;
 
     property ModeloStr:       String           read fpModeloStr;
+    property PaginaDeCodigo:  TACBrETQPaginaCodigo read fPaginaDeCodigo write fPaginaDeCodigo;
     property Temperatura:     Integer          read fTemperatura      write fTemperatura;
     property Velocidade:      Integer          read fVelocidade       write fVelocidade;
     property BackFeed:        TACBrETQBackFeed read fpBackFeed        write fpBackFeed;
@@ -143,6 +151,7 @@ begin
   if (not (AOwner is TACBrETQ)) then
     raise Exception.create(ACBrStr('Essa Classe deve ser instanciada por TACBrETQ'));
 
+  fPaginaDeCodigo := pce850;
   fDPI            := dpi203;
   fpLimparMemoria := True;
   fAvanco         := 0;
@@ -241,6 +250,7 @@ var
 begin
   ListaComandos := '';
 
+  AdicionarComandos( ComandoPaginaDeCodigo, ListaComandos );
   AdicionarComandos( ComandoBackFeed, ListaComandos );
   AdicionarComandos( ComandoAbertura, ListaComandos );
   AdicionarComandos( ComandoUnidade, ListaComandos );
@@ -295,6 +305,11 @@ begin
   Result := EmptyStr;
 end;
 
+function TACBrETQClass.ComandoPaginaDeCodigo: AnsiString;
+begin
+  Result := EmptyStr;
+end;
+
 function TACBrETQClass.ComandoResolucao: AnsiString;
 begin
   Result := EmptyStr;
@@ -308,6 +323,17 @@ end;
 function TACBrETQClass.ComandoVelocidade: AnsiString;
 begin
   Result := EmptyStr;
+end;
+
+function TACBrETQClass.ConverterQRCodeErrorLevel(aErrorLevel: Integer): String;
+begin
+  case aErrorLevel of
+    1: Result := 'M';
+    2: Result := 'Q';
+    3: Result := 'H';
+  else
+    Result := 'L';
+  end;
 end;
 
 function TACBrETQClass.ComandoCopias(const NumCopias: Integer): AnsiString;
@@ -354,6 +380,14 @@ function TACBrETQClass.ComandoImprimirBarras(aOrientacao: TACBrETQOrientacao;
 begin
   Result := EmptyStr;
   ErroNaoImplementado('ComandoImprimirBarras');
+end;
+
+function TACBrETQClass.ComandoImprimirQRCode(aVertical, aHorizontal: Integer;
+  const aTexto: String; aLarguraModulo: Integer; aErrorLevel: Integer;
+  aTipo: Integer): AnsiString;
+begin
+  Result := EmptyStr;
+  ErroNaoImplementado('ComandoImprimirQRCode');
 end;
 
 function TACBrETQClass.ComandoImprimirLinha(aVertical, aHorizontal, aLargura,

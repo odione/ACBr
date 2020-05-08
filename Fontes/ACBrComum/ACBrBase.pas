@@ -399,6 +399,16 @@ function TACBrObjectList.FindObject(Item: Pointer; AComparer: TListSortCompare; 
 {$EndIf}
 var
   nLow, nHigh, nCompare, nCheckPos : Integer;
+
+  function DoCompare(APos: Integer): Integer;
+  begin
+    {$IfDef NEXTGEN}
+     Result := AComparer.Compare(Item,Items[APos]);
+    {$Else}
+     Result := AComparer(Item,Pointer(Items[APos]));
+    {$EndIf}
+  end;
+
 begin
   { Inspirado de http://www.avdf.com/mar97/delf_sortlist.html }
 
@@ -413,17 +423,19 @@ begin
   while (Result = -1) and (nLow <= nHigh) do
   begin
     nCheckPos := (nLow + nHigh) div 2;
-    {$IfDef NEXTGEN}
-     nCompare := AComparer.Compare(Item,Items[nCheckPos]);
-    {$Else}
-     nCompare := AComparer(Item,Pointer(Items[nCheckPos]));
-    {$EndIf}
+    nCompare := DoCompare(nCheckPos);
+
     if (nCompare = -1) then                // less than
       nHigh := nCheckPos - 1
     else if (nCompare = 1) then            // greater than
       nLow := nCheckPos + 1
     else                                   // equal to
+    begin
       Result := nCheckPos;
+      // Check if we have another match below
+      while (Result > nLow) and (DoCompare(Result-1) = 0) do
+        Dec(Result);
+    end;
   end;
 
   if (Result = -1) and Nearest then
@@ -831,7 +843,7 @@ begin
   Result := '';
   l := GetCount-1;
   for i := 0 to l do
-    Result := Result + GetItem(i)
+    Result := Result + GetItem(i);
 end;
 
 

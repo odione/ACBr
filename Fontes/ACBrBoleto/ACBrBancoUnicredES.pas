@@ -50,6 +50,7 @@ type
     function CodDescontoToStr(const pCodigoDesconto : TACBrCodigoDesconto): String;
   protected
     function DefineNumeroDocumentoModulo(const ACBrTitulo: TACBrTitulo): String; override;
+    function DefinePosicaoNossoNumeroRetorno400: Integer; override;
   public
     Constructor create(AOwner: TACBrBanco);
 
@@ -71,7 +72,7 @@ begin
    fpDigito                 := 8;
    fpNome                   := 'UNICRED';
    fpNumero                 := 136;
-   fpTamanhoMaximoNossoNum  := 10;
+   fpTamanhoMaximoNossoNum  := 11;
    fpTamanhoAgencia         := 4;
    fpTamanhoConta           := 10;
    fpTamanhoCarteira        := 2;
@@ -177,6 +178,11 @@ function TACBrBancoUnicredES.DefineNumeroDocumentoModulo(
   const ACBrTitulo: TACBrTitulo): String;
 begin
   Result:= ACBrTitulo.NossoNumero;
+end;
+
+function TACBrBancoUnicredES.DefinePosicaoNossoNumeroRetorno400: Integer;
+begin
+  Result := 51;
 end;
 
 function TACBrBancoUnicredES.CodJurosToStr(const pCodigoJuros : TACBrCodigoJuros; ValorMoraJuros : Currency): String;

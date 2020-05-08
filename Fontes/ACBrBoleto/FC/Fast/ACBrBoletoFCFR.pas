@@ -234,7 +234,6 @@ begin
     FieldDefs.Add('Instrucao2', ftString, 300);
     FieldDefs.Add('TextoLivre', ftMemo, 2000);
     FieldDefs.Add('Asbace', ftString, 40);
-    FieldDefs.Add('UsoBanco', ftMemo, 2000);
     // Sacado
     FieldDefs.Add('Sacado_NomeSacado', ftString, 100);
     FieldDefs.Add('Sacado_CNPJCPF', ftString, 18);
@@ -355,11 +354,9 @@ begin
               frxPDFExport.Keywords := frxPDFExport.Title;
               frxPDFExport.Background := IncorporarBackgroundPdf;//False diminui 70% do tamanho do pdf
               frxPDFExport.EmbeddedFonts := IncorporarFontesPdf;
-              if PdfSenha <> '' then
-              begin
-                frxPDFExport.UserPassword := PdfSenha;
+              frxPDFExport.UserPassword := PdfSenha;
+              if NaoEstaVazio(frxPDFExport.UserPassword) then
                 frxPDFExport.ProtectionFlags := [ePrint];
-              end;
               frxReport.Export(FdmBoleto.frxPDFExport);
               if frxPDFExport.FileName <> NomeArquivo then
                 NomeArquivo := frxPDFExport.FileName;

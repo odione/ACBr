@@ -723,16 +723,32 @@ type
     toRetornoEmTransito
   );
 
+  //Complemento de instrução para alterar outros dados
+  TACBrComplementoOcorrenciaOutrosDados =
+  (
+    TCompDesconto,
+    TCompJurosDia,
+    TCompDescontoDiasAntecipacao,
+    TCompDataLimiteDesconto,
+    TCompCancelaProtestoAutomatico,
+    TCompCarteiraCobranca, //Segundo Manual ainda não disponivel
+    TCompCancelaNegativacaoAutomatica
+  );
+  
+
   {TACBrOcorrencia}
   TACBrOcorrencia = class
   private
      fTipo: TACBrTipoOcorrencia;
      fpAOwner: TACBrTitulo;
+     fComplementoOutrosDados: TACBrComplementoOcorrenciaOutrosDados;
      function GetCodigoBanco: String;
      function GetDescricao: String;
   public
      constructor Create(AOwner: TACBrTitulo);
      property Tipo: TACBrTipoOcorrencia read fTipo write fTipo;
+     property ComplementoOutrosDados: TACBrComplementoOcorrenciaOutrosDados
+      read fComplementoOutrosDados write fComplementoOutrosDados;
      property Descricao  : String  read GetDescricao;
      property CodigoBanco: String  read GetCodigoBanco;
   end;
@@ -790,6 +806,7 @@ type
     function DefineCodigoMulta(const ACBrTitulo: TACBrTitulo): String; virtual;      //Utilizado para definir o Codigo Multa na Remessa
     function DefineDataMulta(const ACBrTitulo: TACBrTitulo): String; virtual;        //Utilizado para definir data multa na Remessa
     function DefineTamanhoContaRemessa: Integer; virtual;     //Define o tamnhano da Conta para Remessa e Retorno  (pode ser diferente do tamanho padrão no Boleto)
+    function DefinePosicaoNossoNumeroRetorno400: Integer; virtual;     //Define posição para leitura de Retorno CNAB400 campo: NossoNumero
 
     function DefineTipoInscricao: String; virtual; //Utilizado para definir Tipo de Inscrição na Remessa
     function DefineResponsEmissao: String; virtual; //Utilizado para definir Responsável Emissão na Remessa
@@ -829,6 +846,9 @@ type
     function TipoOCorrenciaToCod(const TipoOcorrencia: TACBrTipoOcorrencia): String; virtual;
     function CodMotivoRejeicaoToDescricao(const TipoOcorrencia: TACBrTipoOcorrencia;CodMotivo:Integer): String; overload; virtual;
     function CodMotivoRejeicaoToDescricao(const TipoOcorrencia: TACBrTipoOcorrencia; const CodMotivo: String): String; overload; virtual;
+
+    function CompOcorrenciaOutrosDadosToDescricao(const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String; virtual;
+    function CompOcorrenciaOutrosDadosToCodigo(const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String; virtual;
 
     function CodOcorrenciaToTipoRemessa(const CodOcorrencia:Integer): TACBrTipoOcorrencia; virtual;
     function TipoOcorrenciaToCodRemessa(const TipoOcorrencia: TACBrTipoOcorrencia): String; virtual;
@@ -911,6 +931,9 @@ type
     function CodOcorrenciaToTipo(const CodOcorrencia:Integer): TACBrTipoOcorrencia;
     function TipoOCorrenciaToCod(const TipoOcorrencia: TACBrTipoOcorrencia): String;
     function CodMotivoRejeicaoToDescricao(const TipoOcorrencia: TACBrTipoOcorrencia;CodMotivo:Integer): String;
+
+    function CompOcorrenciaOutrosDadosToDescricao(const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String; virtual;
+    function CompOcorrenciaOutrosDadosToCodigo(const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String; virtual;
 
     function CodOcorrenciaToTipoRemessa(const CodOcorrencia:Integer): TACBrTipoOcorrencia;
     function TipoOcorrenciaToCodRemessa(const TipoOcorrencia: TACBrTipoOcorrencia ): String;
@@ -2671,6 +2694,18 @@ begin
    Result:= BancoClass.TipoOCorrenciaToCod(TipoOcorrencia);
 end;
 
+function TACBrBanco.CompOcorrenciaOutrosDadosToDescricao(
+  const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String;
+begin
+  Result:= BancoClass.CompOcorrenciaOutrosDadosToDescricao(CompOcorrencia);
+end;
+
+function TACBrBanco.CompOcorrenciaOutrosDadosToCodigo(
+  const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String;
+begin
+  Result:= BancoClass.CompOcorrenciaOutrosDadosToCodigo(CompOcorrencia);
+end;
+
 function TACBrBanco.CodMotivoRejeicaoToDescricao( const TipoOcorrencia:
    TACBrTipoOcorrencia;CodMotivo: Integer) : String;
 begin
@@ -2913,8 +2948,8 @@ begin
 
     end;
 
+    Result := RemoverQuebraLinhaFinal(ListHeader.Text);
   finally
-    Result:= Trim(ListHeader.Text);
     ListHeader.Free;
   end;
 
@@ -2981,8 +3016,9 @@ begin
              IntToStrZero((3 * wQTDTitulos)+4, 6)                       + //Quantidade de registros do arquivo, inclusive este registro que está sendo criado agora}
              Padleft('0',6,'0')                                         + //Uso exclusivo FEBRABAN/CNAB}
              PadRight('',205,' '));                                       //Uso exclusivo FEBRABAN/CNAB}
+
+    Result := RemoverQuebraLinhaFinal(ListTrailler.Text);
   finally
-    Result:= Trim(ListTrailler.Text);
     ListTrailler.Free;
   end;
 
@@ -3159,7 +3195,7 @@ begin
         ValorMoraJuros       := StrToFloatDef(Copy(Linha,267,13),0)/100;
         ValorOutrosCreditos  := StrToFloatDef(Copy(Linha,280,13),0)/100;
         ValorRecebido        := StrToFloatDef(Copy(Linha,254,13),0)/100;
-        NossoNumero          := Copy(Linha,71,11);
+        NossoNumero          := Copy(Linha,DefinePosicaoNossoNumeroRetorno400,11);
         Carteira             := Copy(Linha,22,3);
         ValorDespesaCobranca := StrToFloatDef(Copy(Linha,176,13),0)/100;
         ValorOutrasDespesas  := StrToFloatDef(Copy(Linha,189,13),0)/100;
@@ -3350,6 +3386,18 @@ function TACBrBancoClass.CodMotivoRejeicaoToDescricao(
 begin
   Result := '';
 end ;
+
+function TACBrBancoClass.CompOcorrenciaOutrosDadosToDescricao(
+  const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String;
+begin
+  Result := '';
+end;
+
+function TACBrBancoClass.CompOcorrenciaOutrosDadosToCodigo(
+  const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String;
+begin
+  Result := '';
+end;
 
 function TACBrBancoClass.CodMotivoRejeicaoToDescricao(
 const TipoOcorrencia: TACBrTipoOcorrencia; const CodMotivo: String): String;
@@ -3897,6 +3945,11 @@ end;
 function TACBrBancoClass.DefineTamanhoContaRemessa: Integer;
 begin
   Result:= ACBrBanco.TamanhoConta;
+end;
+
+function TACBrBancoClass.DefinePosicaoNossoNumeroRetorno400: Integer;
+begin
+  Result := 71;
 end;
 
 function TACBrBancoClass.InstrucoesProtesto(const ACBrTitulo: TACBrTitulo): String;
