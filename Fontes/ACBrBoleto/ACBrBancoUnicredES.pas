@@ -72,7 +72,7 @@ begin
    fpDigito                 := 8;
    fpNome                   := 'UNICRED';
    fpNumero                 := 136;
-   fpTamanhoMaximoNossoNum  := 11;
+   fpTamanhoMaximoNossoNum  := 10;
    fpTamanhoAgencia         := 4;
    fpTamanhoConta           := 10;
    fpTamanhoCarteira        := 2;

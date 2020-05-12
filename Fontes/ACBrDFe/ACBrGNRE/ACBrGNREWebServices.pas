@@ -55,6 +55,7 @@ type
     FPStatus: TStatusACBrGNRE;
     FPLayout: TLayOutGNRE;
     FPConfiguracoesGNRE: TConfiguracoesGNRE;
+    FtempoEstimadoProc: Integer;
 
   protected
     procedure InicializarServico; override;
@@ -68,6 +69,7 @@ type
 
     property Status: TStatusACBrGNRE read FPStatus;
     property Layout: TLayOutGNRE read FPLayout;
+    property tempoEstimadoProc: Integer read FtempoEstimadoProc write FtempoEstimadoProc;
   end;
 
   { TGNRERecepcao }
@@ -75,7 +77,6 @@ type
   TGNRERecepcao = class(TGNREWebService)
   private
     Fnumero: String;
-    FtempoEstimadoProc: Integer;
     Fcodigo: Integer;
     Fdescricao: String;
     FdataHoraRecibo: TDateTime;
@@ -106,7 +107,6 @@ type
     property descricao: String read Fdescricao write Fdescricao;
     property numero: String read Fnumero write Fnumero;
     property dataHoraRecibo: TDateTime read FdataHoraRecibo write FdataHoraRecibo;
-    property tempoEstimadoProc: Integer read FtempoEstimadoProc write FtempoEstimadoProc;
     property cUF: Integer read FcUF;
   end;
 
@@ -412,7 +412,7 @@ var
 begin
   vGuias := '';
   for i := 0 to FGuias.Count - 1 do
-    vGuias := vGuias + FGuias.Items[i].XML;
+    vGuias := vGuias + FGuias.Items[i].XMLAssinado;
 
   if FPConfiguracoesGNRE.Geral.VersaoDF = ve200 then
     Versao := 'versao="2.00" '
@@ -558,6 +558,9 @@ begin
     FcUF := FPConfiguracoesGNRE.WebServices.UFCodigo;
   end;
 
+  if Assigned(FGNRERetorno) then
+    FGNRERetorno.Free;
+    
   FGNRERetorno := TTResultLote_GNRE.Create;
 end;
 
@@ -628,7 +631,10 @@ begin
 
   TACBrGNRE(FPDFeOwner).SetStatus(stGNRERetRecepcao);
   try
-    Sleep(FPConfiguracoesGNRE.WebServices.AguardarConsultaRet);
+    if FPConfiguracoesGNRE.WebServices.AguardarConsultaRet < FtempoEstimadoProc then
+      Sleep(FtempoEstimadoProc)
+    else
+      Sleep(FPConfiguracoesGNRE.WebServices.AguardarConsultaRet);
 
     Tentativas := 0;
     IntervaloTentativas := max(FPConfiguracoesGNRE.WebServices.IntervaloTentativas, 1000);
