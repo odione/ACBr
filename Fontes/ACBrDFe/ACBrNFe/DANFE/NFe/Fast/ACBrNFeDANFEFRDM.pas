@@ -2487,7 +2487,6 @@ begin
       Page.LeftMargin := DANFEClassOwner.MargemEsquerda;
     if (DANFEClassOwner.MargemDireita > 0) then
       Page.RightMargin := DANFEClassOwner.MargemDireita;
-    frxReport.PreviewPages.ModifyPage(I, Page);
   end;
 end;
 

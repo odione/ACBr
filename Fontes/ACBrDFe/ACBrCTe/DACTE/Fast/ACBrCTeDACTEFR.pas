@@ -1270,6 +1270,7 @@ const
   TITULO_PDF = 'Conhecimento de Transporte Eletrônico';
 var
   OldShowDialog: Boolean;
+  NomeArq :string;
 begin
   if PrepareReport(ACTE) then
   begin
@@ -1282,8 +1283,11 @@ begin
     OldShowDialog         := frxPDFExport.ShowDialog;
     try
       frxPDFExport.ShowDialog := False;
-      frxPDFExport.FileName   := IncludeTrailingPathDelimiter(PathPDF) + OnlyNumber(CTE.infCTe.Id) + '-cte.pdf';
-
+      NomeArq := Trim(DACTEClassOwner.NomeDocumento);
+      if EstaVazio(NomeArq) then
+        NomeArq := OnlyNumber(CTE.infCTe.Id) + '-cte.pdf';
+      frxPDFExport.FileName := PathWithDelim(DACTEClassOwner.PathPDF) + NomeArq;
+      
       if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
          ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
 
@@ -1324,9 +1328,11 @@ begin
     OldShowDialog         := frxPDFExport.ShowDialog;
     try
       frxPDFExport.ShowDialog := False;
-      NomeArq                 := StringReplace(TACBrCTe(ACBrCTe).EventoCTe.Evento.Items[0].InfEvento.Id, 'ID', '', [rfIgnoreCase]);
-      frxPDFExport.FileName   := IncludeTrailingPathDelimiter(PathPDF) + NomeArq + '-procEventoCTe.pdf';
-
+      NomeArq := Trim(DACTEClassOwner.NomeDocumento);
+      if EstaVazio(NomeArq) then
+        NomeArq := OnlyNumber(TACBrCTe(ACBrCTe).EventoCTe.Evento.Items[0].InfEvento.Id) + '-procEventoCTe.pdf';
+      frxPDFExport.FileName := PathWithDelim(DACTEClassOwner.PathPDF) + NomeArq;
+            
       if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
         ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
 
@@ -1367,8 +1373,11 @@ begin
     OldShowDialog         := frxPDFExport.ShowDialog;
     try
       frxPDFExport.ShowDialog := False;
-      NomeArq                 := OnlyNumber(TACBrCTe(ACBrCTe).InutCTe.RetInutCTe.Id);
-      frxPDFExport.FileName   := PathWithDelim(Self.PathPDF) + NomeArq + '-procInutCTe.pdf';
+      NomeArq := Trim(DACTEClassOwner.NomeDocumento);
+      if EstaVazio(NomeArq) then
+        NomeArq := OnlyNumber(TACBrCTe(ACBrCTe).InutCTe.RetInutCTe.Id) + '-procInutCTe.pdf';
+      frxPDFExport.FileName := PathWithDelim(DACTEClassOwner.PathPDF) + NomeArq;
+            
 
       if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
         ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
@@ -1397,7 +1406,6 @@ begin
       Page.LeftMargin := MargemEsquerda;
     if (MargemDireita > 0) then
       Page.RightMargin := MargemDireita;
-    frxReport.PreviewPages.ModifyPage(I, Page);
   end;
 end;
 

@@ -554,6 +554,19 @@ begin
         end;
       end;
 
+      if Leitor.rExtrai(4, 'motivosRejeicao') <> '' then
+      begin
+        j:=0;
+        while Leitor.rExtrai(5, 'motivo', '', j + 1) <> '' do
+        begin
+          resRejeicaoGuia.New;
+          resRejeicaoGuia.Items[j].CodMotivoRejeicao  := Leitor.rCampo(tcInt, 'codigo');
+          resRejeicaoGuia.Items[j].DescMotivoRejeicao := Leitor.rCampo(tcStr, 'descricao');
+          resRejeicaoGuia.Items[j].NomeCampo          := Leitor.rCampo(tcStr, 'campo');
+          Inc(j);
+        end;
+      end;
+
       if Leitor.rExtrai(4, 'informacoesComplementares') <> '' then
         resGuia.Items[i].InfoComplementares := Leitor.rCampo(tcStr, 'informacao');
 

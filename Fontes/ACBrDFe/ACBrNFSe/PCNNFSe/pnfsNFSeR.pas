@@ -2066,8 +2066,7 @@ begin
 
   end; // fim EnderecoPrestadorServico
 
-  if (Leitor.rExtrai(3, 'ContatoPrestadorServico') <> '') or
-     (Leitor.rExtrai(3, 'Contato') <> '') then
+  if (Leitor.rExtrai(3, 'ContatoPrestadorServico') <> '') then
   begin
     NFSe.PrestadorServico.Contato.Telefone := Leitor.rCampo(tcStr, 'Telefone');
     NFSe.PrestadorServico.Contato.Email    := Leitor.rCampo(tcStr, 'Email');
@@ -2250,6 +2249,16 @@ begin
       end;
 
       inc(i);
+    end;
+
+    for i := 0 to NFSe.Servico.ItemServico.Count - 1 do
+    begin
+      NFSe.Servico.Valores.ValorDeducoes := NFSe.Servico.Valores.ValorDeducoes + NFSe.Servico.ItemServico[i].ValorDeducoes;
+      NFSe.Servico.Valores.ValorPis      := NFSe.Servico.Valores.ValorPis      + NFSe.Servico.ItemServico[i].ValorPis;
+      NFSe.Servico.Valores.ValorCofins   := NFSe.Servico.Valores.ValorCofins   + NFSe.Servico.ItemServico[i].ValorCofins;
+      NFSe.Servico.Valores.ValorIr       := NFSe.Servico.Valores.ValorIr       + NFSe.Servico.ItemServico[i].ValorIr;
+      NFSe.Servico.Valores.ValorCsll     := NFSe.Servico.Valores.ValorCsll     + NFSe.Servico.ItemServico[i].ValorCsll;
+      NFSe.Servico.Valores.ValorInss     := NFSe.Servico.Valores.ValorInss     + NFSe.Servico.ItemServico[i].ValorInss;
     end;
   end
   else

@@ -723,7 +723,7 @@ begin
                space(9)                                 + // 9 a 17 Uso exclusivo FEBRABAN/CNAB
                ATipoInscricao                           + // 18 - Tipo de inscrição do cedente
                PadLeft(OnlyNumber(CNPJCPF), 14, '0')    + // 19 a 32 -Número de inscrição do cedente
-               StringOfChar(' ', 20)                    + // 33 a 52 - Brancos - Alteração para passar no validador
+               PadRight(Convenio, 20, ' ')              + // 33 a 52 - Brancos - Alteração para passar no validador
                '0'                                      + // 53 - Zeros
                PadLeft(OnlyNumber(Agencia), 4, '0')     + // 54 a 57 - Código da agência do cedente
                PadRight(AgenciaDigito, 1, '0')          + // 58 - Digito agência do cedente
@@ -1036,7 +1036,8 @@ begin
                          '0'                                              + // 224 - Código de Baixa
                          space(3)                                         + // 225 A 227 - Dias para baixa
                          '09'                                             + //
-                         '0000000000'                                     + // Numero contrato da operação
+                                                              
+                         PadLeft(OnlyNumber(ACBrBoleto.Cedente.Operacao), 10, '0') + // Numero contrato da operação
                          ' ';
         Inc(FNumeroSequencialRegistroNoLote);
       {SEGMENTO Q}
