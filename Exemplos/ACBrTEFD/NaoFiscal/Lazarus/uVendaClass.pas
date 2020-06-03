@@ -38,15 +38,16 @@ uses
   Classes, SysUtils, contnrs, IniFiles;
 
 const
-  cPagamentos: array[0..4] of array [0..1] of String =
+  cPagamentos: array[0..5] of array [0..1] of String =
      ( ('01','Dinheiro'),
        ('02','Cheque'),
        ('03','Cartão de Crédito'),
        ('04','Cartão de Débito'),
+       ('05','Carteira Digital'),
        ('99','Outros') );
 
 type
-  TStatusVenda = (stsLivre, stsIniciada, stsEmPagamento, stsFinalizada, stsCancelada, stsAguardandoTEF);
+  TStatusVenda = (stsLivre, stsIniciada, stsEmPagamento, stsCancelada, stsAguardandoTEF, stsOperacaoTEF, stsFinalizada);
 
   { TPagamento }
 
@@ -56,7 +57,7 @@ type
     FConfirmada: Boolean;
     FDesconto: Double;
     FHora: TDateTime;
-    FNomeAdministradora: String;
+    FRedeCNPJ: String;
     FNSU: String;
     FRede: String;
     FSaque: Double;
@@ -72,7 +73,7 @@ type
     property Hora: TDateTime read FHora write FHora;
     property NSU: String read FNSU write FNSU;
     property Rede: String read FRede write FRede;
-    property NomeAdministradora: String read FNomeAdministradora write FNomeAdministradora;
+    property RedeCNPJ: String read FRedeCNPJ write FRedeCNPJ;
     property Acrescimo: Double read FAcrescimo write FAcrescimo;
     property Desconto: Double read FDesconto write FDesconto;
     property Saque: Double read FSaque write FSaque;
@@ -176,7 +177,7 @@ begin
   FNSU := '';
   FRede := '';
   FConfirmada := False;
-  FNomeAdministradora := '';
+  FRedeCNPJ := '';
   FDesconto := 0;
   FAcrescimo := 0;
   FSaque := 0;
@@ -281,7 +282,7 @@ begin
       Ini.WriteDateTime(ASecPag,'Hora', Pagamentos[i].Hora);
       Ini.WriteString(ASecPag,'NSU', Pagamentos[i].NSU);
       Ini.WriteString(ASecPag,'Rede', Pagamentos[i].Rede);
-      Ini.WriteString(ASecPag,'NomeAdministradora', Pagamentos[i].NomeAdministradora);
+      Ini.WriteString(ASecPag,'RedeCNPJ', Pagamentos[i].RedeCNPJ);
       Ini.WriteFloat(ASecPag,'Acrescimo', Pagamentos[i].Acrescimo);
       Ini.WriteFloat(ASecPag,'Desconto', Pagamentos[i].Desconto);
       Ini.WriteFloat(ASecPag,'Saque', Pagamentos[i].Saque);
@@ -320,7 +321,7 @@ begin
       APag.Hora := Ini.ReadDateTime(ASecPag,'Hora', 0);
       APag.NSU := Ini.ReadString(ASecPag,'NSU', '');
       APag.Rede := Ini.ReadString(ASecPag,'Rede', '');
-      APag.NomeAdministradora := Ini.ReadString(ASecPag,'NomeAdministradora', '');
+      APag.RedeCNPJ := Ini.ReadString(ASecPag,'RedeCNPJ', '');
       APag.Acrescimo := Ini.ReadFloat(ASecPag,'Acrescimo', 0);
       APag.Desconto := Ini.ReadFloat(ASecPag,'Desconto', 0);
       APag.Saque := Ini.ReadFloat(ASecPag,'Saque', 0);

@@ -37,10 +37,9 @@ unit ACBrDFeWinCrypt;
 interface
 
 uses
-  Classes, SysUtils,
+  Classes, SysUtils, Windows,
   ACBrDFeSSL, ACBrDFeException,
-  ACBr_WinCrypt, ACBr_NCrypt,
-  Windows;
+  ACBr_WinCrypt, ACBr_NCrypt ;
 
 const
   sz_CERT_STORE_PROV_PKCS12 = 'PKCS12';
@@ -226,7 +225,7 @@ begin
                       {$IfDef UNICODE}LPWSTR{$Else}LPSTR{$EndIf}(CertName),
                       1024);
     if BytesRead > 0 then
-      SetLength(CertName, BytesRead)
+      SetLength(CertName, BytesRead-1)
     else
       raise EACBrDFeException.Create( 'Falha ao executar "CertNameToStr" em "GetSubjectName". Erro:'+GetLastErrorAsHexaStr);
 
@@ -249,7 +248,7 @@ begin
                       {$IfDef UNICODE}LPWSTR{$Else}LPSTR{$EndIf}(CertName),
                       1024);
     if BytesRead > 0 then
-      SetLength(CertName, BytesRead)
+      SetLength(CertName, BytesRead-1)
     else
       raise EACBrDFeException.Create( 'Falha ao executar "CertNameToStr" em "GetIssuerName". Erro:'+GetLastErrorAsHexaStr);
 

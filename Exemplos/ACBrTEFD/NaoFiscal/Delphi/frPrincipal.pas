@@ -4,7 +4,7 @@
 { mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
 { Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
-{																			   }
+{                                                                              }
 {  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
 {                                                                              }
@@ -37,8 +37,8 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComCtrls, StdCtrls,
   Spin, Buttons, DBCtrls, ExtCtrls, Grids, ACBrTEFD,
-  ACBrPosPrinter, ACBrTEFDClass, uVendaClass, ACBrTEFDCliSiTef, ImgList,
-  ACBrBase;
+  ACBrPosPrinter, ACBrTEFDClass, uVendaClass, ACBrTEFDCliSiTef,
+  ImgList, ACBrBase;
 
 type
 
@@ -60,9 +60,11 @@ type
     btEfetuarPagamentos: TBitBtn;
     btSalvarParametros: TBitBtn;
     btSerial: TSpeedButton;
+    btProcuraImpressoras: TSpeedButton;
     btTestarPosPrinter: TBitBtn;
     btTestarTEF: TBitBtn;
-    cbAutoAtivar: TCheckBox;
+    btObterCPF: TButton;
+    cbTestePayGo: TComboBox;
     cbIMprimirViaReduzida: TCheckBox;
     cbMultiplosCartoes: TCheckBox;
     cbSimularErroNoDoctoFiscal: TCheckBox;
@@ -74,14 +76,24 @@ type
     cbxPagCodigo: TComboBox;
     cbxPorta: TComboBox;
     cbEnviarImpressora: TCheckBox;
+    edRazaoSocial: TEdit;
     edLog: TEdit;
+    edAplicacaoNome: TEdit;
+    edRegistro: TEdit;
+    edAplicacaoVersao: TEdit;
     gbConfigImpressora: TGroupBox;
     gbConfigTEF: TGroupBox;
     gbPagamentos: TGroupBox;
+    GroupBox1: TGroupBox;
     Label1: TLabel;
     Label10: TLabel;
     Label11: TLabel;
     Label12: TLabel;
+    Label14: TLabel;
+    Label16: TLabel;
+    Label18: TLabel;
+    Label19: TLabel;
+    Label8: TLabel;
     lNumOperacao: TLabel;
     Label15: TLabel;
     Label17: TLabel;
@@ -91,8 +103,6 @@ type
     Label28: TLabel;
     Label29: TLabel;
     Label7: TLabel;
-    Label8: TLabel;
-    Label9: TLabel;
     lSaidaImpressao: TLabel;
     mImpressao: TMemo;
     mLog: TMemo;
@@ -118,28 +128,25 @@ type
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
+    ImageList1: TImageList;
     pOperacao: TPanel;
     pgPrincipal: TPageControl;
     SbArqLog: TSpeedButton;
     seColunas: TSpinEdit;
-    seEsperaSleep: TSpinEdit;
-    seEsperaSTS: TSpinEdit;
     seEspLinhas: TSpinEdit;
     seLinhasPular: TSpinEdit;
     seMaxCartoes: TSpinEdit;
+    seTotalAcrescimo: TSpinEdit;
+    seTotalDesconto: TSpinEdit;
+    seTrocoMaximo: TSpinEdit;
+    seValorInicialVenda: TSpinEdit;
+    sbLimparLog: TSpeedButton;
     Splitter1: TSplitter;
     sgPagamentos: TStringGrid;
     Splitter2: TSplitter;
     Splitter3: TSplitter;
     tsConfiguracao: TTabSheet;
     tsOperacao: TTabSheet;
-    seValorInicialVenda: TSpinEdit;
-    seTotalDesconto: TSpinEdit;
-    seTotalAcrescimo: TSpinEdit;
-    seTrocoMaximo: TSpinEdit;
-    ImageList1: TImageList;
-    Panel1: TPanel;
-    sbLimparLog: TSpeedButton;
     procedure ACBrTEFD1AguardaResp(Arquivo: String; SegundosTimeOut: Integer;
       var Interromper: Boolean);
     procedure ACBrTEFD1AntesFinalizarRequisicao(Req: TACBrTEFDReq);
@@ -170,14 +177,16 @@ type
     procedure btOperacaoClick(Sender: TObject);
     procedure btLerParametrosClick(Sender: TObject);
     procedure btMudaPaginaClick(Sender: TObject);
+    procedure btProcuraImpressorasClick(Sender: TObject);
     procedure btSalvarParametrosClick(Sender: TObject);
     procedure btSerialClick(Sender: TObject);
     procedure btTestarPosPrinterClick(Sender: TObject);
     procedure btTestarTEFClick(Sender: TObject);
+    procedure btObterCPFClick(Sender: TObject);
     procedure cbEnviarImpressoraChange(Sender: TObject);
     procedure CliSiTefExibeMenu(Titulo: String; Opcoes: TStringList;
       var ItemSelecionado: Integer; var VoltarMenu: Boolean);
-    procedure ACBrTEFD1CliSiTefObtemCampo(Titulo: String; TamanhoMinimo,
+    procedure CliSiTefObtemCampo(Titulo: String; TamanhoMinimo,
       TamanhoMaximo: Integer; TipoCampo: Integer;
       Operacao: TACBrTEFDCliSiTefOperacaoCampo; var Resposta: AnsiString;
       var Digitado: Boolean; var VoltarMenu: Boolean);
@@ -195,6 +204,7 @@ type
     FTipoBotaoOperacao: TTipoBotaoOperacao;
     FCanceladoPeloOperador: Boolean;
     FTempoDeEspera: TDateTime;
+    FTestePayGo: Integer;
 
     function GetNomeArquivoConfiguracao: String;
     function GetNomeArquivoVenda: String;
@@ -217,10 +227,11 @@ type
     procedure Ativar;
     procedure Desativar;
 
-    procedure IniciarVenda;
+    procedure IniciarOperacao;
     procedure AdicionarPagamento(const Indice: String; AValor: Double);
     procedure CancelarVenda;
     procedure FinalizarVenda; // Em caso de Venda, Gere e transmita seu Documento Fiscal
+    procedure VerificarTestePayGo;
 
     procedure AtualizarCaixaLivreNaInterface;
     procedure AtualizarVendaNaInterface;
@@ -277,25 +288,8 @@ begin
   For O := Low(TACBrPosPaginaCodigo) to High(TACBrPosPaginaCodigo) do
      cbxPagCodigo.Items.Add( GetEnumName(TypeInfo(TACBrPosPaginaCodigo), integer(O) ) ) ;
 
-  cbxPorta.Items.Clear;
-  ACBrPosPrinter1.Device.AcharPortasSeriais( cbxPorta.Items );
-  {$IfDef MSWINDOWS}
-  ACBrPosPrinter1.Device.AcharPortasUSB( cbxPorta.Items );
-  {$EndIf}
-  ACBrPosPrinter1.Device.AcharPortasRAW( cbxPorta.Items );
-
-  cbxPorta.Items.Add('TCP:192.168.0.31:9100') ;
-
-  {$IfNDef MSWINDOWS}
-   cbxPorta.Items.Add('/dev/ttyS0') ;
-   cbxPorta.Items.Add('/dev/ttyUSB0') ;
-   cbxPorta.Items.Add('/tmp/ecf.txt') ;
-  {$Else}
-   cbxPorta.Items.Add('\\localhost\Epson') ;
-   cbxPorta.Items.Add('c:\temp\ecf.txt') ;
-  {$EndIf}
-
   ImageList1.GetBitmap(1, btMudaPagina.Glyph);
+  ImageList1.GetBitmap(1, btEfetuarPagamentos.Glyph);
   ImageList1.GetBitmap(2, btSalvarParametros.Glyph);
   ImageList1.GetBitmap(3, btLerParametros.Glyph);
   ImageList1.GetBitmap(4, btTestarPosPrinter.Glyph);
@@ -308,6 +302,7 @@ begin
   ImageList1.GetBitmap(9, btExcluirPagamento.Glyph);
   ImageList1.GetBitmap(10, btAdministrativo.Glyph);
   ImageList1.GetBitmap(11, sbLimparLog.Glyph);
+  ImageList1.GetBitmap(12, btProcuraImpressoras.Glyph);
 
   with sgPagamentos do
   begin
@@ -317,7 +312,7 @@ begin
     ColWidths[3] := 110;
     ColWidths[4] := 110;
     ColWidths[5] := 50;
-    ColWidths[6] := 110;
+    ColWidths[6] := 140;
 
     Cells[0, 0] := 'Item';
     Cells[1, 0] := 'Forma de Pagamento';
@@ -338,9 +333,12 @@ begin
   Venda.Status := High(TStatusVenda);                // Força atualizar tela
   FCanceladoPeloOperador := False;
   FTempoDeEspera := 0;
+  FTestePayGo := 0;
 
   Application.OnException := TratarException;
-  ACBrTEFD1.TEFCliSiTef.OnObtemCampo := ACBrTEFD1CliSiTefObtemCampo;
+  ACBrTEFD1.TEFCliSiTef.OnObtemCampo := CliSiTefObtemCampo;
+
+  btProcuraImpressoras.Click;
 end;
 
 procedure TFormPrincipal.FormDestroy(Sender: TObject);
@@ -394,6 +392,27 @@ begin
     IrParaConfiguracao;
 end;
 
+procedure TFormPrincipal.btProcuraImpressorasClick(Sender: TObject);
+begin
+  cbxPorta.Items.Clear;
+  ACBrPosPrinter1.Device.AcharPortasSeriais( cbxPorta.Items );
+  {$IfDef MSWINDOWS}
+  ACBrPosPrinter1.Device.AcharPortasUSB( cbxPorta.Items );
+  {$EndIf}
+  ACBrPosPrinter1.Device.AcharPortasRAW( cbxPorta.Items );
+
+  cbxPorta.Items.Add('TCP:192.168.0.31:9100') ;
+
+  {$IfNDef MSWINDOWS}
+   cbxPorta.Items.Add('/dev/ttyS0') ;
+   cbxPorta.Items.Add('/dev/ttyUSB0') ;
+   cbxPorta.Items.Add('/tmp/ecf.txt') ;
+  {$Else}
+   cbxPorta.Items.Add('\\localhost\Epson') ;
+   cbxPorta.Items.Add('c:\temp\ecf.txt') ;
+  {$EndIf}
+end;
+
 procedure TFormPrincipal.btLerParametrosClick(Sender: TObject);
 begin
   LerConfiguracao;
@@ -417,20 +436,26 @@ end;
 
 procedure TFormPrincipal.btEfetuarPagamentosClick(Sender: TObject);
 begin
+  VerificarTestePayGo;
   StatusVenda := stsEmPagamento;
   btIncluirPagamentos.Click;
 end;
 
 procedure TFormPrincipal.btIncluirPagamentosClick(Sender: TObject);
+var
+  FormIncluirPagamento: TFormIncluirPagamento;
 begin
   FormIncluirPagamento := TFormIncluirPagamento.Create(Self);
-
-  FormIncluirPagamento.cbFormaPagamento.ItemIndex := 2;
-  FormIncluirPagamento.seValorPago.Value := -Trunc(Venda.Troco);
-  if (FormIncluirPagamento.ShowModal = mrOK) then
-  begin
-    AdicionarPagamento( cPagamentos[FormIncluirPagamento.cbFormaPagamento.ItemIndex, 0],
-                        FormIncluirPagamento.seValorPago.Value );
+  try
+    FormIncluirPagamento.cbFormaPagamento.ItemIndex := 2;
+    FormIncluirPagamento.seValorPago.Value := -Trunc(Venda.Troco);
+    if (FormIncluirPagamento.ShowModal = mrOK) then
+    begin
+      AdicionarPagamento( cPagamentos[FormIncluirPagamento.cbFormaPagamento.ItemIndex, 0],
+                          FormIncluirPagamento.seValorPago.Value );
+    end;
+  finally
+    FormIncluirPagamento.Free;
   end;
 end;
 
@@ -515,6 +540,13 @@ end;
 
 procedure TFormPrincipal.ACBrTEFD1ComandaECF(Operacao: TACBrTEFDOperacaoECF;
   Resp: TACBrTEFDResp; var RetornoECF: Integer);
+
+  procedure PularLinhasECortar;
+  begin
+    AdicionarLinhaImpressao('</pular_linhas>');
+    AdicionarLinhaImpressao('</corte>');
+  end;
+
 begin
   AdicionarLinhaLog('ACBrTEFD1ComandaECF: '+GetEnumName( TypeInfo(TACBrTEFDOperacaoECF), integer(Operacao) ));
 
@@ -524,22 +556,26 @@ begin
         AdicionarLinhaImpressao('</zera>');
 
       opeSubTotalizaCupom:
-        begin
-          if StatusVenda = stsIniciada then
-            StatusVenda := stsEmPagamento;
-        end;
+      begin
+        if StatusVenda = stsIniciada then
+          StatusVenda := stsEmPagamento;
+      end;
 
       opeCancelaCupom:
-         CancelarVenda;
+        CancelarVenda;
 
       opeFechaCupom:
-         FinalizarVenda;
+        FinalizarVenda;
 
-      opePulaLinhas, opeFechaGerencial, opeFechaVinculado:
-        begin
-          AdicionarLinhaImpressao('</pular_linhas>');
-          AdicionarLinhaImpressao('</corte>');
-        end;
+      opePulaLinhas:
+        PularLinhasECortar;
+
+      opeFechaGerencial, opeFechaVinculado:
+      begin
+        PularLinhasECortar;
+        if StatusVenda in [stsOperacaoTEF] then
+          StatusVenda := stsFinalizada;
+      end;
     end;
 
     RetornoECF := 1 ;
@@ -550,15 +586,54 @@ end;
 
 procedure TFormPrincipal.ACBrTEFD1AntesFinalizarRequisicao(Req: TACBrTEFDReq);
 begin
+  AdicionarLinhaLog('Enviando: '+Req.Header+' ID: '+IntToStr( Req.ID ) );
+
   FCanceladoPeloOperador := False;
   FTempoDeEspera := 0;
   // Use esse evento, para inserir campos personalizados, ou modificar o arquivo
   // de requisião, que será criado e envido para o Gerenciador Padrão
 
-  // Exemplo, adicionando o campo 777-777, caso seja uma transação de Cartão (CRT)
-  //if Req.Header = 'CRT' then
-  //   Req.GravaInformacao(777,777,'TESTE REDECARD');
-  //AdicionarLinhaLog('Enviando: '+Req.Header+' ID: '+IntToStr( Req.ID ) );
+  if (FTestePayGo > 0) then
+  begin
+    if (Req.Header = 'CRT') and (FTestePayGo = 2) then // Passo 02 - Venda à vista aprovada com pré-seleção de parâmetros
+    begin
+      Req.GravaInformacao(010,000,'CERTIF');
+      Req.GravaInformacao(730,000,'1');  // operação “VENDA”
+      Req.GravaInformacao(731,000,'1');  // tipo de cartão “CRÉDITO”
+      Req.GravaInformacao(732,000,'1');  // tipo de financiamento “À VISTA”
+      FTestePayGo := 0;
+    end
+
+    else if (Req.Header = 'CRT') and (FTestePayGo = 3) then // Passo 03 - Venda parcelada aprovada com pré-seleção de parâmetros
+    begin
+      Req.GravaInformacao(010,000,'CERTIF');
+      Req.GravaInformacao(018,000,'3');  // número de parcelas = 3
+      Req.GravaInformacao(730,000,'1');  // operação “VENDA”
+      Req.GravaInformacao(731,000,'2');  // tipo de cartão “DÉBITO”
+      Req.GravaInformacao(732,000,'3');  // tipo de financiamento “PARCELADO PELO ESTABELECIMENTO”
+      FTestePayGo := 0;
+    end
+
+    else if (Req.Header = 'CRT') and (FTestePayGo = 4) then // Passo 04 - Venda aprovada em moeda estrangeira
+    begin
+      Req.GravaInformacao(004,000,'1');  // Dólar americano
+      FTestePayGo := 0;
+    end
+
+    else if (Req.Header = 'CRT') and (FTestePayGo = 27) then // Passo 27 - Venda aprovada com pré-seleção de parâmetros de carteira digital
+    begin
+      Req.GravaInformacao(010,000,'CERTIF');
+      Req.GravaInformacao(749,000,'8');  // Tipo de Pagamento como carteira digital
+      Req.GravaInformacao(750,000,'1');  // Identificação da Carteira Digital como QR Code
+      FTestePayGo := 0;
+    end
+
+    else if (Req.Header = 'ADM') and (FTestePayGo = 31) then // Passo 31 - Operação bem sucedida com valor pré-definido
+    begin
+      Req.GravaInformacao(003,000,'1');
+      FTestePayGo := 0;
+    end;
+  end;
 end;
 
 procedure TFormPrincipal.ACBrTEFD1AguardaResp(Arquivo: String;
@@ -683,19 +758,29 @@ begin
 
    case Operacao of
      ineSubTotal :
-       RetornoECF := FloatToStr( Venda.TotalVenda - Venda.TotalPago ) ;
+       RetornoECF := FloatToStr( Venda.TotalVenda ) ;
 
      ineTotalAPagar :
-       RetornoECF := FloatToStr( Venda.TotalPago ) ;
+     begin
+       // ACBrTEFD1.RespostasPendentes.TotalPago  deve ser subtraido, pois ACBrTEFD já subtrai o total dos pagamentos em TEF internamente
+       RetornoECF := FloatToStr( RoundTo(Venda.TotalPago - ACBrTEFD1.RespostasPendentes.TotalPago, -2) );
+     end;
 
      ineEstadoECF :
        begin
+         //"L" - Livre
+         //"V" - Venda de Itens
+         //"P" - Pagamento (ou SubTotal efetuado)
+         //"C" ou "R" - CDC ou Cupom Vinculado
+         //"G" ou "R" - Relatório Gerencial
+         //"N" - Recebimento Não Fiscal
+         //"O" - Outro
          Case StatusVenda of
            stsIniciada:
              RetornoECF := 'V' ;
            stsEmPagamento:
              RetornoECF := 'P' ;
-           stsLivre, stsFinalizada, stsCancelada:
+           stsLivre, stsFinalizada, stsCancelada, stsOperacaoTEF:
              RetornoECF := 'L' ;
          else
            RetornoECF := 'O' ;
@@ -707,8 +792,13 @@ end;
 procedure TFormPrincipal.btAdministrativoClick(Sender: TObject);
 begin
   AdicionarLinhaLog('- btAdministrativoClick');
-  ACBrTEFD1.ADM;
-  StatusVenda := stsFinalizada;
+  IniciarOperacao;
+  StatusVenda := stsOperacaoTEF;
+  try
+    ACBrTEFD1.ADM;
+  finally
+    StatusVenda := stsFinalizada;
+  end;
 end;
 
 procedure TFormPrincipal.btSalvarParametrosClick(Sender: TObject);
@@ -743,22 +833,24 @@ begin
     cbxPorta.Text := INI.ReadString('PosPrinter','Porta',ACBrPosPrinter1.Porta);
     cbxPagCodigo.ItemIndex := INI.ReadInteger('PosPrinter','PaginaDeCodigo', 2);
     ACBrPosPrinter1.Device.ParamsString := INI.ReadString('PosPrinter','ParamsString','');
-    seColunas.Value := INI.ReadInteger('PosPrinter','Colunas',ACBrPosPrinter1.ColunasFonteNormal);
+    seColunas.Value := INI.ReadInteger('PosPrinter','Colunas', 40);
     seEspLinhas.Value := INI.ReadInteger('PosPrinter','EspacoLinhas',ACBrPosPrinter1.EspacoEntreLinhas);
     seLinhasPular.Value := INI.ReadInteger('PosPrinter','LinhasEntreCupons',ACBrPosPrinter1.LinhasEntreCupons);
 
     cbxGP.ItemIndex := INI.ReadInteger('TEF', 'GP', 0);
     edLog.Text := INI.ReadString('TEF', 'Log', '');
-    seEsperaSleep.Value := INI.ReadInteger('TEF', 'Sleep', seEsperaSleep.Value);
-    seEsperaSTS.Value := INI.ReadInteger('TEF', 'TimeoutSTS', seEsperaSTS.Value);
     seMaxCartoes.Value := INI.ReadInteger('TEF', 'MaxCartoes', seMaxCartoes.Value);
     seTrocoMaximo.Value := Trunc(INI.ReadFloat('TEF', 'TrocoMaximo', seTrocoMaximo.Value));
-    cbAutoAtivar.Checked := INI.ReadBool('TEF', 'AutoAtivar', cbAutoAtivar.Checked);
     cbImprimirViaReduzida.Checked := INI.ReadBool('TEF', 'ImprimirViaReduzida', cbImprimirViaReduzida.Checked);
     cbMultiplosCartoes.Checked := INI.ReadBool('TEF', 'MultiplosCartoes', cbMultiplosCartoes.Checked);
     cbSuportaDesconto.Checked := INI.ReadBool('TEF', 'SuportaDesconto', cbSuportaDesconto.Checked);
     cbSuportaSaque.Checked := INI.ReadBool('TEF', 'SuportaSaque', cbSuportaSaque.Checked);
     cbSuportaReajusteValor.Checked := INI.ReadBool('TEF', 'SuportaReajusteValor', cbSuportaReajusteValor.Checked);
+
+    edRazaoSocial.Text := INI.ReadString('Aplicacao', 'RazaoSocial', edRazaoSocial.Text);
+    edRegistro.Text := INI.ReadString('Aplicacao', 'Registro', edRegistro.Text);
+    edAplicacaoNome.Text := INI.ReadString('Aplicacao', 'Nome', edAplicacaoNome.Text);
+    edAplicacaoVersao.Text := INI.ReadString('Aplicacao', 'Versao', edAplicacaoVersao.Text);
   finally
      INI.Free ;
   end ;
@@ -782,16 +874,18 @@ begin
 
     INI.WriteInteger('TEF', 'GP', cbxGP.ItemIndex);
     INI.WriteString('TEF', 'Log', edLog.Text);
-    INI.WriteInteger('TEF', 'Sleep', seEsperaSleep.Value);
-    INI.WriteInteger('TEF', 'TimeoutSTS', seEsperaSTS.Value);
     INI.WriteInteger('TEF', 'MaxCartoes', seMaxCartoes.Value);
     INI.WriteFloat('TEF', 'TrocoMaximo', seTrocoMaximo.Value);
-    INI.WriteBool('TEF', 'AutoAtivar', cbAutoAtivar.Checked);
     INI.WriteBool('TEF', 'ImprimirViaReduzida', cbImprimirViaReduzida.Checked);
     INI.WriteBool('TEF', 'MultiplosCartoes', cbMultiplosCartoes.Checked);
     INI.WriteBool('TEF', 'SuportaDesconto', cbSuportaDesconto.Checked);
     INI.WriteBool('TEF', 'SuportaSaque', cbSuportaSaque.Checked);
     INI.WriteBool('TEF', 'SuportaReajusteValor', cbSuportaReajusteValor.Checked);
+
+    INI.WriteString('Aplicacao', 'RazaoSocial', edRazaoSocial.Text);
+    INI.WriteString('Aplicacao', 'Registro', edRegistro.Text);
+    INI.WriteString('Aplicacao', 'Nome', edAplicacaoNome.Text);
+    INI.WriteString('Aplicacao', 'Versao', edAplicacaoVersao.Text);
   finally
      INI.Free ;
   end ;
@@ -829,7 +923,7 @@ end;
 procedure TFormPrincipal.AdicionarLinhaImpressao(ALinha: String);
 begin
   mImpressao.Lines.Add(ALinha);
-  if cbEnviarImpressora.Checked then
+  if ACBrPosPrinter1.Ativo then
     ACBrPosPrinter1.Imprimir(ALinha);
 end;
 
@@ -867,7 +961,8 @@ begin
   gbTotaisVenda.Enabled := (AValue in [stsLivre, stsIniciada]);
   gbPagamentos.Enabled := (AValue = stsEmPagamento);
   btAdministrativo.Enabled := (AValue = stsLivre);
-  pImpressao.Enabled := not (AValue in [stsIniciada, stsEmPagamento, stsAguardandoTEF]);
+  btObterCPF.Enabled := btAdministrativo.Enabled;
+  pImpressao.Enabled := (AValue in [stsLivre, stsFinalizada, stsCancelada]);
   btEfetuarPagamentos.Enabled := (AValue = stsIniciada);
   lNumOperacao.Visible := (AValue <> stsLivre);
 
@@ -902,7 +997,14 @@ begin
     begin
       MsgStatus := 'TRANSACAO TEF';
       TipoBotaoOperacao := bopCancelarEsperaTEF;
-    end
+    end;
+
+    stsOperacaoTEF:
+    begin
+      MsgStatus := 'OPERAÇÃO TEF';
+      TipoBotaoOperacao := bopNaoExibir;
+      AtualizarVendaNaInterface;
+    end;
 
   else
     MsgStatus := 'CAIXA LIVRE';
@@ -926,10 +1028,11 @@ begin
 end;
 
 procedure TFormPrincipal.btSerialClick(Sender: TObject);
+var
+  frConfiguraSerial: TfrConfiguraSerial;
 begin
   AdicionarLinhaLog('- btSerialClick');
   frConfiguraSerial := TfrConfiguraSerial.Create(self);
-
   try
     frConfiguraSerial.Device.Porta        := ACBrPosPrinter1.Device.Porta ;
     frConfiguraSerial.cmbPortaSerial.Text := cbxPorta.Text ;
@@ -937,11 +1040,11 @@ begin
 
     if frConfiguraSerial.ShowModal = mrOk then
     begin
-       cbxPorta.Text := frConfiguraSerial.cmbPortaSerial.Text ;
-       ACBrPosPrinter1.Device.ParamsString := frConfiguraSerial.Device.ParamsString ;
+      cbxPorta.Text := frConfiguraSerial.cmbPortaSerial.Text ;
+      ACBrPosPrinter1.Device.ParamsString := frConfiguraSerial.Device.ParamsString ;
     end ;
   finally
-     FreeAndNil( frConfiguraSerial ) ;
+    FreeAndNil( frConfiguraSerial ) ;
   end ;
 end;
 
@@ -1004,6 +1107,25 @@ begin
   end;
 end;
 
+procedure TFormPrincipal.btObterCPFClick(Sender: TObject);
+var
+  Saida: String;
+begin
+  Saida := '';
+  if ACBrTEFD1.GPAtual = gpCliSiTef then
+  begin
+    // SiTef precisa de parâmetros extras, vamos informar...
+    ACBrTEFD1.TEFCliSiTef.PinPadIdentificador := '01.123.456/0001-07';
+    ACBrTEFD1.TEFCliSiTef.PinPadChaveAcesso := 'Chave Fornecida pela Software Express, eclusiva para o Identificador acima';
+  end;
+
+  ACBrTEFD1.CDP('F', Saida);  // F=CPF
+  if (Saida <> '') then
+    ShowMessage(Saida)
+  else
+    ShowMessage('Falha ao Obter CPF no PinPad');
+end;
+
 procedure TFormPrincipal.cbEnviarImpressoraChange(Sender: TObject);
 begin
   btImprimir.Enabled := ACBrPosPrinter1.Ativo and (not cbEnviarImpressora.Checked);
@@ -1030,7 +1152,7 @@ begin
   end;
 end;
 
-procedure TFormPrincipal.ACBrTEFD1CliSiTefObtemCampo(Titulo: String; TamanhoMinimo,
+procedure TFormPrincipal.CliSiTefObtemCampo(Titulo: String; TamanhoMinimo,
   TamanhoMaximo: Integer; TipoCampo: Integer;
   Operacao: TACBrTEFDCliSiTefOperacaoCampo; var Resposta: AnsiString;
   var Digitado: Boolean; var VoltarMenu: Boolean);
@@ -1063,7 +1185,7 @@ begin
   seTotalDesconto.MaxValue := seValorInicialVenda.Value;
   if (seValorInicialVenda.Value <> 0) and (StatusVenda = stsLivre) then
   begin
-    IniciarVenda;
+    IniciarOperacao;
     Venda.ValorInicial := seValorInicialVenda.Value;
     StatusVenda := stsIniciada;
   end
@@ -1079,13 +1201,14 @@ begin
   AdicionarLinhaLog('- AtualizarCaixaLivreNaInterface');
   LimparMensagensTEF;
   mImpressao.Clear;
+  cbTestePayGo.ItemIndex := 0;
   Venda.Clear;
   AtualizarVendaNaInterface;
   FCanceladoPeloOperador := False;
   FTempoDeEspera := 0;
 end;
 
-procedure TFormPrincipal.IniciarVenda;
+procedure TFormPrincipal.IniciarOperacao;
 var
   ProxVenda: Integer;
 begin
@@ -1103,6 +1226,7 @@ procedure TFormPrincipal.AdicionarPagamento(const Indice: String; AValor: Double
   );
 var
   Ok, TemTEF: Boolean;
+  ReajusteValor: Double;
 begin
   Ok := True;
   TemTEF := False;
@@ -1116,25 +1240,70 @@ begin
   begin
     Ok := ACBrTEFD1.CRT(AValor, Indice);
     TemTEF := True;
+  end
+  else if (Indice = '05') then
+  begin
+    FTestePayGo := 27;
+    Ok := ACBrTEFD1.CRT(AValor, Indice);
+    TemTEF := True;
   end;
 
+  StatusVenda := stsEmPagamento;
+  
   if Ok then
   begin
-     with Venda.Pagamentos.New do
-     begin
-       TipoPagamento := Indice;
-       Valor := AValor;
-       if TemTEF then
-       begin
-         NSU := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].NSU;
-         Rede := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].Rede;
-       end;
-     end;
+    with Venda.Pagamentos.New do
+    begin
+      TipoPagamento := Indice;
+      ValorPago := AValor;
 
-     AtualizarPagamentosVendaNaInterface;
+      if TemTEF then
+      begin
+        NSU := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].NSU;
+        Rede := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].Rede;
+        RedeCNPJ := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].NFCeSAT.CNPJCredenciadora;
 
-     if (Venda.TotalPago >= Venda.TotalVenda) then
-       FinalizarVenda;
+        // Calcula a Diferença do Valor Retornado pela Operação TEF do Valor que
+        //   Informamos no CRT/CHQ
+        ReajusteValor := RoundTo(ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].ValorTotal - ValorPago, -2);
+
+        Saque := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].Saque;
+        if (Saque > 0) then
+        begin
+          // Se houve Saque na operação TEF, devemos adicionar no ValorPago,
+          //   para que o Saque conste como Troco
+          ValorPago := ValorPago + Saque
+        end
+        else if ReajusteValor > 0 then
+        begin
+          // Se não é Saque, mas houve acréscimo no valor Retornado, devemos lançar
+          //   o Reajuste como Acréscimo na venda
+          Venda.TotalAcrescimo := Venda.TotalAcrescimo + ReajusteValor;
+        end;
+
+        Desconto := ACBrTEFD1.RespostasPendentes[ACBrTEFD1.RespostasPendentes.Count-1].Desconto;
+        if Desconto > 0 then
+        begin
+          // Se houve Desconto na Operação TEF, devemos subtrair do ValorPago
+          //   e lançar um Desconto no Total da Transacao
+          ValorPago := ValorPago - Desconto;
+          Venda.TotalDesconto := Venda.TotalDesconto + Desconto;
+        end
+        else if (ReajusteValor < 0) then
+        begin
+          // Se não é Desconto, mas houve redução no Valor Retornado, devemos
+          //   considerar a redução no ValorPago, pois a Adquirente limitou o
+          //   valor da Operação, a um máximo permitido... Deverá fechar o cupom,
+          //   com outra forma de Pagamento
+          ValorPago := ValorPago + ReajusteValor;
+        end;
+      end;
+    end;
+
+    AtualizarPagamentosVendaNaInterface;
+
+    if (Venda.TotalPago >= Venda.TotalVenda) then
+      FinalizarVenda;
   end;
 end;
 
@@ -1152,23 +1321,40 @@ procedure TFormPrincipal.FinalizarVenda;
 var
   SL: TStringList;
   i: Integer;
+  DoctoFiscalOk: Boolean;
+  MR: TModalResult;
 begin
-  // AQUI você deve Gerar e Transmitir o Documento Fiscal (NFCe ou SAT)
-
   try
-    if cbSimularErroNoDoctoFiscal.Checked then
-      raise Exception.Create('Erro na geração do Comprovante de Venda');
+    // AQUI você deve Chamar uma Rotina para Gerar e Transmitir o Documento Fiscal (NFCe ou SAT)
+    DoctoFiscalOk := not cbSimularErroNoDoctoFiscal.Checked;
+    while not DoctoFiscalOk do
+    begin
+      MR := MessageDlg( 'Falha no Documento Fiscal' + sLineBreak +
+                        'Tentar Novamente ?', mtConfirmation,
+                        [mbYes, mbNo, mbIgnore], 0);
+      if (MR = mrIgnore) then
+        cbSimularErroNoDoctoFiscal.Checked := False
+      else if (MR <> mrYes) then
+        raise Exception.Create('Erro no Documento Fiscal');
+
+      // AQUI você deve Chamar uma Rotina para Gerar e Transmitir o Documento Fiscal (NFCe ou SAT)
+      DoctoFiscalOk := not cbSimularErroNoDoctoFiscal.Checked;
+    end;
 
     SL := TStringList.Create;
     try
+      // Ao invés do relatório abaixo, você deve enviar a impressão de um DANFCE ou Extrato do SAT
+
       SL.Add(PadCenter( ' COMPROVANTE DE OPERAÇÃO ', ACBrPosPrinter1.Colunas, '-'));
       SL.Add('Número: <n>' + FormatFloat('000000',Venda.NumOperacao) + '</n>');
       SL.Add('Data/Hora: <n>' + FormatDateTimeBr(Venda.DHInicio) + '</n>');
       SL.Add('</linha_simples>');
+      SL.Add('');
       SL.Add('Valor Inicial...: <n>' + FormatFloatBr(Venda.ValorInicial) + '</n>');
       SL.Add('Total Descontos.: <n>' + FormatFloatBr(Venda.TotalDesconto) + '</n>');
       SL.Add('Total Acréscimos: <n>' + FormatFloatBr(Venda.TotalAcrescimo) + '</n>');
-      SL.Add('Total Operação..: <n>' + FormatFloatBr(Venda.TotalVenda) + '</n>');
+      SL.Add('</linha_simples>');
+      SL.Add('VALOR FINAL.....: <n>' + FormatFloatBr(Venda.TotalVenda) + '</n>');
       SL.Add('');
       SL.Add(PadCenter( ' Pagamentos ', ACBrPosPrinter1.Colunas, '-'));
       for i := 0 to Venda.Pagamentos.Count-1 do
@@ -1176,7 +1362,7 @@ begin
         with Venda.Pagamentos[i] do
         begin
           SL.Add(PadSpace( TipoPagamento+' - '+DescricaoTipoPagamento(TipoPagamento)+'|'+
-                           FormatFloatBr(Valor)+'|'+Rede, ACBrPosPrinter1.Colunas, '|') );
+                           FormatFloatBr(ValorPago)+'|'+Rede, ACBrPosPrinter1.Colunas, '|') );
         end;
       end;
       SL.Add('</linha_simples>');
@@ -1196,22 +1382,30 @@ begin
     ACBrTEFD1.ImprimirTransacoesPendentes();
   except
     CancelarVenda;
-
   end;
+end;
 
+procedure TFormPrincipal.VerificarTestePayGo;
+var
+  P: Integer;
+  ATeste: String;
+begin
+  P := pos('-',cbTestePayGo.Text);
+  ATeste := copy(cbTestePayGo.Text, 1, P-1);
+  FTestePayGo := StrToIntDef(ATeste, 0);
 end;
 
 procedure TFormPrincipal.AtualizarVendaNaInterface;
 begin
   lNumOperacao.Caption := FormatFloat('000000',Venda.NumOperacao);
   seValorInicialVenda.Value := Trunc(Venda.ValorInicial);
-  seTotalDesconto.Value := Trunc(Venda.TotalDesconto);
-  seTotalAcrescimo.Value := Trunc(Venda.TotalAcrescimo);
   AtualizarPagamentosVendaNaInterface;
 end;
 
 procedure TFormPrincipal.AtualizarTotaisVendaNaInterface;
 begin
+  seTotalDesconto.Value := Trunc(Venda.TotalDesconto);
+  seTotalAcrescimo.Value := Trunc(Venda.TotalAcrescimo);
   edTotalVenda.Text := FormatFloatBr(Venda.TotalVenda);
   edTotalPago.Text := FormatFloatBr(Venda.TotalPago);
   edTroco.Text := FormatFloatBr(max(Venda.Troco,0));
@@ -1233,10 +1427,11 @@ begin
     begin
       sgPagamentos.Cells[0, ARow] := FormatFloat('000', ARow);
       sgPagamentos.Cells[1, ARow] := TipoPagamento + ' - ' + DescricaoTipoPagamento(TipoPagamento);
-      sgPagamentos.Cells[2, ARow] := FormatFloatBr(Valor);
+      sgPagamentos.Cells[2, ARow] := FormatFloatBr(ValorPago);
       sgPagamentos.Cells[3, ARow] := NSU;
       sgPagamentos.Cells[4, ARow] := Rede;
       sgPagamentos.Cells[5, ARow] := ifthen(Confirmada, 'Sim', 'Não');
+      sgPagamentos.Cells[6, ARow] := RedeCNPJ;
     end;
 
     Inc(ARow);
@@ -1268,16 +1463,21 @@ procedure TFormPrincipal.ConfigurarTEF;
 begin
   AdicionarLinhaLog('- ConfigurarTEF');
   ACBrTEFD1.ArqLOG := edLog.Text;
-  ACBrTEFD1.EsperaSleep := seEsperaSleep.Value;
-  ACBrTEFD1.EsperaSTS := seEsperaSTS.Value;
   ACBrTEFD1.TrocoMaximo := seTrocoMaximo.Value;
-  ACBrTEFD1.AutoAtivarGP := cbAutoAtivar.Checked;
   ACBrTEFD1.ImprimirViaClienteReduzida := cbImprimirViaReduzida.Checked;
   ACBrTEFD1.MultiplosCartoes := cbMultiplosCartoes.Checked;
   ACBrTEFD1.NumeroMaximoCartoes := seMaxCartoes.Value;
   ACBrTEFD1.SuportaDesconto := cbSuportaDesconto.Checked;
-  ACBrTEFD1.SuportaReajusteValor := cbSuportaReajusteValor.Checked;
   ACBrTEFD1.SuportaSaque := cbSuportaSaque.Checked;
+
+  ACBrTEFD1.Identificacao.RazaoSocial := edRazaoSocial.Text;
+  ACBrTEFD1.Identificacao.RegistroCertificacao := edRegistro.Text;
+  ACBrTEFD1.Identificacao.NomeAplicacao := edAplicacaoNome.Text;
+  ACBrTEFD1.Identificacao.VersaoAplicacao := edAplicacaoVersao.Text;
+
+  ACBrTEFD1.TEFPayGo.SuportaReajusteValor := cbSuportaReajusteValor.Checked;
+  ACBrTEFD1.TEFPayGo.SuportaNSUEstendido := True;
+  ACBrTEFD1.TEFPayGo.SuportaViasDiferenciadas := True;
 
   // Configurações abaixo são obrigatórios, para funcionamento de Não Fiscal //
   ACBrTEFD1.AutoEfetuarPagamento := False;
@@ -1317,7 +1517,6 @@ procedure TFormPrincipal.Ativar;
 begin
   AdicionarLinhaLog('- Ativar');
   GravarConfiguracao;
-  AtivarTEF;
   try
     AtivarPosPrinter;
   except
@@ -1326,6 +1525,7 @@ begin
       TratarException(nil, E);
     end;
   end;
+  AtivarTEF;
 end;
 
 procedure TFormPrincipal.Desativar;
@@ -1334,7 +1534,6 @@ begin
   ACBrPosPrinter1.Desativar;
   ACBrTEFD1.DesInicializar(TACBrTEFDTipo(cbxGP.ItemIndex));
 end;
-
 
 end.
 
