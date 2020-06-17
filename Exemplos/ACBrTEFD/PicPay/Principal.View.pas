@@ -92,9 +92,10 @@ type
     ACBrPicpay1: TACBrPicpay;
     Button1: TButton;
     Edit1: TEdit;
-    procedure btnSolicitarClick(Sender: TObject);
     procedure ACBrPicpay1StatusPayment(AuthorizationId, Status: string);
-    procedure ACBrPicpay1WaitingPayment(Status: string);
+    procedure btnSolicitarClick(Sender: TObject);
+    procedure ACBrPicpay1WaitingPayment(const Status: string; const TempoRestante: Integer);
+    procedure ACBrPicpay1WaitingTimeout(var Retry: Boolean);
     procedure Button1Click(Sender: TObject);
   private
     procedure MostrarImagemQrCode;
@@ -119,8 +120,7 @@ uses
 {$R *.dfm}
 
 
-procedure TPrincipalView.ACBrPicpay1StatusPayment(AuthorizationId,
-  Status: string);
+procedure TPrincipalView.ACBrPicpay1StatusPayment(AuthorizationId, Status: string);
 begin
   if Status = 'paid' then
   begin
@@ -130,10 +130,15 @@ begin
   end;
 end;
 
-procedure TPrincipalView.ACBrPicpay1WaitingPayment(Status: string);
+procedure TPrincipalView.ACBrPicpay1WaitingPayment(const Status: string; const TempoRestante: Integer);
 begin
-  if Status <> 'paid' then
-    lbStatus.Caption := 'WAITING: ' + IntToStr(ACBrPicpay1.TempoRetorno) + ' segundos.';
+  lbStatus.Caption := 'WAITING: ' + IntToStr(TempoRestante) + ' segundos.';
+end;
+
+procedure TPrincipalView.ACBrPicpay1WaitingTimeout(var Retry: Boolean);
+begin
+  //Aqui você pode ter uma regra de negócios que avalia se vai recomeçar a consulta.
+  //É melhor não usar um questionamento ao usuário no caso do tipo retorno ser por threads.
 end;
 
 procedure TPrincipalView.btnSolicitarClick(Sender: TObject);
@@ -149,11 +154,11 @@ begin
   ACBrPicpay1.Lojista.URLCallBack := 'http://www.exemplo.com.br/callback';
   ACBrPicpay1.Lojista.URLReturn := 'http://www.exemplo.com.br/cliente/pedido/102030';
 
-  ACBrPicpay1.Comprador.Nome := txt_FirstName.Text;
+  ACBrPicpay1.Comprador.Nome      := txt_FirstName.Text;
   ACBrPicpay1.Comprador.SobreNome := txt_LastName.Text;
   ACBrPicpay1.Comprador.Documento :=  txt_Document.Text;
-  ACBrPicpay1.Comprador.Email := txt_email.Text;
-  ACBrPicpay1.Comprador.Telefone := txt_Phone.Text;
+  ACBrPicpay1.Comprador.Email     := txt_email.Text;
+  ACBrPicpay1.Comprador.Telefone  := txt_Phone.Text;
 
   ACBrPicpay1.Enviar;
 

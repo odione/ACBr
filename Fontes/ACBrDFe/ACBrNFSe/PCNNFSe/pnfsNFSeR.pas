@@ -182,6 +182,9 @@ begin
   if NFSe.Servico.ItemListaServico = '' then
     NFSe.Servico.ItemListaServico := OnlyNumber(Leitor.rCampo(tcStr, 'CodigoServico'));
 
+  if FProvedor = proMegaSoft then
+    NFSe.Servico.ItemListaServico := OnlyNumber(Leitor.rCampo(tcStr, 'CodigoTributacaoMunicipio'));
+
   Item := StrToIntDef(OnlyNumber(Nfse.Servico.ItemListaServico), 0);
   if Item < 100 then
     Item := Item * 100 + 1;
@@ -2317,7 +2320,7 @@ begin
         if (FProvedor in [proActconv202, proISSe, proVersaTecnologia, proNEAInformatica,
                           proFiorilli, proPronimv2, proVitoria, proSmarAPDABRASF,
                           proGovDigital, proDataSmart, proTecnos, proRLZ, proSigCorp,
-						  proSaatri]) then
+                          proSaatri, proSH3]) then
         begin
           if NFSe.Servico.Valores.IssRetido = stRetencao then
             NFSe.Servico.Valores.ValorIssRetido := Leitor.rCampo(tcDe2, 'ValorIss')
