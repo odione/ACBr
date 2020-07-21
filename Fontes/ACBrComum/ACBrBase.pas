@@ -50,7 +50,7 @@ uses
   {$ELSE}
    Windows, ACBrD5,
   {$ENDIF}
-  {$IF DEFINED(NEXTGEN)}
+  {$IF DEFINED(HAS_SYSTEM_GENERICS)}
    System.Generics.Collections, System.Generics.Defaults
   {$ELSEIF DEFINED(DELPHICOMPILER16_UP)}
    System.Contnrs
@@ -187,7 +187,7 @@ TAnsiStringList = class
 
 { TACBrObjectList }
 
-  TACBrObjectList = class(TObjectList{$IfDef NEXTGEN}<TObject>{$EndIf})
+  TACBrObjectList = class(TObjectList{$IfDef HAS_SYSTEM_GENERICS}<TObject>{$EndIf})
   protected
     fIsSorted: Boolean;
   public
@@ -195,7 +195,7 @@ TAnsiStringList = class
 
     Function Add(AObject: TObject): Integer;
     Procedure Insert(Index: Integer; AObject: TObject);
-    {$IfDef NEXTGEN}
+    {$IfDef HAS_SYSTEM_GENERICS}
      procedure Sort(const AComparer: IComparer<TObject>);
      function FindObject(Item: TObject; AComparer: IComparer<TObject>; Nearest: Boolean = False): Integer;
      procedure Assign(ObjectListSource: TObjectList<TObject>);
@@ -239,40 +239,43 @@ de campos quando necessário}
     fInfo: String;
     fName: String;
     function GetAsBinary: AnsiString;
-    function GetAsDate : TDateTime;
+    function GetAsDate: TDateTime;
     function GetAsFloat: Double;
-    function GetAsInteger : Integer;
+    function GetAsInt64: Int64;
+    function GetAsInteger: Integer;
     function GetAsString: String;
-    function GetAsTime : TDateTime;
-    function GetAsTimeStamp : TDateTime;
-    function GetAsTimeStampSQL : TDateTime;
+    function GetAsTime: TDateTime;
+    function GetAsTimeStamp: TDateTime;
+    function GetAsTimeStampSQL: TDateTime;
     procedure SetAsBinary(AValue: AnsiString);
-    procedure SetAsDate(const AValue : TDateTime);
-    procedure SetAsFloat(const AValue : Double);
-    procedure SetAsInteger(const AValue : Integer);
+    procedure SetAsDate(const AValue: TDateTime);
+    procedure SetAsFloat(const AValue: Double);
+    procedure SetAsInteger(const AValue: Integer);
+    procedure SetAsInt64(const AValue: Int64);
     procedure SetAsString(const AValue: String);
-    procedure SetAsTime(const AValue : TDateTime);
-    procedure SetAsTimeStamp(const AValue : TDateTime);
-    procedure SetAsTimeStampSQL(const AValue : TDateTime);
+    procedure SetAsTime(const AValue: TDateTime);
+    procedure SetAsTimeStamp(const AValue: TDateTime);
+    procedure SetAsTimeStampSQL(const AValue: TDateTime);
     procedure SetFloatDecimalDigits(AValue: Integer);
   public
     constructor Create;
     property Nome          : String     read fName             write fName;
-    property AsString      : String     read GetAsString       write SetAsString ;
-    property AsDate        : TDateTime  read GetAsDate         write SetAsDate ;
-    property AsTime        : TDateTime  read GetAsTime         write SetAsTime ;
-    property AsTimeStamp   : TDateTime  read GetAsTimeStamp    write SetAsTimeStamp ;
-    property AsTimeStampSQL: TDateTime  read GetAsTimeStampSQL write SetAsTimeStampSQL ;
-    property AsInteger     : Integer    read GetAsInteger      write SetAsInteger ;
-    property AsFloat       : Double     read GetAsFloat        write SetAsFloat ;
-    property AsBinary      : AnsiString read GetAsBinary       write SetAsBinary ;
+    property AsString      : String     read GetAsString       write SetAsString;
+    property AsDate        : TDateTime  read GetAsDate         write SetAsDate;
+    property AsTime        : TDateTime  read GetAsTime         write SetAsTime;
+    property AsTimeStamp   : TDateTime  read GetAsTimeStamp    write SetAsTimeStamp;
+    property AsTimeStampSQL: TDateTime  read GetAsTimeStampSQL write SetAsTimeStampSQL;
+    property AsInteger     : Integer    read GetAsInteger      write SetAsInteger;
+    property AsInt64       : Int64      read GetAsInt64        write SetAsInt64;
+    property AsFloat       : Double     read GetAsFloat        write SetAsFloat;
+    property AsBinary      : AnsiString read GetAsBinary       write SetAsBinary;
 
     property FloatDecimalDigits : Integer read fFloatDecimalDigits write SetFloatDecimalDigits default 2;
   end ;
 
   { TACBrInformacoes }
 
-  TACBrInformacoes = class(TObjectList{$IfDef NEXTGEN}<TACBrInformacao>{$EndIf})
+  TACBrInformacoes = class(TObjectList{$IfDef HAS_SYSTEM_GENERICS}<TACBrInformacao>{$EndIf})
   private
     function GetItem(Index: Integer): TACBrInformacao;
     procedure SetItem(Index: Integer; const Value: TACBrInformacao);
@@ -319,19 +322,28 @@ begin
   {$IFDEF NOGUI}
       Msg := 'Componentes ACBr CONSOLE'+sLineBreak+
              'Automação Comercial Brasil'+sLineBreak+
-             'http://acbr.sourceforge.net' ;
+             'https://projetoacbr.com.br' ;
       Msg := ACBrStr(Msg) ;
       writeln( Msg )
   {$ELSE}
     {$IFDEF VisualCLX}
       Msg := 'Componentes <b>ACBr CLX</b><BR>'+
               'Automação Comercial Brasil<BR><BR>'+
-              '<A HREF="http://acbr.sourceforge.net">'+
-              'http://acbr.sourceforge.net</A><BR><BR>' ;
+              '<A HREF="https://projetoacbr.com.br">'+
+              'https://projetoacbr.com.br</A><BR><BR>' ;
     {$ELSE}
-      Msg := 'Componentes ACBr '+{$IFDEF FPC}'Lazarus/FPC'{$ELSE}'VCL'{$ENDIF}+#10+
+      Msg := 'Componentes ACBr '+
+             {$IFDEF FPC}
+              'Lazarus/FPC'
+             {$ELSE}
+              {$IFDEF FMX}
+               'FMX'
+              {$ELSE}
+               'VCL'
+              {$ENDIF}
+             {$ENDIF}+#10+
              'Automação Comercial Brasil'+#10+#10+
-             'http://acbr.sourceforge.net' ;
+             'https://projetoacbr.com.br' ;
       Msg := ACBrStr( Msg ) ;
     {$ENDIF}
 
@@ -363,7 +375,7 @@ begin
   fIsSorted := False;
 end;
 
-{$IfDef NEXTGEN}
+{$IfDef HAS_SYSTEM_GENERICS}
  procedure TACBrObjectList.Sort(const AComparer: IComparer<TObject>);
  begin
    inherited Sort(AComparer);
@@ -392,7 +404,7 @@ end;
  end;
 {$EndIf}
 
-{$IfDef NEXTGEN}
+{$IfDef HAS_SYSTEM_GENERICS}
 function TACBrObjectList.FindObject(Item: TObject; AComparer: IComparer<TObject>; Nearest: Boolean = False): Integer;
 {$Else}
 function TACBrObjectList.FindObject(Item: Pointer; AComparer: TListSortCompare; Nearest: Boolean): Integer;
@@ -402,7 +414,7 @@ var
 
   function DoCompare(APos: Integer): Integer;
   begin
-    {$IfDef NEXTGEN}
+    {$IfDef HAS_SYSTEM_GENERICS}
      Result := AComparer.Compare(Item,Items[APos]);
     {$Else}
      Result := AComparer(Item,Pointer(Items[APos]));
@@ -514,9 +526,15 @@ end;
 
 function TACBrInformacao.GetAsDate : TDateTime;
 var
-   DataStr : String;
+   DataStr, AnoStr: String;
 begin
   DataStr := OnlyNumber( Trim(fInfo) );
+
+  if (Length(DataStr) = 6) then // DDMMYY, converte para DDMMYYYY
+  begin
+    AnoStr := IntToStr(YearOf(Today));
+    DataStr := copy(DataStr,1,4) + copy(AnoStr,1,2) + copy(DataStr,5,2);
+  end;
 
   try
      Result := EncodeDate( StrToInt(copy(DataStr,5,4)),
@@ -545,9 +563,14 @@ begin
   Result := Result / Pow;
 end;
 
-function TACBrInformacao.GetAsInteger : Integer;
+function TACBrInformacao.GetAsInteger: Integer;
 begin
   Result := StrToIntDef(Trim(fInfo),0);
+end;
+
+function TACBrInformacao.GetAsInt64: Int64;
+begin
+  Result := StrToInt64Def(Trim(fInfo),0);
 end;
 
 function TACBrInformacao.GetAsString: String;
@@ -635,6 +658,14 @@ begin
 end;
 
 procedure TACBrInformacao.SetAsInteger(const AValue : Integer);
+begin
+  if AValue = 0 then
+     fInfo := ''
+  else
+     fInfo := IntToStr( AValue ) ;
+end;
+
+procedure TACBrInformacao.SetAsInt64(const AValue: Int64);
 begin
   if AValue = 0 then
      fInfo := ''

@@ -41,7 +41,7 @@ interface
 
 uses
   SysUtils, Classes,
-  {$IF DEFINED(NEXTGEN)}
+  {$IF DEFINED(HAS_SYSTEM_GENERICS)}
    System.Generics.Collections, System.Generics.Defaults,
   {$ELSEIF DEFINED(DELPHICOMPILER16_UP)}
    System.Contnrs,
@@ -1011,7 +1011,7 @@ begin
       if INIRec.ReadString(sSecao, 'tpInscSuc', '') <> '' then
         infoDeslig.sucessaoVinc.tpInscSuc := eSStrToTpInscricao(Ok, INIRec.ReadString(sSecao, 'tpInscSuc', EmptyStr));
 
-      if INIRec.ReadString(sSecao, 'cnpjEmpSucessora', '') <> '' then
+      if INIRec.ReadString(sSecao, 'cnpjSucessora', '') <> '' then
         infoDeslig.sucessaoVinc.cnpjSucessora := INIRec.ReadString(sSecao, 'cnpjSucessora', EmptyStr);
 
       sSecao := 'transfTit';

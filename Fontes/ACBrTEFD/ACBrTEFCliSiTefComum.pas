@@ -292,6 +292,9 @@ begin
           fpDataHoraTransacaoLocal := fpDataHoraTransacaoComprovante;
         end;
 
+        106: fpIdCarteiraDigital := LinStr;
+        107: fpNomeCarteiraDigital := LinStr;
+
         120: fpAutenticacao := LinStr;
         121: fpImagemComprovante1aVia.Text := ChangeLineBreak(LinStr, sLineBreak);
         122: fpImagemComprovante2aVia.Text := ChangeLineBreak(LinStr, sLineBreak);
@@ -379,6 +382,7 @@ begin
     end;
 
     fpQtdLinhasComprovante := max(fpImagemComprovante1aVia.Count, fpImagemComprovante2aVia.Count);
+    fpConfirmar := (fpQtdLinhasComprovante > 0);
 
     // leitura de parcelas conforme nova documentação
     // 141 e 142 foram removidos em Setembro de 2014

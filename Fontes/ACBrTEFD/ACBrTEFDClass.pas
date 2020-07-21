@@ -1138,7 +1138,8 @@ Var
 begin
   OldResp := CriarResposta(fpTipo);
   try
-     OldResp.Assign(Resp);      { Salvando dados da Resposta Atual }
+     { Salvando dados da Resposta Atual, pois 'Resp' será zerado em "IniciarRequisicao" }
+     OldResp.Assign(Resp);
 
      IniciarRequisicao('CNC');
      Req.DocumentoVinculado           := OldResp.DocumentoVinculado;
@@ -1857,10 +1858,13 @@ begin
        while FileExists( ArqBackup ) do
        begin
           try
-             if ImpressaoOk then
-                self.CNF
-             else
-                self.NCN ;
+             if Resp.Confirmar then
+             begin
+               if ImpressaoOk then
+                  self.CNF
+               else
+                  self.NCN ;
+             end;
           except
           end;
 

@@ -1,4 +1,3 @@
-{******************************************************************************}
 { Projeto: Componentes ACBr                                                    }
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
@@ -4675,6 +4674,8 @@ begin
     case FProvedor of
       proCONAM: FURI := 'Sdt_cancelanfe';
 
+      proCenti: FURI := FNotasFiscais.Items[0].NFSe.InfID.ID;
+
       proDigifred,
       proPronimv2,
       proPublica: FURI := 'CANC' + TNFSeCancelarNfse(Self).FNumeroNFSe;
@@ -4687,7 +4688,8 @@ begin
       proGiap,
       proIPM: FURI := '';
 
-      proGovDigital: FURI := TNFSeCancelarNfse(Self).FNumeroNFSe;
+      proGovDigital,
+      proTecnos: FURI := TNFSeCancelarNfse(Self).FNumeroNFSe;
 
       proIssIntel,
       proISSNet: begin
@@ -4695,8 +4697,7 @@ begin
                    FURIRef := 'http://www.w3.org/TR/2000/REC-xhtml1-20000126/';
                  end;
 
-      proABase,
-      proTecnos: FURI := '2' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
+      proABase: FURI := '2' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
                   IntToStrZero(StrToInt(TNFSeCancelarNfse(Self).FNumeroNFSe), 16);
 
       proRecife,
@@ -4818,6 +4819,9 @@ begin
       // Necessário para o provedor ISSDSF
       Transacao  := FNotasFiscais.Transacao;
       Notas      := FvNotas;
+      
+      if FProvedor = proCenti then
+        CodVerificacaoRPS := FNotasFiscais.Items[0].NFSe.CodigoVerificacao;
 
       NumeroLote := FNotasFiscais.NumeroLote;
       if NumeroLote = '' then
@@ -5121,8 +5125,7 @@ begin
                    FURIRef := 'http://www.w3.org/TR/2000/REC-xhtml1-20000126/';
                  end;
 
-      proTecnos: FURI := '2' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
-                            IntToStrZero(StrToInt(TNFSeSubstituirNfse(Self).FNumeroNFSe), 16);
+      proTecnos: FURI := TNFSeSubstituirNfse(Self).FNumeroNFSe;
 
     else
       FURI := 'pedidoCancelamento_' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
@@ -6011,7 +6014,7 @@ begin
   with TACBrNFSe(FACBrNFSe) do
   begin
     if not (Configuracoes.Geral.Provedor in [proABase, proCONAM, proEL, proISSNet,
-                                             proSMARAPD, proIPM]) then
+                                             proSMARAPD, proIPM, proCenti]) then
     begin
       if Configuracoes.Geral.Provedor in [proSystemPro] then
       begin

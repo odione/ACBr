@@ -151,7 +151,7 @@ begin
   if (not (AOwner is TACBrETQ)) then
     raise Exception.create(ACBrStr('Essa Classe deve ser instanciada por TACBrETQ'));
 
-  fPaginaDeCodigo := pce850;
+  fPaginaDeCodigo := pceNone;
   fDPI            := dpi203;
   fpLimparMemoria := True;
   fAvanco         := 0;
@@ -260,7 +260,8 @@ begin
   AdicionarComandos( ComandoResolucao, ListaComandos );
   AdicionarComandos( ComandoOrigemCoordenadas, ListaComandos );
   AdicionarComandos( ComandoVelocidade, ListaComandos );
-  AdicionarComandos( ComandoPaginaDeCodigo, ListaComandos );
+  if (PaginaDeCodigo <> pceNone) then
+    AdicionarComandos( ComandoPaginaDeCodigo, ListaComandos );
 
   Result := ListaComandos;
 end;

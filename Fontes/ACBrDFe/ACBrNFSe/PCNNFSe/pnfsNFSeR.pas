@@ -556,10 +556,16 @@ begin
   if (Leitor.rExtrai(2, 'InfDeclaracaoPrestacaoServico') <> '') or
      (Leitor.rExtrai(1, 'InfDeclaracaoPrestacaoServico') <> '') then
   begin
-    if FProvedor = ProTecnos then
-      NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0))
+    case FProvedor of
+      proTecnos:
+        NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0));
+
+      proSigCorp,
+      proSimplISSv2:
+        NFSe.Competencia := DateToStr(Leitor.rCampo(tcDat, 'Competencia'));
     else
       NFSe.Competencia := Leitor.rCampo(tcStr, 'Competencia');
+    end;
 
     NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
     NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
@@ -1569,10 +1575,14 @@ begin
       NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
       NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
 
-      if FProvedor = ProTecnos then
-        NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0))
+      case FProvedor of
+        proTecnos:
+          NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0));
+        proSimplISSv2:
+          NFSe.Competencia := DateToStr(Leitor.rCampo(tcDat, 'Competencia'));
       else
         NFSe.Competencia := Leitor.rCampo(tcStr, 'Competencia');
+      end;
 
       NFSe.OutrasInformacoes := Leitor.rCampo(tcStr, 'OutrasInformacoes');
       NFSe.ValorCredito      := Leitor.rCampo(tcDe2, 'ValorCredito');
@@ -1637,8 +1647,17 @@ begin
   if ((Leitor.rExtrai(1, 'NfseCancelamento') <> '') or (Leitor.rExtrai(1, 'CancelamentoNfse') <> '')) then
   begin
     NFSe.NfseCancelamento.DataHora := Leitor.rCampo(tcDatHor, 'DataHora');
+
     if NFSe.NfseCancelamento.DataHora = 0 then
-      NFSe.NfseCancelamento.DataHora := Leitor.rCampo(tcDatHor, 'DataHoraCancelamento');
+    begin
+      case Provedor of
+        proSigCorp:
+          NFSe.NfseCancelamento.DataHora := StringToDateTime(Leitor.rCampo(tcStr, 'DataHoraCancelamento') , 'DD/MM/YYYY hh:nn:ss')
+      else
+        NFSe.NfseCancelamento.DataHora := Leitor.rCampo(tcDatHor, 'DataHoraCancelamento');
+      end;
+    end;
+
     NFSe.NfseCancelamento.Pedido.CodigoCancelamento := Leitor.rCampo(tcStr, 'CodigoCancelamento');
 
     case FProvedor of
@@ -2105,16 +2124,22 @@ begin
       NFSe.InfID.ID := Leitor.rAtributo('id=');
   end;
 
-  if FProvedor = ProTecnos then
-    NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0))
-  else if FProvedor = ProSigCorp  then
-  begin
-    NFSe.Competencia := Copy(Leitor.rCampo(tcStr, 'Competencia'),5,2);
-    NFSe.Competencia := Copy(Leitor.rCampo(tcStr, 'Competencia'),1,4) + '/' +
-      IfThen(Length(NFSe.Competencia) = 1, '0' + NFSe.Competencia, NFSe.Competencia);
-  end
+  case FProvedor of
+    proTecnos:
+      NFSe.Competencia := DateTimeToStr(StrToFloatDef(Leitor.rCampo(tcDatHor, 'Competencia'), 0));
+
+    proSigCorp:
+      begin
+        NFSe.Competencia := Copy(Leitor.rCampo(tcStr, 'Competencia'),5,2);
+        NFSe.Competencia := Copy(Leitor.rCampo(tcStr, 'Competencia'),1,4) + '/' +
+          IfThen(Length(NFSe.Competencia) = 1, '0' + NFSe.Competencia, NFSe.Competencia);
+      end;
+
+    proSimplISSv2:
+      NFSe.Competencia := DateToStr(Leitor.rCampo(tcDat, 'Competencia'));
   else
     NFSe.Competencia := Leitor.rCampo(tcStr, 'Competencia');
+  end;
 
   NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
   NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
@@ -4350,6 +4375,7 @@ begin
   NFSe.Prestador.ChaveAcesso        := Leitor.rCampo(tcStr, 'ChvAcs');
   NFSe.Numero                       := Leitor.rCampo(tcStr, 'NumNot');
   NFSe.IdentificacaoRps.Numero      := Leitor.rCampo(tcStr, 'NumRps');
+  NFSe.CodigoVerificacao            := Leitor.rCampo(tcStr, 'CodVer');
 
   if (Leitor.rExtrai(1, 'Nfse') <> '') then
   begin

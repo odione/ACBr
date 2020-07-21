@@ -37,7 +37,7 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComCtrls, StdCtrls,
   Spin, Buttons, DBCtrls, ExtCtrls, Grids, ACBrTEFD, ACBrPosPrinter,
-  ACBrTEFDClass, uVendaClass, ACBrTEFDCliSiTef, ACBrTEFPayGoWebComum,
+  ACBrTEFDClass, uVendaClass, ACBrTEFDCliSiTef, ACBrTEFPayGoComum, ACBrTEFPayGoWebComum,
   ACBrTEFComum, ACBrTEFDPayGoWeb, ImgList, ACBrBase;
 
 type
@@ -94,9 +94,11 @@ type
     Label18: TLabel;
     Label19: TLabel;
     Label8: TLabel;
+    lMensagemCliente: TLabel;
+    lMensagemOperador: TLabel;
     lNumOperacao: TLabel;
-    Label15: TLabel;
-    Label17: TLabel;
+    lTituloMsgOperador: TLabel;
+    lTituloMensagemCliente: TLabel;
     Label25: TLabel;
     Label26: TLabel;
     Label27: TLabel;
@@ -199,7 +201,7 @@ type
     procedure lURLTEFClick(Sender: TObject);
     procedure PayGoWebAguardaPinPad(
       OperacaoPinPad: TACBrTEFPGWebAPIOperacaoPinPad; var Cancelar: Boolean);
-    procedure PayGoWebAvaliarTransacaoPendente(var Confirmar: Boolean;
+    procedure PayGoWebAvaliarTransacaoPendente(var Status: Cardinal;
       const Mensagem: String; Resp: TACBrTEFDResp);
     procedure PayGoWebExibeMensagem(Mensagem: String;
       Terminal: TACBrTEFPGWebAPITerminalMensagem; MilissegundosExibicao: Integer);
@@ -208,6 +210,7 @@ type
     procedure PayGoWebObtemCampo(
       DefinicaoCampo: TACBrTEFPGWebAPIDefinicaoCampo; var Resposta: String;
       var Validado: Boolean; var Cancelado: Boolean);
+    procedure SbArqLogClick(Sender: TObject);
     procedure sbLimparLogClick(Sender: TObject);
     procedure seTotalAcrescimoChange(Sender: TObject);
     procedure seTotalDescontoChange(Sender: TObject);
@@ -397,15 +400,21 @@ begin
 end;
 
 procedure TFormPrincipal.PayGoWebAvaliarTransacaoPendente(
-  var Confirmar: Boolean; const Mensagem: String; Resp: TACBrTEFDResp);
+  var Status: Cardinal; const Mensagem: String; Resp: TACBrTEFDResp);
 var
   MR: TModalResult;
 begin
   // Aqui você pode Confirmar ou Cancelar as transações pendentes de acordo com a sua lógica
   // Ou ainda, fazer uma pergunta ao usuário, como nesse exemplo...
+  // Veja os valores possíveis, para "Status", em ACBrTEFPayGoWebComum.pas, procure por: "PWCNF_"
+
   MR := mrYes;
   ACBrTEFD1ExibeMsg( opmYesNo, Mensagem + sLineBreak + sLineBreak + 'Confirmar ?', MR);
-  Confirmar := (MR = mrYes);
+
+  if (MR = mrNo) then
+    Status := PWCNF_REV_PWR_AUT
+  else
+    Status := PWCNF_CNF_MANU_AUT;
 end;
 
 procedure TFormPrincipal.PayGoWebExibeMensagem(Mensagem: String;
@@ -527,6 +536,18 @@ begin
   finally
     FormObtemCampo.Free;
   end;
+end;
+
+procedure TFormPrincipal.SbArqLogClick(Sender: TObject);
+var
+  AFileLog: String;
+begin
+  if pos(PathDelim,edLog.Text) = 0 then
+    AFileLog := ExtractFilePath( Application.ExeName ) + edLog.Text
+  else
+    AFileLog := edLog.Text;
+
+  OpenURL( AFileLog );
 end;
 
 procedure TFormPrincipal.btImprimirClick(Sender: TObject);
@@ -667,7 +688,7 @@ begin
 
     opmDestaqueVia:
       begin
-        OldMensagem := pMensagemOperador.Caption ;
+        OldMensagem := lMensagemOperador.Caption;
         try
           { Aguardando 3 segundos }
           Fim := IncSecond(now, 3)  ;
@@ -782,7 +803,7 @@ begin
       begin
         Req.GravaInformacao(730,000,'1');  // 1: venda (pagamento com cartão)
         Req.GravaInformacao(731,000,'1');  // 1: crédito
-        Req.GravaInformacao(732,000,'1');  // 1: à vista
+        //Req.GravaInformacao(732,000,'1');  // 1: à vista
       end
 
       // Instruindo CRT a apenas transações de Débito
@@ -790,7 +811,7 @@ begin
       begin
         Req.GravaInformacao(730,000,'1');  // 1: venda (pagamento com cartão)
         Req.GravaInformacao(731,000,'2');  // 2: débito
-        Req.GravaInformacao(732,000,'1');  // 1: à vista
+        //Req.GravaInformacao(732,000,'1');  // 1: à vista
       end;
 
       FIndicePagto := '';
@@ -981,7 +1002,7 @@ begin
              RetornoECF := 'V' ;
            stsEmPagamento:
              RetornoECF := 'P' ;
-           stsLivre, stsFinalizada, stsCancelada, stsOperacaoTEF:
+           stsLivre, stsFinalizada, stsCancelada, stsAguardandoTEF, stsOperacaoTEF:
              RetornoECF := 'L' ;
          else
            RetornoECF := 'O' ;
@@ -1322,7 +1343,7 @@ begin
   begin
     // SiTef precisa de parâmetros extras, vamos informar...
     ACBrTEFD1.TEFCliSiTef.PinPadIdentificador := '01.123.456/0001-07';
-    ACBrTEFD1.TEFCliSiTef.PinPadChaveAcesso := 'Chave Fornecida pela Software Express, eclusiva para o Identificador acima';
+    ACBrTEFD1.TEFCliSiTef.PinPadChaveAcesso := 'Chave Fornecida pela Software Express, exclusiva para o Identificador acima';
   end;
 
   ACBrTEFD1.CDP('F', Saida);  // F=CPF
@@ -1454,7 +1475,7 @@ var
     if (ACBrTEFD1.GPAtual = gpPayGoWeb) then
     begin
       ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_CARDTYPE]:='01'; //01: crédito
-      ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_FINTYPE]:='01'; //01: à vista
+      //ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_FINTYPE]:='01'; //01: à vista
     end
     else if (ACBrTEFD1.GPAtual = gpCliSiTef) then
       ACBrTEFD1.TEFCliSiTef.OperacaoCRT := 3;
@@ -1466,7 +1487,7 @@ var
     if (ACBrTEFD1.GPAtual = gpPayGoWeb) then
     begin
       ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_CARDTYPE]:='02'; //02: débito
-      ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_FINTYPE]:='01'; //01: à vista
+      //ACBrTEFD1.TEFPayGoWeb.ParametrosAdicionais.ValueInfo[PWINFO_FINTYPE]:='01'; //01: à vista
     end
     else if (ACBrTEFD1.GPAtual = gpCliSiTef) then
       ACBrTEFD1.TEFCliSiTef.OperacaoCRT := 2;
@@ -1484,7 +1505,7 @@ begin
 
   try
     // ** NOTA **
-    // Usa '01' como Indice de Forma de Pagamento para todas as operações TEF,
+    // Usa '01' como Indice de Forma de Pagamento de ECF, para todas as operações TEF,
     // para evitar que o ACBrTEFD tente separar os Comprovantes por Forma de Pagamento
 
     if (Indice = '02') then          // 02-CHEQUE
@@ -1715,13 +1736,13 @@ end;
 procedure TFormPrincipal.MensagemTEF(const MsgOperador, MsgCliente: String);
 begin
   if (MsgOperador <> '') then
-    pMensagemOperador.Caption := MsgOperador;
+    lMensagemOperador.Caption := MsgOperador;
 
   if (MsgCliente <> '') then
-    pMensagemCliente.Caption := MsgCliente;
+    lMensagemCliente.Caption := MsgCliente;
 
-  pMensagemOperador.Visible := (Trim(pMensagemOperador.Caption) <> '');
-  pMensagemCliente.Visible := (Trim(pMensagemCliente.Caption) <> '');
+  pMensagemOperador.Visible := (Trim(lMensagemOperador.Caption) <> '');
+  pMensagemCliente.Visible := (Trim(lMensagemCliente.Caption) <> '');
   pMensagem.Visible := pMensagemOperador.Visible or pMensagemCliente.Visible;
   Application.ProcessMessages;
 end;
@@ -1742,7 +1763,7 @@ begin
   ACBrTEFD1.SuportaDesconto := cbSuportaDesconto.Checked;
   ACBrTEFD1.SuportaSaque := cbSuportaSaque.Checked;
 
-  ACBrTEFD1.Identificacao.RazaoSocial := edRazaoSocial.Text;
+  ACBrTEFD1.Identificacao.SoftwareHouse := edRazaoSocial.Text;
   ACBrTEFD1.Identificacao.RegistroCertificacao := edRegistro.Text;
   ACBrTEFD1.Identificacao.NomeAplicacao := edAplicacaoNome.Text;
   ACBrTEFD1.Identificacao.VersaoAplicacao := edAplicacaoVersao.Text;
