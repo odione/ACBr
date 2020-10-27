@@ -1,8 +1,6 @@
 object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Left = 435
-  Top = 231
   Height = 341
   Width = 539
   object frxPDFExport: TfrxPDFExport
@@ -14,6 +12,7 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     Outline = False
     Background = True
     HTMLTags = True
+    Quality = 95
     Author = 'FastReport'
     Subject = 'Exportando DANFE para PDF'
     ProtectionFlags = [ePrint, eModify, eCopy, eAnnot]
@@ -46,7 +45,7 @@ object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
     Top = 200
   end
   object frxReport: TfrxReport
-    Version = '4.12.6'
+    Version = '5.6.14'
     DotMatrixReport = False
     IniFile = '\Software\Fast Reports'
     PreviewOptions.AllowEdit = False
