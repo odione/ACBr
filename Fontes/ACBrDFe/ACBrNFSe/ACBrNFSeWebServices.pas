@@ -2025,6 +2025,7 @@ begin
            proEL,
            proFISSLex,
            proGiap,
+           proDSFv2,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
            proCTA: FTagI := '<' + FTagGrupo + ' xmlns:ns1="http://localhost:8080/WsNFe2/lote" '+
@@ -2048,8 +2049,6 @@ begin
 //           proSimplISSv2: FTagI := '<' + FTagGrupo + FNameSpaceDad +
 //                                   ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'+
 //                                   ' xmlns:xsd="http://www.w3.org/2001/XMLSchema">';
-
-           proSiapSistemas: FTagI := '<san:' + FTagGrupo + FNameSpaceDad + '>';
          else
            FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
          end;
@@ -2128,6 +2127,7 @@ begin
            proEL,
            proTinus,
            proGeisWeb,
+           proDSFv2,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
            proSP: FTagI := '<' + FTagGrupo +
@@ -2176,6 +2176,7 @@ begin
 
            proEL,
            proTinus,
+           proDSFv2,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
            proSJP: FTagI := '<' + FTagGrupo + FNameSpaceDad + ' Id="consultar">';
@@ -2226,6 +2227,7 @@ begin
            proSP, 
            proTinus,
            proGeisWeb,
+           proDSFv2,
            proNotaBlu: FTagI := '<' + FTagGrupo + '>';
 
            proAssessorPublico,
@@ -2290,6 +2292,7 @@ begin
            proPronimv2,
            proTinus,
            proGeisWeb,
+           proDSFv2,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
            proSP: FTagI := '<' + FTagGrupo +
@@ -2342,6 +2345,7 @@ begin
 
            proEGoverneISS,
            proTinus,
+           proDSFv2,
            proSimplISS: FTagI := '<' + FTagGrupo + '>';
 
            proAssessorPublico,
@@ -2369,6 +2373,9 @@ begin
 //           proSimplISSv2: FTagI := '<' + FTagGrupo + FNameSpaceDad +
 //                                   ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'+
 //                                   ' xmlns:xsd="http://www.w3.org/2001/XMLSchema">';
+
+           proDSFv2:
+             FTagI := '<' + FTagGrupo + '>';
          else
            FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
          end;	 
@@ -2394,14 +2401,14 @@ begin
            proSMARAPD,
            proGiap,
            proIPM: FTagI := '';
-         else begin
-                FTagI := '<' + FTagGrupo + FNameSpaceDad + '>' +
-                          '<' + FPrefixo3 + 'SubstituicaoNfse>'{ +
-                           '<' + FPrefixo3 + 'Pedido>' +
-                            '<' + FPrefixo4 + 'InfPedidoCancelamento' +
-                              ifThen(FPConfiguracoesNFSe.Geral.ConfigGeral.Identificador <> '', ' ' +
-                                     FPConfiguracoesNFSe.Geral.ConfigGeral.Identificador + '="' + FURI + '"', '') + '>'};
-              end;
+
+           proDSFv2:
+             FTagI := '<' + FTagGrupo + '>';
+         else
+           begin
+             FTagI := '<' + FTagGrupo + FNameSpaceDad + '>' +
+                      '<' + FPrefixo3 + 'SubstituicaoNfse>';
+           end;
          end;
        end;
 
@@ -2428,8 +2435,6 @@ begin
            proIPM,
            proSMARAPD,
            proSigISS: FTagF := '';
-
-           proSiapSistemas: FTagF := '</san:' + FTagGrupo + '>';
          else
            FTagF := '</' + FTagGrupo + '>';
          end;
@@ -3020,7 +3025,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'EnviarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'EnviarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         case FPConfiguracoesNFSe.Geral.CodigoMunicipio of
           2407104:  // Macaiba/RN
@@ -4002,7 +4008,8 @@ begin
 
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarSituacaoLoteRpsEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarSituacaoLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
           FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
@@ -4250,7 +4257,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
           FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
@@ -4514,7 +4522,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseRpsEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
           FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
@@ -4673,7 +4682,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
           FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
@@ -5110,7 +5120,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        FPDadosMsg := StringReplace(FPDadosMsg, 'CancelarNfseEnvio', 'Arg', [rfReplaceAll]);
+        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+          FPDadosMsg := StringReplace(FPDadosMsg, 'CancelarNfseEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
           FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus', 'www2.tinus', [rfReplaceAll])
@@ -5382,11 +5393,17 @@ begin
   // mesmo assinado da propriedade FPDadosMsg
   if (FPConfiguracoesNFSe.Geral.ConfigAssinar.Substituir) and (FPDadosMsg <> '') then
     AssinarXML(FPDadosMsg, FdocElemento, FinfElemento, 'Falha ao Assinar - Substituir NFS-e: ');
-    
-  FPDadosMsg := '<' + FPrefixo3 + 'SubstituirNfseEnvio' + FNameSpaceDad + '>' +
-                '<' + FPrefixo3 + 'SubstituicaoNfse'+ Identificador + '>' +
-                 SeparaDados(FPDadosMsg, FPrefixo3 + 'Pedido', True) +
-                 FvNotas  + FTagF;
+
+  if Provedor = proDSFv2 then
+    FPDadosMsg := '<' + FPrefixo3 + 'SubstituirNfseEnvio>' +
+                  '<' + FPrefixo3 + 'SubstituicaoNfse'+ Identificador + '>' +
+                   SeparaDados(FPDadosMsg, FPrefixo3 + 'Pedido', True) +
+                   FvNotas  + FTagF
+  else
+    FPDadosMsg := '<' + FPrefixo3 + 'SubstituirNfseEnvio' + FNameSpaceDad + '>' +
+                  '<' + FPrefixo3 + 'SubstituicaoNfse'+ Identificador + '>' +
+                   SeparaDados(FPDadosMsg, FPrefixo3 + 'Pedido', True) +
+                   FvNotas  + FTagF;
 
   if Provedor in [proWebISSv2] then
     AssinarXML(FPDadosMsg, 'SubstituirNfseEnvio', 'SubstituicaoNfse', 'Falha ao Assinar - SubstituirNfseEnvio: ');
