@@ -289,7 +289,7 @@ implementation
 
 uses
   Math, DateUtils, StrUtils,
-  ACBrConsts, ACBrUtil;
+  ACBrTEFPayGoRedes, ACBrConsts, ACBrUtil;
 
 procedure ConteudoToPropertyPayGoWeb(AACBrTEFResp: TACBrTEFResp);
 
@@ -415,6 +415,7 @@ var
   I, AInt: Integer;
   LinStr: String;
   Linha: TACBrTEFLinha;
+  ARede: TACBrTEFPayGoRede;
 begin
   with AACBrTEFResp do
   begin
@@ -499,7 +500,21 @@ begin
           DataHoraTransacaoHost :=  Linha.Informacao.AsTimeStampSQL;
 
         PWINFO_AUTHSYST:
+        begin
           Rede := LinStr;
+          if (Trim(Rede) <> '') then
+          begin
+            ARede := TabelaRedes.FindPGWeb(Rede);
+            if Assigned(ARede) then
+            begin
+              if (NFCeSAT.Bandeira = '') then
+                NFCeSAT.Bandeira := ARede.NomePGWeb;
+
+              NFCeSAT.CNPJCredenciadora := ARede.CNPJ;
+              NFCeSAT.CodCredenciadora := IntToStrZero(ARede.CodSATCFe, 3);
+            end;
+          end;
+        end;
 
         PWINFO_CARDNAME:
         begin
@@ -722,7 +737,7 @@ begin
     PWINFO_PRODCLIRCPT:     Result := 'PWINFO_PRODCLIRCPT';
     PWINFO_EMVCRYPTTYPE:    Result := 'PWINFO_EMVCRYPTTYPE';
     PWINFO_TRNORIGAUTHCODE: Result := 'PWINFO_TRNORIGAUTHCODE';
-    PWINFO_PAYMNTTYPE:      Result := 'PWINFO_PAYMNTMODE';
+    PWINFO_PAYMNTTYPE:      Result := 'PWINFO_PAYMNTTYPE';
     PWINFO_GRAPHICRCPHEADER: Result := 'PWINFO_GRAPHICRCPHEADER';
     PWINFO_GRAPHICRCPFOOTER: Result := 'PWINFO_GRAPHICRCPFOOTER';
     PWINFO_CHOLDERNAME:     Result := 'PWINFO_CHOLDERNAME';

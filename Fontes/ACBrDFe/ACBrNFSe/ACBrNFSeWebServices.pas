@@ -41,14 +41,13 @@ uses
   ACBrNFSeNotasFiscais, ACBrNFSeConfiguracoes,
   pnfsNFSe, pnfsNFSeG, pnfsConversao, pnfsLerListaNFSe, pnfsEnvLoteRpsResposta,
   pnfsConsSitLoteRpsResposta, pnfsCancNfseResposta, pnfsSubsNfseResposta,
-  pnfsAbrirSessaoResposta, synacode;
+  pnfsAbrirSessaoResposta, synacode, pnfsConsURLResposta;
 
 type
 
   { TNFSeWebService }
 
   TNFSeWebService = class(TDFeWebService)
-  private
   protected
     FPConfiguracoesNFSe: TConfiguracoesNFSe;
 
@@ -124,6 +123,7 @@ type
     function RemoverCharControle(const AXML: String): String;
     function DefinirDadosSenha(ATexto: String): String;
     function GerarXmlNotaEL(const aXmlRps, aXmlRetorno: string): string;
+    function GerarXmlNotaEquiplano(const aXmlRps, aXmlRetorno: string): string;
 
   public
     constructor Create(AOwner: TACBrDFe); override;
@@ -407,6 +407,7 @@ type
     FCNPJInter: String;
     FIMInter: String;
     FSerie: String;
+    FNumeroLote: String;
 
   protected
     procedure DefinirURL; override;
@@ -432,6 +433,43 @@ type
     property CNPJInter: String      read FCNPJInter    write FCNPJInter;
     property IMInter: String        read FIMInter      write FIMInter;
     property Serie: String          read FSerie        write FSerie;
+    property NumeroLote: String     read FNumeroLote   write FNumeroLote;
+  end;
+
+{ TNFSeConsultarURL }
+
+  TNFSeConsultarURL = Class(TNFSeWebService)
+  private
+    FNumeroLote: String;
+    FNumeroNFSe: String;
+    FCNPJPrestador: String;
+    FSerie: String;
+    FIMPrestador: String;
+    FCodigoTribMun: String;
+    FRetURL: TRetURL;
+
+  protected
+    procedure DefinirURL; override;
+    procedure DefinirServicoEAction; override;
+    procedure DefinirDadosMsg; override;
+    function TratarResposta: Boolean; override;
+    procedure FinalizarServico; override;
+    function GerarMsgLog: String; override;
+    function GerarPrefixoArquivo: String; override;
+  public
+    constructor Create(AOwner: TACBrDFe; ANotasFiscais: TNotasFiscais);
+      reintroduce; overload;
+    destructor Destroy; override;
+    procedure Clear; override;
+
+    property CNPJPrestador: String  read FCNPJPrestador write FCNPJPrestador;
+    property IMPrestador: String    read FIMPrestador   write FIMPrestador;
+    property NumeroNFSe: String     read FNumeroNFSe    write FNumeroNFSe;
+    property CodigoTribMun: String  read FCodigoTribMun write FCodigoTribMun;
+    property Serie: String          read FSerie         write FSerie;
+    property NumeroLote: String     read FNumeroLote    write FNumeroLote;
+
+    property RetURL: TRetURL read FRetURL write FRetURL;
   end;
 
 { TNFSeCancelarNFSe }
@@ -624,6 +662,7 @@ type
     FFecharSessao: TNFSeFecharSessao;
 
     FEnvioWebService: TNFSeEnvioWebService;
+    FConsURL: TNFSeConsultarURL;
 
   public
     constructor Create(AOwner: TACBrDFe); overload;
@@ -659,7 +698,12 @@ type
                           const ANomeInter: String = '';
                           const ACNPJInter: String = '';
                           const AIMInter: String = '';
-                          const ASerie: String = ''): Boolean;
+                          const ASerie: String = '';
+                          const ANumLote: String = ''): Boolean;
+
+    function ConsultaURL(const ACNPJPrestador, AIMPrestador : string;
+                         const ANumeroNFSe, ACodigoTribMun : string) : Boolean;
+
 
     function CancelaNFSe(const ACodigoCancelamento: String;
                          const ANumeroNFSe: String = '';
@@ -684,6 +728,7 @@ type
     property SubNFSe: TNFSeSubstituirNFSe                  read FSubNFSe         write FSubNFSe;
     property AbrirSessao: TNFSeAbrirSessao                 read FAbrirSessao     write FAbrirSessao;
     property FecharSessao: TNFSeFecharSessao               read FFecharSessao    write FFecharSessao;
+    property ConsURL: TNFSeConsultarURL                    read FConsURL         write FConsURL;
 
     property EnvioWebService: TNFSeEnvioWebService         read FEnvioWebService write FEnvioWebService;
   end;
@@ -792,109 +837,111 @@ begin
 
   Texto := Texto + FDadosEnvelope;
 
-  if FProvedor = proIPM then
-  begin
-    Bound := IntToHex( Random( MaxInt ), 8 ) + '_Synapse_boundary';
+  case FProvedor of
+    proIPM:
+      begin
+        Bound := IntToHex( Random( MaxInt ), 8 ) + '_Synapse_boundary';
 
-    UsuarioWeb := Trim(FPConfiguracoesNFSe.Geral.Emitente.WebUser);
-    if UsuarioWeb = '' then
-      UsuarioWeb := Trim(FPConfiguracoesNFSe.Geral.UserWeb);
+        UsuarioWeb := Trim(FPConfiguracoesNFSe.Geral.Emitente.WebUser);
+        if UsuarioWeb = '' then
+          UsuarioWeb := Trim(FPConfiguracoesNFSe.Geral.UserWeb);
 
-    SenhaWeb := Trim(FPConfiguracoesNFSe.Geral.Emitente.WebSenha);
-    if SenhaWeb = '' then
-      SenhaWeb := Trim(FPConfiguracoesNFSe.Geral.SenhaWeb);
+        SenhaWeb := Trim(FPConfiguracoesNFSe.Geral.Emitente.WebSenha);
+        if SenhaWeb = '' then
+          SenhaWeb := Trim(FPConfiguracoesNFSe.Geral.SenhaWeb);
 
-    if UsuarioWeb = '' then
-      GerarException(ACBrStr('O provedor IPM necessita que a propriedade: Configuracoes.Geral.Emitente.WebUser seja informada.'));
+        if UsuarioWeb = '' then
+          GerarException(ACBrStr('O provedor IPM necessita que a propriedade: Configuracoes.Geral.Emitente.WebUser seja informada.'));
 
-    if SenhaWeb = '' then
-      GerarException(ACBrStr('O provedor IPM necessita que a propriedade: Configuracoes.Geral.Emitente.WebSenha seja informada.'));
+        if SenhaWeb = '' then
+          GerarException(ACBrStr('O provedor IPM necessita que a propriedade: Configuracoes.Geral.Emitente.WebSenha seja informada.'));
 
-    Texto := Texto +
-      '--' + Bound + sLineBreak +
-      'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'login', '"') + sLineBreak +
-      sLineBreak +
+        Texto := Texto +
+          '--' + Bound + sLineBreak +
+          'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'login', '"') + sLineBreak +
+          sLineBreak +
 
-      UsuarioWeb +
+          UsuarioWeb +
 
-      sLineBreak + '--' + Bound + sLineBreak +
-      'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'senha', '"') + sLineBreak +
-      sLineBreak +
+          sLineBreak + '--' + Bound + sLineBreak +
+          'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'senha', '"') + sLineBreak +
+          sLineBreak +
 
-      SenhaWeb +
+          SenhaWeb +
 
-      sLineBreak + '--' + Bound + sLineBreak +
-      'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'f1', '"' ) + '; ' +
-      'filename=' + AnsiQuotedStr( GerarPrefixoArquivo + '-' + FPArqEnv + '.xml', '"') + sLineBreak +
-      'Content-Type: text/xml' + sLineBreak +
-      sLineBreak +
+          sLineBreak + '--' + Bound + sLineBreak +
+          'Content-Disposition: form-data; name=' + AnsiQuotedStr( 'f1', '"' ) + '; ' +
+          'filename=' + AnsiQuotedStr( GerarPrefixoArquivo + '-' + FPArqEnv + '.xml', '"') + sLineBreak +
+          'Content-Type: text/xml' + sLineBreak +
+          sLineBreak +
 
-      FPDadosMsg +
+          FPDadosMsg +
 
-      sLineBreak +
-      '--' + Bound + '--' + sLineBreak;
+          sLineBreak +
+          '--' + Bound + '--' + sLineBreak;
 
-    FPMimeType := 'multipart/form-data; boundary=' + AnsiQuotedStr( Bound, '"' );
-  end
+        FPMimeType := 'multipart/form-data; boundary=' + AnsiQuotedStr( Bound, '"' );
+      end
   else
-  begin
-    if FPConfiguracoesNFSe.WebServices.Ambiente = taProducao then
-      NameSpaceTemp := FPConfiguracoesNFSe.Geral.ConfigNameSpace.Producao
-    else
-      NameSpaceTemp := FPConfiguracoesNFSe.Geral.ConfigNameSpace.Homologacao;
-
-    if FProvedor in [proSafeWeb, proTcheInfov2] then
-      FPCabMsg := StringReplace(FPCabMsg, '%SenhaMsg%' , FDadosSenha, [rfReplaceAll]);
-
-    CabMsg := FPCabMsg;
-    if FCabecalhoStr then
     begin
-      CabMsg := StringReplace(CabMsg, '<', '&lt;', [rfReplaceAll]);
-      CabMsg := StringReplace(CabMsg, '>', '&gt;', [rfReplaceAll]);
-    end;
+      if FPConfiguracoesNFSe.WebServices.Ambiente = taProducao then
+        NameSpaceTemp := FPConfiguracoesNFSe.Geral.ConfigNameSpace.Producao
+      else
+        NameSpaceTemp := FPConfiguracoesNFSe.Geral.ConfigNameSpace.Homologacao;
 
-    CabMsg := StringReplace(CabMsg, '%NameSpace%', NameSpaceTemp, [rfReplaceAll]);
-    CabMsg := StringReplace(CabMsg, '%NameSpaceXML%', NameSpace, [rfReplaceAll]);
-    CabMsg := StringReplace(CabMsg, '%VersaoAtrib%', FPConfiguracoesNFSe.Geral.ConfigXML.VersaoAtrib, [rfReplaceAll]);
-    CabMsg := StringReplace(CabMsg, '%VersaoDados%', FPConfiguracoesNFSe.Geral.ConfigXML.VersaoDados, [rfReplaceAll]);
+      if FProvedor in [proSafeWeb, proTcheInfov2] then
+        FPCabMsg := StringReplace(FPCabMsg, '%SenhaMsg%' , FDadosSenha, [rfReplaceAll]);
 
-    DadosMsg := FPDadosMsg;
-    if FDadosStr then
-    begin
-      DadosMsg := StringReplace(DadosMsg, '<', '&lt;', [rfReplaceAll]);
-      DadosMsg := StringReplace(DadosMsg, '>', '&gt;', [rfReplaceAll]);
-    end;
+      CabMsg := FPCabMsg;
+      if FCabecalhoStr then
+      begin
+        CabMsg := StringReplace(CabMsg, '<', '&lt;', [rfReplaceAll]);
+        CabMsg := StringReplace(CabMsg, '>', '&gt;', [rfReplaceAll]);
+      end;
 
-    // Alterações no conteudo de DadosMsg especificas para alguns provedores
-    case FProvedor of
-      proGinfes:
-        begin
-          if (FPLayout = LayNfseCancelaNfse) then
+      CabMsg := StringReplace(CabMsg, '%NameSpace%', NameSpaceTemp, [rfReplaceAll]);
+      CabMsg := StringReplace(CabMsg, '%NameSpaceXML%', NameSpace, [rfReplaceAll]);
+      CabMsg := StringReplace(CabMsg, '%VersaoAtrib%', FPConfiguracoesNFSe.Geral.ConfigXML.VersaoAtrib, [rfReplaceAll]);
+      CabMsg := StringReplace(CabMsg, '%VersaoDados%', FPConfiguracoesNFSe.Geral.ConfigXML.VersaoDados, [rfReplaceAll]);
+
+      DadosMsg := FPDadosMsg;
+      if FDadosStr then
+      begin
+        DadosMsg := StringReplace(DadosMsg, '<', '&lt;', [rfReplaceAll]);
+        DadosMsg := StringReplace(DadosMsg, '>', '&gt;', [rfReplaceAll]);
+      end;
+
+      // Alterações no conteudo de DadosMsg especificas para alguns provedores
+      case FProvedor of
+        proGinfes:
           begin
-            DadosMsg := StringReplace(DadosMsg, '<', '&lt;', [rfReplaceAll]);
-            DadosMsg := StringReplace(DadosMsg, '>', '&gt;', [rfReplaceAll]);
+            if (FPLayout = LayNfseCancelaNfse) then
+            begin
+              DadosMsg := StringReplace(DadosMsg, '<', '&lt;', [rfReplaceAll]);
+              DadosMsg := StringReplace(DadosMsg, '>', '&gt;', [rfReplaceAll]);
+            end;
           end;
-        end;
 
-      proPronim:
-        DadosMsg := StringReplace(DadosMsg, ' xmlns="http://www.abrasf.org.br/ABRASF/arquivos/nfse.xsd"', '', [rfReplaceAll]);
+        proPronim:
+          DadosMsg := StringReplace(DadosMsg, ' xmlns="http://www.abrasf.org.br/ABRASF/arquivos/nfse.xsd"', '', [rfReplaceAll]);
 
-      proPronimV2:
-        DadosMsg := StringReplace(DadosMsg, ' xmlns="http://www.abrasf.org.br/nfse.xsd"', '', [rfReplaceAll]);
+        proPronimV2:
+          DadosMsg := StringReplace(DadosMsg, ' xmlns="http://www.abrasf.org.br/nfse.xsd"', '', [rfReplaceAll]);
 
-//      proSigep:    DadosMsg := Copy(DadosMsg, (pos('&lt;p:credenciais',DadosMsg)), length(DadosMsg));
+  //      proSigep:    DadosMsg := Copy(DadosMsg, (pos('&lt;p:credenciais',DadosMsg)), length(DadosMsg));
+      end;
+
+      // %SenhaMsg%  : Representa a Mensagem que contem o usuário e senha
+      // %NameSpace% : Representa o NameSpace de Homologação/Produção
+      // %CabMsg%    : Representa a Mensagem de Cabeçalho
+      // %DadosMsg%  : Representa a Mensagem de Dados
+
+      Texto := StringReplace(Texto, '%SenhaMsg%' , FDadosSenha, [rfReplaceAll]);
+      Texto := StringReplace(Texto, '%NameSpace%', NameSpaceTemp  , [rfReplaceAll]);
+      Texto := StringReplace(Texto, '%CabMsg%'   , CabMsg     , [rfReplaceAll]);
+      Texto := StringReplace(Texto, '%DadosMsg%' , DadosMsg   , [rfReplaceAll]);
+      Texto := StringReplace(Texto, '%inscricaoMunicipal%', FPConfiguracoesNFSe.Geral.Emitente.InscMun, [rfReplaceAll]);
     end;
-
-    // %SenhaMsg%  : Representa a Mensagem que contem o usuário e senha
-    // %NameSpace% : Representa o NameSpace de Homologação/Produção
-    // %CabMsg%    : Representa a Mensagem de Cabeçalho
-    // %DadosMsg%  : Representa a Mensagem de Dados
-
-    Texto := StringReplace(Texto, '%SenhaMsg%' , FDadosSenha, [rfReplaceAll]);
-    Texto := StringReplace(Texto, '%NameSpace%', NameSpaceTemp  , [rfReplaceAll]);
-    Texto := StringReplace(Texto, '%CabMsg%'   , CabMsg     , [rfReplaceAll]);
-    Texto := StringReplace(Texto, '%DadosMsg%' , DadosMsg   , [rfReplaceAll]);
-    Texto := StringReplace(Texto, '%inscricaoMunicipal%', FPConfiguracoesNFSe.Geral.Emitente.InscMun, [rfReplaceAll]);
   end;
 
   {Configura Authorization para GIAP}
@@ -906,13 +953,24 @@ begin
 
   FPEnvelopeSoap := Texto;
 
-  if (FPConfiguracoesNFSe.Geral.Provedor = proCenti) and
-     (FPConfiguracoesNFSe.Geral.CodigoMunicipio = 5218805 {Rio Verde-GO}) then
+  if (FPConfiguracoesNFSe.Geral.Provedor = proCenti)
+//    and
+//     (FPConfiguracoesNFSe.Geral.CodigoMunicipio = 5218805 {Rio Verde-GO})
+     then
   begin
     FPMimeType := 'application/json';
     DadosMsg := StringReplace(FPDadosMsg, '"', '''', [rfReplaceAll]);
+    DadosMsg := StringReplace(DadosMsg, #10, '', [rfReplaceAll]);
+    DadosMsg := StringReplace(DadosMsg, #13, '', [rfReplaceAll]);
     FPEnvelopeSoap := Format('{"xml": "%s", "usuario": "%s", "senha": "%s"}',
      [DadosMsg, FPConfiguracoesNFSe.Geral.UserWeb, FPConfiguracoesNFSe.Geral.SenhaWeb]);
+  end;
+
+  if (FProvedor = proTinus) and
+     (FPConfiguracoesNFSe.Geral.CodigoMunicipio = 2607208) then
+  begin
+    FPEnvelopeSoap := StringReplace(FPEnvelopeSoap, '"http://www.tinus.com.br"', '"http://www.abrasf.org.br/nfse.xsd"', [rfReplaceAll]);
+    FPEnvelopeSoap := StringReplace(FPEnvelopeSoap, '"http://www2.tinus.com.br"', '"http://www.abrasf.org.br/nfse.xsd"', [rfReplaceAll]);
   end;
 end;
 
@@ -931,6 +989,9 @@ begin
     FPMimeType := 'text/xml';
 
   FPDFeOwner.SSL.UseCertificateHTTP := FPConfiguracoesNFSe.Geral.ConfigGeral.UseCertificateHTTP;
+
+  if FProvedor = proGiap then
+    self.FPAuthorizationHeader := FPConfiguracoesNFSe.Geral.Emitente.WebChaveAcesso;
 
   TACBrNFSe(FPDFeOwner).SetStatus(FPStatus);
 end;
@@ -981,6 +1042,23 @@ begin
                 aRPSp2 +
               '</Nfse>' +
             '</tcListaNFse>';
+end;
+
+function TNFSeWebService.GerarXmlNotaEquiplano(const aXmlRps,
+  aXmlRetorno: string): string;
+var
+  aRPS, aNFSE: string;
+begin
+  aRPS  := SeparaDados(aXmlRps, 'rps', False);
+//  aNFSE := SeparaDados(aXmlRetorno, 'nfse', False);
+  aNFSE := aXmlRetorno;
+
+  Result := '<compNfse xmlns="http://www.equiplano.com.br/esnfs">' +
+              '<nfse>' +
+                aNFSE +
+                aRPS +
+              '</nfse>' +
+            '</compNfse>';
 end;
 
 function TNFSeWebService.GerarCabecalhoSoap: String;
@@ -1521,11 +1599,19 @@ begin
     else
        FRetNFSe := GerarRetornoNFSe(FRetornoNFSe.ListaNFSe.CompNFSe.Items[i].NFSe.XML);
 
-    if FProvedor = proEL then
+    if FProvedor in [proEL, proEquiplano] then
     begin
       XmlRps     := FNotasFiscais.Items[ii].XMLAssinado;
       XmlRetorno := FRetornoNFSe.ListaNFSe.CompNFSe.Items[i].NFSe.XML;
-      FRetNFSe   := GerarXmlNotaEL(XmlRps, XmlRetorno);
+
+      case FProvedor of
+        proEL:
+          FRetNFSe := GerarXmlNotaEL(XmlRps, XmlRetorno);
+        proEquiplano:
+          FRetNFSe := GerarXmlNotaEquiplano(XmlRps, XmlRetorno);
+      else
+        FRetNFSe := '';
+      end;
     end;
 
     if FPConfiguracoesNFSe.Arquivos.EmissaoPathNFSe then
@@ -1856,7 +1942,6 @@ begin
                             '<' + FPrefixo4 + 'Rps', '</Signature>') +
                           '</Signature>'+
                        '</' + FPrefixo4 + 'Rps>';
-
            else
              FvNotas := FvNotas +
                        '<' + FPrefixo4 + 'Rps>' +
@@ -2421,6 +2506,11 @@ begin
        begin
          FTagI := '';
        end;
+
+    LayNfseConsultaURL:
+      begin
+        FTagI := '<' + FTagGrupo + FNameSpaceDad + '>';
+      end;
   end;
 
   // Inicializa a TagF
@@ -2539,7 +2629,12 @@ begin
     LayNfseFecharSessao:
        begin
          FTagF := '';
-       end;  
+       end;
+
+    LayNfseConsultaURL:
+      begin
+         FTagF := '</' + FTagGrupo + '>';
+      end;
   end;
 end;
 
@@ -2597,6 +2692,12 @@ begin
                      proGiap, proiiBrasilv2, proAEG]) then
       GerarException(ACBrStr('O provedor ' + FPConfiguracoesNFSe.Geral.xProvedor +
         ' necessita que a propriedade: Configuracoes.Geral.Emitente.WebChaveAcesso seja informada.'));
+
+    // Provedor Adm
+    Key := FPConfiguracoesNFSe.Geral.Key;
+    Auth := FPConfiguracoesNFSe.Geral.Auth;
+    RequestId := FPConfiguracoesNFSe.Geral.RequestId;
+    Resposta := FPConfiguracoesNFSe.Geral.Resposta;
   end;
 end;
 
@@ -2647,7 +2748,7 @@ begin
 
   if (SenhaWeb = '') and
      (FProvedor in [proCONAM, proFiorilli, proEL, proIPM,
-                    proNFSeBrasil, proSaatri, proSMARAPD, proSimplISS]) then
+                    proSaatri, proSMARAPD, proSimplISS]) then
     GerarException(ACBrStr('O provedor ' + FPConfiguracoesNFSe.Geral.xProvedor +
       ' necessita que a propriedade: Configuracoes.Geral.Emitente.WebSenha seja informada.'));
 
@@ -2675,6 +2776,11 @@ begin
   end;
 
   ATexto := StringReplace(ATexto, '%WebChaveAcesso%', FPConfiguracoesNFSe.Geral.Emitente.WebChaveAcesso, [rfReplaceAll]);
+
+  if (FPConfiguracoesNFSe.Geral.Emitente.WebChaveAcesso = '') and
+     (FProvedor in [proNFSeBrasil]) then
+    GerarException(ACBrStr('O provedor ' + FPConfiguracoesNFSe.Geral.xProvedor +
+      ' necessita que a propriedade: Configuracoes.Geral.Emitente.WebChaveAcesso seja informada.'));
 
   // Parâmetros personalizados
   for i := 0 to FPConfiguracoesNFSe.Geral.Emitente.DadosSenhaParams.Count - 1 do
@@ -2979,6 +3085,9 @@ begin
   FDadosEnvelope := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Recepcionar.Envelope;
 
   case FProvedor of
+    proAdm:
+      FDadosEnvelope := FPDadosMsg;
+
     proThema:
       begin
         if (FNotasFiscais.Count < 4) then
@@ -3025,7 +3134,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'EnviarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         case FPConfiguracoesNFSe.Geral.CodigoMunicipio of
@@ -3035,6 +3145,12 @@ begin
 
 //              if FPConfiguracoesNFSe.WebServices.Ambiente = taProducao then
 //                FPDadosMsg := StringReplace(FPDadosMsg, 'www.tinus.com.br', 'tempuri.org', [rfReplaceAll]);
+            end;
+          2607208:
+            begin
+              FPDadosMsg     := StringReplace(FPDadosMsg, '"http://www.tinus.com.br"', '"http://www.abrasf.org.br/nfse.xsd"', [rfReplaceAll]);
+              FPDadosMsg     := StringReplace(FPDadosMsg, '"http://www2.tinus.com.br"', '"http://www.abrasf.org.br/nfse.xsd"', [rfReplaceAll]);
+              FDadosEnvelope := StringReplace(FDadosEnvelope, 'xmlns:xd="http://www.w3.org/2000/09/xmldsig#"', '', [rfReplaceAll]);
             end;
         else
           begin
@@ -3549,10 +3665,10 @@ begin
       TNFSeEnviarSincrono(Self).FNotasFiscais.ValidarLote(FPDadosMsg,
                  FPConfiguracoes.Arquivos.PathSchemas +
                  FPConfiguracoesNFSe.Geral.ConfigSchemas.ServicoEnviarSincrono);
-   end
-   else
-     GerarException(ACBrStr('A funcionalidade [Enviar Sincrono] não foi disponibilizada pelo provedor: ' +
-      FPConfiguracoesNFSe.Geral.xProvedor));
+  end
+  else
+    GerarException(ACBrStr('A funcionalidade [Enviar Sincrono] não foi disponibilizada pelo provedor: ' +
+     FPConfiguracoesNFSe.Geral.xProvedor));
 
   IncluirEncoding(FPConfiguracoesNFSe.Geral.ConfigEnvelope.RecSincrono.IncluiEncodingDados);
 
@@ -3708,6 +3824,7 @@ end;
 procedure TNFSeGerarNFSe.DefinirDadosMsg;
 var
   I: Integer;
+  xAux: string;
   Gerador: TGerador;
 begin
   if FNotasFiscais.Count <= 0 then
@@ -3813,6 +3930,18 @@ begin
                               FPConfiguracoesNFSe.Geral.ConfigAssinar.LoteGerar,
                               xSignatureNode, xDSIGNSLote, xIdSignature);
 
+    if FProvedor = proGoiania then
+    begin
+      xAux := RetornarConteudoEntre(FPDadosMsg, '<Signature', '</Signature>', True);
+
+      FPDadosMsg := StringReplace(FPDadosMsg, xAux, '', [rfReplaceAll]);
+
+      i := Pos('</InfDeclaracaoPrestacaoServico>', FPDadosMsg);
+
+      FPDadosMsg := Copy(FPDadosMsg, 1, i + 31) + xAux + '</Rps>' +
+                          '</GerarNfseEnvio>';
+    end;
+
     if FPConfiguracoesNFSe.Geral.ConfigSchemas.Validar then
        TNFSeGerarNFSe(Self).FNotasFiscais.ValidarLote(FPDadosMsg,
                            FPConfiguracoes.Arquivos.PathSchemas +
@@ -3829,17 +3958,9 @@ begin
         end;
 
       proSimplISSv2:
-        begin
-//          FPDadosMsg := StringReplace(FPDadosMsg,
-//                                      'GerarNfseEnvio xmlns="http://www.abrasf.org.br/nfse.xsd" '+
-//                                      'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '+
-//                                      'xmlns:xsd="http://www.w3.org/2001/XMLSchema"',
-//                                      'GerarNfseEnvio xmlns="http://www.abrasf.org.br/nfse.xsd"', [rfReplaceAll]);
-
-          FPDadosMsg := StringReplace(FPDadosMsg,
-                                      'Rps xmlns="http://www.abrasf.org.br/nfse.xsd"',
-                                      'Rps', [rfReplaceAll]);
-        end;
+        FPDadosMsg := StringReplace(FPDadosMsg,
+                                    'Rps xmlns="http://www.abrasf.org.br/nfse.xsd"',
+                                    'Rps', [rfReplaceAll]);
 
       proNotaBlu:
         FPDadosMsg := StringReplace(FPDadosMsg, 'EnvioRps xmlns=""', 'EnvioRps', [rfReplaceAll]);
@@ -4008,7 +4129,8 @@ begin
 
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarSituacaoLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
@@ -4257,7 +4379,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarLoteRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
@@ -4403,7 +4526,8 @@ begin
             end;
             Gerador.wGrupo('/RPSConsulta');
           end
-          else begin
+          else
+          begin
             Gerador.wGrupo('NotaConsulta');
             for i := 0 to FNotasFiscais.Count-1 do
             begin
@@ -4477,6 +4601,13 @@ begin
       begin
         CodVerificacaoRPS := FNotasFiscais.Items[0].NFSe.CodigoVerificacao;
       end
+      else if FProvedor = proAdm then
+      begin
+        Key      := FPConfiguracoesNFSe.Geral.Key;
+        Auth     := FPConfiguracoesNFSe.Geral.Auth;
+        RequestId:= FPConfiguracoesNFSe.Geral.RequestId;
+        Resposta := FPConfiguracoesNFSe.Geral.Resposta;
+      end;
     end;
 
     AjustarOpcoes( GerarDadosMsg.Gerador.Opcoes );
@@ -4522,7 +4653,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseRpsEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
@@ -4532,6 +4664,9 @@ begin
     // Italo 10/09/2019
     proDSFSJC:
       FPDadosMsg := StringReplace(FPDadosMsg, 'http://www.abrasf.org.br/nfse.xsd', 'http:/www.abrasf.org.br/nfse.xsd', [rfReplaceAll]);
+
+    proAdm:
+      FDadosEnvelope := FPDadosMsg;
   end;
 
   if (FPDadosMsg = '') or ((FDadosEnvelope = '') and (Provedor <> proIPM)) then
@@ -4653,6 +4788,7 @@ begin
       NomeInter   := TNFSeConsultarNfse(Self).FNomeInter;
       CNPJInter   := TNFSeConsultarNfse(Self).FCNPJInter;
       IMInter     := TNFSeConsultarNfse(Self).FIMInter;
+      NumeroLote  := TNFSeConsultarNfse(Self).FNumeroLote;
 
       // Necessario para o provedor Infisc
       SerieNFSe := TNFSeConsultarNfse(Self).Serie;
@@ -4682,7 +4818,8 @@ begin
   case FProvedor of
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'ConsultarNfseEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
@@ -4844,6 +4981,8 @@ begin
       proFriburgo: FURI := 'Cancelamento_NF' + TNFSeCancelarNfse(Self).FNumeroNFSe;
 
       proSaatri: FURI := 'Cancelamento_' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ;
+
+      proAdm: FURI := NumeroLote;
     else
       FURI := 'pedidoCancelamento_' + FPConfiguracoesNFSe.Geral.Emitente.CNPJ +
                                    FPConfiguracoesNFSe.Geral.Emitente.InscMun +
@@ -5118,9 +5257,13 @@ begin
   FDadosEnvelope := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Cancelar.Envelope;
 
   case FProvedor of
+    proAdm:
+      FDadosEnvelope := FPDadosMsg;
+
     proTinus:
       begin
-        if FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251 then
+        if (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2403251) and
+           (FPConfiguracoesNFSe.Geral.CodigoMunicipio <> 2607208) then
           FPDadosMsg := StringReplace(FPDadosMsg, 'CancelarNfseEnvio', 'Arg', [rfReplaceAll]);
 
         if FPConfiguracoesNFSe.WebServices.Ambiente = taHomologacao then
@@ -5132,7 +5275,7 @@ begin
       FPDadosMsg := StringReplace(FPDadosMsg, 'http://www.abrasf.org.br/nfse.xsd', 'http:/www.abrasf.org.br/nfse.xsd', [rfReplaceAll]);
   end;
 
-  if ((FPDadosMsg = '') or (FDadosEnvelope = '')) and (not (FProvedor in [proIPM])) then
+  if ((FPDadosMsg = '') or (FDadosEnvelope = '')) and (not (FProvedor in [proIPM, proAdm])) then
     GerarException(ACBrStr('A funcionalidade [Cancelar NFSe] não foi disponibilizada pelo provedor: ' +
      FPConfiguracoesNFSe.Geral.xProvedor));
 end;
@@ -5405,7 +5548,7 @@ begin
                    SeparaDados(FPDadosMsg, FPrefixo3 + 'Pedido', True) +
                    FvNotas  + FTagF;
 
-  if Provedor in [proWebISSv2] then
+  if Provedor in [proWebISSv2, proDeISS] then
     AssinarXML(FPDadosMsg, 'SubstituirNfseEnvio', 'SubstituicaoNfse', 'Falha ao Assinar - SubstituirNfseEnvio: ');
 
   if FPConfiguracoesNFSe.Geral.ConfigSchemas.Validar then
@@ -5889,6 +6032,7 @@ begin
   FSubNfse        := TNFSeSubstituirNfse.Create(FACBrNFSe, TACBrNFSe(FACBrNFSe).NotasFiscais);
   FAbrirSessao    := TNFSeAbrirSessao.Create(FACBrNFSe, TACBrNFSe(FACBrNFSe).NotasFiscais);
   FFecharSessao   := TNFSeFecharSessao.Create(FACBrNFSe, TACBrNFSe(FACBrNFSe).NotasFiscais);
+  FConsURL        := TNFSeConsultarURL.Create(FACBrNFSe, TACBrNFSe(FACBrNFSe).NotasFiscais);
 
   FEnvioWebService := TNFSeEnvioWebService.Create(FACBrNFSe);
 
@@ -5909,6 +6053,7 @@ begin
   FSubNfse.Free;
   FAbrirSessao.Free;
   FFecharSessao.Free;
+  FConsURL.Free;
 
   FEnvioWebService.Free;
 
@@ -6013,7 +6158,8 @@ begin
         proGoverna,
         proIPM,
         proInfisc,
-        proInfiscv11: Result := True
+        proInfiscv11,
+        proGiap: Result := True
       else
         begin
           Sleep(Configuracoes.WebServices.AguardarConsultaRet);
@@ -6161,6 +6307,20 @@ begin
    FConsSitLoteRPS.GerarException( FConsSitLoteRPS.Msg );
 end;
 
+function TWebServices.ConsultaURL(const ACNPJPrestador, AIMPrestador,
+  ANumeroNFSe, ACodigoTribMun: string): Boolean;
+begin
+  FConsURL.FCNPJPrestador := ACNPJPrestador;
+  FConsURL.FIMPrestador   := AIMPrestador;
+  FConsURL.FNumeroNFSe    := ANumeroNFSe;
+  FConsURL.FCodigoTribMun := ACodigoTribMun;
+
+  Result := FConsURL.Executar;
+
+  if not (Result) then
+   FConsURL.GerarException(FConsURL.Msg);
+end;
+
 function TWebServices.ConsultaLoteRps(const ANumLote, AProtocolo: String): Boolean;
 begin
   FConsLote.FNumeroLote := ANumLote;
@@ -6190,7 +6350,7 @@ end;
 
 function TWebServices.ConsultaNFSe(ADataInicial, ADataFinal: TDateTime;
   const NumeroNFSe: String; APagina: Integer; const ACNPJTomador, AIMTomador, ANomeInter,
-  ACNPJInter, AIMInter, ASerie: String): Boolean;
+  ACNPJInter, AIMInter, ASerie, ANumLote: String): Boolean;
 begin
   FConsNfse.FDataInicial := ADataInicial;
   FConsNfse.FDataFinal   := ADataFinal;
@@ -6202,6 +6362,7 @@ begin
   FConsNfse.FCNPJInter   := ACNPJInter;
   FConsNfse.FIMInter     := AIMInter;
   FConsNfse.FSerie       := ASerie;
+  FConsNfse.FNumeroLote  := ANumLote;
 
   Result := FConsNfse.Executar;
 
@@ -6337,6 +6498,148 @@ begin
     if not (Result) then
       FConsLote.GerarException( FConsLote.Msg );
   end;
+end;
+
+{ TNFSeConsultarURL }
+
+procedure TNFSeConsultarURL.Clear;
+begin
+  inherited Clear;
+
+  FPStatus := stNFSeConsulta;
+  FPLayout := LayNfseConsultaNfse;
+  FPArqEnv := 'cons-url-nfse';
+  FPArqResp := 'url';
+
+  if Assigned(FRetornoNFSe) then
+    FreeAndNil(FRetornoNFSe);
+end;
+
+constructor TNFSeConsultarURL.Create(AOwner: TACBrDFe;
+  ANotasFiscais: TNotasFiscais);
+begin
+  inherited Create(AOwner);
+
+  FNotasFiscais := ANotasFiscais;
+end;
+
+procedure TNFSeConsultarURL.DefinirDadosMsg;
+begin
+  FCabecalhoStr := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.CabecalhoStr;
+  FDadosStr     := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.DadosStr;
+  FTagGrupo     := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.TagGrupo;
+  FTagElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.TagElemento;
+  FDocElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.DocElemento;
+  FInfElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.InfElemento;
+
+  FxsdServico := FPConfiguracoesNFSe.Geral.ConfigSchemas.ServicoConURL;
+
+  InicializarDadosMsg(FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.IncluiEncodingCab);
+
+  GerarDadosMsg := TNFSeG.Create;
+  try
+    if FTagGrupo <> '' then
+      FTagGrupo := FPrefixo3 + FTagGrupo;
+
+    if FdocElemento <> '' then
+      FdocElemento := FPrefixo3 + FdocElemento;
+
+    InicializarTagITagF;
+
+    InicializarGerarDadosMsg;
+
+    with GerarDadosMsg do
+    begin
+      CodigoTribMun := FCodigoTribMun;
+      NumeroNFSe := FNumeroNFSe;
+      CNPJPrestador := FCNPJPrestador;
+      IMPrestador := FIMPrestador;
+      Serie := FSerie;
+      Protocolo := FProtocolo;
+      NumeroLote := FNumeroLote;
+    end;
+
+    AjustarOpcoes( GerarDadosMsg.Gerador.Opcoes );
+
+    FPDadosMsg := FTagI + GerarDadosMsg.Gera_DadosMsgConsURLNFSe + FTagF;
+
+    FIDLote := GerarDadosMsg.IdLote;
+  finally
+    GerarDadosMsg.Free;
+  end;
+
+  DefinirSignatureNode(FTagGrupo);
+
+  // O procedimento recebe como parametro o XML a ser assinado e retorna o
+  // mesmo assinado da propriedade FPDadosMsg
+
+  if (FPConfiguracoesNFSe.Geral.ConfigAssinar.ConsURL) and (FPDadosMsg <> '') then
+    AssinarXML(FPDadosMsg, FTagGrupo, FinfElemento, 'Falha ao Assinar - Consultar URL: ');
+
+
+  IncluirEncoding(FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.IncluiEncodingDados);
+
+  FDadosEnvelope := FPConfiguracoesNFSe.Geral.ConfigEnvelope.ConsURL.Envelope;
+
+  if (FPDadosMsg = '') or (FDadosEnvelope = '') then
+    GerarException(ACBrStr('A funcionalidade [Consultar URL] não foi disponibilizada pelo provedor: ' +
+     FPConfiguracoesNFSe.Geral.xProvedor));
+end;
+
+procedure TNFSeConsultarURL.DefinirServicoEAction;
+begin
+  FPServico :=  'NFSeConsURL';
+  FPSoapAction := FPConfiguracoesNFSe.Geral.ConfigSoapAction.ConsURL;
+
+  inherited DefinirServicoEAction;
+end;
+
+procedure TNFSeConsultarURL.DefinirURL;
+begin
+  FPLayout := LayNfseConsultaURL;
+
+  inherited DefinirURL;
+end;
+
+destructor TNFSeConsultarURL.Destroy;
+begin
+  if Assigned(FRetURL) then
+    FRetURL.Free;
+
+  inherited Destroy;
+end;
+
+procedure TNFSeConsultarURL.FinalizarServico;
+begin
+  inherited FinalizarServico;
+end;
+
+function TNFSeConsultarURL.GerarMsgLog: String;
+begin
+  Result := ACBrStr(FaMsg)
+end;
+
+function TNFSeConsultarURL.GerarPrefixoArquivo: String;
+begin
+  Result := CNPJPrestador + '_' + NumeroNFSe;
+end;
+
+function TNFSeConsultarURL.TratarResposta: Boolean;
+begin
+  FPMsg := '';
+  FaMsg := '';
+  FRetURL.Free;
+  FRetURL := TretURL.Create;
+
+  FPRetWS := ExtrairRetorno(FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.GrupoMsg,
+                            FPConfiguracoesNFSe.Geral.ConfigGrupoMsgRet.ConsSit);
+
+  FRetURL.Leitor.Arquivo := FPRetWS;
+  FRetURL.Provedor       := FProvedor;
+
+  RetURL.LerXml;
+
+  Result := (RetURL.InfURL.URL <> '');
 end;
 
 end.

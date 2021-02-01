@@ -86,7 +86,6 @@ type
     function ValidarConcatChave: Boolean;
     function CalcularNomeArquivo: String;
     function CalcularPathArquivo: String;
-    function ObterNFeXML(const AXML: String): String;
   public
     constructor Create(Collection2: TCollection); override;
     destructor Destroy; override;
@@ -352,7 +351,9 @@ begin
     else
       ALayout := LayNfeRecepcao;
 
-    AXML := ObterNFeXML(AXML);  // Extraindo apenas os dados da NFe (sem nfeProc)
+    // Extraindo apenas os dados da NFe (sem nfeProc)
+    AXML := ObterDFeXML(AXML, 'NFe', ACBRNFE_NAMESPACE);
+
     if EstaVazio(AXML) then
     begin
       Erro := ACBrStr('NFe não encontrada no XML');
@@ -385,7 +386,8 @@ begin
 
   with TACBrNFe(TNotasFiscais(Collection).ACBrNFe) do
   begin
-    AXML := ObterNFeXML(AXML);  // Extraindo apenas os dados da NFe (sem nfeProc)
+    // Extraindo apenas os dados da NFe (sem nfeProc)
+    AXML := ObterDFeXML(AXML, 'NFe', ACBRNFE_NAMESPACE);
 
     if EstaVazio(AXML) then
     begin
@@ -1551,6 +1553,7 @@ begin
       Ide.finNFe   := StrToFinNFe( OK,INIRec.ReadString( sSecao,'finNFe',INIRec.ReadString( sSecao,'Finalidade','0')));
       Ide.indFinal := StrToConsumidorFinal(OK,INIRec.ReadString( sSecao,'indFinal','0'));
       Ide.indPres  := StrToPresencaComprador(OK,INIRec.ReadString( sSecao,'indPres','0'));
+      Ide.indIntermed := StrToIndIntermed(OK, INIRec.ReadString( sSecao,'indIntermed', ''));
       Ide.procEmi  := StrToProcEmi(OK,INIRec.ReadString( sSecao,'procEmi','0'));
       Ide.verProc  := INIRec.ReadString(  sSecao, 'verProc' ,'ACBrNFe');
       Ide.dhCont   := StringToDateTime(INIRec.ReadString( sSecao,'dhCont'  ,'0'));
@@ -2455,6 +2458,10 @@ begin
         Inc(I);
       end;
 
+      sSecao := 'infIntermed';
+      infIntermed.CNPJ         := INIRec.ReadString( sSecao,'CNPJ', '');
+      infIntermed.idCadIntTran := INIRec.ReadString( sSecao,'idCadIntTran', '');
+
       sSecao := IfThen(INIRec.SectionExists('DadosAdicionais'), 'DadosAdicionais', 'infAdic');
       InfAdic.infAdFisco := INIRec.ReadString( sSecao,'infAdFisco',INIRec.ReadString( sSecao,'Fisco',''));
       InfAdic.infCpl     := INIRec.ReadString( sSecao,'infCpl'    ,INIRec.ReadString( sSecao,'Complemento',''));
@@ -2633,6 +2640,8 @@ begin
         TpcnConsumidorFinal(Ide.indFinal)));
       INIRec.WriteString('Identificacao', 'indPres',
         PresencaCompradorToStr(TpcnPresencaComprador(Ide.indPres)));
+      INIRec.WriteString('Identificacao', 'indIntermed',
+        indIntermedToStr(TindIntermed(Ide.indIntermed)));
       INIRec.WriteString('Identificacao', 'procEmi', procEmiToStr(Ide.procEmi));
       INIRec.WriteString('Identificacao', 'verProc', Ide.verProc);
       INIRec.WriteString('Identificacao', 'dhCont', DateToStr(Ide.dhCont));
@@ -3333,6 +3342,9 @@ begin
       end;
       INIRec.WriteFloat(sSecao, 'vTroco', pag.vTroco);
 
+      INIRec.WriteString('infIntermed', 'CNPJ', infIntermed.CNPJ);
+      INIRec.WriteString('infIntermed', 'idCadIntTran', infIntermed.idCadIntTran);
+
       INIRec.WriteString('DadosAdicionais', 'infAdFisco', InfAdic.infAdFisco);
       INIRec.WriteString('DadosAdicionais', 'infCpl', InfAdic.infCpl);
 
@@ -3626,27 +3638,6 @@ begin
 
     Result := PathWithDelim(Configuracoes.Arquivos.GetPathNFe(Data, FNFe.Emit.CNPJCPF, FNFe.Emit.IE, FNFe.Ide.modelo));
   end;
-end;
-
-// Extraindo apenas os dados da NFe (sem nfeProc)
-function NotaFiscal.ObterNFeXML(const AXML: String): String;
-var
-  DeclaracaoXML: String;
-begin
-  DeclaracaoXML := ObtemDeclaracaoXML(AXML);
-
-  Result := RetornarConteudoEntre(AXML, '<NFe xmlns', '</NFe>');
-  if not EstaVazio(Result) then
-    Result := '<NFe xmlns' + Result + '</NFe>'
-  else
-  begin
-    Result := LerTagXML(AXML, 'NFe');
-    if not EstaVazio(Result) then
-      Result := '<NFe>' + Result + '</NFe>'
-  end;
-
-  if not EstaVazio(Result) then
-    Result := DeclaracaoXML + Result;
 end;
 
 function NotaFiscal.CalcularNomeArquivoCompleto(NomeArquivo: String;

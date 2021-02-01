@@ -246,6 +246,7 @@ var
   CM: String;
 begin
   Result := False;
+  Leitor.Grupo := Leitor.Arquivo;
 
   if FProvedor = proNenhum then
   begin
@@ -292,26 +293,22 @@ begin
   VersaoNFSe := ProvedorToVersaoNFSe(FProvedor);
   LayoutXML := ProvedorToLayoutXML(FProvedor);
 
-  if (Leitor.rExtrai(1, 'Rps') <> '') or (Leitor.rExtrai(1, 'RPS') <> '') or (Leitor.rExtrai(1, 'rps') <> '') or
-     (Leitor.rExtrai(1, 'LoteRps') <> '') then
-  begin
-    case LayoutXML of
-      loABRASFv1:    Result := LerRPS_ABRASF_V1;
-      loABRASFv2:    Result := LerRPS_ABRASF_V2;
-      loEGoverneISS: Result := False; // Falta implementar
-      loEL:          Result := LerRps_EL;
-      loEquiplano:   Result := LerRPS_Equiplano;
-      loGoverna:     Result := LerRps_Governa;
-      loInfisc:      Result := False; // Falta implementar
-      loISSDSF:      Result := LerRPS_ISSDSF;
-      loAgili:       Result := LerRPS_Agili;
-      loSP:          Result := LerRPS_SP;
-      loSMARAPD:     Result := LerNFSe_Smarapd;
-      loAssessorPublico: Result := LerRPS_AssessorPublico;
-      loSiat:        Result := LerRPS_Siat;     
-    else
-      Result := False;
-    end;
+  case LayoutXML of
+    loABRASFv1:    Result := LerRPS_ABRASF_V1;
+    loABRASFv2:    Result := LerRPS_ABRASF_V2;
+    loEGoverneISS: Result := False; // Falta implementar
+    loEL:          Result := LerRps_EL;
+    loEquiplano:   Result := LerRPS_Equiplano;
+    loGoverna:     Result := LerRps_Governa;
+    loInfisc:      Result := False; // Falta implementar
+    loISSDSF:      Result := LerRPS_ISSDSF;
+    loAgili:       Result := LerRPS_Agili;
+    loSP:          Result := LerRPS_SP;
+    loSMARAPD:     Result := LerNFSe_Smarapd;
+    loAssessorPublico: Result := LerRPS_AssessorPublico;
+    loSiat:        Result := LerRPS_Siat;
+  else
+    Result := False;
   end;
 end;
 
@@ -507,6 +504,8 @@ function TNFSeR.LerRPS_ABRASF_V2: Boolean;
 var
   i: Integer;
   ok: Boolean;
+  DtStr: string;
+  Dt: TDateTime;
 begin
   // Para o provedor ISSDigital
   if (Leitor.rExtrai(2, 'ValoresServico') <> '') then
@@ -566,13 +565,39 @@ begin
       proSigCorp,
       proSimplISSv2:
         NFSe.Competencia := DateToStr(Leitor.rCampo(tcDat, 'Competencia'));
+
+      proAdm : // O xml gerado, vem: Novembro/2020, no RPS vem formato de data '2020-11-23'
+        begin
+          DtStr := Leitor.rCampo(tcStr, 'Competencia');
+
+          if Pos('-', DtStr) > 0 then // '2020-11-23'
+            DtStr := Copy(DtStr, 9, 2) + '/' + Copy(DtStr, 6, 2) + '/' + Copy(DtStr, 1, 4)
+          else
+            DtStr := Leitor.rCampo(tcStr, 'Competencia');
+
+          Dt := StrToDateDef( DtStr, 0 );
+
+          if Dt = 0 then
+            DtStr := Leitor.rCampo(tcStr, 'Competencia')
+          else
+            DtStr := FormatDateTime('mmmm/yyyy', Dt );
+
+          NFSe.Competencia := DtStr;
+        end
     else
       NFSe.Competencia := Leitor.rCampo(tcStr, 'Competencia');
     end;
 
+    if FProvedor = proAdm then
+      NFSe.NaturezaOperacao := StrToNaturezaOperacao(ok, Leitor.rCampo(tcStr, 'NaturezaOperacao'));
+
     NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
     NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
-    NFSe.IncentivadorCultural     := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
+
+    if FProvedor = proAdm then
+      NFSe.IncentivadorCultural := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivadorCultural'))
+    else
+      NFSe.IncentivadorCultural := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
 
     if FProvedor = proCONAM then
       NFSe.Producao := StrToSimNao(ok, Leitor.rCampo(tcStr, 'Producao'));
@@ -1094,6 +1119,7 @@ begin
       NFSe.Servico.ItemServico[serv].Quantidade    := Leitor.rCampo(tcDe2, 'QUANTIDADE');
       NFSe.Servico.ItemServico[serv].ValorUnitario := Leitor.rCampo(tcDe2, 'VALOR');
       NFSe.Servico.ItemServico[serv].ValorTotal    := NFSe.Servico.ItemServico[serv].Quantidade*NFSe.Servico.ItemServico[serv].ValorUnitario;
+      NFSe.Servico.ItemServico[serv].DescontoIncondicionado := Leitor.rCampo(tcDe2, 'DESCONTO');
       NFSe.Servico.ItemServico[serv].Tributavel    := snSim;
       Inc(serv);
     end;
@@ -1378,7 +1404,7 @@ begin
     if TabServicosExt then
       NFSe.Servico.xItemListaServico := ObterDescricaoServico(OnlyNumber(NFSe.Servico.ItemListaServico))
     else
-     NFSe.Servico.xItemListaServico := CodigoToDesc(OnlyNumber(NFSe.Servico.ItemListaServico));
+      NFSe.Servico.xItemListaServico := CodigoToDesc(OnlyNumber(NFSe.Servico.ItemListaServico));
 
     NFSe.Servico.Valores.ValorServicos        := Leitor.rCampo(tcDe2, 'vlServico');
     NFSe.Servico.Valores.Aliquota             := Leitor.rCampo(tcDe2, 'vlAliquota');
@@ -1409,13 +1435,22 @@ end;
 
 function TNFSeR.LerRps_Governa: Boolean;
 begin
-  Leitor.rExtrai(1, 'LoteRps');
-  NFSe.dhRecebimento                := StrToDateTime(formatdatetime ('dd/mm/yyyy',now));
-  NFSe.Prestador.InscricaoMunicipal := Leitor.rCampo(tcStr, 'CodCadBic');
-  NFSe.Prestador.ChaveAcesso        := Leitor.rCampo(tcStr, 'ChvAcs');
-  NFSe.CodigoVerificacao            := Leitor.rCampo(tcStr, 'CodVer');
-  NFSe.IdentificacaoRps.Numero      := Leitor.rCampo(tcStr, 'NumRps');
-  Result := True;
+  if (Leitor.rExtrai(1, 'LoteRps') <> '') then
+  begin
+    NFSe.Prestador.InscricaoMunicipal := Leitor.rCampo(tcStr, 'CodCadBic');
+    NFSe.Prestador.ChaveAcesso        := Leitor.rCampo(tcStr, 'ChvAcs');
+
+    if (Leitor.rExtrai(2, 'Rps') <> '') then
+    begin
+      NFSe.dhRecebimento           := StrToDateTime(formatdatetime ('dd/mm/yyyy',now));
+      NFSe.CodigoVerificacao       := Leitor.rCampo(tcStr, 'CodVer');
+      NFSe.IdentificacaoRps.Numero := Leitor.rCampo(tcStr, 'NumRps');
+
+      Result := True;
+    end;
+  end
+  else
+    Result := False;
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1427,6 +1462,7 @@ var
   ok: Boolean;
   CM: String;
   DataHorBR: String;
+  Data: string;
 //  DataEmiBR: TDateTime;
 begin
   if FProvedor = proNenhum then
@@ -1512,6 +1548,8 @@ begin
         proSigCorp: NFSe.Link := Leitor.rCampo(tcStr, 'LinkNota');
 
         proPublica: NFSe.Link := Leitor.rCampo(tcStr, 'LinkVisualizacaoNfse');
+
+        proSigep: NFSe.Link := Leitor.rCampo(tcStr, 'UrlNfse');
       end;
 
       NFSe.Numero            := Leitor.rCampo(tcStr, 'Numero');
@@ -1527,6 +1565,19 @@ begin
         NFSe.dhRecebimento := Leitor.rCampo(tcDatHor, 'DataEmissao');
 
       case FProvedor of
+        proAdm:
+          begin
+          //ConsultarNFSePorRps: Formato <DataEmissao>2020-10-09 - 13:34:44</DataEmissao>
+            DataHorBR := Leitor.rCampo(tcStr, 'DataEmissao');
+            // remover separador de data e hora: ficar no formato yyyy-mm-dd hh:nn:ss
+            DataHorBR := StringReplace(DataHorBR,' - ', ' ', [ rfReplaceAll]);
+            Data := Copy(DataHorBR, 9, 2) + '/' + Copy(DataHorBR, 6, 2) + '/' + Copy(DataHorBR, 1, 4);
+            Delete(DataHorBR, 1, 10);
+            DataHorBR := Data+ DataHorBR ;
+
+            NFSe.DataEmissao := StringToDateTime(DataHorBr, 'DD/MM/YYYY hh:nn:ss');
+          end;
+
         proFreire,
         proSpeedGov,
         proVitoria,
@@ -1982,7 +2033,9 @@ function TNFSeR.LerNFSe_ABRASF_V2: Boolean;
 var
   NivelTemp, i: Integer;
   ok: Boolean;
-  DataHorBR: string;
+  SimNao, DataHorBR: string;
+  Dt: TDateTime;
+  DtStr: string;
 begin
   if Leitor.rExtrai(3, 'ValoresNfse') <> '' then
   begin
@@ -2035,7 +2088,8 @@ begin
     NFSe.PrestadorServico.Endereco.CodigoPais := Leitor.rCampo(tcInt, 'CodigoPais');
     NFSe.PrestadorServico.Endereco.CEP        := Leitor.rCampo(tcStr, 'Cep');
 
-    if length(NFSe.PrestadorServico.Endereco.CodigoMunicipio) < 7 then
+    if (NFSe.PrestadorServico.Endereco.CodigoMunicipio > '0') and
+       (length(NFSe.PrestadorServico.Endereco.CodigoMunicipio) < 7) then
       NFSe.PrestadorServico.Endereco.CodigoMunicipio := Copy(NFSe.PrestadorServico.Endereco.CodigoMunicipio, 1, 2) +
           FormatFloat('00000', StrToIntDef(Copy(NFSe.PrestadorServico.Endereco.CodigoMunicipio, 3, 5), 0));
 
@@ -2147,13 +2201,57 @@ begin
 
     proSimplISSv2:
       NFSe.Competencia := DateToStr(Leitor.rCampo(tcDat, 'Competencia'));
+
+    proAdm:
+      begin
+        DtStr := Leitor.rCampo(tcStr, 'Competencia');
+
+        if Pos('-', DtStr) > 0 then // '2020-11-23'
+          DtStr := Copy(DtStr, 9, 2) + '/' + Copy(DtStr, 6, 2) + '/' + Copy(DtStr, 1, 4)
+        else
+          DtStr := Leitor.rCampo(tcStr, 'Competencia');
+
+        Dt := StrToDateDef( DtStr, 0 );
+
+        if Dt = 0 then
+          DtStr := Leitor.rCampo(tcStr, 'Competencia')
+        else
+          DtStr := FormatDateTime('mmmm/yyyy', Dt );
+
+        NFSe.Competencia := DtStr;
+      end
   else
     NFSe.Competencia := Leitor.rCampo(tcStr, 'Competencia');
   end;
 
-  NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
-  NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
-  NFSe.IncentivadorCultural     := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
+  if FProvedor = proAdm then
+  begin
+    // <RegimeEspecialTributacao>No Municipio</RegimeEspecialTributacao>
+    NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
+
+    //if Leitor.rCampo(tcStr, 'RegimeEspecialTributacao') then
+    //NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
+    // Optante Simples: 0 Sim / 1 Não
+    SimNao := Leitor.rCampo(tcStr, 'OptanteSimplesNacional');
+
+    if (SimNao = '0') or (AnsiUpperCase(SimNao) = 'SIM') then
+      NFSe.OptanteSimplesNacional := snSim
+    else
+      NFSe.OptanteSimplesNacional := snNao;
+
+    SimNao := Leitor.rCampo(tcStr, 'IncentivoFiscal');
+
+    if (SimNao = '0') or (AnsiUpperCase(SimNao) = 'SIM') then // retorno quando vem pela consulta de nfse por rps, vem 'Sim'
+      NFSe.IncentivadorCultural := snSim
+    else
+      NFSe.IncentivadorCultural := snNao;
+  end
+  else
+  begin
+    NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(ok, Leitor.rCampo(tcStr, 'RegimeEspecialTributacao'));
+    NFSe.OptanteSimplesNacional   := StrToSimNao(ok, Leitor.rCampo(tcStr, 'OptanteSimplesNacional'));
+    NFSe.IncentivadorCultural     := StrToSimNao(ok, Leitor.rCampo(tcStr, 'IncentivoFiscal'));
+  end;
 
   if FProvedor = proCONAM then
     NFSe.Producao := StrToSimNao(ok, Leitor.rCampo(tcStr, 'Producao'));
@@ -2252,7 +2350,7 @@ begin
       SetxItemListaServico;
 
       NFSe.Servico.ItemServico.New;
-      NFSe.Servico.Valores.IssRetido            := StrToSituacaoTributaria(ok, Leitor.rCampo(tcStr, 'IssRetido'));
+      NFSe.Servico.Valores.IssRetido            := StrToSituacaoTributaria(ok, Leitor.rCampo(tcStr, 'IssRetido'), FProvedor);
 //      NFSe.Servico.ItemListaServico             := Leitor.rCampo(tcStr, 'ItemListaServico');
       NFSe.Servico.ItemServico[i].Descricao     := Leitor.rCampo(tcStr, 'Discriminacao');
       NFSe.Servico.CodigoMunicipio              := Leitor.rCampo(tcStr, 'CodigoMunicipio');
@@ -2303,10 +2401,20 @@ begin
   begin
     if (Leitor.rExtrai(NivelTemp, 'Servico') <> '') then
     begin
-      if FProvedor <> proCenti then // se for Centi ja foi feito a cima.
+      // se for Centi/Adm ja foi feito a cima.
+      if not (FProvedor in [proCenti, proAdm]) then
       begin
         NFSe.Servico.Valores.IssRetido   := StrToSituacaoTributaria(ok, Leitor.rCampo(tcStr, 'IssRetido'));
         NFSe.Servico.ResponsavelRetencao := StrToResponsavelRetencao(ok, Leitor.rCampo(tcStr, 'ResponsavelRetencao'));
+      end;
+
+      // Não existe essa tag
+      if (FProvedor = proAdm) then
+      begin
+        if NFSe.Servico.Valores.IssRetido = stRetencao then
+          NFSe.Servico.ResponsavelRetencao := ptTomador
+        else
+          NFSe.Servico.ResponsavelRetencao := rtPrestador; // rtPrestador
       end;
 
       SetxItemListaServico;
@@ -2355,7 +2463,7 @@ begin
         if (FProvedor in [proActconv202, proISSe, proVersaTecnologia, proNEAInformatica,
                           proFiorilli, proPronimv2, proVitoria, proSmarAPDABRASF,
                           proGovDigital, proDataSmart, proTecnos, proRLZ, proSigCorp,
-                          proSaatri, proSH3]) then
+                          proSaatri, proSH3, profinteliss]) then
         begin
           if NFSe.Servico.Valores.IssRetido = stRetencao then
             NFSe.Servico.Valores.ValorIssRetido := Leitor.rCampo(tcDe2, 'ValorIss')
@@ -2373,7 +2481,7 @@ begin
         if (NFSe.Servico.Valores.ValorIssRetido = 0) and (NFSe.Servico.Valores.IssRetido=stRetencao) then
         begin
           case FProvedor of
-            proSystemPro, proWebISSv2:
+            proSystemPro, proWebISSv2, proSafeWeb:
                 NFSe.Servico.Valores.ValorIssRetido := NFSe.Servico.Valores.ValorIss;
 
             proGoiania:
@@ -2491,6 +2599,21 @@ begin
       NFSe.Tomador.Contato.Email    := Leitor.rCampo(tcStr, 'Email');
     end;
   end; // fim Tomador
+
+  if (Leitor.rExtrai(NivelTemp, 'ValoresServico') <> '') then
+  begin
+    NFSe.Servico.Valores.ValorPis    := Leitor.rCampo(tcDe2, 'ValorPis');
+    NFSe.Servico.Valores.ValorCofins := Leitor.rCampo(tcDe2, 'ValorCofins');
+    NFSe.Servico.Valores.ValorInss   := Leitor.rCampo(tcDe2, 'ValorInss');
+    NFSe.Servico.Valores.ValorIr     := Leitor.rCampo(tcDe2, 'ValorIr');
+    NFSe.Servico.Valores.ValorCsll   := Leitor.rCampo(tcDe2, 'ValorCsll');
+    NFSe.Servico.Valores.ValorIss    := Leitor.rCampo(tcDe2, 'ValorIss');
+
+    NFSe.Servico.Valores.ValorLiquidoNfse := Leitor.rCampo(tcDe2, 'ValorLiquidoNfse');
+
+    NFSe.Servico.Valores.DescontoIncondicionado := Leitor.rCampo(tcDe2, 'DescontoIncondicionado');
+    NFSe.Servico.Valores.DescontoCondicionado   := Leitor.rCampo(tcDe2, 'DescontoCondicionado');
+  end;
 
   Result := True;
 end;
@@ -2705,6 +2828,11 @@ begin
   NFSe.Prestador.cUF := NFSe.PrestadorServico.IdentificacaoPrestador.cUF;
   NFSe.Prestador.InscricaoEstadual := NFSe.PrestadorServico.IdentificacaoPrestador.InscricaoEstadual;
   NFSe.Prestador.ChaveAcesso := NFSe.PrestadorServico.IdentificacaoPrestador.ChaveAcesso;
+  // Adm
+  NFSe.Prestador.Key := NFSe.PrestadorServico.IdentificacaoPrestador.Key;
+  NFSe.Prestador.Auth := NFSe.PrestadorServico.IdentificacaoPrestador.Auth;
+  NFSe.Prestador.RequestId := NFSe.PrestadorServico.IdentificacaoPrestador.RequestId;
+  NFSe.Prestador.Resposta := NFSe.PrestadorServico.IdentificacaoPrestador.Resposta;
 
   // DadosTomador
   // DadosIntermediario
@@ -3082,6 +3210,16 @@ begin
       end;
     end;
   end;
+
+  if ((FNFSe.Servico.Valores.ValorIssRetido = 0) or (FNFSe.Servico.Valores.ValorIss = 0)) and
+      (FNFSe.Servico.Valores.Aliquota > 0)  then
+  begin
+    if FNFSe.Servico.Valores.IssRetido = stRetencao then
+       FNFSe.Servico.Valores.ValorIssRetido := (FNFSe.Servico.Valores.ValorServicos * (FNFSe.Servico.Valores.Aliquota / 100));
+
+    FNFSe.Servico.Valores.ValorIss := (FNFSe.Servico.Valores.ValorServicos * (FNFSe.Servico.Valores.Aliquota / 100));
+  end;
+
 
   (**** calculo anterior
   FNFSe.Servico.Valores.ValorLiquidoNfse := (FNfse.Servico.Valores.ValorServicos -

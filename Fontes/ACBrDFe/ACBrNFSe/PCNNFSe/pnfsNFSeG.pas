@@ -135,6 +135,11 @@ type
     // Layout - EL
     FHashIdent: String;
     FIdCanc: String;
+    FCodigoTribMun: string;
+    FKey: String;
+    FAuth: String;
+    FRequestId: String;
+    FResposta: Integer;
 
     // Provedor iiBrasil
 //    FIntegridade: String;
@@ -148,6 +153,7 @@ type
 
     procedure GerarGrupoCNPJCPF(const CNPJCPF: string; Codicao: Boolean;
       GrupoCNPJ: Boolean = False);
+    procedure GerarGrupoProAdm;
   public
     constructor Create;
     destructor Destroy; override;
@@ -161,6 +167,7 @@ type
     function Gera_DadosMsgGerarNFSe: String;
     function Gera_DadosMsgEnviarSincrono: String;
     function Gera_DadosMsgSubstituirNFSe: String;
+    function Gera_DadosMsgConsURLNFSe: String;
 
     function Gera_DadosMsgAbrirSessao: String;
     function Gera_DadosMsgFecharSessao: String;
@@ -206,6 +213,9 @@ type
     property CodMunicipioTOM: Integer read FCodMunicipioTOM write FCodMunicipioTOM;
     property CodigoCanc: String       read FCodigoCanc   write FCodigoCanc;
     property MotivoCanc: String       read FMotivoCanc   write FMotivoCanc;
+
+    // Layout ISSNET.
+    property CodigoTribMun : string read FCodigoTribMun write FCodigoTribMun;
 
     // Layout - ISSDSF
     property VersaoXML: String            read FVersaoXML          write FVersaoXML;
@@ -253,12 +263,17 @@ type
 
     property IdLote: String read FIdLote write FIdLote;
     property IdCanc: String read FIdCanc write FIdCanc;
+    // Layout - AdmNotas
+    property Key: String          read FKey        write FKey;
+    property Auth: String         read FAuth       write FAuth;
+    property RequestId: String    read FRequestId  write FRequestId;
+    property Resposta: Integer    read FResposta   write FResposta;
    end;
 
 implementation
 
 uses
-  StrUtils, DateUtils, ACBrUtil;
+  StrUtils, DateUtils, ACBrUtil, ACBrValidador;
 
 (*
 class function TNFSeG2.Gera_DadosMsgConsSeqRPSDSF(TagI, TagF: AnsiString;
@@ -314,14 +329,17 @@ begin
   // Atributo versao ===========================================================
   if VersaoDados <> '' then
   begin
-    if Provedor in [proFintelISS, proSP, proNotaBlu] then
+    if Provedor in [proSP, proNotaBlu] then
       FaVersao := ' Versao="' + VersaoDados + '"'
     else
       FaVersao := ' versao="' + VersaoDados + '"';
 
+    if (Provedor = proFintelISS) and (CodMunicipio <> 3136702) then
+      FaVersao := '';
+
     if Provedor in [proAbaco, proBetha, proDBSeller, proGinfes, proGoiania,
                     proGovBR, proIssCuritiba, proISSNET, proLexsom, proNatal,
-                    proTinus, proRecife, proRJ, proSimplISS, proThema, proTiplan,
+                    proTinus, proRecife, proRJ, proThema, proTiplan,
                     proAgiliv2, proFISSLex, proSpeedGov, proPronim, proSalvador,
                     proSJP, proWebISS, proMetropolisWeb,
                     progeNFe, proSiapSistemas] then
@@ -831,7 +849,16 @@ begin
 
       if (Provedor <> proBetha) or (IM <> '') then
         Gerador.wCampo(tcStr, '#3', 'InscricaoMunicipal', 01, 15, 1, IM, '');
-      Gerador.wCampo(tcInt, '#4', 'QuantidadeRps', 01, 02, 1, QtdeNotas, '');
+
+      if Provedor = proAdm then
+      begin
+        GerarGrupoProAdm;
+
+        Gerador.wCampo(tcInt, '#7', 'QuantidadeRps', 01, 02, 1, QtdeNotas, '');
+        Gerador.wCampo(tcInt, '#5', 'Resposta', 01, 01, 1, Resposta, '');
+      end
+      else
+        Gerador.wCampo(tcInt, '#4', 'QuantidadeRps', 01, 02, 1, QtdeNotas, '');
 
       Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML +
                                    '<' + Prefixo4 + 'ListaRps>' +
@@ -986,6 +1013,43 @@ begin
     Result := '';
 end;
 
+function TNFSeG.Gera_DadosMsgConsURLNFSe: String;
+begin
+  SetAtributos;
+  Gerador.ArquivoFormatoXML := '';
+
+
+  Gerador.Prefixo := Prefixo3;
+  Gerador.wGrupo('Prestador' + FaNameSpace);
+
+  Gerador.Prefixo := Prefixo4;
+
+  GerarGrupoCNPJCPF(Cnpj, (VersaoNFSe <> ve100) or (Provedor in [proISSNet, proActcon]));
+
+  if (Provedor <> proBetha) or (IM <> '') then
+    Gerador.wCampo(tcStr, '#3', 'InscricaoMunicipal', 01, 15, 1, IM, '');
+
+  Gerador.Prefixo := Prefixo3;
+  Gerador.wGrupo('/Prestador');
+
+  Gerador.wCampo(tcStr, '#4', 'Numero', 01, 15, 1, NumeroNFSe, '');
+  Gerador.wCampo(tcStr, '#5', 'CodigoTributacaoMunicipio', 01, 20, 0, CodigoTribMun, '');
+
+
+  Result := Gerador.ArquivoFormatoXML;
+
+  FPossuiAlertas := (Gerador.ListaDeAlertas.Count <> 0);
+
+  if Provedor in [proNenhum, proABRASFv1, proABRASFv2, pro4R, proAgili,
+                  proCoplan, profintelISS, proFiorilli, proFriburgo, proGoiania,
+                  proGovDigital, proISSDigital, proISSe, proProdata, proVirtual,
+                  proSaatri, proFreire, proPVH, proVitoria, proTecnos, proSiam,
+                  proSisPMJP, proSystemPro] then
+  begin
+    Result := '';
+  end;
+end;
+
 function TNFSeG.Gera_DadosMsgConsLote: String;
 var
   strTemp : string;
@@ -1123,6 +1187,16 @@ begin
        end;
   else
     begin
+      if Provedor = proSigep then
+      begin
+        Gerador.Prefixo := Prefixo4;
+        Gerador.wGrupo('credenciais');
+        Gerador.wCampo(tcStr, '#01', 'usuario     ', 01, 15, 1, UserWeb);
+        Gerador.wCampo(tcStr, '#02', 'senha       ', 01, 05, 1, SenhaWeb);
+        Gerador.wCampo(tcStr, '#03', 'chavePrivada', 01, 01, 1, ChaveAcessoPrefeitura);
+        Gerador.wGrupo('/credenciais');
+      end;
+
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupo('Prestador' + FaNameSpace);
 
@@ -1143,6 +1217,10 @@ begin
       begin
         Gerador.wCampo(tcStr, '#5', 'Senha', 06, 10, 1, SenhaWeb, '');
         Gerador.wCampo(tcStr, '#6', 'FraseSecreta', 06, 20, 1, FraseSecreta, '');
+      end
+      else if Provedor = proAdm then
+      begin
+        GerarGrupoProAdm;
       end;
 
       Gerador.Prefixo := Prefixo3;
@@ -1323,6 +1401,16 @@ begin
 
   else
     begin
+      if Provedor = proSigep then
+      begin
+        Gerador.Prefixo := Prefixo4;
+        Gerador.wGrupo('credenciais');
+        Gerador.wCampo(tcStr, '#01', 'usuario     ', 01, 15, 1, UserWeb);
+        Gerador.wCampo(tcStr, '#02', 'senha       ', 01, 05, 1, SenhaWeb);
+        Gerador.wCampo(tcStr, '#03', 'chavePrivada', 01, 01, 1, ChaveAcessoPrefeitura);
+        Gerador.wGrupo('/credenciais');
+      end;
+
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupo('IdentificacaoRps' + FaNameSpace);
 
@@ -1354,6 +1442,10 @@ begin
       begin
         Gerador.wCampo(tcStr, '#5', 'Senha', 06, 10, 1, SenhaWeb, '');
         Gerador.wCampo(tcStr, '#6', 'FraseSecreta', 06, 20, 1, FraseSecreta, '');
+      end
+      else if Provedor = proAdm then
+      begin
+        GerarGrupoProAdm;
       end;
 
       Gerador.Prefixo := Prefixo3;
@@ -1486,6 +1578,9 @@ begin
         if Provedor in [proISSDSF, proSiat] then
           Gerador.wCampo(tcStr, '#1', 'NotaInicial', 01, 15, 0, NumeroNFSe, '');
 
+        if Provedor = proSiat then
+          Gerador.wCampo(tcStr, '#1', 'NumeroLote', 01, 12, 1, NumeroLote, '');
+
         Gerador.wCampo(tcStr, '#1', 'Versao', 01, 05, 1, VersaoXML, '');
         Gerador.wGrupo('/Cabecalho');
       end;
@@ -1507,6 +1602,7 @@ begin
         Gerador.wGrupo('/ChaveNFe');
         Gerador.wGrupo('/Detalhe');
       end;
+
     proSigISS:
      begin
         Gerador.ArquivoFormatoXML := '';
@@ -1555,6 +1651,16 @@ begin
        end;
   else
     begin
+      if Provedor = proSigep then
+      begin
+        Gerador.Prefixo := Prefixo4;
+        Gerador.wGrupo('credenciais');
+        Gerador.wCampo(tcStr, '#01', 'usuario     ', 01, 15, 1, UserWeb);
+        Gerador.wCampo(tcStr, '#02', 'senha       ', 01, 05, 1, SenhaWeb);
+        Gerador.wCampo(tcStr, '#03', 'chavePrivada', 01, 01, 1, ChaveAcessoPrefeitura);
+        Gerador.wGrupo('/credenciais');
+      end;
+
       Gerador.Prefixo := Prefixo3;
       Gerador.wGrupo('Prestador' + FaNameSpace);
 
@@ -1685,6 +1791,24 @@ begin
   xAtrib := 'xsi:type="xsd:string"';
 
   case Provedor of
+    proAdm:
+      begin
+        Gerador.Prefixo := '';
+        Gerador.wGrupo('IdentificacaoNfse');
+        Gerador.wCampo(tcStr, '#3', 'Numero', 01, 15, 1, NumeroNfse, '');
+
+        Gerador.Prefixo := '';
+
+        GerarGrupoCNPJCPF(Cnpj, True);
+
+        Gerador.wCampo(tcStr, '#2', 'InscricaoMunicipal', 01, 15, 1, IM, '');
+
+        GerarGrupoProAdm;
+
+        Gerador.Prefixo := '';
+        Gerador.wGrupo('/IdentificacaoNfse');
+      end;
+
     proAgili,
     proAgiliv2:
       begin
@@ -2038,6 +2162,21 @@ begin
         TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
                 '</' + Prefixo3 + 'Pedido>';
       end;
+
+    proSigep:
+      begin
+        TagI := '<' + Prefixo4 + 'credenciais>' +
+                 '<' + Prefixo4 + 'usuario>' + UserWeb + '</' + Prefixo4 + 'usuario>' +
+                 '<' + Prefixo4 + 'senha>' + SenhaWeb + '</' + Prefixo4 + 'senha>' +
+                 '<' + Prefixo4 + 'chavePrivada>' + ChaveAcessoPrefeitura + '</' + Prefixo4 + 'chavePrivada>' +
+                '</' + Prefixo4 + 'credenciais>' +
+                '<' + Prefixo3 + 'Pedido>' +
+                   '<' + Prefixo4 + 'InfPedidoCancelamento' + FaIdentificadorCanc + '>';
+
+        TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
+                '</' + Prefixo3 + 'Pedido>';
+      end;
+
     proSpeedGov:
       begin
         TagI := '<Pedido>' +
@@ -2053,6 +2192,15 @@ begin
       begin
         TagI := '';
         TagF := '';
+      end;
+
+    proAdm:
+      begin
+        TagI := '<Pedido>' +
+                 '<InfPedidoCancelamento' + FaIdentificadorCanc + '>';
+
+        TagF :=    '</InfPedidoCancelamento>' +
+              '</Pedido>';
       end;
   else
     begin
@@ -2186,10 +2334,10 @@ begin
   FPossuiAlertas := (Gerador.ListaDeAlertas.Count <> 0);
 
   if Provedor in [proNenhum, proABRASFv1, proABRASFv2, proAbaco, proBetha,
-                  proBetim, proBHISS, proDBSeller, proEquiplano, profintelISS,
+                  proBetim, proBHISS, proDBSeller, proEquiplano,
                   proFISSLex, proGinfes, proGoiania, proGovBR, proIssCuritiba,
                   proISSIntel, proISSNet, proLexsom, proNatal,
-                  proTinus, proProdemge, proPublica, proRecife, proRJ, //proSaatri,
+                  proTinus, proProdemge, proPublica, proRecife, proRJ,
                   proFreire, proSimplISS, proThema, proTiplan, proWebISS,
                   proProdata, proAgili, proSpeedGov, proPronim, proSalvador,
                   proNFSEBrasil] then
@@ -2278,6 +2426,8 @@ begin
 end;
 
 procedure TNFSeG.GerarGrupoCNPJCPF(const CNPJCPF: string; Codicao, GrupoCNPJ: Boolean);
+var
+  xCNPJ: string;
 begin
   if (Codicao) then
   begin
@@ -2289,7 +2439,14 @@ begin
     if Length(CNPJCPF) <= 11 then
       Gerador.wCampo(tcStr, '#2', 'Cpf', 11, 11, 1, CNPJCPF, '')
     else
-      Gerador.wCampo(tcStr, '#2', 'Cnpj', 14, 14, 1, CNPJCPF, '');
+    begin
+      xCNPJ := CNPJCPF;
+
+      if Provedor = proadm then
+        xCNPJ := FormatarCNPJouCPF(xCNPJ);
+
+      Gerador.wCampo(tcStr, '#2', 'Cnpj', 14, 18, 1, xCNPJ, '');
+    end;
 
     if GrupoCNPJ then
       Gerador.wGrupo('/Cnpj')
@@ -2298,6 +2455,13 @@ begin
   end
   else
     Gerador.wCampo(tcStr, '#2', 'Cnpj', 14, 14, 1, CNPJCPF, '');
+end;
+
+procedure TNFSeG.GerarGrupoProAdm;
+begin
+  Gerador.wCampo(tcStr, '#4', 'Key', 06, 80, 1, Key, '');
+  Gerador.wCampo(tcStr, '#5', 'Auth', 06, 50, 1, Auth, '');
+  Gerador.wCampo(tcStr, '#6', 'RequestId', 06, 50, 1, RequestId, '');
 end;
 
 end.

@@ -340,7 +340,7 @@ begin
       Nivel1 := (leitor.rExtrai(1, 'ConsultarNfseFaixaResposta') <> '');
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'ConsultarNfseServicoPrestadoResponse') <> '');
-      
+
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'resPedidoLoteNFSe') <> '');
 
@@ -351,11 +351,18 @@ begin
       Nivel1 := (leitor.rExtrai(1, 'RetornoConsultaRPS') <> '');
 
     if not Nivel1 then
+      Nivel1 := (leitor.rExtrai(1, 'Enviarloterpssincronoresposta') <> '');
+
+    if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'listaNfse') <> '');
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'ListaNfse') <> '');
     if not Nivel1 then
       Nivel1 := (leitor.rExtrai(1, 'nfse') <> '');
+
+    // Adm notas
+    if not Nivel1 then
+      Nivel1 := (leitor.rExtrai(1, 'Nfse') <> '');
 
     // Assessor Publico
     if not Nivel1 then
@@ -1464,6 +1471,21 @@ begin
 
             inc(i);
           end;
+        end;
+      end;
+    end;
+
+    if FProvedor = proAssessorPublico then
+    begin
+      i := 0;
+      if (leitor.rExtrai(2, 'INCONSISTENCIA') <> '') then
+      begin
+        while Leitor.rExtrai(3, 'ERRO', '', i + 1) <> '' do
+        begin
+          ListaNfse.FMsgRetorno.New;
+          ListaNfse.FMsgRetorno[i].FMensagem := Leitor.rCampo(tcStr, 'ERRO');
+
+          inc(i);
         end;
       end;
     end;

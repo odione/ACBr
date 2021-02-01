@@ -52,7 +52,7 @@ type
   TLayOutNFSe = (LayNfseRecepcaoLote, LayNfseConsultaLote, LayNfseConsultaNfseRps,
                  LayNfseConsultaSitLoteRps, LayNfseConsultaNfse, LayNfseCancelaNfse,
                  LayNfseGerar, LayNfseRecepcaoLoteSincrono, LayNfseSubstituiNfse,
-                 LayNfseAbrirSessao, LayNfseFecharSessao);
+                 LayNfseAbrirSessao, LayNfseFecharSessao, LayNfseConsultaURL);
 
   TSchemaNFSe = (schErro, schNFSe, schConsNFSe, schCancNFSe, schSubNFSe,
                  schAbrirSessao, schFecharSessao);
@@ -72,7 +72,7 @@ type
                             no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
                             no70, no71, no72, no78, no79, no101, no102, no103, no104, no105,
                             no106,no107, no108, no109, no110, no111, no112, no113, no114, no115,
-                            no116, no117, 
+                            no116, no117, no118,
                             no121, no201, no301, no501, no511,
                             no512, no515, no521, no522, no539, no541, no549, no551, no601,
                             no611, no612, no613, no615, no621, no622, no701, no711,no712,
@@ -121,7 +121,7 @@ type
                     proSilTecnologia, proiiBrasilv2, proWebFisco, proDSFSJC,
                     proSimplISSv2, proLencois, progeNFe, proMegaSoft,
                     proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-                    proGeisWeb, proAEG, proSiapSistemas, proDSFv2);
+                    proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm);
 
   TnfseAcao = (acRecepcionar, acConsSit, acConsLote, acConsNFSeRps, acConsNFSe,
                acCancelar, acGerar, acRecSincrono, acConsSecRps, acSubstituir);
@@ -133,7 +133,7 @@ type
   TnfseTEmissao = ( teNormalNFSe, teContigenciaNFSe );
   TnfseTEmpreitadaGlobal = ( EgConstrucaoCivil, EgOutros);
 
-  TTipoDANFSE = ( tpPadrao, tpIssDSF, tpFiorilli );
+  TTipoDANFSE = ( tpPadrao, tpIssDSF, tpFiorilli, tpAdm );
 
   TLayOutXML = (loNone, loABRASFv1, loABRASFv2, loEGoverneISS, loEL, loEquiplano,
                 loInfisc, loISSDSF, loGoverna, loSP, loCONAM, loAgili, loSMARAPD, 
@@ -211,8 +211,8 @@ function CodCidadeToCidade(const ACodigo: Integer): String;
 function CodCidadeToCodSiafi(const ACodigo: Integer): String;
 function CodSiafiToCodCidade(const ACodigo: String): String;
 
-function SituacaoTributariaToStr(const t: TnfseSituacaoTributaria): String;
-function StrToSituacaoTributaria(out ok: boolean; const s: String; const provedor : TnfseProvedor = proNenhum): TnfseSituacaoTributaria;
+function SituacaoTributariaToStr(const t: TnfseSituacaoTributaria; const provedor: TnfseProvedor = proNenhum): String;
+function StrToSituacaoTributaria(out ok: boolean; const s: String; const provedor: TnfseProvedor = proNenhum): TnfseSituacaoTributaria;
 function SituacaoTributariaDescricao( const t: TnfseSituacaoTributaria ): String;
 
 function ResponsavelRetencaoToStr(const t: TnfseResponsavelRetencao): String;
@@ -335,7 +335,7 @@ begin
                             '60', '61', '62', '63', '64', '65', '66', '67', '68', '69',
                             '70', '71', '72', '78', '79', '101', '102', '103', '104',
                             '105','106', '107', '108',  '109' ,'110', '111', '112', '113', '114',
-                            '115', '116', '117', '121', '201', '301', '501', '511', '512',
+                            '115', '116', '117', '118', '121', '201', '301', '501', '511', '512',
                             '515', '521', '522', '539', '541', '549', '551', '601',
                             '611', '612', '613', '615', '621', '622', '701', '711',
                             '712', '901', '902', '911', '912', '921', '931', '951',
@@ -347,7 +347,7 @@ begin
                             no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
                             no70, no71, no72, no78, no79, no101, no102, no103, no104,
                             no105, no106, no107, no108, no109, no110, no111, no112, no113, no114,
-                            no115, no116, no117, no121, no201, no301, no501, no511, no512,
+                            no115, no116, no117, no118, no121, no201, no301, no501, no511, no512,
                             no515, no521, no522, no539, no541, no549, no551, no601,
                             no611, no612, no613, no615, no621, no622, no701, no711,
                             no712, no901, no902, no911, no912, no921, no931,
@@ -364,7 +364,7 @@ begin
                             '60', '61', '62', '63', '64', '65', '66', '67', '68', '69',
                             '70', '71', '72', '78', '79', '101', '102', '103' , '104',
                             '105', '106', '107', '108', '109', '110', '111', '112', '113',
-                            '114','115', '116', '117', '121', '201', '301', '501', '511', '512',
+                            '114','115', '116', '117', '118', '121', '201', '301', '501', '511', '512',
                             '515', '521', '522', '539', '541', '549', '551', '601',
                             '611', '612', '613', '615', '621', '622', '701', '711',
                             '712', '901', '902', '911', '912', '921', '931', '951',
@@ -376,7 +376,7 @@ begin
                             no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
                             no70, no71, no72, no78, no79, no101, no102, no103, no104,
                             no105, no106, no107, no108, no109,no110, no111, no112, no113,
-                            no114, no115, no116, no117,no121, no201, no301, no501, no511, no512,
+                            no114, no115, no116, no117, no118, no121, no201, no301, no501, no511, no512,
                             no515, no521, no522, no539, no541, no549, no551, no601,
                             no611, no612, no613, no615, no621, no622, no701, no711,
                             no712, no901, no902, no911, no912, no921, no931,
@@ -535,7 +535,7 @@ begin
          'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
          'SimplISSv2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'SmarAPDv1', 'Futurize', 'GeisWeb', 'AEG', 'SiapSistemas',
-         'DSFv2'],
+         'DSFv2', 'Adm'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -556,7 +556,7 @@ begin
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
          proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe,
          proMegaSoft, proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-         proGeisWeb, proAEG, proSiapSistemas, proDSFv2]);
+         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm]);
 end;
 
 function StrToProvedor(out ok: boolean; const s: String): TnfseProvedor;
@@ -581,7 +581,7 @@ begin
          'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
          'SimplISSv2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'SmarAPDv1', 'Futurize', 'GeisWeb', 'AEG', 'SiapSistemas',
-         'DSFv2'],
+         'DSFv2', 'Adm'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -602,7 +602,7 @@ begin
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
          proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe,
          proMegaSoft, proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-         proGeisWeb, proAEG, proSiapSistemas, proDSFv2]);
+         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm]);
 end;
 
 // Condição de pagamento ******************************************************
@@ -18026,23 +18026,40 @@ end;
 
 // Situacao Tributária *********************************************************
 
-function SituacaoTributariaToStr(const t: TnfseSituacaoTributaria): String;
+function SituacaoTributariaToStr(const t: TnfseSituacaoTributaria; const provedor: TnfseProvedor = proNenhum): String;
 begin
-  result := EnumeradoToStr(t,
+  if provedor = proAdm then
+  begin
+    // Iss Retido: 0 Sim / 1 Não
+    if t = stRetencao then
+      Result := '0'
+    else
+      Result := '1';
+  end
+  else
+    result := EnumeradoToStr(t,
                            ['1', '2', '3'],
                            [stRetencao, stNormal, stSubstituicao]);
 end;
 
-function StrToSituacaoTributaria(out ok: boolean; const s: String; const provedor : TnfseProvedor): TnfseSituacaoTributaria;
+function StrToSituacaoTributaria(out ok: boolean; const s: String; const provedor: TnfseProvedor): TnfseSituacaoTributaria;
 begin
-  if provedor = proCenti then
-  begin
-    result := StrToEnumerado(ok, s,
+  case provedor of
+    proCenti:
+      result := StrToEnumerado(ok, s,
                              ['0', '1', '2'],
                              [stNormal, stRetencao, stSubstituicao]);
-  end
+
+    proAdm:
+      begin
+        // Iss Retido: 0 Sim / 1 Não
+        result := StrToEnumerado(ok, s,
+                                 ['1', '0'],
+                                 [stRetencao, stNormal]);
+        if not Ok then
+          result := stNormal;
+      end;
   else
-  begin
     result := StrToEnumerado(ok, s,
                              ['1', '2', '3'],
                              [stRetencao, stNormal, stSubstituicao]);
@@ -18512,7 +18529,7 @@ begin
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
     proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, proiiBrasilv2,
     proSimplISSv2, proMegasoft, proModernizacaoPublica, proFuturize, proAEG,
-    proSiapSistemas, proDSFv2, proElotech: Result := loABRASFv2;
+    proSiapSistemas, proDSFv2, proElotech, proAdm: Result := loABRASFv2;
 
     proAgili,
     proAgiliv2:     Result := loAgili;
@@ -18558,7 +18575,7 @@ begin
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2, proSigep,
     proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, proGiap,
     proSimplISSv2, proMegasoft, proModernizacaoPublica, proFuturize, proAEG,
-    proSiapSistemas, proDSFv2, proElotech: Result := ve200;
+    proSiapSistemas, proDSFv2, proElotech, proAdm: Result := ve200;
 
     proInfiscv11, proLencois: Result := ve110;
   else

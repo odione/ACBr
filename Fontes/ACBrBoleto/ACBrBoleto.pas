@@ -1349,6 +1349,7 @@ type
     fDataAbatimento       : TDateTime;
     fDataDesconto         : TDateTime;
     fDataDesconto2        : TDateTime;
+    fDataDesconto3        : TDateTime;
     fDataMoraJuros        : TDateTime;
     fDataMulta            : TDateTime;
     fDataProtesto         : TDateTime;
@@ -1361,6 +1362,7 @@ type
     fValorAbatimento      : Currency;
     fValorDesconto        : Currency;
     fValorDesconto2       : Currency;
+    fValorDesconto3       : Currency;
     fValorMoraJuros       : Currency;
     fValorIOF             : Currency;
     fValorOutrasDespesas  : Currency;
@@ -1465,6 +1467,7 @@ type
      property DataAbatimento                 : TDateTime read fDataAbatimento    write fDataAbatimento;
      property DataDesconto                   : TDateTime read fDataDesconto      write fDataDesconto;
      property DataDesconto2                  : TDateTime read fDataDesconto2     write fDataDesconto2;
+     property DataDesconto3                  : TDateTime read fDataDesconto3     write fDataDesconto3;
      property DataMoraJuros                  : TDateTime read fDataMoraJuros     write fDataMoraJuros;
      property DataMulta                      : TDateTime read fDataMulta         write fDataMulta;
      property DataProtesto                   : TDateTime read fDataProtesto      write SetDataProtesto;
@@ -1478,6 +1481,7 @@ type
      property ValorAbatimento      : Currency read fValorAbatimento       write fValorAbatimento;
      property ValorDesconto        : Currency read fValorDesconto         write fValorDesconto;
      property ValorDesconto2       : Currency read fValorDesconto2        write fValorDesconto2;
+     property ValorDesconto3       : Currency read fValorDesconto3        write fValorDesconto3;
      property ValorMoraJuros       : Currency read fValorMoraJuros        write fValorMoraJuros;
      property ValorIOF             : Currency read fValorIOF              write fValorIOF;
      property ValorOutrasDespesas  : Currency read fValorOutrasDespesas   write fValorOutrasDespesas;
@@ -1644,6 +1648,7 @@ type
     FAlterarEscalaPadrao: Boolean;
     FNovaEscala: Integer;
     FIndiceImprimirIndividual: Integer;
+    FCalcularNomeArquivoPDFIndividual: Boolean;
     function ComponentStateDesigning: Boolean;
     function GetArquivoLogo: String;
     function GetDirLogo: String;
@@ -1688,6 +1693,7 @@ type
     property PrinterName     : String          read fPrinterName      write fPrinterName;
     property DirLogo         : String          read GetDirLogo        write SetDirLogo;
     property NomeArquivo     : String          read GetNomeArquivo    write SetNomeArquivo ;
+    property CalcularNomeArquivoPDFIndividual: Boolean        read FCalcularNomeArquivoPDFIndividual write FCalcularNomeArquivoPDFIndividual default True ;
     property PdfSenha        : string          read FPdfSenha         write SetPdfSenha;
     property AlterarEscalaPadrao: Boolean      read FAlterarEscalaPadrao write FAlterarEscalaPadrao default False;
     property NovaEscala      : Integer         read FNovaEscala       write FNovaEscala        default 96;
@@ -2178,15 +2184,17 @@ end;
 
 procedure TACBrTitulo.SetParcela ( const AValue: Integer ) ;
 begin
-   if (AValue > TotalParcelas) and (ACBrBoleto.ACBrBoletoFC.LayOut = lCarne) then
-      raise Exception.Create( ACBrStr('Numero da Parcela Atual deve ser menor ' +
-                                      'que o Total de Parcelas do Carnê') );
+  if Assigned(ACBrBoleto.ACBrBoletoFC) then
+    if (AValue > TotalParcelas) and (ACBrBoleto.ACBrBoletoFC.LayOut = lCarne) then
+       raise Exception.Create( ACBrStr('Numero da Parcela Atual deve ser menor ' +
+                                       'que o Total de Parcelas do Carnê') );
    fParcela := AValue;
 end;
 
 procedure TACBrTitulo.SetTotalParcelas ( const AValue: Integer ) ;
 begin
-   if (AValue < Parcela) and (ACBrBoleto.ACBrBoletoFC.LayOut = lCarne) then
+  if Assigned(ACBrBoleto.ACBrBoletoFC) then
+    if (AValue < Parcela) and (ACBrBoleto.ACBrBoletoFC.LayOut = lCarne) then
       raise Exception.Create( ACBrStr('Numero da Parcela Atual deve ser menor ou igual ' +
                                       'o Total de Parcelas do Carnê') );
    fTotalParcelas := AValue;
@@ -2303,6 +2311,7 @@ begin
    fDataAbatimento       := 0;
    fDataDesconto         := 0;
    fDataDesconto2        := 0;
+   fDataDesconto3        := 0;
    fDataMoraJuros        := 0;
    fDataMulta            := 0;
    fDataProtesto         := 0;
@@ -2315,6 +2324,7 @@ begin
    fValorAbatimento      := 0;
    fValorDesconto        := 0;
    fValorDesconto2       := 0;
+   fValorDesconto3       := 0;
    fValorMoraJuros       := 0;
    fValorIOF             := 0;
    fValorOutrasDespesas  := 0;
@@ -3887,25 +3897,24 @@ begin
         Result := '';
         Exit;
      end;
-
      Result := '2'               +                                         // IDENTIFICAÇÃO DO LAYOUT PARA O REGISTRO
-               Copy(PadRight(Mensagem[1], 80, ' '), 1, 80);                // CONTEÚDO DA 1ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
+               Copy(PadRight(TiraAcentos(Mensagem[1]), 80, ' '), 1, 80);                // CONTEÚDO DA 1ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
 
      if Mensagem.Count >= 3 then
         Result := Result +
-                  Copy(PadRight(Mensagem[2], 80, ' '), 1, 80)              // CONTEÚDO DA 2ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
+                  Copy(PadRight(TiraAcentos(Mensagem[2]), 80, ' '), 1, 80)              // CONTEÚDO DA 2ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
      else
         Result := Result + PadRight('', 80, ' ');                          // CONTEÚDO DO RESTANTE DAS LINHAS
 
      if Mensagem.Count >= 4 then
         Result := Result +
-                  Copy(PadRight(Mensagem[3], 80, ' '), 1, 80)              // CONTEÚDO DA 3ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
+                  Copy(PadRight(TiraAcentos(Mensagem[3]), 80, ' '), 1, 80)              // CONTEÚDO DA 3ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
      else
         Result := Result + PadRight('', 80, ' ');                          // CONTEÚDO DO RESTANTE DAS LINHAS
 
      if Mensagem.Count >= 5 then
         Result := Result +
-                  Copy(PadRight(Mensagem[4], 80, ' '), 1, 80)              // CONTEÚDO DA 4ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
+                  Copy(PadRight(TiraAcentos(Mensagem[4]), 80, ' '), 1, 80)              // CONTEÚDO DA 4ª LINHA DE IMPRESSÃO DA ÁREA "INSTRUÇÕES” DO BOLETO
      else
         Result := Result + PadRight('', 80, ' ');                          // CONTEÚDO DO RESTANTE DAS LINHAS
 
@@ -4916,6 +4925,7 @@ begin
             Competencia         := IniBoletos.ReadString(Sessao,'Competencia', Competencia);
             ArquivoLogoEmp      := IniBoletos.ReadString(Sessao,'ArquivoLogoEmp', ArquivoLogoEmp);
             Verso               := IniBoletos.ReadBool(Sessao,'Verso', False);
+            Sacado.SacadoAvalista.Pessoa        := TACBrPessoa( IniBoletos.ReadInteger(Sessao,'Sacado.SacadoAvalista.Pessoa',2) );
             Sacado.SacadoAvalista.NomeAvalista  := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.NomeAvalista','');
             Sacado.SacadoAvalista.CNPJCPF       := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.CNPJCPF','');
             Sacado.SacadoAvalista.Logradouro    := IniBoletos.ReadString(Sessao,'Sacado.SacadoAvalista.Logradouro','');
@@ -5150,6 +5160,7 @@ begin
   FAlterarEscalaPadrao := False;
   FNovaEscala          := 96;
   FIndiceImprimirIndividual := -1;
+  FCalcularNomeArquivoPDFIndividual := True;
 
 end;
 
@@ -5339,7 +5350,7 @@ begin
      if fACBrBoleto.ListadeBoletos.Count < 1 then
        raise Exception.Create(ACBrStr('Lista de Boletos está vazia'));
 
-     if FIndiceImprimirIndividual >= 0 then
+     if (FIndiceImprimirIndividual >= 0) and (FCalcularNomeArquivoPDFIndividual) then
      begin
        fPathNomeArquivo:= '';
        NomeArquivo := GetNomeArquivoPdfIndividual(NomeArquivoAntigo, FIndiceImprimirIndividual);

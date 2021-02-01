@@ -294,7 +294,7 @@ begin
     if Configuracoes.Geral.ConfigAssinar.URI then
       IdAttr := Configuracoes.Geral.ConfigGeral.Identificador
     else
-      IdAttr := '';
+      IdAttr := 'ID';
 
     if Assina then
       FXMLAssinado := SSL.Assinar(String(XMLUTF8), DocElemento, InfElemento,
@@ -727,7 +727,7 @@ begin
     if Configuracoes.Geral.ConfigAssinar.URI then
       IdAttr := Configuracoes.Geral.ConfigGeral.Identificador
     else
-      IdAttr := '';
+      IdAttr := 'ID';
 
     if Assina then
     begin
@@ -759,7 +759,7 @@ begin
     if Configuracoes.Geral.ConfigAssinar.URI then
       IdAttr := Configuracoes.Geral.ConfigGeral.Identificador
     else
-      IdAttr := '';
+      IdAttr := 'ID';
 
     if Assina then
     begin
@@ -979,20 +979,23 @@ var
     TamTAG := 5;
     if (VersaoNFSe < ve200) and (AProvedor <> proAgili) then
     begin
-      Result := Pos('</Rps>', AXMLString);
+      Result := 0;
+
+      if AProvedor = proGoverna then
+      begin
+        Result := Pos('</LoteRps>', AXMLString);
+        TamTAG := 9;
+      end;
+
+      if Result = 0 then
+        Result := Pos('</Rps>', AXMLString);
+
       // Provedor ISSDSF
       if Result = 0 then
         Result := Pos('</RPS>', AXMLString);
 
       if Result = 0 then  //Equiplano
         Result := Pos('</rps>', AXMLString);
-
-      // Provedor Governa
-      if ((Result = 0) and (AProvedor = proGoverna)) then
-      begin
-        Result := Pos('</LoteRps>', AXMLString);
-        TamTAG := 9;
-      end;
     end
     else
     begin
