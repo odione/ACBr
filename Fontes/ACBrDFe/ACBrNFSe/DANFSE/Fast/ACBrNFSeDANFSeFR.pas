@@ -170,7 +170,7 @@ const
   TITULO_PDF = 'Nota Fiscal de Serviço Eletrônica';
 var
   I         : Integer;
-  NomeArqXML: string;
+  LArquivoPDF: string;
   OldShowDialog: Boolean;
 begin
   if PrepareReport(NFSe) then
@@ -186,15 +186,11 @@ begin
       frxPDFExport.ShowDialog := False;
       for I := 0 to TACBrNFSe(ACBrNFSe).NotasFiscais.Count - 1 do
       begin
-        NomeArqXML := Trim(DANFSEClassOwner.NomeDocumento);
 
-        if EstaVazio(NomeArqXML) then
-          with TACBrNFSe(ACBrNFSe).NotasFiscais.Items[I] do
-          begin
-            NomeArqXML :=  TACBrNFSe(ACBrNFSe).NumID[NFSe] + '-nfse.pdf';
-          end;
-
-        frxPDFExport.FileName := PathWithDelim(DANFSEClassOwner.PathPDF) + NomeArqXML;
+        LArquivoPDF := Trim(DANFSEClassOwner.NomeDocumento);
+        if EstaVazio(LArquivoPDF) then
+          LArquivoPDF :=  TACBrNFSe(ACBrNFSe).NumID[TACBrNFSe(ACBrNFSe).NotasFiscais.Items[I].NFSe] + '-nfse.pdf';
+        frxPDFExport.FileName := PathWithDelim(DANFSEClassOwner.PathPDF) + LArquivoPDF;
 
         if not DirectoryExists(ExtractFileDir(frxPDFExport.FileName)) then
           ForceDirectories(ExtractFileDir(frxPDFExport.FileName));
@@ -290,6 +286,7 @@ begin
     begin
       for I := 0 to TACBrNFSe(ACBrNFSe).NotasFiscais.Count - 1 do
       begin
+
         CarregaDados(TACBrNFSe(ACBrNFSe).NotasFiscais.Items[I].NFSe);
 
         if (I > 0) then
@@ -303,6 +300,7 @@ begin
   end;
 
   AjustaMargensReports;
+
 end;
 
 procedure TACBrNFSeDANFSeFR.CriarDataSetsFrx;

@@ -486,6 +486,10 @@ type
     // Retorno
     FDataHora: TDateTime;
     FRetCancNFSe: TRetCancNFSe;
+    FSerieNFSe: String;
+    FSerieRps: String;
+    FNumeroRps: String;
+    FValorNFSe: Double;
 
   protected
     procedure DefinirURL; override;
@@ -508,6 +512,12 @@ type
     property MotivoCancelamento: String read FMotivoCancelamento write FMotivoCancelamento;
     //usado pelo provedor IssDsf
     property NumeroLote: String         read FNumeroLote         write FNumeroLote;
+
+    // Provedor Conam
+    property SerieNFSe: String read FSerieNFSe write FSerieNFSe;
+    property NumeroRps: String read FNumeroRps write FNumeroRps;
+    property SerieRps: String  read FSerieRps  write FSerieRps;
+    property ValorNFSe: Double read FValorNFSe write FValorNFSe;
 
     property DataHora: TDateTime        read FDataHora           write FDataHora;
 
@@ -709,7 +719,11 @@ type
                          const ANumeroNFSe: String = '';
                          const AMotivoCancelamento: String = '';
                          const ANumLote: String = '';
-                         const ACodigoVerificacao: String = ''): Boolean;
+                         const ACodigoVerificacao: String = '';
+                         const ASerieNFSe: string = '';
+                         const ANumeroRps: string = '';
+                         const ASerieRps: string = '';
+                         const AValorNFSe: Double = 0): Boolean;
 
     function SubstituiNFSe(const ACodigoCancelamento, ANumeroNFSe: String;
                            const AMotivoCancelamento: String = ''): Boolean;
@@ -1934,7 +1948,7 @@ begin
                           '</Signature>'+
                        '</' + FPrefixo4 + 'Rps>';
 
-             proTcheInfov2,
+//             proTcheInfov2,
              proSimplISSv2,
              proFintelISS: FvNotas := FvNotas +
                        '<' + FPrefixo4 + 'Rps' +
@@ -1966,6 +1980,13 @@ begin
         proSMARAPD,
         proGiap,
         proIPM: FvNotas := RPS;
+
+        proGeisWeb: FvNotas := FvNotas +
+                       '<' + FPrefixo4 + 'Rps' +
+                          RetornarConteudoEntre(RPS,
+                            '<' + FPrefixo4 + 'Rps', '</Signature>') +
+                          '</Signature>'+
+                       '</' + FPrefixo4 + 'Rps>';
       else
         FvNotas := FvNotas +
                     '<' + FPrefixo4 + 'Rps>' +
@@ -3201,6 +3222,7 @@ begin
 
   FDataRecebimento := RetEnvLote.InfRec.DataRecebimento;
   FProtocolo       := RetEnvLote.InfRec.Protocolo;
+
   if RetEnvLote.InfRec.NumeroLote <> '' then
     FNumeroLote := RetEnvLote.InfRec.NumeroLote;
 
@@ -3208,7 +3230,7 @@ begin
   FPMsg := '';
   FaMsg := '';
 
-  if FProtocolo <> '' then
+  if (FProtocolo <> '') or (FDataRecebimento > 0) then
   begin
     for i := 0 to FNotasFiscais.Count -1 do
     begin
@@ -3258,7 +3280,8 @@ begin
   else if FProvedor in [proGiap] then
     Result := RetEnvLote.InfRec.ListaChaveNFeRPS.Count > 0
   else
-    Result := (RetEnvLote.InfRec.Protocolo <> '');
+    Result := (RetEnvLote.InfRec.Protocolo <> '') or
+              (RetEnvLote.InfRec.DataRecebimento > 0);
 
   if RetEnvLote.InfRec.MsgRetorno.Count > 0 then
   begin
@@ -5137,6 +5160,12 @@ begin
       CodigoCanc := TNFSeCancelarNfse(Self).FCodigoCancelamento;
       MotivoCanc := TNFSeCancelarNfse(Self).FMotivoCancelamento;
 
+      // Provedor Conam
+      SerieNFSe := TNFSeCancelarNfse(Self).FSerieNFSe;
+      NumeroRPS := TNFSeCancelarNfse(Self).FNumeroRps;
+      SerieRps  := TNFSeCancelarNfse(Self).FSerieRps;
+      ValorNota := TNFSeCancelarNfse(Self).FValorNFSe;
+
       if FNotasFiscais.Count > 0 then
       begin
         SerieNFSe  := FNotasFiscais.Items[0].NFSe.SeriePrestacao;
@@ -5416,10 +5445,16 @@ var
 begin
   FCabecalhoStr := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.CabecalhoStr;
   FDadosStr     := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.DadosStr;
+  {
   FTagGrupo     := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.TagGrupo;
   FTagElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.TagElemento;
   FDocElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.DocElemento;
   FInfElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.InfElemento;
+  }
+  FTagGrupo     := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Substituir.TagGrupo;
+  FTagElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Cancelar.TagElemento;
+  FDocElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Cancelar.DocElemento;
+  FInfElemento  := FPConfiguracoesNFSe.Geral.ConfigEnvelope.Cancelar.InfElemento;
 
   FxsdServico := FPConfiguracoesNFSe.Geral.ConfigSchemas.ServicoSubstituir;
 
@@ -5445,7 +5480,8 @@ begin
     if FdocElemento <> '' then
       FdocElemento := FPrefixo3 + FdocElemento;
 
-    if FPConfiguracoesNFSe.Geral.ConfigAssinar.RPS then
+    if (FPConfiguracoesNFSe.Geral.ConfigAssinar.RPS) or
+       (FPConfiguracoesNFSe.Geral.ConfigAssinar.SubstituirRps) then
     begin
       for I := 0 to FNotasFiscais.Count - 1 do
         GerarLoteRPScomAssinatura(FNotasFiscais.Items[I].XMLAssinado);
@@ -5534,8 +5570,8 @@ begin
 
   // O procedimento recebe como parametro o XML a ser assinado e retorna o
   // mesmo assinado da propriedade FPDadosMsg
-  if (FPConfiguracoesNFSe.Geral.ConfigAssinar.Substituir) and (FPDadosMsg <> '') then
-    AssinarXML(FPDadosMsg, FdocElemento, FinfElemento, 'Falha ao Assinar - Substituir NFS-e: ');
+  if (FPConfiguracoesNFSe.Geral.ConfigAssinar.Cancelar) and (FPDadosMsg <> '') then
+    AssinarXML(FPDadosMsg, FdocElemento, FinfElemento, 'Falha ao Assinar - Cancelar: ');
 
   if Provedor = proDSFv2 then
     FPDadosMsg := '<' + FPrefixo3 + 'SubstituirNfseEnvio>' +
@@ -5548,7 +5584,8 @@ begin
                    SeparaDados(FPDadosMsg, FPrefixo3 + 'Pedido', True) +
                    FvNotas  + FTagF;
 
-  if Provedor in [proWebISSv2, proDeISS] then
+  if (Provedor in [proWebISSv2, proDeISS]) or
+     (FPConfiguracoesNFSe.Geral.ConfigAssinar.Substituir) then
     AssinarXML(FPDadosMsg, 'SubstituirNfseEnvio', 'SubstituicaoNfse', 'Falha ao Assinar - SubstituirNfseEnvio: ');
 
   if FPConfiguracoesNFSe.Geral.ConfigSchemas.Validar then
@@ -6372,13 +6409,19 @@ end;
 
 function TWebServices.CancelaNFSe(const ACodigoCancelamento: String;
   const ANumeroNFSe: String = ''; const AMotivoCancelamento: String = '';
-  const ANumLote: String = ''; const ACodigoVerificacao: String = ''): Boolean;
+  const ANumLote: String = ''; const ACodigoVerificacao: String = '';
+  const ASerieNFSe: string = ''; const ANumeroRps: string = '';
+  const ASerieRps: string = ''; const AValorNFSe: Double = 0): Boolean;
 begin
   FCancNfse.FCodigoCancelamento := ACodigoCancelamento;
   FCancNfse.FNumeroNFSe         := ANumeroNFSe;
   FCancNfse.FMotivoCancelamento := AMotivoCancelamento;
   FCancNfse.FNumeroLote         := ANumLote;
   FCancNFSe.FCodigoVerificacao  := ACodigoVerificacao;
+  FCancNFSe.FSerieNFSe          := ASerieNFSe;
+  FCancNFSe.FNumeroRps          := ANumeroRps;
+  FCancNFSe.FSerieRps           := ASerieRps;
+  FCancNFSe.FValorNFSe          := AValorNFSe;
 
   Result := FCancNfse.Executar;
 

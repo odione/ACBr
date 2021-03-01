@@ -121,7 +121,8 @@ type
                     proSilTecnologia, proiiBrasilv2, proWebFisco, proDSFSJC,
                     proSimplISSv2, proLencois, progeNFe, proMegaSoft,
                     proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-                    proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm);
+                    proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm,
+                    proSmarAPDv23);
 
   TnfseAcao = (acRecepcionar, acConsSit, acConsLote, acConsNFSeRps, acConsNFSe,
                acCancelar, acGerar, acRecSincrono, acConsSecRps, acSubstituir);
@@ -217,9 +218,11 @@ function SituacaoTributariaDescricao( const t: TnfseSituacaoTributaria ): String
 
 function ResponsavelRetencaoToStr(const t: TnfseResponsavelRetencao): String;
 function StrToResponsavelRetencao(out ok: boolean; const s: String): TnfseResponsavelRetencao;
+function ResponsavelRetencaoDescricao(const t: TnfseResponsavelRetencao): String;
 
 function TipoEmissaoToStr(const t: TnfseTEmissao): String;
 function StrToTipoEmissao(out ok: boolean; const s: String): TnfseTEmissao;
+function TipoEmissaoDescricao(const t: TnfseTEmissao): String;
 
 function EmpreitadaGlobalToStr(const t: TnfseTEmpreitadaGlobal): String;
 function StrToEmpreitadaGlobal(out ok: boolean; const s: String): TnfseTEmpreitadaGlobal;
@@ -276,9 +279,11 @@ function StrToTFrmRec(out ok: boolean; const s: String): TNFSEFrmRec; //Governa
 
 function OperacaoToStr(const t: TOperacao): String;
 function StrToOperacao(out ok: boolean; const s: String): TOperacao;
+function OperacaoDescricao(const t: TOperacao): String;
 
 function TributacaoToStr(const t: TTributacao): String;
 function StrToTributacao(out ok: boolean; const s: String): TTributacao;
+function TributacaoDescricao(const t: TTributacao): String;
 
 function RemoverAtributos(const AXML: String; AProvedor: TnfseProvedor): String;
 
@@ -535,7 +540,7 @@ begin
          'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
          'SimplISSv2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'SmarAPDv1', 'Futurize', 'GeisWeb', 'AEG', 'SiapSistemas',
-         'DSFv2', 'Adm'],
+         'DSFv2', 'Adm', 'SmarAPDv23'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -556,7 +561,7 @@ begin
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
          proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe,
          proMegaSoft, proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm]);
+         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm, proSmarAPDv23]);
 end;
 
 function StrToProvedor(out ok: boolean; const s: String): TnfseProvedor;
@@ -581,7 +586,7 @@ begin
          'SigIss', 'Elotech', 'SilTecnologia', 'iiBrasilv2', 'WEBFISCO', 'DSFSJC',
          'SimplISSv2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'SmarAPDv1', 'Futurize', 'GeisWeb', 'AEG', 'SiapSistemas',
-         'DSFv2', 'Adm'],
+         'DSFv2', 'Adm', 'SmarAPDv23'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISSv2, proGINFES, proIssDSF,
          proProdemge, proAbaco, proBetha, proEquiplano, proISSIntel, proProdam,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -602,7 +607,7 @@ begin
          proGiap, proAssessorPublico, proSigIss, proElotech, proSilTecnologia,
          proiiBrasilv2, proWebFisco, proDSFSJC, proSimplISSv2, proLencois, progeNFe,
          proMegaSoft, proModernizacaoPublica, proSiat, proSmarAPDv1, proFuturize,
-         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm]);
+         proGeisWeb, proAEG, proSiapSistemas, proDSFv2, proAdm, proSmarAPDv23]);
 end;
 
 // Condição de pagamento ******************************************************
@@ -18449,6 +18454,38 @@ begin
   end;
 end;
 
+function OperacaoDescricao(const t: TOperacao): String;
+begin
+  case t of
+    toSemDeducao             : Result := 'A - Sem Dedução';
+    toComDeducaoMateriais    : Result := 'B - Com Dedução/Materiais';
+    toImuneIsenta            : Result := 'C - Imune/Isenta de ISSQN';
+    toDevolucaoSimplesRemessa: Result := 'D - Devolução/Simples Remessa';
+    toIntermediacao          : Result := 'J - Intermediario';
+  else
+    Result := '';
+  end;
+end;
+
+function ResponsavelRetencaoDescricao(const t: TnfseResponsavelRetencao): String;
+begin
+  case t of
+    ptTomador      : Result := '1 - Tomador';
+    rtPrestador    : Result := '2 - Prestador';
+    rtIntermediario: Result := '3 - Intermediário';
+  else
+    Result := '';
+  end;
+end;
+
+function TipoEmissaoDescricao(const t: TnfseTEmissao): String;
+begin
+  case t of
+    teNormalNFSe     : Result := 'N - Normal';
+    teContigenciaNFSe: Result := 'C - Contingência';
+  end;
+end;
+
 function nfseRegimeEspecialTributacaoDescricao( const t: TnfseRegimeEspecialTributacao ): String;
 begin
   case t of
@@ -18467,6 +18504,23 @@ begin
     retEmpresaPP                 : Result := '12 - Empresa de Pequeno Porte (EPP)';
     retMicroEmpresario           : Result := '13 - Microempresário';
     retOutros                    : Result := '14 - Outros/Sem Vinculo';
+  else
+    Result := '';
+  end;
+end;
+
+function TributacaoDescricao(const t: TTributacao): String;
+begin
+  case t of
+    ttIsentaISS           : Result := 'C - Isenta de ISS';
+    ttNaoIncidencianoMunic: Result := 'E - Não Incidência no Município';
+    ttImune               : Result := 'F - Imune';
+    ttExigibilidadeSusp   : Result := 'K - Exigibilidade Susp.Dec.J/Proc.A';
+    ttNaoTributavel       : Result := 'N - Não Tributável';
+    ttTributavel          : Result := 'T - Tributável';
+    ttTributavelFixo      : Result := 'G - Tributável Fixo';
+    ttTributavelSN        : Result := 'H - Tributável S.N.';
+    ttMEI                 : Result := 'M - Micro Empreendedor Individual(MEI)';
   else
     Result := '';
   end;
@@ -18529,7 +18583,7 @@ begin
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2,
     proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, proiiBrasilv2,
     proSimplISSv2, proMegasoft, proModernizacaoPublica, proFuturize, proAEG,
-    proSiapSistemas, proDSFv2, proElotech, proAdm: Result := loABRASFv2;
+    proSiapSistemas, proDSFv2, proElotech, proAdm, proSmarAPDv23: Result := loABRASFv2;
 
     proAgili,
     proAgiliv2:     Result := loAgili;
@@ -18575,7 +18629,7 @@ begin
     proAsten, proELv2, proTiplanv2, proGiss, proDeISS, proTcheInfov2, proSigep,
     proDataSmart, proDesenvolve, proCenti, proRLZ, proSigCorp, proGiap,
     proSimplISSv2, proMegasoft, proModernizacaoPublica, proFuturize, proAEG,
-    proSiapSistemas, proDSFv2, proElotech, proAdm: Result := ve200;
+    proSiapSistemas, proDSFv2, proElotech, proAdm, proSmarAPDv23: Result := ve200;
 
     proInfiscv11, proLencois: Result := ve110;
   else
