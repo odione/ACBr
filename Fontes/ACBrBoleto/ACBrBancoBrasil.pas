@@ -273,7 +273,7 @@ end;
 
 function TACBrBancoBrasil.GerarRegistroHeader240(NumeroRemessa : Integer): String;
 var
-  ATipoInscricao, aConta, aAgencia, aModalidade, aCSP :String;
+  ATipoInscricao, aConta, aAgencia, aModalidade, aCSP, str0: String;
   VersaoArquivo, VersaoLote: Integer;
 begin
 
@@ -300,10 +300,16 @@ begin
       pode ser informado 'CSP' nas posições 223 a 225.
       }
 
-      if VersaoArquivo = 030 then
-        aCSP := 'CSP'
-      else
+      if VersaoArquivo = 030 then 
+      begin
+        aCSP := 'CSP';
+        str0 := '0';
+      end 
+      else 
+      begin
         aCSP := '';
+        str0 := '';
+      end;
 
       { GERAR REGISTRO-HEADER DO ARQUIVO }
 
@@ -334,7 +340,7 @@ begin
                StringOfChar('0', 20)                           + // 192 a 211 - Uso reservado da empresa
                StringOfChar(' ', 11)                           + // 212 a 222 - 11 brancos
                PadLeft(aCSP, 3, ' ')                           + // 223 a 225 - Informar 'CSP' se a versão for 030, caso contrario informar branco
-               StringOfChar('0', 3)                            + // 226 a 228 - Uso exclusivo de Vans
+               PadLeft(str0, 3, ' ')                            + // 226 a 228 - Uso exclusivo de Vans
                StringOfChar(' ', 2)                            + // 229 a 230 - Tipo de servico
                StringOfChar(' ', 10);                            // 231 a 240 - titulo em carteira de cobranca
 
@@ -406,6 +412,7 @@ var
    BoletoEmail,GeraSegS         : Boolean;
    DataProtestoNegativacao      : string;
    DiasProtestoNegativacao      : string;
+   ATipoDocumento               : String;
 
   function MontarInstrucoes2: string;
   begin
@@ -662,6 +669,9 @@ begin
      if Mensagem.Text <> '' then
        AMensagem   := Mensagem.Strings[0];
 
+     {Tipo Documento}
+     ATipoDocumento:= DefineTipoDocumento;
+
      {SEGMENTO P}
      Result:= IntToStrZero(ACBrBanco.Numero, 3)                                         + // 1 a 3 - Código do banco
               '0001'                                                                    + // 4 a 7 - Lote de serviço
@@ -678,7 +688,7 @@ begin
               PadRight(ANossoNumero+aDV, 20, ' ')                                       + // 38 a 57 - Nosso número - identificação do título no banco
               wTipoCarteira                                                             + // 58 - Cobrança Simples
               '1'                                                                       + // 59 - Forma de cadastramento do título no banco: com cadastramento
-              InttoStr(Integer(ACBrBoleto.Cedente.TipoDocumento))                       + // 60 - Tipo de documento: Tradicional
+              ATipoDocumento                                                            + // 60 - Tipo de documento: Tradicional
               ATipoBoleto                                                               + // 61 a 62 - Quem emite e quem distribui o boleto?
               PadRight(NumeroDocumento, 15, ' ')                                        + // 63 a 77 - Número que identifica o título na empresa [ Alterado conforme instruções da CSO Brasília ] {27-07-09}
               FormatDateTime('ddmmyyyy', Vencimento)                                    + // 78 a 85 - Data de vencimento do título

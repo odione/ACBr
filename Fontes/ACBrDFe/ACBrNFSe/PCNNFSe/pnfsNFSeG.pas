@@ -630,7 +630,8 @@ begin
     proInfisc,
     proInfiscv11: begin
                     Gerador.Prefixo := Prefixo3;
-                    Gerador.wGrupo('envioLote versao="1.0" xmlns:ws="http://ws.pc.gif.com.br/"');
+//                    Gerador.wGrupo('envioLote versao="1.0" xmlns:ws="http://ws.pc.gif.com.br/"');
+                    Gerador.wGrupo('envioLote versao="1.0"');
                     Gerador.wCampo(tcStr, '', 'CNPJ'   , 01, 14, 1, Cnpj, '');
                     Gerador.wCampo(tcStr, '', 'dhTrans', 01, 19, 1, FormatDateTime('yyyy-mm-dd hh:mm:ss', Now), '');
                     Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + Notas;
@@ -733,7 +734,8 @@ begin
             Gerador.ArquivoFormatoXML := Gerador.ArquivoFormatoXML + Notas
           end;
 
-     proISSJoinville:
+     proISSJoinville,
+     proAbacov2:
           begin
             Gerador.wGrupo('LoteRps' + FaVersao + FaIdentificador);
             Gerador.Prefixo := Prefixo4;
@@ -2201,6 +2203,24 @@ begin
 
         TagF :=    '</InfPedidoCancelamento>' +
               '</Pedido>';
+      end;
+
+    proElotech:
+      begin
+        TagI := '<' + Prefixo4 + 'IdentificacaoRequerente>' +
+                 '<' + Prefixo4 + 'CpfCnpj>' +
+                  '<' + Prefixo4 + 'Cnpj>' + Cnpj + '</' + Prefixo4 + 'Cnpj>' +
+                 '</' + Prefixo4 + 'CpfCnpj>' +
+                 '<' + Prefixo4 + 'InscricaoMunicipal>' + IM + '</' + Prefixo4 + 'InscricaoMunicipal>' +
+                 '<' + Prefixo4 + 'Senha>' + SenhaWeb + '</' + Prefixo4 + 'Senha>' +
+                 '<' + Prefixo4 + 'Homologa>' + LowerCase(booltostr(Transacao, True)) + '</' + Prefixo4 + 'Homologa>' +
+                '</' + Prefixo4 + 'IdentificacaoRequerente>' +
+
+                '<' + Prefixo3 + 'Pedido>' +
+                   '<' + Prefixo4 + 'InfPedidoCancelamento' + FaIdentificadorCanc + '>';
+
+        TagF :=    '</' + Prefixo4 + 'InfPedidoCancelamento>' +
+                '</' + Prefixo3 + 'Pedido>';
       end;
   else
     begin

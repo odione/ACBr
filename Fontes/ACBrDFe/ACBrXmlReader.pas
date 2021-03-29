@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 { Projeto: Componentes ACBr                                                    }
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
@@ -38,10 +38,10 @@ interface
 
 uses
   Classes, SysUtils,
-  pcnConversao,
-  ACBrXmlDocument;
+  ACBrXmlBase, ACBrXmlDocument;
 
 type
+  { TACBrXmlReader }
   TACBrXmlReader = class
   private
     FArquivo: String;
@@ -57,7 +57,7 @@ type
     function CarregarArquivo(const CaminhoArquivo: string): boolean; overload;
     function CarregarArquivo(const Stream: TStream): boolean; overload;
     function ProcessarCNPJCPF(const ANode: TACBrXmlNode): string;
-    function ProcessarConteudo(const ANode: TACBrXmlNode; const Tipo: TpcnTipoCampo): variant;
+    function ProcessarConteudo(const ANode: TACBrXmlNode; const Tipo: TACBrTipoCampo): variant;
 
     property Document: TACBrXmlDocument read FDocument;
     property Arquivo: String read FArquivo write FArquivo;
@@ -110,7 +110,7 @@ begin
     Result := ProcessarConteudo(ANode.Childrens.Find('CPF'), tcStr);
 end;
 
-function TACBrXmlReader.ProcessarConteudo(const ANode: TACBrXmlNode; const Tipo: TpcnTipoCampo): variant;
+function TACBrXmlReader.ProcessarConteudo(const ANode: TACBrXmlNode; const Tipo: TACBrTipoCampo): variant;
 var
   ConteudoTag: string;
 begin
