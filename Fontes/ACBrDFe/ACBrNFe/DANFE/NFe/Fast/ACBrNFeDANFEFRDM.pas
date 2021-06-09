@@ -1321,7 +1321,7 @@ begin
       if FDANFEClassOwner is TACBrNFeDANFCEClass then
         cdsPagamento.FieldByName('tPag').AsString := TACBrNFeDANFCEClass(FDANFEClassOwner).ManterDescricaoPagamentos(FNFe.pag[i])
       else
-        cdsPagamento.FieldByName('tPag').AsString := FormaPagamentoToDescricao(tPag);
+        cdsPagamento.FieldByName('tPag').AsString := FormaPagamentoToDescricao(tPag, xPag);
       cdsPagamento.FieldByName('vPag').AsFloat   := vPag;
       // ver tpIntegra
       cdsPagamento.FieldByName('CNPJ').AsString  := FormatarCNPJ(CNPJ);
@@ -1747,6 +1747,11 @@ begin
       FieldByName('ImprimeEmDuasLinhas').AsString    := IfThen( TACBrNFeDANFCEClass(FDANFEClassOwner).ImprimeEmDuasLinhas, 'S', 'N');
       FieldByName('QrCodeLateral').AsString          := IfThen( TACBrNFeDANFCEClass(FDANFEClassOwner).ImprimeQRCodeLateral, 'S', 'N');
       FieldByName('ImprimeDescAcrescItem').AsInteger := IfThen( TACBrNFeDANFCEClass(FDANFEClassOwner).ImprimeDescAcrescItem, 1 , 0 );
+    end;
+
+    if (FDANFEClassOwner is TACBrNFeDANFEClass) then
+    begin
+      FieldByName('ImprimeDescAcrescItem').AsInteger := Integer(TACBrNFeDANFEClass(FDANFEClassOwner).ImprimeDescAcrescItem);
     end;
 
     // Carregamento da imagem

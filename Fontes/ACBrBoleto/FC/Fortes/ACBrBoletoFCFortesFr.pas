@@ -87,6 +87,10 @@ type
     RLDraw20: TRLDraw;
     RLDraw21: TRLDraw;
     RLDraw22: TRLDraw;
+    rlCIP1: TRLDraw;
+    rlCIP2: TRLDraw;
+    rlCIP3: TRLDraw;
+    rlCIP4: TRLDraw;
     RLDraw23: TRLDraw;
     RLDraw24: TRLDraw;
     RLDraw25: TRLDraw;
@@ -134,6 +138,10 @@ type
     RLLabel123: TRLMemo;
     RLLabel161: TRLMemo;
     RLLabel249: TRLLabel;
+    lblCIP1: TRLLabel;
+    lblCIP2: TRLLabel;
+    lblCIP3: TRLLabel;
+    lblCIP4: TRLLabel;
     RLLabel80: TRLMemo;
     RLLabel88: TRLLabel;
     txtUsoBanco: TRLLabel;
@@ -237,6 +245,10 @@ type
     txtParcela: TRLLabel;
     txtCodCedenteCarne2: TRLLabel;
     txtCPFCarne2: TRLLabel;
+    txtCIP1: TRLLabel;
+    txtCIP2: TRLLabel;
+    txtCIP3: TRLLabel;
+    txtCIP4: TRLLabel;
     txtValorCar: TRLLabel;
     txtNossoNumCan: TRLLabel;
     txtVencCanhoto: TRLLabel;
@@ -985,6 +997,7 @@ type
     procedure LayoutTermicaDataRecord(Sender: TObject; RecNo,
       CopyNo: Integer; var Eof: Boolean;
       var RecordAction: TRLRecordAction);
+    procedure ValidarCIP;
   private
      MensagemPadrao: TStringList;
      Detalhamento  : TStringList;
@@ -1136,6 +1149,7 @@ begin
    Detalhamento    := TStringList.Create;
    RLBand4.Visible := (fBoletoFC.LayOut = lPadraoEntrega) ;
    rlbndComprovanteEntrega2.Visible := (fBoletoFC.LayOut = lPadraoEntrega2) ;
+   ValidarCIP;
    if fBoletoFC.AlterarEscalaPadrao then
    begin
      Self.Scaled := False;
@@ -1284,6 +1298,26 @@ begin
    RecordAction := raUseIt ;
 end;
 
+procedure TACBrBoletoFCFortesFr.ValidarCIP;
+var
+  isCIP: Boolean;
+begin
+  isCIP := ( fBoletoFC.ACBrBoleto.Banco.TipoCobranca in [cobBradesco, cobBradescoSICOOB] );
+  txtCIP1.Visible:= isCIP;
+  lblCIP1.Visible:= isCIP;
+  rlCIP1.Visible:= isCIP;
+  txtCIP2.Visible:= isCIP;
+  lblCIP2.Visible:= isCIP;
+  rlCIP2.Visible:= isCIP;
+  txtCIP3.Visible:= isCIP;
+  lblCIP3.Visible:= isCIP;
+  rlCIP3.Visible:= isCIP;
+  txtCIP4.Visible:= isCIP;
+  lblCIP4.Visible:= isCIP;
+  rlCIP4.Visible:= isCIP;
+
+end;
+
 procedure TACBrBoletoFCFortesFr.RLBand1BeforePrint(Sender: TObject;
    var PrintIt: boolean);
 Var
@@ -1325,7 +1359,8 @@ begin
       txtUsoBanco2.Caption            := Titulo.UsoBanco;
       txtCarteira2.Caption            := Carteira;
       txtEspecie2.Caption             := IfThen(trim(Titulo.EspecieMod) = '','R$',Titulo.EspecieMod);
-      txtValorDocumento2.Caption      := IfThen(Titulo.ValorDocumento > 0,FormatFloat(',0.00',Titulo.ValorDocumento));
+      txtValorDocumento2.Caption      := IfThen(Titulo.ValorDocumento > 0,FormatFloatBr(Titulo.ValorDocumento, ',0.00'));
+      txtCIP1.Caption                 := Banco.CIP;
 
       with Titulo.Sacado do
       begin
@@ -1412,6 +1447,7 @@ begin
      imgCodigoBarra.Margins.LeftMargin := 5;
      txtLinhaDigitavel.Caption       := LinhaDigitavel;
      txtInstrucoes3.Lines.Text       := txtInstrucoes2.Lines.Text;
+
    end;
 end;
 
@@ -1447,7 +1483,7 @@ begin
       txtVencCarne2.Caption           := txtVencCanhoto.Caption;
       txtCodCedenteCarne.Caption      := CodCedente;
       txtCodCedenteCarne2.Caption     := txtCodCedenteCarne.Caption;
-      txtValorCarne.Caption           := FormatFloat(',0.00',Titulo.ValorDocumento);
+      txtValorCarne.Caption           := FormatFloatBr(Titulo.ValorDocumento,',0.00');
       txtValorCar.Caption             := txtValorCarne.Caption;
       txtNossoNumeroCarne.Caption     := NossoNum;
       txtNossoNumCan.Caption          := NossoNum;
@@ -1473,6 +1509,7 @@ begin
                                                 FormatDateTime('dd/mm/yyyy',Titulo.DataProcessamento));
 
       txtUsoBanco.Caption             := Titulo.UsoBanco;
+      txtCIP4.Caption                 := Banco.CIP;
       txtCarteira.Caption             := Carteira;
       txtEspecie2.Caption             := IfThen(trim(Titulo.EspecieMod) = '','R$',Titulo.EspecieMod);
       txtParcela.Caption              := IntToStrZero(Titulo.Parcela,3)+' /';
@@ -1548,7 +1585,7 @@ begin
                                                 FormatDateTime('dd/mm/yyyy',Titulo.DataProcessamento));
       txtNossoNumero4.Caption         := NossoNum;
       txtEspecie4.Caption             := 'R$';
-      txtValorDocumento4.Caption      := FormatFloat(',0.00',Titulo.ValorDocumento);
+      txtValorDocumento4.Caption      := FormatFloatBr(Titulo.ValorDocumento,',0.00');
       txtNomeSacado4.Caption          := Titulo.Sacado.NomeSacado;
    end;
 end;
@@ -1599,7 +1636,7 @@ begin
 
       txtCodigoCedenteRecTop.Caption  := CodCedente;
       txtNossoNumeroRecTop.Caption    := NossoNum;
-      txtValorDocumentoRecTop.Caption := FormatFloat('###,###,##0.00',Titulo.ValorDocumento);
+      txtValorDocumentoRecTop.Caption := FormatFloatBr(Titulo.ValorDocumento,'###,###,##0.00');
       txtDataVencimentoRecTop.Caption := FormatDateTime('dd/mm/yyyy',Titulo.Vencimento);
 
       txtNumeroDocumentoRecTop.Caption:= Titulo.NumeroDocumento;
@@ -1611,7 +1648,7 @@ begin
                                          ifthen(Banco.Digito >= 10,'X',IntToStrZero(Banco.Digito, 1));
       txtDataVencimentoRecTop1.Caption := FormatDateTime('dd/mm/yyyy',Titulo.Vencimento);
       txtCodigoCedenteRecTop1.Caption  := CodCedente;
-      txtValorDocumentoRecTop1.Caption := FormatFloat('###,###,##0.00',Titulo.ValorDocumento);
+      txtValorDocumentoRecTop1.Caption := FormatFloatBr(Titulo.ValorDocumento,'###,###,##0.00');
       txtNossoNumeroRecTop1.Caption    := NossoNum;
       txtNomeSacadoRecTop1.Caption     := Titulo.Sacado.NomeSacado;
 
@@ -1626,6 +1663,7 @@ begin
       txtDataProcessamentoRecTop1.Caption := FormatDateTime('dd/mm/yyyy',Titulo.DataProcessamento);
 
       txtUsoBancoRecTop1.Caption       := Titulo.UsoBanco;
+      txtCIP2.Caption                  := Banco.CIP;
       txtCarteiraRecTop1.Caption       := Titulo.Carteira + IfThen( (Banco.Numero = 1) and (length(trim(Cedente.Modalidade))>0) ,'/' + IntToStr(StrToIntDef(Cedente.Modalidade,0)) );
       txtEspecieRecTop1.Caption        := IfThen(trim(Titulo.EspecieMod) = '','R$',Titulo.EspecieMod);
       txtQuantidadeRecTop1.Caption     := '';
@@ -1698,7 +1736,7 @@ begin
     txtEspecieDocRecPagDet.Caption     := Titulo.EspecieDoc;
     txtNossoNumeroRecPagDet.Caption    := NossoNum;
     txtCarteiraRecPagDet.Caption       := Titulo.Carteira;
-    txtValorDocumentoRecPagDet.Caption := IfThen(Titulo.ValorDocumento > 0, FormatFloat('###,###,##0.00', Titulo.ValorDocumento));
+    txtValorDocumentoRecPagDet.Caption := IfThen(Titulo.ValorDocumento > 0, FormatFloatBr( Titulo.ValorDocumento, '###,###,##0.00'));
     //Pagador
     txtNomePagadorRecPagDet.Caption    := Titulo.Sacado.NomeSacado + '  ' +
                                           IfThen(Titulo.Sacado.Pessoa = pJuridica, 'CNPJ: ', 'CPF: ')+ FormatarCNPJouCPF(Titulo.Sacado.CNPJCPF);
@@ -1757,7 +1795,7 @@ begin
       lTertxtUsoBanco.Caption         := Titulo.UsoBanco;
       lTertxtCarteira.Caption         := Carteira;
       lTertxtEspecie.Caption          := IfThen(trim(Titulo.EspecieMod) = '','R$',Titulo.EspecieMod);
-      ltertxtValorDocumento.Caption   := IfThen(Titulo.ValorDocumento > 0,FormatFloat(',0.00',Titulo.ValorDocumento));
+      ltertxtValorDocumento.Caption   := IfThen(Titulo.ValorDocumento > 0,FormatFloatBr(Titulo.ValorDocumento,',0.00'));
 
       with Titulo.Sacado do
       begin
@@ -1851,9 +1889,10 @@ begin
     txtDataProcessamentoDet.Caption         := IfThen(Titulo.DataProcessamento = 0,FormatDateTime('dd/mm/yyyy', Now),FormatDateTime('dd/mm/yyyy', Titulo.DataProcessamento));
     txtNossoNumeroDet.Caption               := NossoNum;
     txtUsoBancoDet.Caption                  := Titulo.UsoBanco;
+    txtCIP3.Caption                         := Banco.CIP;
     txtCarteiraDet.Caption                  := Titulo.Carteira;
     txtEspecieDet.Caption                   := IfThen(trim(Titulo.EspecieMod) = '', 'R$', Titulo.EspecieMod);
-    txtValorDocumentoDet.Caption            := IfThen(Titulo.ValorDocumento > 0, FormatFloat('###,###,##0.00', Titulo.ValorDocumento));
+    txtValorDocumentoDet.Caption            := IfThen(Titulo.ValorDocumento > 0, FormatFloatBr(Titulo.ValorDocumento, '###,###,##0.00'));
     txtNomeSacadoDet.Caption                := Titulo.Sacado.NomeSacado;
     txtEnderecoSacadoDet.Caption            := Titulo.Sacado.Logradouro + ' ' + Titulo.Sacado.Numero + Titulo.Sacado.Complemento;
     txtCidadeSacadoDet.Caption              := 'CEP: '+ Titulo.Sacado.CEP + ', ' + Titulo.Sacado.Bairro + ', ' + Titulo.Sacado.Cidade + ' ' + Titulo.Sacado.UF;
@@ -1917,7 +1956,7 @@ begin
 
       txtDataDocumentoTopDet.Caption       := FormatDateTime('dd/mm/yyyy', Titulo.DataDocumento);
       txtCompetenciaTopDet.Caption         := Titulo.Competencia;
-      txtValorDocumentoTopDet.Caption      := FormatFloat('R$ ###,###,##0.00',Titulo.ValorDocumento);
+      txtValorDocumentoTopDet.Caption      := FormatFloatBr(Titulo.ValorDocumento,'R$ ###,###,##0.00');
       txtDataVencimentoTopDet.Caption      := FormatDateTime('dd/mm/yyyy', Titulo.Vencimento);
       txtNumeroDocumentoTopDet.Caption     := Titulo.NumeroDocumento;
       txtCodigoBaixaTopDet.Caption         := Banco.MontarCampoNossoNumero(Titulo);
@@ -1969,7 +2008,7 @@ begin
                                                 FormatDateTime('dd/mm/yyyy',Titulo.DataProcessamento));
       txtNossoNumero5.Caption         := NossoNum;
       txtEspecie5.Caption             := 'R$';
-      txtValorDocumento5.Caption      := FormatFloat(',0.00',Titulo.ValorDocumento);
+      txtValorDocumento5.Caption      := FormatFloatBr(Titulo.ValorDocumento,',0.00');
       with Titulo.Sacado do
       begin
         if Length(CNPJCPF) > 11 then
