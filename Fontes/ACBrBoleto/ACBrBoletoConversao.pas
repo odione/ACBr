@@ -46,7 +46,7 @@ type
                       tcSimplesRapComReg, tcCaucionadaRapComReg, tcDiretaEspecial);
   TACBrPessoa = (pFisica,pJuridica,pOutras, pNenhum);
   TACBrPessoaCedente = pFisica..pJuridica;
-  TACBrBolLayOut = (lPadrao, lCarne, lFatura, lPadraoEntrega, lReciboTopo, lPadraoEntrega2, lFaturaDetal, lTermica80mm);
+  TACBrBolLayOut = (lPadrao, lCarne, lFatura, lPadraoEntrega, lReciboTopo, lPadraoEntrega2, lFaturaDetal, lTermica80mm, lPadraoPIX);
 
   {Aceite do titulo}
   TACBrAceiteTitulo = (atSim, atNao);
@@ -83,6 +83,13 @@ type
   {Definir Tipo de Pagamento Aceito para Registro de Cobrança via WebService }
   TTipo_Pagamento = (tpAceita_Qualquer_Valor, tpAceita_Valores_entre_Minimo_Maximo,
                      tpNao_Aceita_Valor_Divergente, tpSomente_Valor_Minimo);
+
+    { Situação do boleto. Campo obrigatoriamente MAIÚSCULO. Domínios: A - Em ser B - Baixados/Protestados/Liquidados }
+  TACBrIndicadorSituacaoBoleto    = (isbNenhum,isbAberto,isbBaixado);
+
+  { Indica se o Boleto está vencido ou não. Campo obrigatoriamente MAIÚSCULO. Domínio: S para boletos vencidos N para boletos não vencidos }
+  TACBrIndicadorBoletoVencido     = (ibvNenhum,ibvNao,ibvSim);
+
 
   function StrToTipoOperacao(out ok: Boolean; const s: String): TOperacao;
   function TipoOperacaoToStr(const t: TOperacao): String;

@@ -66,7 +66,6 @@ type
   end;
 
   TACBrNFSeProviderActconv201 = class(TACBrNFSeProviderABRASFv2)
-
   protected
     procedure Configuracao; override;
 
@@ -77,13 +76,11 @@ type
   end;
 
   TACBrNFSeProviderActconv202 = class(TACBrNFSeProviderActconv201)
-
   protected
     procedure Configuracao; override;
 
     function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; override;
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
-//    function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
 
   end;
 
@@ -339,67 +336,15 @@ begin
 end;
 
 function TACBrNFSeProviderActconv201.CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceActconv2.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 { TACBrNFSeProviderActconv202 }
@@ -432,11 +377,5 @@ begin
   Result := TNFSeR_Actconv202.Create(Self);
   Result.NFSe := ANFSe;
 end;
-{
-function TACBrNFSeProviderActconv202.CriarServiceClient(
-  const AMetodo: TMetodo): TACBrNFSeXWebservice;
-begin
 
-end;
-}
 end.

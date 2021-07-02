@@ -81,7 +81,7 @@ implementation
 
 uses
   ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   Lencois.GravarXml, Lencois.LerXml;
 
 { TACBrNFSeProviderLencois }
@@ -96,10 +96,6 @@ begin
 
     UseCertificateHTTP := False;
     ModoEnvio := meUnitario;
-    {
-    TagRaizNFSe := 'Nota';
-    TagRaizRps  := 'Nota';
-    }
   end;
 
   SetXmlNameSpace('NotaFiscal-Geracao.xsd');
@@ -138,35 +134,15 @@ end;
 
 function TACBrNFSeProviderLencois.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceLencois.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceLencois.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceLencois.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceLencois.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceLencois.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderLencois.ProcessarMensagemErros(
@@ -209,15 +185,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -280,8 +256,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -295,10 +271,10 @@ begin
 
       with Response.InfRetorno do
       begin
-        Protocolo := ProcessarConteudoXml(ANode.Childrens.Find('validacao'), tcStr);
+        Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('validacao'), tcStr);
       end;
 
-      Xml := ProcessarConteudoXml(ANode.Childrens.Find('xml'), tcStr);
+      Xml := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('xml'), tcStr);
       {
       ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps();
 
@@ -316,7 +292,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -334,32 +310,32 @@ begin
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.MotCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Motivo do Canelamento não informado.';
+    AErro.Codigo := Cod110;
+    AErro.Descricao := Desc110;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.CodCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código do Canelamento não informado.';
+    AErro.Codigo := Cod109;
+    AErro.Descricao := Desc109;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.CodVerificacao) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código de Validação não informado.';
+    AErro.Codigo := Cod117;
+    AErro.Descricao := Desc117;
     Exit;
   end;
 
@@ -407,8 +383,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -421,15 +397,15 @@ begin
       Response.Sucesso := (Response.Erros.Count = 0);
 
       {
-      AuxNode := ANode.Childrens.Find('RetornoNota');
+      AuxNode := ANode.Childrens.FindAnyNs('RetornoNota');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Resultado'), tcStr);
-          NumeroNota := ProcessarConteudoXml(AuxNode.Childrens.Find('Nota'), tcInt);
-          Link := ProcessarConteudoXml(AuxNode.Childrens.Find('LinkImpressao'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Resultado'), tcStr);
+          NumeroNota := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Nota'), tcInt);
+          Link := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('LinkImpressao'), tcStr);
         end;
       end;
      }
@@ -437,7 +413,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;

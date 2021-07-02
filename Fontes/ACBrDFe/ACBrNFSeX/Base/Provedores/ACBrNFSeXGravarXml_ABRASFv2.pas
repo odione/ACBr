@@ -124,7 +124,6 @@ type
     FNrOcorrValorCofins: Integer;
     FNrOcorrValorInss: Integer;
     FNrOcorrValorIr: Integer;
-
     FNrOcorrCodigoPaisServico: Integer;
     FNrOcorrCodigoPaisTomador: Integer;
     FNrOcorrInscMunTomador: Integer;
@@ -263,71 +262,6 @@ begin
   // Executa a Configuração Padrão
   inherited Configuracao;
 
-  {italo
-  // Os provedores que seguem a versão 1 do layout da ABRASF só tem 3 métodos de
-  // envio: EnviarLoteRpsEnvio, EnviarLoteRpsSincronoEnvio e GerarNfseEnvio.
-  // O método escolhido como padrão é o que funciona no modo Síncrono.
-  // Pode variar dependendo do provedor.
-  with ConfigGeral do
-  begin
-    VersaoProv := ve200;
-
-    QtdReqConsultar := 2;
-    ConsultarRequisitos[1] := rcoNumeroInicial;
-    ConsultarRequisitos[2] := rcoPagina;
-
-    QtdReqConsultarNFSeRps := 3;
-    ConsultarNFSeRpsRequisitos[1] := rconNumero;
-    ConsultarNFSeRpsRequisitos[2] := rconSerie;
-    ConsultarNFSeRpsRequisitos[3] := rconTipo;
-
-    QtdReqCancelar := 2;
-    CancelarRequisitos[1] := rcaNumeroNFSe;
-    CancelarRequisitos[2] := rcaCodCancelamento;
-  end;
-
-  with ConfigMsgDados do
-  begin
-    VersaoRps       := '2.00';
-
-    with LoteRps do
-    begin
-      GerarID           := True;
-      GerarGrupoCPFCNPJ := True;
-      GerarNSEnvioLote  := True;
-    end;
-
-    with ConsLote do
-    begin
-      GerarGrupoCPFCNPJ   := True;
-      GerarGrupoPrestador := True;
-    end;
-
-    with ConsNFSeRps do
-    begin
-      GerarGrupoCPFCNPJ   := True;
-      GerarGrupoPrestador := True;
-    end;
-
-    with ConsNFSe do
-    begin
-      GerarGrupoPrestador := True;
-      GerarGrupoCPFCNPJ   := True;
-    end;
-
-    with Cancelar do
-    begin
-      GerarGrupoCPFCNPJ := True;
-      NrOcorrMotCanc_1  := -1;
-    end;
-
-    with Gerar do
-    begin
-      GerarGrupoCPFCNPJ := True;
-    end;
-  end;
-  }
-
   // Numero de Ocorrencias Minimas de uma tag
   // se for  0 só gera a tag se o conteudo for diferente de vazio ou zero
   // se for  1 sempre vai gerar a tag
@@ -419,7 +353,7 @@ var
   NFSeNode, xmlNode: TACBrXmlNode;
 begin
   // Em conformidade com a versão 2 do layout da ABRASF não deve ser alterado
-//  Configuracao;
+  // Configuracao;
 
   ListaDeAlertas.Clear;
 
@@ -436,7 +370,7 @@ begin
   NFSeNode.AppendChild(xmlNode);
 
   // Define a tag raiz que vai conter o XML da NFS-e
-//italo  DefinirRetornoNFSe;
+//  DefinirRetornoNFSe;
 
   Result := True;
 end;
@@ -630,17 +564,17 @@ begin
                         Copy(NFSe.Servico.ItemListaServico, 2, 4), DSC_CLISTSERV))
         else
           Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 5, NrOcorrItemListaServico,
-                                   NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
+                                 NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
     else
       Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 5, NrOcorrItemListaServico,
-                                   NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
+                                 NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
     end;
 
     Result.AppendChild(AddNode(tcStr, '#30', 'CodigoCnae', 1, 7, NrOcorrCodigoCNAE,
-                                  OnlyNumber(NFSe.Servico.CodigoCnae), DSC_CNAE));
+                                OnlyNumber(NFSe.Servico.CodigoCnae), DSC_CNAE));
 
     Result.AppendChild(AddNode(tcStr, '#31', 'CodigoTributacaoMunicipio', 1, 20, NrOcorrCodTribMun_1,
-                       NFSe.Servico.CodigoTributacaoMunicipio, DSC_CSERVTRIBMUN));
+                     NFSe.Servico.CodigoTributacaoMunicipio, DSC_CSERVTRIBMUN));
 
     Result.AppendChild(AddNode(tcStr, '#32', 'Discriminacao', 1, 2000, NrOcorrDiscriminacao_1,
       StringReplace(NFSe.Servico.Discriminacao, ';', FAOwner.ConfigGeral.QuebradeLinha,
@@ -648,10 +582,10 @@ begin
                 (NFSe.Prestador.Endereco.CodigoMunicipio <> '3304557')));
 
     Result.AppendChild(AddNode(tcStr, '#33', 'CodigoMunicipio', 1, 7, NrOcorrCodigoMunic_1,
-                             OnlyNumber(NFSe.Servico.CodigoMunicipio), DSC_CMUN));
+                           OnlyNumber(NFSe.Servico.CodigoMunicipio), DSC_CMUN));
 
     Result.AppendChild(AddNode(tcStr, '#31', 'CodigoTributacaoMunicipio', 1, 20, NrOcorrCodTribMun_2,
-                       NFSe.Servico.CodigoTributacaoMunicipio, DSC_CSERVTRIBMUN));
+                     NFSe.Servico.CodigoTributacaoMunicipio, DSC_CSERVTRIBMUN));
 
     Result.AppendChild(AddNode(tcStr, '#32', 'Discriminacao', 1, 2000, NrOcorrDiscriminacao_2,
       StringReplace(NFSe.Servico.Discriminacao, ';', FAOwner.ConfigGeral.QuebradeLinha,
@@ -662,7 +596,7 @@ begin
 //                             OnlyNumber(NFSe.Servico.CodigoNBS), DSC_CMUN));
 
     Result.AppendChild(AddNode(tcStr, '#33', 'CodigoMunicipio', 1, 7, NrOcorrCodigoMunic_2,
-                             OnlyNumber(NFSe.Servico.CodigoMunicipio), DSC_CMUN));
+                           OnlyNumber(NFSe.Servico.CodigoMunicipio), DSC_CMUN));
 
     Result.AppendChild(AddNode(tcInt, '#34', 'CodigoPais', 4, 4, NrOcorrCodigoPaisServico,
                                            NFSe.Servico.CodigoPais, DSC_CPAIS));
@@ -672,7 +606,7 @@ begin
     StrToInt(ExigibilidadeISSToStr(NFSe.Servico.ExigibilidadeISS)), DSC_INDISS));
 
     Result.AppendChild(AddNode(tcInt, '#36', 'MunicipioIncidencia', 7, 07, NrOcorrMunIncid,
-                                  NFSe.Servico.MunicipioIncidencia, DSC_MUNINCI));
+                                NFSe.Servico.MunicipioIncidencia, DSC_MUNINCI));
 
     Result.AppendChild(AddNode(tcStr, '#37', 'NumeroProcesso     ', 1, 30, NrOcorrNumProcesso,
                                    NFSe.Servico.NumeroProcesso, DSC_NPROCESSO));

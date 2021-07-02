@@ -1285,7 +1285,11 @@ begin
   end;
 
   if FPConfiguracoesNFSe.Geral.ConfigRemover.EComercial then
-    Result := FastStringReplace(Result, '&amp;', '', [rfReplaceAll]);
+    begin
+      Result := FastStringReplace(Result, '&amp;', '', [rfReplaceAll]);
+      if FProvedor = proIPM then
+        Result := FastStringReplace(Result, '&', '', [rfReplaceAll]);
+    end;
 
   // Remover o CDATA
   Result := FastStringReplace(Result, '<![CDATA[', '', [rfReplaceAll]);
@@ -1683,7 +1687,7 @@ begin
       então uma validação específica para o provedor Tecnos, assim, se em outras
       consultas ele estiver vazio ele será preenchido.
       }
-    if (FProtocolo = '') and (FProvedor in [proTecnos, proTiplanv2]) then
+    if (FProtocolo = '') and (FProvedor in [proTecnos, proTiplanv2, proIPM]) then
       FProtocolo := FRetornoNFSe.ListaNFSe.CompNFSe[0].NFSe.Protocolo;
   end
   else
@@ -5203,12 +5207,16 @@ begin
       end;
 
       case FProvedor of
-        proISSNet: if FPConfiguracoesNFSe.WebServices.AmbienteCodigo = 2 then
-                     CodMunicipio := 999;
-                     
+        proISSNet:
+          if FPConfiguracoesNFSe.WebServices.AmbienteCodigo = 2 then
+            CodMunicipio := 999;
+
         proBetha,
-        proBethav2: CodMunicipio  := StrToIntDef(FNotasFiscais.Items[0].NFSe.PrestadorServico.Endereco.CodigoMunicipio, 0);
-        proFiorilli: CodMunicipio := FNotasFiscais.Items[0].NFSe.Servico.MunicipioIncidencia;
+        proBethav2:
+          CodMunicipio  := StrToIntDef(FNotasFiscais.Items[0].NFSe.PrestadorServico.Endereco.CodigoMunicipio, 0);
+
+        proFiorilli:
+          CodMunicipio := FNotasFiscais.Items[0].NFSe.Servico.MunicipioIncidencia;
       else
         CodMunicipio := FPConfiguracoesNFSe.Geral.CodigoMunicipio;
       end;

@@ -63,10 +63,8 @@ implementation
 
 procedure TNFSeW_Recife.Configuracao;
 begin
-  // Executa a Configuração Padrão
   inherited Configuracao;
 
-  // Altera a Configuração Padrão para gerar o XML do RPS
   NrOcorrValorPis := 1;
   NrOcorrValorCofins := 1;
   NrOcorrValorInss := 1;
@@ -76,93 +74,5 @@ begin
   NrOcorrAliquota := 0;
   NrOcorrValorTotalRecebido := 1;
 end;
-{
-procedure TNFSeW_Recife.ConfigurarEnvelopes;
-begin
-  with ConfigEnvelope do
-  begin
-    with Recepcionar do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'RecepcionarLoteRpsRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
 
-    with ConsultarSituacao do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'ConsultarSituacaoLoteRpsRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
-
-    with ConsultarLote do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'ConsultarLoteRpsRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
-
-    with ConsultarNFSePorRps do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'ConsultarNfsePorRpsRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
-
-    with ConsultarNFSe do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'ConsultarNfseRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
-
-    with Cancelar do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'CancelarNfseRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-    end;
-
-    with GerarNFSe do
-    begin
-      IncluirEncodingDados := True;
-      ElementoBody := 'GerarNfseRequest';
-      AtributoElementoBody := ' xmlns="http://nfse.recife.pe.gov.br/"';
-      ElementoCabecalho := '';
-      ElementoDados := 'inputXML';
-      ServicoImplementado := True;
-    end;
-  end;
-end;
-
-procedure TNFSeW_Recife.ConfigurarSoapAction;
-var
-  URL: string;
-begin
-  URL := 'http://nfse.recife.pe.gov.br/';
-
-  with ConfigSoapAction do
-  begin
-    Recepcionar         := URL + 'RecepcionarLoteRps';
-    ConsultarSituacao   := URL + 'ConsultarSituacaoLoteRps';
-    ConsultarLote       := URL + 'ConsultarLoteRps';
-    ConsultarNFSePorRps := URL + 'ConsultarNfsePorRps';
-    ConsultarNFSe       := URL + 'ConsultarNfse';
-    Cancelar            := URL + 'CancelarNfse';
-    GerarNFSe           := URL + 'GerarNfse';
-  end;
-end;
-}
 end.

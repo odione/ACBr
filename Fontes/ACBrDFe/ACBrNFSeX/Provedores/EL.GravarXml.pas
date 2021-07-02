@@ -277,7 +277,7 @@ begin
 
   if (Trim(NFSe.Prestador.Endereco.xMunicipio) = '') then
   begin
-    xMun := CodCidadeToCidade(StrToIntDef(NFSe.Prestador.Endereco.CodigoMunicipio, 0));
+    xMun := CodIBGEToCidade(StrToIntDef(NFSe.Prestador.Endereco.CodigoMunicipio, 0));
     xMun := Copy(xMun,1,Length(xMun)-3);
 
     Result.AppendChild(AddNode(tcStr, '#1', 'Municipio', 1, 100, 0,
@@ -320,7 +320,7 @@ begin
 
   if (Trim(NFSe.Tomador.Endereco.xMunicipio) = '') then
   begin
-    xMun := CodCidadeToCidade(StrToIntDef(NFSe.Tomador.Endereco.CodigoMunicipio, 0));
+    xMun := CodIBGEToCidade(StrToIntDef(NFSe.Tomador.Endereco.CodigoMunicipio, 0));
     xMun := Copy(xMun,1,Length(xMun)-3);
 
     Result.AppendChild(AddNode(tcStr, '#1', 'Municipio', 1, 100, 0,
@@ -532,10 +532,8 @@ end;
 
 procedure TNFSeW_ELv2.Configuracao;
 begin
-  // Executa a Configuração Padrão
   inherited Configuracao;
 
-  // Altera a Configuração Padrão para gerar o XML do RPS
   FormatoAliq := tcDe2;
   NrOcorrInformacoesComplemetares := 0;
   NrOcorrCepTomador := 1;

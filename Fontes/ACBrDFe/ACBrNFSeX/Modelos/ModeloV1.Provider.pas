@@ -124,11 +124,14 @@ begin
     // Usado na tag raiz dos XML de envio do Lote, Consultas, etc.
     Prefixo := '';
 
-//    DadosCabecalho := GetCabecalho('');
+    DadosCabecalho := GetCabecalho('');
+
+    { caso tenha um cabeçalho fora do padrão montar ele conforme exemplo abaixo
 
     DadosCabecalho := '<cabecalho versao="1.00" xmlns="http://www.abrasf.org.br/ABRASF/arquivos/nfse.xsd">' +
                       '<versaoDados>1.00</versaoDados>' +
                       '</cabecalho>';
+    }
 
     // Usado para geração do Xml do Rps
     with XmlRps do
@@ -294,68 +297,7 @@ function TACBrNFSeProviderModeloV1.CriarServiceClient(const AMetodo: TMetodo): T
 var
   URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        // Métodos padrões da versão 1 do layout da ABRASF
-        tmRecepcionar: URL := Recepcionar;
-        tmConsultarLote: URL := ConsultarLote;
-        tmConsultarSituacao: URL := ConsultarSituacao;
-        tmConsultarNFSePorRps: URL := ConsultarNFSeRps;
-        tmConsultarNFSe: URL := ConsultarNFSe;
-        tmCancelarNFSe: URL := CancelarNFSe;
-
-        // Métodos que por padrão não existem na versão 1 do layout da ABRASF
-        {
-        tmRecepcionarSincrono: URL := RecepcionarSincrono;
-        tmGerar: URL := GerarNFSe;
-        tmSubstituirNFSe: URL := SubstituirNFSe;
-        tmConsultarNFSeURL: URL := ConsultarNFSeURL;
-        tmConsultarNFSePorFaixa: URL := ConsultarNFSePorFaixa;
-        tmConsultarNFSeServicoPrestado: URL := ConsultarNFSeServicoPrestado;
-        tmConsultarNFSeServicoTomado: URL := ConsultarNFSeServicoTomado;
-        tmAbrirSessao: URL := AbrirSessao;
-        tmFecharSessao: URL := FecharSessao;
-        tmTeste: URL := TesteEnvio;
-        }
-      else
-        URL := '';
-      end;
-    end;
-  end
-  else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        // Métodos padrões da versão 1 do layout da ABRASF
-        tmRecepcionar: URL := Recepcionar;
-        tmConsultarLote: URL := ConsultarLote;
-        tmConsultarSituacao: URL := ConsultarSituacao;
-        tmConsultarNFSePorRps: URL := ConsultarNFSeRps;
-        tmConsultarNFSe: URL := ConsultarNFSe;
-        tmCancelarNFSe: URL := CancelarNFSe;
-
-        // Métodos que por padrão não existem na versão 1 do layout da ABRASF
-        {
-        tmRecepcionarSincrono: URL := RecepcionarSincrono;
-        tmGerar: URL := GerarNFSe;
-        tmSubstituirNFSe: URL := SubstituirNFSe;
-        tmConsultarNFSeURL: URL := ConsultarNFSeURL;
-        tmConsultarNFSePorFaixa: URL := ConsultarNFSePorFaixa;
-        tmConsultarNFSeServicoPrestado: URL := ConsultarNFSeServicoPrestado;
-        tmConsultarNFSeServicoTomado: URL := ConsultarNFSeServicoTomado;
-        tmAbrirSessao: URL := AbrirSessao;
-        tmFecharSessao: URL := FecharSessao;
-        tmTeste: URL := TesteEnvio;
-        }
-      else
-        URL := '';
-      end;
-    end;
-  end;
+  URL := GetWebServiceURL(AMetodo);
 
   if URL <> '' then
     Result := TACBrNFSeXWebserviceModeloV1.Create(FAOwner, AMetodo, URL)

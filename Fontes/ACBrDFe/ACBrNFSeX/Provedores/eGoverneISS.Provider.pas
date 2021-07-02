@@ -87,7 +87,7 @@ implementation
 
 uses
   ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   eGoverneISS.GravarXml, eGoverneISS.LerXml;
 
 { TACBrNFSeProvidereGoverneISS }
@@ -100,10 +100,6 @@ begin
   begin
     Identificador := '';
     ModoEnvio := meLoteAssincrono;
-    {
-    TagRaizNFSe := 'eis:NotaFiscal';
-    TagRaizRps  := 'eis:NotaFiscal';
-    }
   end;
 
   SetXmlNameSpace('');
@@ -129,43 +125,15 @@ end;
 
 function TACBrNFSeProvidereGoverneISS.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, ConsultarLote);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, ConsultarLote);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceeGoverneISS.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProvidereGoverneISS.ProcessarMensagemErros(
@@ -206,15 +174,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -289,7 +257,6 @@ procedure TACBrNFSeProvidereGoverneISS.TratarRetornoEmitir(Response: TNFSeEmiteR
 var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
-//  ANode: TACBrXmlNode;
 begin
   Document := TACBrXmlDocument.Create;
 
@@ -298,7 +265,7 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := '201';
         AErro.Descricao := 'WebService retornou um XML vazio.';
         Exit
       end;
@@ -315,7 +282,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -333,8 +300,8 @@ begin
   if EstaVazio(Response.Lote) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero do Lote não informado.';
+    AErro.Codigo := Cod111;
+    AErro.Descricao := Desc111;
     Exit;
   end;
 
@@ -353,7 +320,6 @@ procedure TACBrNFSeProvidereGoverneISS.TratarRetornoConsultaLoteRps(
 var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
-//  ANode: TACBrXmlNode;
 begin
   Document := TACBrXmlDocument.Create;
 
@@ -362,8 +328,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -376,7 +342,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -395,8 +361,8 @@ begin
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
@@ -430,8 +396,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -444,7 +410,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;

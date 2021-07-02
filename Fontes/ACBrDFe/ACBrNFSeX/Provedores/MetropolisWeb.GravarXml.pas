@@ -48,6 +48,7 @@ type
 
   TNFSeW_MetropolisWeb = class(TNFSeW_ABRASFv1)
   protected
+    procedure Configuracao; override;
 
   end;
 
@@ -57,5 +58,14 @@ implementation
 // Essa unit tem por finalidade exclusiva gerar o XML do RPS do provedor:
 //     MetropolisWeb
 //==============================================================================
+
+{ TNFSeW_MetropolisWeb }
+
+procedure TNFSeW_MetropolisWeb.Configuracao;
+begin
+  inherited Configuracao;
+
+  NrOcorrAliquota := 1;
+end;
 
 end.

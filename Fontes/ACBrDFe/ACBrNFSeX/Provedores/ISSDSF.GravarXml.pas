@@ -217,7 +217,7 @@ begin
   NFSe.InfID.ID := 'rps:' + NFSe.IdentificacaoRps.Numero;
 
   NFSeNode := CreateElement('RPS');
-  NFSeNode.SetNamespace(FAOwner.ConfigMsgDados.LoteRps.xmlns,Self.PrefixoPadrao);
+  NFSeNode.SetNamespace(FAOwner.ConfigMsgDados.LoteRps.xmlns, Self.PrefixoPadrao);
 
   FDocument.Root := NFSeNode;
 
@@ -327,14 +327,14 @@ begin
                                              NFSe.Tomador.Endereco.Bairro, ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CidadeTomador', 1, 10, 1,
-   CodCidadeToCodSiafi(strtoint64(NFSe.Tomador.Endereco.CodigoMunicipio)), ''));
+   CodIBGEToCodTOM(strtoint64(NFSe.Tomador.Endereco.CodigoMunicipio)), ''));
 
   if (Trim(NFSe.Tomador.Endereco.xMunicipio) <> '') then
     NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CidadeTomadorDescricao', 1, 50, 1,
                                           NFSe.Tomador.Endereco.xMunicipio, ''))
   else
     NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CidadeTomadorDescricao', 1, 50, 1,
-     CodCidadeToCidade(strtoint64(NFSe.Tomador.Endereco.CodigoMunicipio)), ''));
+     CodIBGEToCidade(strtoint64(NFSe.Tomador.Endereco.CodigoMunicipio)), ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CEPTomador', 1, 8, 1,
                                     OnlyNumber(NFSe.Tomador.Endereco.CEP), ''));
@@ -345,7 +345,7 @@ begin
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CodigoAtividade', 1, 9, 1,
                                                   NFSe.Servico.CodigoCnae, ''));
 
-  NFSeNode.AppendChild(AddNode(tcInt, '#1', 'CodigoServico', 4, 5, 1,
+  NFSeNode.AppendChild(AddNode(tcInt, '#1', 'CodigoServico', 4, 5, 0,
                                 OnlyNumber(NFSe.Servico.ItemListaServico), ''));
 
   NFSeNode.AppendChild(AddNode(tcDe4, '#1', 'AliquotaAtividade', 1, 11, 1,
@@ -359,10 +359,10 @@ begin
                                                          TipoRecolhimento, ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'MunicipioPrestacao', 1, 10, 1,
-            CodCidadeToCodSiafi(strtoint64(NFSe.Servico.CodigoMunicipio)), ''));
+            CodIBGEToCodTOM(strtoint64(NFSe.Servico.CodigoMunicipio)), ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'MunicipioPrestacaoDescricao', 1, 30, 1,
-              CodCidadeToCidade(strtoint64(NFSe.Servico.CodigoMunicipio)), ''));
+              CodIBGEToCidade(strtoint64(NFSe.Servico.CodigoMunicipio)), ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'Operacao', 1, 1, 1,
                                      OperacaoToStr(NFSe.Servico.Operacao), ''));

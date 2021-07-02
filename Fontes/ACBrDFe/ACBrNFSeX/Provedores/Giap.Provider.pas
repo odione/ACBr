@@ -86,7 +86,7 @@ implementation
 
 uses
   ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   Giap.GravarXml, Giap.LerXml;
 
 { TACBrNFSeProviderGiap }
@@ -104,10 +104,6 @@ begin
 
     UseAuthorizationHeader := True;
     ModoEnvio := meLoteAssincrono;
-    {
-    TagRaizNFSe := 'notaFiscal';
-    TagRaizRps  := 'notaFiscal';
-    }
   end;
 
   SetXmlNameSpace('');
@@ -146,39 +142,15 @@ end;
 
 function TACBrNFSeProviderGiap.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderGiap.ProcessarMensagemErros(
@@ -218,15 +190,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -291,8 +263,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -308,8 +280,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -338,7 +310,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -356,8 +328,8 @@ begin
   if EstaVazio(Response.CodVerificacao) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código de Verificação não informado.';
+    AErro.Codigo := Cod117;
+    AErro.Descricao := Desc117;
     Exit;
   end;
 
@@ -394,8 +366,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -416,7 +388,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -433,16 +405,16 @@ begin
   if EstaVazio(Response.InfCancelamento.CodCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código de Cancelamento não informado.';
+    AErro.Codigo := Cod109;
+    AErro.Descricao := Desc109;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
@@ -476,8 +448,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -489,14 +461,14 @@ begin
 
       ANode := Document.Root;
 
-      Response.InfRetorno.NumeroLote := ProcessarConteudoXml(ANode.Childrens.Find('NumeroLote'), tcStr);
+      Response.InfRetorno.NumeroLote := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('NumeroLote'), tcStr);
 
       ANodeArray := ANode.Childrens.FindAllAnyNs('Nfse');
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -525,7 +497,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;

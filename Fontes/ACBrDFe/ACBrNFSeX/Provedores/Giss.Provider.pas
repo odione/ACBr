@@ -80,13 +80,6 @@ procedure TACBrNFSeProviderGiss.Configuracao;
 begin
   inherited Configuracao;
 
-  {italo
-  with ConfigGeral do
-  begin
-    Prefixo2   := 'ns2';
-    Prefixo4   := 'n2';
-  end;
-  }
   with ConfigAssinar do
   begin
     LoteRps := True;
@@ -97,73 +90,21 @@ begin
   begin
     XmlRps.xmlns := 'http://www.giss.com.br/tipos-v2_04.xsd';
 
-    with LoteRps do
-    begin
-      xmlns := 'http://www.giss.com.br/enviar-lote-rps-envio-v2_04.xsd';
-      {italo
-      GerarP3LoteRps      := True;
-      GerarID             := True;
-      GerarP4EnvioLote    := True;
-      GerarGrupoPrestador := True;
-      }
-    end;
+    LoteRps.xmlns := 'http://www.giss.com.br/enviar-lote-rps-envio-v2_04.xsd';
 
-    with ConsultarLote do
-    begin
-      xmlns := 'http://www.giss.com.br/consultar-lote-rps-envio-v2_04.xsd';
-      {italo
-      GerarP4             := True;
-      GerarGrupoPrestador := True;
-      }
-    end;
+    ConsultarLote.xmlns := 'http://www.giss.com.br/consultar-lote-rps-envio-v2_04.xsd';
 
-    with ConsultarNFSeRps do
-    begin
-      xmlns := 'http://www.giss.com.br/consultar-nfse-rps-envio-v2_04.xsd';
-      {italo
-      GerarP4           := True;
-      GerarGrupoCPFCNPJ := True;
-      }
-    end;
+    ConsultarNFSeRps.xmlns := 'http://www.giss.com.br/consultar-nfse-rps-envio-v2_04.xsd';
 
-    with ConsultarNFSe do
-    begin
-      xmlns := 'http://www.giss.com.br/consultar-nfse-servico-prestado-envio-v2_04.xsd';
-      {italo
-      GerarP3 := True;
-      GerarP4 := True;
-      }
-    end;
+    ConsultarNFSe.xmlns := 'http://www.giss.com.br/consultar-nfse-servico-prestado-envio-v2_04.xsd';
 
-    with CancelarNFSe do
-    begin
-      xmlns := 'http://www.giss.com.br/cancelar-nfse-envio-v2_04.xsd';
-      {
-      GerarP3           := True;
-      GerarP4           := True;
-      GerarP4InfPedCanc := True;
-      }
-    end;
+    CancelarNFSe.xmlns := 'http://www.giss.com.br/cancelar-nfse-envio-v2_04.xsd';
 
-    with GerarNFSe do
-    begin
-      xmlns := 'http://www.giss.com.br/gerar-nfse-envio-v2_04.xsd';
-      {
-      GerarP3 := True;
-      GerarP4 := True;
-      }
-    end;
+    GerarNFSe.xmlns := 'http://www.giss.com.br/gerar-nfse-envio-v2_04.xsd';
 
     LoteRpsSincrono.xmlns := 'http://www.giss.com.br/enviar-lote-rps-sincrono-envio-v2_04.xsd';
 
-    with SubstituirNFSe do
-    begin
-      xmlns := 'http://www.giss.com.br/substituir-nfse-envio-v2_04.xsd';
-      {italo
-      GerarP3 := True;
-      GerarP4 := True;
-      }
-    end;
+    SubstituirNFSe.xmlns := 'http://www.giss.com.br/substituir-nfse-envio-v2_04.xsd';
 
     DadosCabecalho := '<cabecalho versao="1.0" xmlns="http://www.giss.com.br/cabecalho-v2_04.xsd">' +
                       '<versaoDados>1.0</versaoDados>' +
@@ -172,18 +113,18 @@ begin
 
   with ConfigSchemas do
   begin
-    Recepcionar      := 'enviar-lote-rps-envio-v2_04.xsd';
-    ConsultarLote    := 'consultar-lote-rps-envio-v2_04.xsd';
+    Recepcionar := 'enviar-lote-rps-envio-v2_04.xsd';
+    ConsultarLote := 'consultar-lote-rps-envio-v2_04.xsd';
     ConsultarNFSeRps := 'consultar-nfse-rps-envio-v2_04.xsd';
 
-    ConsultarNFSePorFaixa        := 'consultar-nfse-faixa-envio-v2_04.xsd';
+    ConsultarNFSePorFaixa := 'consultar-nfse-faixa-envio-v2_04.xsd';
     ConsultarNFSeServicoPrestado := 'consultar-nfse-servico-prestado-envio-v2_04.xsd';
-    ConsultarNFSeServicoTomado   := 'consultar-nfse-servico-tomado-envio-v2_04.xsd';
+    ConsultarNFSeServicoTomado := 'consultar-nfse-servico-tomado-envio-v2_04.xsd';
 
-    CancelarNFSe        := 'cancelar-nfse-envio-v2_04.xsd';
-    GerarNFSe           := 'gerar-nfse-envio-v2_04.xsd';
+    CancelarNFSe := 'cancelar-nfse-envio-v2_04.xsd';
+    GerarNFSe := 'gerar-nfse-envio-v2_04.xsd';
     RecepcionarSincrono := 'enviar-lote-rps-sincrono-envio-v2_04.xsd';
-    SubstituirNFSe      := 'substituir-nfse-envio-v2_04.xsd';
+    SubstituirNFSe := 'substituir-nfse-envio-v2_04.xsd';
   end;
 end;
 
@@ -203,67 +144,15 @@ end;
 
 function TACBrNFSeProviderGiss.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceGiss.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 { TACBrNFSeXWebserviceGiss }

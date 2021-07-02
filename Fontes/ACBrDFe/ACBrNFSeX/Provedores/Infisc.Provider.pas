@@ -90,7 +90,6 @@ type
 
     function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; override;
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
-//    function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
   end;
 
   TACBrNFSeXWebserviceInfiscv2 = class(TACBrNFSeXWebserviceSoap11)
@@ -122,7 +121,8 @@ type
 implementation
 
 uses
-  ACBrUtil, ACBrDFeException, ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrUtil, ACBrDFeException,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   ACBrNFSeXNotasFiscais, Infisc.GravarXml, Infisc.LerXml;
 
 { TACBrNFSeProviderInfisc }
@@ -135,10 +135,6 @@ begin
   begin
     Identificador := '';
     ModoEnvio := meLoteAssincrono;
-    {
-    TagRaizNFSe := 'NFS-e';  // resPedidoLoteNFSe
-    TagRaizRps  := 'NFS-e';
-    }
   end;
 
   with ConfigWebServices do
@@ -149,39 +145,6 @@ begin
   end;
 
   SetXmlNameSpace('http://ws.pc.gif.com.br/');
-
-  with ConfigMsgDados do
-  begin
-    {italo
-    with LoteRps do
-    begin
-      InfElemento := 'InfDeclaracaoPrestacaoServico';
-      DocElemento := 'infNFSe';
-    end;
-
-    TagGrupoRecep    := '';
-    TagGrupoConsLote := 'pedidoStatusLote';
-    TagGrupoConsNFSe := 'obterLoteNotaFiscal'; //'pedidoLoteNFSe';
-    TagGrupoCancelar := 'pedCancelaNFSe';
-    }
-  end;
-
-  {italo
-  with ConfigRetorno do
-  begin
-    RetornoNFSe := '<NFS-e xmlns="' + ConfigMsgDados.xmlnsRps +
-                             '">%DadosNFSe%</NFS-e>';
-  end;
-  }
-
-  // Para Garibaldi/RS devemos usar o arquivo XSD:
-  // schemaNFS.xsd em vez de nfse-v11.xsd
-  {
-  if TACBrNFSeX(FAOwner).Configuracoes.Geral.CodigoMunicipio <> 4308607 then
-    SetNomeXSD('schemaNFS.xsd')
-  else
-    SetNomeXSD('nfse-v11.xsd');
-  }
 end;
 
 function TACBrNFSeProviderInfiscv100.CriarGeradorXml(
@@ -200,43 +163,15 @@ end;
 
 function TACBrNFSeProviderInfiscv100.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceInfisc.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderInfiscv100.PrepararEmitir(Response: TNFSeEmiteResponse);
@@ -250,15 +185,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -339,8 +274,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -353,67 +288,67 @@ begin
       {
       ANode := Document.Root;
 
-      AuxNode := ANode.Childrens.Find('Cabecalho');
+      AuxNode := ANode.Childrens.FindAnyNs('Cabecalho');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
 
-          AuxNode := AuxNode.Childrens.Find('InformacoesLote');
+          AuxNode := AuxNode.Childrens.FindAnyNs('InformacoesLote');
 
           if AuxNode <> nil then
           begin
             with InformacoesLote do
             begin
-              NumeroLote := ProcessarConteudoXml(AuxNode.Childrens.Find('NumeroLote'), tcStr);
-              InscricaoPrestador := ProcessarConteudoXml(AuxNode.Childrens.Find('InscricaoPrestador'), tcStr);
+              NumeroLote := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('NumeroLote'), tcStr);
+              InscricaoPrestador := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('InscricaoPrestador'), tcStr);
 
-              AuxNodeCPFCNPJ := AuxNode.Childrens.Find('CPFCNPJRemetente');
+              AuxNodeCPFCNPJ := AuxNode.Childrens.FindAnyNs('CPFCNPJRemetente');
 
               if AuxNodeCPFCNPJ <> nil then
               begin
-                CPFCNPJRemetente := ProcessarConteudoXml(AuxNodeCPFCNPJ.Childrens.Find('CNPJ'), tcStr);
+                CPFCNPJRemetente := ProcessarConteudoXml(AuxNodeCPFCNPJ.Childrens.FindAnyNs('CNPJ'), tcStr);
 
                 if CPFCNPJRemetente = '' then
-                  CPFCNPJRemetente := ProcessarConteudoXml(AuxNodeCPFCNPJ.Childrens.Find('CPF'), tcStr);
+                  CPFCNPJRemetente := ProcessarConteudoXml(AuxNodeCPFCNPJ.Childrens.FindAnyNs('CPF'), tcStr);
               end;
 
-              DataEnvioLote := ProcessarConteudoXml(AuxNode.Childrens.Find('DataEnvioLote'), tcDatHor);
-              QtdNotasProcessadas := ProcessarConteudoXml(AuxNode.Childrens.Find('QtdNotasProcessadas'), tcInt);
-              TempoProcessamento := ProcessarConteudoXml(AuxNode.Childrens.Find('TempoProcessamento'), tcInt);
-              ValorTotalServico := ProcessarConteudoXml(AuxNode.Childrens.Find('ValorTotalServico'), tcDe2);
+              DataEnvioLote := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('DataEnvioLote'), tcDatHor);
+              QtdNotasProcessadas := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('QtdNotasProcessadas'), tcInt);
+              TempoProcessamento := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('TempoProcessamento'), tcInt);
+              ValorTotalServico := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('ValorTotalServico'), tcDe2);
             end;
           end;
         end;
       end;
 
-      AuxNode := ANode.Childrens.Find('ChaveNFeRPS');
+      AuxNode := ANode.Childrens.FindAnyNs('ChaveNFeRPS');
 
       if AuxNode <> nil then
       begin
-        AuxNodeChave := AuxNode.Childrens.Find('ChaveRPS');
+        AuxNodeChave := AuxNode.Childrens.FindAnyNs('ChaveRPS');
 
         if (AuxNodeChave <> nil) then
         begin
           with Response.InfRetorno.ChaveNFeRPS do
           begin
-            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('InscricaoPrestador'), tcStr);
-            SerieRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('SerieRPS'), tcStr);
-            NumeroRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('NumeroRPS'), tcStr);
+            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('InscricaoPrestador'), tcStr);
+            SerieRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('SerieRPS'), tcStr);
+            NumeroRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('NumeroRPS'), tcStr);
           end;
         end;
 
-        AuxNodeChave := AuxNode.Childrens.Find('ChaveNFe');
+        AuxNodeChave := AuxNode.Childrens.FindAnyNs('ChaveNFe');
 
         if (AuxNodeChave <> nil) then
         begin
           with Response.InfRetorno.ChaveNFeRPS do
           begin
-            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('InscricaoPrestador'), tcStr);
-            Numero := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('NumeroNFe'), tcStr);
-            CodigoVerificacao := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('CodigoVerificacao'), tcStr);
+            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('InscricaoPrestador'), tcStr);
+            Numero := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('NumeroNFe'), tcStr);
+            CodigoVerificacao := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('CodigoVerificacao'), tcStr);
           end;
         end;
       end;
@@ -422,7 +357,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -441,8 +376,8 @@ begin
   if EstaVazio(Response.Lote) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Lote não informado.';
+    AErro.Codigo := Cod111;
+    AErro.Descricao := Desc111;
     Exit;
   end;
 
@@ -484,8 +419,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -497,13 +432,13 @@ begin
       {
       ANode := Document.Root;
 
-      AuxNode := ANode.Childrens.Find('Cabecalho');
+      AuxNode := ANode.Childrens.FindAnyNs('Cabecalho');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
         end;
       end;
 
@@ -511,8 +446,8 @@ begin
       if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -539,7 +474,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -558,16 +493,16 @@ begin
   if EstaVazio(Response.InfConsultaNFSe.NumeroIniNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe Inicial não informado.';
+    AErro.Codigo := Cod105;
+    AErro.Descricao := Desc105;
     Exit;
   end;
 
   if EstaVazio(Response.InfConsultaNFSe.NumeroFinNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe Final não informado.';
+    AErro.Codigo := Cod106;
+    AErro.Descricao := Desc106;
     Exit;
   end;
 
@@ -614,8 +549,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -627,13 +562,13 @@ begin
       {
       ANode := Document.Root;
 
-      AuxNode := ANode.Childrens.Find('Cabecalho');
+      AuxNode := ANode.Childrens.FindAnyNs('Cabecalho');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
         end;
       end;
 
@@ -641,8 +576,8 @@ begin
       if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -669,7 +604,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -688,16 +623,16 @@ begin
   if EstaVazio(Response.InfCancelamento.ChaveNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Chave da NFSe não informada.';
+    AErro.Codigo := Cod118;
+    AErro.Descricao := Desc118;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.CodCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código do Cancelamento não informado.';
+    AErro.Codigo := Cod109;
+    AErro.Descricao := Desc109;
     Exit;
   end;
 
@@ -736,8 +671,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -749,13 +684,13 @@ begin
       {
       ANode := Document.Root;
 
-      AuxNode := ANode.Childrens.Find('Cabecalho');
+      AuxNode := ANode.Childrens.FindAnyNs('Cabecalho');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
         end;
       end;
       }
@@ -763,7 +698,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -845,13 +780,7 @@ begin
   Result := TNFSeR_Infisc.Create(Self);
   Result.NFSe := ANFSe;
 end;
-{
-function TACBrNFSeProviderInfiscv110.CriarServiceClient(
-  const AMetodo: TMetodo): TACBrNFSeXWebservice;
-begin
 
-end;
-}
 { TACBrNFSeProviderInfiscv2 }
 
 procedure TACBrNFSeProviderInfiscv2.Configuracao;
@@ -900,67 +829,15 @@ end;
 
 function TACBrNFSeProviderInfiscv2.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceInfiscv2.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderInfiscv2.ValidarSchema(

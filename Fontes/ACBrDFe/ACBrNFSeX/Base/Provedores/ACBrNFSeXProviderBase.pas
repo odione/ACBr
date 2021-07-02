@@ -69,6 +69,8 @@ type
     procedure SalvarXmlRps(aNota: NotaFiscal);
     procedure SalvarXmlNfse(aNota: NotaFiscal);
 
+    function GetWebServiceURL(const AMetodo: TMetodo): string;
+
     function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; virtual; abstract;
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; virtual; abstract;
     function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; virtual; abstract;
@@ -143,7 +145,7 @@ type
 implementation
 
 uses
-  pcnAuxiliar, ACBrXmlBase, ACBrNFSeXConfiguracoes,
+  pcnAuxiliar, ACBrXmlBase, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   ACBrDFeUtil, ACBrDFeException, ACBrNFSeX;
 
 { TACBrNFSeXProvider }
@@ -210,6 +212,72 @@ begin
               '</' + Prefixo + 'InscricaoMunicipal>'
   else
     Result := '';
+end;
+
+function TACBrNFSeXProvider.GetWebServiceURL(const AMetodo: TMetodo): string;
+begin
+  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
+  begin
+   with ConfigWebServices.Homologacao do
+    begin
+      case AMetodo of
+        // Métodos padrões da versão 1 do layout da ABRASF
+        tmRecepcionar: Result := Recepcionar;
+        tmConsultarLote: Result := ConsultarLote;
+        tmConsultarSituacao: Result := ConsultarSituacao;
+        tmConsultarNFSePorRps: Result := ConsultarNFSeRps;
+        tmConsultarNFSe: Result := ConsultarNFSe;
+        tmCancelarNFSe: Result := CancelarNFSe;
+
+        // Métodos padrões da versão 2 do layout da ABRASF
+        tmRecepcionarSincrono: Result := RecepcionarSincrono;
+        tmGerar: Result := GerarNFSe;
+        tmSubstituirNFSe: Result := SubstituirNFSe;
+        tmConsultarNFSePorFaixa: Result := ConsultarNFSePorFaixa;
+        tmConsultarNFSeServicoPrestado: Result := ConsultarNFSeServicoPrestado;
+        tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
+
+        // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
+        tmConsultarNFSeURL: Result := ConsultarNFSeURL;
+        tmAbrirSessao: Result := AbrirSessao;
+        tmFecharSessao: Result := FecharSessao;
+        tmTeste: Result := TesteEnvio;
+      else
+        Result := '';
+      end;
+    end;
+  end
+  else
+  begin
+    with ConfigWebServices.Producao do
+    begin
+      case AMetodo of
+        // Métodos padrões da versão 1 do layout da ABRASF
+        tmRecepcionar: Result := Recepcionar;
+        tmConsultarLote: Result := ConsultarLote;
+        tmConsultarSituacao: Result := ConsultarSituacao;
+        tmConsultarNFSePorRps: Result := ConsultarNFSeRps;
+        tmConsultarNFSe: Result := ConsultarNFSe;
+        tmCancelarNFSe: Result := CancelarNFSe;
+
+        // Métodos padrões da versão 2 do layout da ABRASF
+        tmRecepcionarSincrono: Result := RecepcionarSincrono;
+        tmGerar: Result := GerarNFSe;
+        tmSubstituirNFSe: Result := SubstituirNFSe;
+        tmConsultarNFSePorFaixa: Result := ConsultarNFSePorFaixa;
+        tmConsultarNFSeServicoPrestado: Result := ConsultarNFSeServicoPrestado;
+        tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
+
+        // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
+        tmConsultarNFSeURL: Result := ConsultarNFSeURL;
+        tmAbrirSessao: Result := AbrirSessao;
+        tmFecharSessao: Result := FecharSessao;
+        tmTeste: Result := TesteEnvio;
+      else
+        Result := '';
+      end;
+    end;
+  end;
 end;
 
 function TACBrNFSeXProvider.GetConfigMsgDados: TConfigMsgDados;
@@ -576,9 +644,6 @@ begin
       else
         AWriter.Municipio := ConfigGeral.Params2;
 
-      //Italo necessário para alguns provedores
-      //AWriter.VersaoNFSe := StrToVersaoNFSe(Ok, ConfigMsgDados.VersaoRps);
-
       pcnAuxiliar.TimeZoneConf.Assign( Configuracoes.WebServices.TimeZoneConf );
 
       AWriter.Opcoes.FormatoAlerta  := Configuracoes.Geral.FormatoAlerta;
@@ -666,10 +731,11 @@ begin
   Schema := FAOwner.Configuracoes.Arquivos.PathSchemas + Schema;
 
   FAOwner.SSL.Validar(Response.XmlEnvio, Schema, Erros);
+
   if NaoEstaVazio(Erros) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
+    AErro.Codigo := Cod999;
     AErro.Descricao := Erros;
   end;
 end;
@@ -816,7 +882,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -882,7 +948,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -948,7 +1014,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -1017,7 +1083,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -1108,7 +1174,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -1153,7 +1219,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1185,7 +1251,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1217,7 +1283,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1249,7 +1315,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1281,7 +1347,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1332,7 +1398,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1364,7 +1430,7 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := '999';
+      AErro.Codigo := Cod999;
       AErro.Descricao := E.Message;
     end;
   end;
@@ -1421,7 +1487,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -1529,7 +1595,7 @@ begin
       on E:Exception do
       begin
         AErro := Result.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;

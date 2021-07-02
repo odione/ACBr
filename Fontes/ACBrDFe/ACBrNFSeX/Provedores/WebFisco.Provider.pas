@@ -48,6 +48,9 @@ uses
 
 type
   TACBrNFSeXWebserviceWebFisco = class(TACBrNFSeXWebserviceSoap11)
+  protected
+    function GetSoapActionURL: string; virtual;
+
   private
     function GetSoapAction: string;
   public
@@ -55,6 +58,7 @@ type
     function ConsultarNFSe(ACabecalho, AMSG: String): string; override;
     function Cancelar(ACabecalho, AMSG: String): string; override;
 
+    property SoapActionURL: string read GetSoapActionURL;
     property SoapAction: string read GetSoapAction;
   end;
 
@@ -89,7 +93,7 @@ implementation
 
 uses
   ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   WebFisco.GravarXml, WebFisco.LerXml;
 
 { TACBrNFSeProviderWebFisco }
@@ -102,35 +106,9 @@ begin
   begin
     Identificador := '';
     ModoEnvio := meUnitario;
-
-    {
-    TagRaizNFSe := 'Nfe'; // Verificar
-    TagRaizRps  := 'EnvNfe';
-    }
   end;
 
   SetXmlNameSpace('');
-
-  with ConfigMsgDados do
-  begin
-    with ConsultarNFSe do
-    begin
-      InfElemento := '';
-      DocElemento := 'ConsultaNfe';
-    end;
-
-    with CancelarNFSe do
-    begin
-      InfElemento := '';
-      DocElemento := 'CancelaNfe';
-    end;
-
-    with GerarNFSe do
-    begin
-      InfElemento := '';
-      DocElemento := 'GerarCancelaNfe';
-    end;
-  end;
 
   ConfigSchemas.Validar := False;
 end;
@@ -151,39 +129,15 @@ end;
 
 function TACBrNFSeProviderWebFisco.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmConsultarNFSe:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, ConsultarNFSe);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmConsultarNFSe:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, ConsultarNFSe);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceWebFisco.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderWebFisco.ProcessarMensagemErros(
@@ -226,15 +180,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -296,8 +250,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -309,20 +263,20 @@ begin
 
       Response.Sucesso := (Response.Erros.Count = 0);
 
-      AuxNode := ANode.Childrens.Find('okk');
+      AuxNode := ANode.Childrens.FindAnyNs('okk');
 
       if AuxNode <> nil then
       begin
         {
-        AuxNodeChave := AuxNode.Childrens.Find('ChaveRPS');
+        AuxNodeChave := AuxNode.Childrens.FindAnyNs('ChaveRPS');
 
         if (AuxNodeChave <> nil) then
         begin
           with Response.InfRetorno.ChaveNFeRPS do
           begin
-            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('InscricaoPrestador'), tcStr);
-            SerieRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('SerieRPS'), tcStr);
-            NumeroRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.Find('NumeroRPS'), tcStr);
+            InscricaoPrestador := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('InscricaoPrestador'), tcStr);
+            SerieRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('SerieRPS'), tcStr);
+            NumeroRPS := ProcessarConteudoXml(AuxNodeChave.Childrens.FindAnyNs('NumeroRPS'), tcStr);
           end;
         end;
         }
@@ -331,7 +285,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -349,19 +303,19 @@ begin
   if EstaVazio(Response.InfConsultaNFSe.NumeroIniNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
-  {
+
   if EstaVazio(Response.InfConsultaNFSe.Tipo) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Tipo da NFSe não informado.';
+    AErro.Codigo := Cod114;
+    AErro.Descricao := Desc114;
     Exit;
   end;
-  }
+
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
   Response.Metodo := tmConsultarNFSe;
@@ -406,8 +360,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -420,13 +374,13 @@ begin
       Response.Sucesso := (Response.Erros.Count = 0);
 
       {
-      AuxNode := ANode.Childrens.Find('okk');
+      AuxNode := ANode.Childrens.FindAnyNs('okk');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
         end;
       end;
 
@@ -434,8 +388,8 @@ begin
       if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -462,7 +416,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -480,24 +434,24 @@ begin
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.SerieNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Série da NFSe não informada.';
+    AErro.Codigo := Cod112;
+    AErro.Descricao := Desc112;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.MotCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Motivo do Canelamento não informado.';
+    AErro.Codigo := Cod110;
+    AErro.Descricao := Desc110;
     Exit;
   end;
 
@@ -542,8 +496,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -556,13 +510,13 @@ begin
       Response.Sucesso := (Response.Erros.Count = 0);
 
       {
-      AuxNode := ANode.Childrens.Find('okk');
+      AuxNode := ANode.Childrens.FindAnyNs('okk');
 
       if AuxNode <> nil then
       begin
         with Response.InfRetorno do
         begin
-          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.Find('Sucesso'), tcStr);
+          Sucesso := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
         end;
       end;
       }
@@ -570,7 +524,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -580,6 +534,11 @@ begin
 end;
 
 { TACBrNFSeXWebserviceWebFisco }
+
+function TACBrNFSeXWebserviceWebFisco.GetSoapActionURL: string;
+begin
+  Result := 'https://www.webfiscotecnologia.com.br/issqn/wservice/';
+end;
 
 function TACBrNFSeXWebserviceWebFisco.GetSoapAction: string;
 begin
@@ -598,7 +557,7 @@ begin
 
   Request := AMSG;
 
-  Result := Executar('https://www.webfiscotecnologia.com.br/issqn/wservice/' + SoapAction,
+  Result := Executar(SoapActionURL + SoapAction,
                      Request,
                      ['return', 'item'],
                      ['xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
@@ -614,7 +573,7 @@ begin
 
   Request := AMSG;
 
-  Result := Executar('https://www.webfiscotecnologia.com.br/issqn/wservice/wsnfeconsultaxml.php/ConsultaNfe',
+  Result := Executar(SoapActionURL + 'wsnfeconsultaxml.php/ConsultaNfe',
                      Request,
                      ['return', 'item'],
                      ['xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
@@ -629,7 +588,7 @@ begin
 
   Request := AMSG;
 
-  Result := Executar('https://www.webfiscotecnologia.com.br/issqn/wservice/wsnfecancela.php/CancelaNfe',
+  Result := Executar(SoapActionURL + 'wsnfecancela.php/CancelaNfe',
                      Request,
                      ['return', 'item'],
                      ['xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',

@@ -96,7 +96,7 @@ implementation
 
 uses
   ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   Conam.GravarXml, Conam.LerXml;
 
 { TACBrNFSeProviderConam }
@@ -112,10 +112,6 @@ begin
 
     UseCertificateHTTP := False;
     ModoEnvio := meLoteAssincrono;
-    {
-    TagRaizNFSe := '';  // Verificar
-    TagRaizRps  := 'nfe:Reg20Item';
-    }
   end;
 
   SetXmlNameSpace('');
@@ -145,43 +141,15 @@ end;
 
 function TACBrNFSeProviderConam.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarSituacao:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, ConsultarSituacao);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, ConsultarLote);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarSituacao:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, ConsultarSituacao);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, ConsultarLote);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceConam.Create(FAOwner, AMetodo, CancelarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderConam.ProcessarMensagemErros(
@@ -227,15 +195,15 @@ begin
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -441,8 +409,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -458,14 +426,14 @@ begin
       begin
         with Response.InfRetorno do
         begin
-          Protocolo := ProcessarConteudoXml(ANode.Childrens.Find('Protocolo'), tcStr);
+          Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Protocolo'), tcStr);
         end;
       end;
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -483,8 +451,8 @@ begin
   if EstaVazio(Response.Protocolo) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero do Protocolo não informado.';
+    AErro.Codigo := Cod101;
+    AErro.Descricao := Desc101;
     Exit;
   end;
 
@@ -519,8 +487,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -536,14 +504,14 @@ begin
       begin
         with Response.InfRetorno do
         begin
-          Protocolo := ProcessarConteudoXml(ANode.Childrens.Find('PrtCSerRps'), tcStr);
+          Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('PrtCSerRps'), tcStr);
         end;
       end;
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -561,8 +529,8 @@ begin
   if EstaVazio(Response.Protocolo) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero do Protocolo não informado.';
+    AErro.Codigo := Cod101;
+    AErro.Descricao := Desc101;
     Exit;
   end;
 
@@ -601,8 +569,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -614,7 +582,7 @@ begin
 
       ANode := Document.Root;
 
-      AuxNode := ANode.Childrens.Find('XML_Notas');
+      AuxNode := ANode.Childrens.FindAnyNs('XML_Notas');
 
       if AuxNode <> nil then
       begin
@@ -622,8 +590,8 @@ begin
         if not Assigned(ANodeArray) then
         begin
           AErro := Response.Erros.New;
-          AErro.Codigo := '999';
-          AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+          AErro.Codigo := Cod203;
+          AErro.Descricao := Desc203;
           Exit;
         end;
 
@@ -657,7 +625,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -675,48 +643,48 @@ begin
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero da NFSe não informada.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.SerieNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Série da NFSe não informada.';
+    AErro.Codigo := Cod112;
+    AErro.Descricao := Desc112;
     Exit;
   end;
 
   if Response.InfCancelamento.NumeroRps = 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Numero do Rps não informado.';
+    AErro.Codigo := Cod102;
+    AErro.Descricao := Desc102;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.SerieRps) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Série do Rps não informado.';
+    AErro.Codigo := Cod103;
+    AErro.Descricao := Desc103;
     Exit;
   end;
 
   if Response.InfCancelamento.ValorNFSe = 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Valor da NFSe não informado.';
+    AErro.Codigo := Cod113;
+    AErro.Descricao := Desc113;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.MotCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Motivo do Cancelamento não informado.';
+    AErro.Codigo := Cod110;
+    AErro.Descricao := Desc110;
     Exit;
   end;
 
@@ -769,8 +737,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -786,14 +754,14 @@ begin
       begin
         with Response.InfRetorno do
         begin
-          Protocolo := ProcessarConteudoXml(ANode.Childrens.Find('PrtCSerRps'), tcStr);
+          Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('PrtCSerRps'), tcStr);
         end;
       end;
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;

@@ -68,6 +68,33 @@ type
 
   end;
 
+  TACBrNFSeXWebservicefintelISS_A = class(TACBrNFSeXWebservicefintelISS)
+  public
+    {
+    function Recepcionar(ACabecalho, AMSG: String): string; override;
+    function RecepcionarSincrono(ACabecalho, AMSG: String): string; override;
+    function GerarNFSe(ACabecalho, AMSG: String): string; override;
+    function ConsultarLote(ACabecalho, AMSG: String): string; override;
+    function ConsultarNFSePorRps(ACabecalho, AMSG: String): string; override;
+    function ConsultarNFSePorFaixa(ACabecalho, AMSG: String): string; override;
+    function ConsultarNFSeServicoPrestado(ACabecalho, AMSG: String): string; override;
+    function ConsultarNFSeServicoTomado(ACabecalho, AMSG: String): string; override;
+    function Cancelar(ACabecalho, AMSG: String): string; override;
+    function SubstituirNFSe(ACabecalho, AMSG: String): string; override;
+    }
+  end;
+
+  TACBrNFSeProviderfintelISS_A = class (TACBrNFSeProviderfintelISS)
+  protected
+    procedure Configuracao; override;
+
+    function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; override;
+    function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
+    {
+    function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
+    }
+  end;
+
 implementation
 
 uses
@@ -92,20 +119,16 @@ begin
   begin
     VersaoDados := '2.02';
     VersaoAtrib := '2.02';
+    AtribVerLote := '';
   end;
 
   with ConfigMsgDados do
   begin
     with XmlRps do
     begin
-      if TACBrNFSeX(FAOwner).Configuracoes.Geral.CodigoMunicipio <> 3136702 then
-      begin
-        xmlns := ConfigWebServices.Producao.XMLNameSpace;
+      xmlns := ConfigWebServices.Producao.XMLNameSpace;
 
-        ConfigWebServices.AtribVerLote := '';
-
-        SetXmlNameSpace(xmlns);
-      end;
+      SetXmlNameSpace(xmlns);
     end;
 
     DadosCabecalho := GetCabecalho(XmlRps.xmlns);
@@ -130,67 +153,15 @@ end;
 
 function TACBrNFSeProviderfintelISS.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmGerar:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, GerarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebservicefintelISS.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 { TACBrNFSeXWebservicefintelISS }
@@ -208,7 +179,7 @@ begin
   Request := Request + '</web:RecepcionarLoteRps>';
 
   Result := Executar('http://www.fintel.com.br/WebService/RecepcionarLoteRps', Request,
-                     ['return', 'outputXML', 'RecepcionarLoteRpsResult'],
+                     ['RecepcionarLoteRpsResult', 'EnviarLoteRpsResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -225,7 +196,7 @@ begin
   Request := Request + '</web:RecepcionarLoteRpsSincrono>';
 
   Result := Executar('http://www.fintel.com.br/WebService/RecepcionarLoteRpsSincrono', Request,
-                     ['return', 'outputXML', 'RecepcionarLoteRpsSincronoResult'],
+                     ['RecepcionarLoteRpsSincronoResult', 'EnviarLoteRpsSincronoResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -242,7 +213,7 @@ begin
   Request := Request + '</web:GerarNfse>';
 
   Result := Executar('http://www.fintel.com.br/WebService/GerarNfse', Request,
-                     ['return', 'outputXML', 'GerarNfseResult'],
+                     ['GerarNfseResult', 'GerarNfseResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -259,7 +230,7 @@ begin
   Request := Request + '</web:ConsultarLoteRps>';
 
   Result := Executar('http://www.fintel.com.br/WebService/ConsultarLoteRps', Request,
-                     ['return', 'outputXML', 'ConsultarLoteRpsResult'],
+                     ['ConsultarLoteRpsResult', 'ConsultarLoteRpsResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -276,7 +247,7 @@ begin
   Request := Request + '</web:ConsultarNfseFaixa>';
 
   Result := Executar('http://www.fintel.com.br/WebService/ConsultarNfseFaixa', Request,
-                     ['return', 'outputXML', 'ConsultarNfseServicoFaixaResult'],
+                     ['ConsultarNfseFaixaResult', 'ConsultarNfseFaixaResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -293,7 +264,7 @@ begin
   Request := Request + '</web:ConsultarNfsePorRps>';
 
   Result := Executar('http://www.fintel.com.br/WebService/ConsultarNfsePorRps', Request,
-                     ['return', 'outputXML', 'ConsultarNfsePorRpsResult'],
+                     ['ConsultarNfsePorRpsResult', 'ConsultarNfseRpsResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -310,7 +281,7 @@ begin
   Request := Request + '</web:ConsultarNfseServicoPrestado>';
 
   Result := Executar('http://www.fintel.com.br/WebService/ConsultarNfseServicoPrestado', Request,
-                     ['return', 'outputXML', 'ConsultarNfseServicoPrestadoResult'],
+                     ['ConsultarNfseServicoPrestadoResult', 'ConsultarNfseServicoPrestadoResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -327,7 +298,7 @@ begin
   Request := Request + '</web:ConsultarNfseServicoTomado>';
 
   Result := Executar('http://www.fintel.com.br/WebService/ConsultarNfseServicoTomado', Request,
-                     ['return', 'outputXML', 'ConsultarNfseServicoTomadoResult'],
+                     ['ConsultarNfseServicoTomadoResult', 'ConsultarNfseServicoTomadoResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -343,7 +314,7 @@ begin
   Request := Request + '</web:CancelarNfse>';
 
   Result := Executar('http://www.fintel.com.br/WebService/CancelarNfse', Request,
-                     ['return', 'outputXML', 'CancelarNfseResult'],
+                     ['CancelarNfseResult', 'CancelarNfseResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
 end;
 
@@ -360,8 +331,50 @@ begin
   Request := Request + '</web:SubstituirNfse>';
 
   Result := Executar('http://www.fintel.com.br/WebService/SubstituirNfse', Request,
-                     ['return', 'outputXML', 'SubstituirNfseResult'],
+                     ['SubstituirNfseResult', 'SubstituirNfseResposta'],
                      ['xmlns:web="http://www.fintel.com.br/WebService"']);
+end;
+
+{ TACBrNFSeProviderfintelISS_A }
+
+procedure TACBrNFSeProviderfintelISS_A.Configuracao;
+begin
+  inherited Configuracao;
+
+  with ConfigAssinar do
+  begin
+    Rps := True;
+    LoteRps := True;
+    CancelarNFSe := True;
+    RpsGerarNFSe := True;
+  end;
+
+  with ConfigWebServices do
+  begin
+    VersaoDados := '2.02';
+    VersaoAtrib := '2.02';
+    AtribVerLote := 'versao';
+  end;
+
+  SetXmlNameSpace('http://www.abrasf.org.br/nfse.xsd');
+
+  ConfigMsgDados.DadosCabecalho := GetCabecalho('');
+
+  SetNomeXSD('nfseV202.xsd');
+end;
+
+function TACBrNFSeProviderfintelISS_A.CriarGeradorXml(
+  const ANFSe: TNFSe): TNFSeWClass;
+begin
+  Result := TNFSeW_fintelISS_A.Create(Self);
+  Result.NFSe := ANFSe;
+end;
+
+function TACBrNFSeProviderfintelISS_A.CriarLeitorXml(
+  const ANFSe: TNFSe): TNFSeRClass;
+begin
+  Result := TNFSeR_fintelISS_A.Create(Self);
+  Result.NFSe := ANFSe;
 end;
 
 end.

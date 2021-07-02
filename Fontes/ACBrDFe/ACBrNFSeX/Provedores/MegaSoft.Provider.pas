@@ -80,13 +80,6 @@ begin
 
   SetXmlNameSpace('http://megasoftarrecadanet.com.br/xsd/nfse_v01.xsd');
 
-  with ConfigMsgDados do
-  begin
-    DadosCabecalho := '<cabecalho versao="2.00" xmlns="http://megasoftarrecadanet.com.br/xsd/nfse_v01.xsd">' +
-                      '<versaoDados>2.00</versaoDados>' +
-                      '</cabecalho>';
-  end;
-
   SetNomeXSD('nfse_v01.xsd');
 end;
 
@@ -106,35 +99,15 @@ end;
 
 function TACBrNFSeProviderMegaSoft.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceMegaSoft.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceMegaSoft.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceMegaSoft.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceMegaSoft.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmGerar:
-          Result := TACBrNFSeXWebserviceMegaSoft.Create(FAOwner, AMetodo, GerarNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 procedure TACBrNFSeProviderMegaSoft.ValidarSchema(

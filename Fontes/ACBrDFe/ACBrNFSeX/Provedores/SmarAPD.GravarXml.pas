@@ -151,7 +151,7 @@ begin
                                              NFSe.Tomador.Endereco.xMunicipio, ''))
   else
     NFSeNode.AppendChild(AddNode(tcStr, '#2', 'cidadetomador', 1, 50, 1,
-     CodCidadeToCidade(StrToInt64Def(NFSe.Tomador.Endereco.CodigoMunicipio, 3202405)), ''));
+     CodIBGEToCidade(StrToInt64Def(NFSe.Tomador.Endereco.CodigoMunicipio, 3202405)), ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#2', 'estadotomador', 1, 50, 1,
                                                  NFSe.Tomador.Endereco.UF, ''));
@@ -365,10 +365,8 @@ end;
 
 procedure TNFSeW_SmarAPDv203.Configuracao;
 begin
-  // Executa a Configuração Padrão
   inherited Configuracao;
 
-  // Altera a Configuração Padrão para gerar o XML do RPS
   FormatoAliq := tcDe2;
   NrOcorrInformacoesComplemetares := 0;
   NrOcorrNIFTomador := 0;
@@ -380,10 +378,8 @@ end;
 
 procedure TNFSeW_SmarAPDv204.Configuracao;
 begin
-  // Executa a Configuração Padrão
   inherited Configuracao;
 
-  // Altera a Configuração Padrão para gerar o XML do RPS
   FormatoAliq := tcDe2;
   NrOcorrInformacoesComplemetares := 0;
   NrOcorrNIFTomador := 0;

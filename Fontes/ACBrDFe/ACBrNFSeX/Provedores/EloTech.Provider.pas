@@ -92,46 +92,7 @@ begin
 
   SetXmlNameSpace('http://shad.elotech.com.br/schemas/iss/nfse_v2_03.xsd');
 
-  with ConfigMsgDados do
-  begin
-    with LoteRps do
-    begin
-//      GerarID := False;
-    end;
-
-    with ConsultarLote do
-    begin
-//      NrOcorrNumLote   := 1;
-//      NrOcorrProtocolo := -1;
-    end;
-
-    with ConsultarNFSeRps do
-    begin
-//      GerarGrupoRequerente := True;
-//      GerarGrupoPrestador  := False;
-    end;
-
-    with ConsultarNFSe do
-    begin
-//      GerarGrupoRequerente := True;
-//      GerarGrupoPrestador  := False;
-    end;
-
-    with CancelarNFSe do
-    begin
-//      GerarIDInfPedCanc  := False;
-//      NrOcorrChaveAcesso := -1;
-    end;
-
-    with SubstituirNFSe do
-    begin
-//      GerarIDSubstituicaoNFSe := False;
-//      GerarGrupoCPFCNPJ       := True;
-    end;
-  end;
-
   SetNomeXSD('nfse_v2_03.xsd');
-//  ConfigSchemas.Validar := False;
 end;
 
 function TACBrNFSeProviderEloTech.CriarGeradorXml(
@@ -150,63 +111,15 @@ end;
 
 function TACBrNFSeProviderEloTech.CriarServiceClient(
   const AMetodo: TMetodo): TACBrNFSeXWebservice;
+var
+  URL: string;
 begin
-  if FAOwner.Configuracoes.WebServices.AmbienteCodigo = 2 then
-  begin
-   with ConfigWebServices.Homologacao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end
+  URL := GetWebServiceURL(AMetodo);
+
+  if URL <> '' then
+    Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, URL)
   else
-  begin
-    with ConfigWebServices.Producao do
-    begin
-      case AMetodo of
-        tmRecepcionar:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, Recepcionar);
-        tmConsultarLote:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarLote);
-        tmConsultarNFSePorRps:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeRps);
-        tmConsultarNFSePorFaixa:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSePorFaixa);
-        tmConsultarNFSeServicoPrestado:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeServicoPrestado);
-        tmConsultarNFSeServicoTomado:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, ConsultarNFSeServicoTomado);
-        tmCancelarNFSe:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, CancelarNFSe);
-        tmRecepcionarSincrono:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, RecepcionarSincrono);
-        tmSubstituirNFSe:
-          Result := TACBrNFSeXWebserviceEloTech.Create(FAOwner, AMetodo, SubstituirNFSe);
-      else
-        raise EACBrDFeException.Create(ERR_NAO_IMP);
-      end;
-    end;
-  end;
+    raise EACBrDFeException.Create(ERR_NAO_IMP);
 end;
 
 { TACBrNFSeXWebserviceEloTech }

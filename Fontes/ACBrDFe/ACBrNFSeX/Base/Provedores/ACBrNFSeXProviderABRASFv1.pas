@@ -78,8 +78,8 @@ type
 implementation
 
 uses
-  ACBrUtil, ACBrDFeException, ACBrXmlWriter,  ACBrNFSeX, ACBrNFSeXConfiguracoes,
-  ACBrNFSeXNotasFiscais, ACBrNFSeXConversao;
+  ACBrUtil, ACBrDFeException, ACBrXmlWriter, ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrNFSeXConsts, ACBrNFSeXNotasFiscais, ACBrNFSeXConversao;
 
 { TACBrNFSeProviderABRASFv1 }
 
@@ -101,11 +101,7 @@ begin
     VersaoAtrib := '1.00';
   end;
 
-  with ConfigMsgDados do
-  begin
-    DadosCabecalho := '<cabecalho versao="1.00" xmlns="' + NameSpace + '">' +
-                      '<versaoDados>1.00</versaoDados></cabecalho>';
-  end;
+  ConfigMsgDados.DadosCabecalho := GetCabecalho('');
 end;
 
 procedure TACBrNFSeProviderABRASFv1.PrepararEmitir(Response: TNFSeEmiteResponse);
@@ -117,18 +113,25 @@ var
   TagEnvio, Prefixo, PrefixoTS: string;
   I: Integer;
 begin
+  if Response.ModoEnvio in [meLoteSincrono, meUnitario, meTeste] then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod001;
+    AErro.Descricao := Desc001;
+  end;
+
   if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Nenhum RPS adicionado ao componente';
+    AErro.Codigo := Cod002;
+    AErro.Descricao := Desc002;
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'ERRO: Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Codigo := Cod003;
+    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
                        IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
@@ -275,8 +278,8 @@ begin
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := Desc201;
         Exit
       end;
 
@@ -293,7 +296,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -311,8 +314,8 @@ begin
   if EstaVazio(Response.Protocolo) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Protocolo não informado.';
+    AErro.Codigo := Cod101;
+    AErro.Descricao := Desc101;
     Exit;
   end;
 
@@ -386,7 +389,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -404,8 +407,8 @@ begin
   if EstaVazio(Response.Protocolo) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Protocolo não informado.';
+    AErro.Codigo := Cod101;
+    AErro.Descricao := Desc101;
     Exit;
   end;
 
@@ -466,7 +469,7 @@ var
   ANodeArray: TACBrXmlNodeArray;
   AErro: TNFSeEventoCollectionItem;
   ANota: NotaFiscal;
-  NumRps: String;
+  NumNFSe: String;
   I: Integer;
 begin
   Document := TACBrXmlDocument.Create;
@@ -484,8 +487,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Lista de NFSe não encontrada! (ListaNfse)';
+        AErro.Codigo := Cod202;
+        AErro.Descricao := Desc202;
         Exit;
       end;
 
@@ -493,8 +496,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -506,11 +509,11 @@ begin
         if AuxNode <> nil then
         begin
           AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
-          AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
+//          AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
           AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumNFSe := ProcessarConteudoXml(AuxNode, tcStr);
 
-          ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+          ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumNFSe);
 
           if Assigned(ANota) then
             ANota.XML := ANode.OuterXml
@@ -525,8 +528,8 @@ begin
         else
         begin
           AErro := Response.Erros.New;
-          AErro.Codigo := '999';
-          AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+          AErro.Codigo := Cod203;
+          AErro.Descricao := Desc203;
           Exit;
         end;
       end;
@@ -536,7 +539,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -554,8 +557,8 @@ begin
   if EstaVazio(Response.NumRPS) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Número da RPS não informado.';
+    AErro.Codigo := Cod102;
+    AErro.Descricao := Desc102;
     Exit;
   end;
 
@@ -623,7 +626,7 @@ var
   ANode, AuxNode: TACBrXmlNode;
   AErro: TNFSeEventoCollectionItem;
   ANota: NotaFiscal;
-  NumRps: String;
+  NumNFSe: String;
 begin
   Document := TACBrXmlDocument.Create;
 
@@ -639,18 +642,18 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
       AuxNode := ANode.Childrens.FindAnyNs('Nfse');
       AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
-      AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
+//      AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
       AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-      NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+      NumNFSe := ProcessarConteudoXml(AuxNode, tcStr);
 
-      ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+      ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumNFSe);
 
       if Assigned(ANota) then
         ANota.XML := ANode.OuterXml
@@ -667,7 +670,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -685,8 +688,8 @@ begin
   if Response.InfConsultaNFSe.tpConsulta in [tcPorFaixa, tcServicoTomado, tcPorNumeroURLRetornado] then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Consulta não disponivel neste provedor.';
+    AErro.Codigo := Cod001;
+    AErro.Descricao := Desc001;
     Exit;
   end;
 
@@ -795,7 +798,7 @@ var
   ANodeArray: TACBrXmlNodeArray;
   AErro: TNFSeEventoCollectionItem;
   ANota: NotaFiscal;
-  NumRps: String;
+  NumNFSe: String;
   I: Integer;
 begin
   Document := TACBrXmlDocument.Create;
@@ -811,8 +814,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Lista de NFSe não encontrada! (ListaNfse)';
+        AErro.Codigo := Cod202;
+        AErro.Descricao := Desc202;
         Exit;
       end;
 
@@ -820,8 +823,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Não foi retornado nenhuma NFSe';
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
         Exit;
       end;
 
@@ -830,11 +833,11 @@ begin
         ANode := ANodeArray[I];
         AuxNode := ANode.Childrens.FindAnyNs('Nfse');
         AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
-        AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
+//        AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
         AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-        NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+        NumNFSe := ProcessarConteudoXml(AuxNode, tcStr);
 
-        ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+        ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumNFSe);
 
         if Assigned(ANota) then
           ANota.XML := ANode.OuterXml
@@ -852,7 +855,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -871,16 +874,16 @@ begin
   if EstaVazio(Response.InfCancelamento.NumeroNFSe) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Número da NFSe não informado para cancelamento.';
+    AErro.Codigo := Cod108;
+    AErro.Descricao := Desc108;
     Exit;
   end;
 
   if EstaVazio(Response.InfCancelamento.CodCancelamento) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := '999';
-    AErro.Descricao := 'Código de cancelamento não informado para cancelamento.';
+    AErro.Codigo := Cod109;
+    AErro.Descricao := Desc109;
     Exit;
   end;
 
@@ -982,8 +985,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Confirmação do cancelamento não encontrada';
+        AErro.Codigo := Cod204;
+        AErro.Descricao := Desc204;
         Exit;
       end;
 
@@ -991,8 +994,8 @@ begin
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
-        AErro.Descricao := 'Confirmação do cancelamento não encontrada';
+        AErro.Codigo := Cod204;
+        AErro.Descricao := Desc204;
         Exit;
       end;
 
@@ -1022,7 +1025,7 @@ begin
       on E:Exception do
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '999';
+        AErro.Codigo := Cod999;
         AErro.Descricao := E.Message;
       end;
     end;
@@ -1036,8 +1039,8 @@ var
   AErro: TNFSeEventoCollectionItem;
 begin
   AErro := Response.Erros.New;
-  AErro.Codigo := '999';
-  AErro.Descricao := 'Provedor não implementa este tipo de Serviço.';
+  AErro.Codigo := Cod001;
+  AErro.Descricao := Desc001;
 
   TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
 
