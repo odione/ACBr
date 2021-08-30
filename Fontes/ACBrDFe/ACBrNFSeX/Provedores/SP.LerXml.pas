@@ -188,6 +188,8 @@ begin
       CEP             := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('CEP'), tcStr);
       xMunicipio      := CodIBGEToCidade(StrToIntDef(CodigoMunicipio, 0));
     end;
+
+    NFSe.Servico.CodigoMunicipio := NFSe.Tomador.Endereco.CodigoMunicipio;
   end;
 end;
 
@@ -196,7 +198,7 @@ var
   XmlNode: TACBrXmlNode;
   xRetorno: string;
 begin
-  xRetorno := TratarRetorno(Arquivo);
+  xRetorno := TratarXmlRetorno(Arquivo);
 
   if EstaVazio(xRetorno) then
     raise Exception.Create('Arquivo xml não carregado.');
@@ -233,18 +235,14 @@ begin
 
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
-  AuxNode := ANode.Childrens.FindAnyNs('NFe');
-
-  if AuxNode = nil then
-    AuxNode := ANode.Childrens.FindAnyNs('CompNfse');
-
-  if AuxNode = nil then Exit;
+  AuxNode := ANode;
 
   NFSe.dhRecebimento  := Now;
   NFSe.Protocolo      := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumeroLote'), tcStr);
   NFSe.NumeroLote     := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumeroLote'), tcStr);
   NFSe.DataEmissao    := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('DataEmissaoNFe'), tcDatHor);
   NFSe.DataEmissaoRps := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('DataEmissaoRPS'), tcDat);
+  NFSe.Competencia    := NFSe.DataEmissao;
 
   aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('StatusNFe'), tcStr);
 

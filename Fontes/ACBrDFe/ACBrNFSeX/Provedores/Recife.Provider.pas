@@ -88,7 +88,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/RecepcionarLoteRps', Request,
                      ['outputXML', 'EnviarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.GerarNFSe(ACabecalho, AMSG: String): string;
@@ -110,7 +110,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/GerarNfse', Request,
                      ['outputXML', 'GerarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.ConsultarLote(ACabecalho, AMSG: String): string;
@@ -125,7 +125,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/ConsultarLoteRps', Request,
                      ['outputXML', 'ConsultarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.ConsultarSituacao(ACabecalho, AMSG: String): string;
@@ -140,7 +140,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/ConsultarSituacaoLoteRps', Request,
                      ['outputXML', 'ConsultarSituacaoLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.ConsultarNFSePorRps(ACabecalho, AMSG: String): string;
@@ -155,7 +155,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/ConsultarNfsePorRps', Request,
                      ['outputXML', 'ConsultarNfseRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.ConsultarNFSe(ACabecalho, AMSG: String): string;
@@ -170,7 +170,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/ConsultarNfse', Request,
                      ['outputXML', 'ConsultarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceRecife.Cancelar(ACabecalho, AMSG: String): string;
@@ -185,7 +185,7 @@ begin
 
   Result := Executar('http://nfse.recife.pe.gov.br/CancelarNfse', Request,
                      ['outputXML', 'CancelarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 { TACBrNFSeProviderRecife }
@@ -193,8 +193,6 @@ end;
 procedure TACBrNFSeProviderRecife.Configuracao;
 begin
   inherited Configuracao;
-
-  ConfigGeral.FormatoItemListaServico := filsSemFormatacao;
 
   with ConfigAssinar do
   begin
@@ -296,6 +294,8 @@ begin
 
     ListaRps := ListaRps + xRps;
   end;
+
+  ListaRps := ChangeLineBreak(ListaRps, '');
 
   if EstaVazio(ConfigMsgDados.GerarNFSe.xmlns) then
     NameSpace := ''

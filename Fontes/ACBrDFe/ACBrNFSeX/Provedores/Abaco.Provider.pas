@@ -109,8 +109,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:RecepcionarLoteRPS.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:RecepcionarLoteRPS.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ARECEPCIONARLOTERPS.Execute', Request,
@@ -125,8 +125,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:ConsultarLoteRps.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:ConsultarLoteRps.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ACONSULTARLOTERPS.Execute', Request,
@@ -141,8 +141,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:ConsultarSituacaoLoteRps.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:ConsultarSituacaoLoteRps.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ACONSULTARSITUACAOLOTERPS.Execute', Request,
@@ -157,8 +157,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:ConsultarNfsePorRps.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:ConsultarNfsePorRps.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ACONSULTARNFSEPORRPS.Execute', Request,
@@ -173,8 +173,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:ConsultarNfse.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:ConsultarNfse.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ACONSULTARNFSE.Execute', Request,
@@ -189,8 +189,8 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:CancelarNfse.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:CancelarNfse.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/ACANCELARNFSE.Execute', Request,
@@ -258,13 +258,24 @@ procedure TACBrNFSeProviderAbacov204.Configuracao;
 begin
   inherited Configuracao;
 
+  ConfigGeral.ModoEnvio := meLoteAssincrono;
+
+  with ConfigAssinar do
+  begin
+    Rps := True;
+  end;
+
   with ConfigWebServices do
   begin
     VersaoDados := '2.04';
     VersaoAtrib := '201001';
   end;
 
-  ConfigMsgDados.DadosCabecalho := GetCabecalho('');
+  with ConfigMsgDados do
+  begin
+    GerarPrestadorLoteRps := True;
+    DadosCabecalho := GetCabecalho('');
+  end;
 end;
 
 function TACBrNFSeProviderAbacov204.CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass;
@@ -301,13 +312,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_CancelarNfse.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_CancelarNfse.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CANCELARNFSE.Execute', Request,
-                     'A24_CancelarNfse.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'CancelarNfseResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.ConsultarLote(ACabecalho,
@@ -318,13 +329,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_ConsultarLoteRps.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_ConsultarLoteRps.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CONSULTARLOTERPS.Execute', Request,
-                     'A24_ConsultarLoteRps.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'ConsultarLoteRpsResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.ConsultarNFSePorFaixa(ACabecalho,
@@ -335,13 +346,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_ConsultarNfsePorFaixa.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_ConsultarNfsePorFaixa.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CONSULTARNFSEPORFAIXA.Execute', Request,
-                     'A24_ConsultarNfsePorFaixa.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'ConsultarNfsePorFaixaResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.ConsultarNFSePorRps(ACabecalho,
@@ -352,13 +363,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_ConsultarNfsePorRps.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_ConsultarNfsePorRps.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CONSULTARNFSEPORRPS.Execute', Request,
-                     'A24_ConsultarNfsePorRps.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'ConsultarNfseRpsResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.ConsultarNFSeServicoPrestado(ACabecalho,
@@ -369,13 +380,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_ConsultarNfseServicoPrestado.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_ConsultarNfseServicoPrestado.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CONSULTARNFSESERVICOPRESTADO.Execute', Request,
-                     'A24_ConsultarNfseServicoPrestado.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'ConsultarNfseServicoPrestadoResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.ConsultarNFSeServicoTomado(ACabecalho,
@@ -386,13 +397,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_ConsultarNfseServicoTomado.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_ConsultarNfseServicoTomado.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_CONSULTARNFSESERVICOTOMADO.Execute', Request,
-                     'A24_ConsultarNfseServicoTomado.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'ConsultarNfseServicoTomadoResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.Recepcionar(ACabecalho,
@@ -403,13 +414,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_RecepcionarLoteRPS.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_RecepcionarLoteRPS.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_RECEPCIONARLOTERPS.Execute', Request,
-                     'A24_RecepcionarLoteRPS.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'EnviarLoteRpsResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 function TACBrNFSeXWebserviceAbacov204.SubstituirNFSe(ACabecalho,
@@ -420,13 +431,13 @@ begin
   FPMsgOrig := AMSG;
 
   Request := '<e:A24_SubstituirNfse.Execute>';
-  Request := Request + '<e:Nfsecabecmsg><![CDATA[' + ACabecalho + ']]></e:Nfsecabecmsg>';
-  Request := Request + '<e:Nfsedadosmsg><![CDATA[' + AMSG + ']]></e:Nfsedadosmsg>';
+  Request := Request + '<e:Nfsecabecmsg>' + XmlToStr(ACabecalho) + '</e:Nfsecabecmsg>';
+  Request := Request + '<e:Nfsedadosmsg>' + XmlToStr(AMSG) + '</e:Nfsedadosmsg>';
   Request := Request + '</e:A24_SubstituirNfse.Execute>';
 
   Result := Executar('http://www.e-nfs.com.braction/AA24_SUBSTITUIRNFSE.Execute', Request,
-                     'A24_SubstituirNfse.ExecuteResponse',
-                     'xmlns:e="http://www.e-nfs.com.br"');
+                     ['Outputxml', 'SubstituirNfseResposta'],
+                     ['xmlns:e="http://www.e-nfs.com.br"']);
 end;
 
 end.

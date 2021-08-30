@@ -81,10 +81,11 @@ type
     FChaveAutoriz: string;
     FFraseSecreta: string;
     FCNPJPrefeitura: string;
+    FProvedor: TnfseProvedor;
 
     FFormatoEmissao: TACBrTipoCampo;
     FFormatoCompetencia: TACBrTipoCampo;
-
+    FFormItemLServico: TFormatoItemListaServico;
     FFormatoAliq: TACBrTipoCampo;
     FDivAliq100: Boolean;
 
@@ -110,6 +111,8 @@ type
 
     function GerarCNPJ(const CNPJ: string): TACBrXmlNode; virtual;
     function GerarCPFCNPJ(const CPFCNPJ: string): TACBrXmlNode; virtual;
+    function PadronizarItemServico(const Codigo: string): string;
+    function AjustarAliquota(const Aliquota: Double; DivPor100: Boolean = False): Double;
 
  public
     constructor Create(AOwner: IACBrNFSeXProvider); virtual;
@@ -130,9 +133,12 @@ type
     property ChaveAutoriz: string        read FChaveAutoriz   write FChaveAutoriz;
     property FraseSecreta: string        read FFraseSecreta   write FFraseSecreta;
     property CNPJPrefeitura: string      read FCNPJPrefeitura write FCNPJPrefeitura;
+    property Provedor: TnfseProvedor     read FProvedor       write FProvedor;
 
     property FormatoEmissao: TACBrTipoCampo     read FFormatoEmissao     write FFormatoEmissao;
     property FormatoCompetencia: TACBrTipoCampo read FFormatoCompetencia write FFormatoCompetencia;
+
+    property FormatoItemListaServico: TFormatoItemListaServico read FFormItemLServico write FFormItemLServico;
 
     property FormatoAliq: TACBrTipoCampo read FFormatoAliq  write FFormatoAliq;
     property DivAliq100: Boolean         read FDivAliq100   write FDivAliq100;
@@ -166,8 +172,9 @@ end;
 procedure TNFSeWClass.Configuracao;
 begin
   // Propriedades de Formatação de informações
-  FFormatoEmissao     := tcDatHor;
+  FFormatoEmissao := tcDatHor;
   FFormatoCompetencia := tcDatHor;
+  FFormItemLServico := filsComFormatacao;
 
   FFormatoAliq := tcDe4;
   FDivAliq100  := False;
@@ -200,6 +207,33 @@ end;
 function TNFSeWClass.ObterNomeArquivo: String;
 begin
   Result := OnlyNumber(NFSe.infID.ID) + '.xml';
+end;
+
+function TNFSeWClass.AjustarAliquota(const Aliquota: Double; DivPor100: Boolean = False): Double;
+var
+  Aliq: Double;
+begin
+  if Aliquota < 1 then
+    Aliq := Aliquota * 100
+  else
+    Aliq := Aliquota;
+
+  if DivPor100 then
+    Result := Aliq / 100
+  else
+    Result := Aliq;
+end;
+
+function TNFSeWClass.PadronizarItemServico(const Codigo: string): string;
+var
+  i: Integer;
+  item: string;
+begin
+  item := OnlyNumber(Codigo);
+  i := StrToIntDef(item, 0);
+  item := Poem_Zeros(i, 4);
+
+  Result := Copy(item, 1, 2) + '.' + Copy(item, 3, 2);
 end;
 
 function TNFSeWClass.GetOpcoes: TACBrXmlWriterOptions;

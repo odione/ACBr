@@ -83,36 +83,50 @@ type
 
     //metodos para geração e tratamento dos dados do metodo emitir
     procedure PrepararEmitir(Response: TNFSeEmiteResponse); virtual; abstract;
+    procedure GerarMsgDadosEmitir(Response: TNFSeEmiteResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarEmitir(Response: TNFSeEmiteResponse); virtual;
     procedure TratarRetornoEmitir(Response: TNFSeEmiteResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo ConsultaSituacao
     procedure PrepararConsultaSituacao(Response: TNFSeConsultaSituacaoResponse); virtual; abstract;
+    procedure GerarMsgDadosConsultaSituacao(Response: TNFSeConsultaSituacaoResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarConsultaSituacao(Response: TNFSeConsultaSituacaoResponse); virtual;
     procedure TratarRetornoConsultaSituacao(Response: TNFSeConsultaSituacaoResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo ConsultaLoteRps
     procedure PrepararConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); virtual; abstract;
+    procedure GerarMsgDadosConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); virtual;
     procedure TratarRetornoConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo ConsultaNFSeporRps
     procedure PrepararConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); virtual; abstract;
+    procedure GerarMsgDadosConsultaporRps(Response: TNFSeConsultaNFSeporRpsResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); virtual;
     procedure TratarRetornoConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo ConsultaNFSe
     procedure PrepararConsultaNFSe(Response: TNFSeConsultaNFSeResponse); virtual; abstract;
+    procedure GerarMsgDadosConsultaNFSe(Response: TNFSeConsultaNFSeResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarConsultaNFSe(Response: TNFSeConsultaNFSeResponse); virtual;
     procedure TratarRetornoConsultaNFSe(Response: TNFSeConsultaNFSeResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo CancelaNFSe
     procedure PrepararCancelaNFSe(Response: TNFSeCancelaNFSeResponse); virtual; abstract;
+    procedure GerarMsgDadosCancelaNFSe(Response: TNFSeCancelaNFSeResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarCancelaNFSe(Response: TNFSeCancelaNFSeResponse); virtual;
     procedure TratarRetornoCancelaNFSe(Response: TNFSeCancelaNFSeResponse); virtual; abstract;
 
     //metodos para geração e tratamento dos dados do metodo CancelaNFSe
     procedure PrepararSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual; abstract;
+    procedure GerarMsgDadosSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual;
     procedure TratarRetornoSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual; abstract;
 
@@ -145,7 +159,7 @@ type
 implementation
 
 uses
-  pcnAuxiliar, ACBrXmlBase, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
+  Math, pcnAuxiliar, ACBrXmlBase, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   ACBrDFeUtil, ACBrDFeException, ACBrNFSeX;
 
 { TACBrNFSeXProvider }
@@ -323,9 +337,12 @@ begin
     NumMaxRpsGerar  := 1;
     NumMaxRpsEnviar := 50;
     ModoEnvio := meAutomatico;
-    FormatoItemListaServico := filsComFormatacao;
     TabServicosExt := False;
     Identificador := 'Id';
+    ConsultaSitLote := False;
+    ConsultaLote := True;
+    ConsultaNFSe := True;
+    QuebradeLinha := ';';
   end;
 
   // Inicializa os parâmetros de configuração: MsgDados
@@ -334,6 +351,8 @@ begin
     // Usado na tag raiz dos XML de envio do Lote, Consultas, etc.
     Prefixo := '';
     PrefixoTS := '';
+
+    UsarNumLoteConsLote := False;
 
     // Usado para geração do Xml do Rps
     with XmlRps do
@@ -504,14 +523,33 @@ begin
     with TACBrNFSeX(FAOwner) do
     begin
       Sessao := Configuracoes.Geral.xProvedor;
-      ConfigWebServices.LoadUrl(IniParams, Sessao);
+      ConfigWebServices.LoadUrlProducao(IniParams, Sessao);
+      ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
       ConfigGeral.LoadParams1(IniParams, Sessao);
       ConfigGeral.LoadParams2(IniParams, Sessao);
 
       if ConfigWebServices.Producao.Recepcionar = '' then
       begin
         Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
-        ConfigWebServices.LoadUrl(IniParams, Sessao);
+        ConfigWebServices.LoadUrlProducao(IniParams, Sessao);
+      end;
+
+      if ConfigWebServices.Homologacao.Recepcionar = '' then
+      begin
+        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+        ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
+      end;
+
+      if ConfigWebServices.Homologacao.Recepcionar = '' then
+      begin
+        Sessao := Configuracoes.Geral.xProvedor;
+        ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
+      end;
+
+      if ConfigWebServices.Homologacao.Recepcionar = '' then
+      begin
+        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+        ConfigWebServices.HomologacaoIgualProducao(IniParams, Sessao);
       end;
 
       if ConfigGeral.Params1 = '' then
@@ -550,11 +588,16 @@ var
   aPath, NomeArq: string;
   aConfig: TConfiguracoesNFSe;
 begin
+  aNota.Confirmada := True;
+  aNota.NomeArq := '';
+
   if FAOwner.Configuracoes.Arquivos.Salvar then
   begin
     aConfig := TConfiguracoesNFSe(FAOwner.Configuracoes);
     aPath := aConfig.Arquivos.GetPathNFSe;
 
+    NomeArq := TACBrNFSeX(FAOwner).GetNumID(aNota.NFSe) + '-nfse.xml';
+    {
     if aConfig.Arquivos.NomeLongoNFSe then
       NomeArq := GerarNomeNFSe(aConfig.WebServices.UFCodigo,
                                aNota.NFSe.DataEmissao,
@@ -564,6 +607,8 @@ begin
       NomeArq := aNota.NFSe.Numero +
                  aNota.NFSe.IdentificacaoRps.Serie +
                  '-nfse.xml';
+    }
+    aNota.NomeArq := NomeArq;
 
     TACBrNFSeX(FAOwner).Gravar(NomeArq, aNota.XML, aPath);
   end;
@@ -638,6 +683,7 @@ begin
       AWriter.ChaveAcesso  := Configuracoes.Geral.Emitente.WSChaveAcesso;
       AWriter.ChaveAutoriz := Configuracoes.Geral.Emitente.WSChaveAutoriz;
       AWriter.FraseSecreta := Configuracoes.Geral.Emitente.WSFraseSecr;
+      AWriter.Provedor     := Configuracoes.Geral.Provedor;
 
       if AWriter.Ambiente = taProducao then
         AWriter.Municipio := ConfigGeral.Params1
@@ -796,6 +842,10 @@ function TACBrNFSeXProvider.Emite(const aLote: String; aModoEnvio: TmodoEnvio): 
 var
   AService: TACBrNFSeXWebservice;
   AErro: TNFSeEventoCollectionItem;
+  Protocolo: string;
+  RetornoConsSit: TNFSeConsultaSituacaoResponse;
+  RetornoConsLote: TNFSeConsultaLoteRpsResponse;
+  qTentativas, Intervalo, Situacao: Integer;
 begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeRecepcao);
 
@@ -899,6 +949,63 @@ begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeAguardaProcesso);
   TratarRetornoEmitir(Result);
   TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+
+  if TACBrNFSeX(FAOwner).Configuracoes.Geral.ConsultaLoteAposEnvio and
+     (Result.ModoEnvio = meLoteAssincrono) then
+  begin
+    Protocolo := Result.Protocolo;
+
+    if Protocolo <> '' then
+    begin
+      if ConfigGeral.ConsultaSitLote then
+      begin
+        with TACBrNFSeX(FAOwner).Configuracoes.WebServices do
+        begin
+          try
+            RetornoConsSit := TNFSeConsultaSituacaoResponse.Create;
+            RetornoConsSit.Clear;
+
+            Sleep(AguardarConsultaRet);
+
+            qTentativas := 0;
+            Situacao := 0;
+            Intervalo := max(IntervaloTentativas, 1000);
+
+            while (Situacao < 3) and (qTentativas < Tentativas) do
+            begin
+              if ConfigMsgDados.UsarNumLoteConsLote then
+                RetornoConsSit := ConsultaSituacao(Protocolo, aLote)
+              else
+                RetornoConsSit := ConsultaSituacao(Protocolo, '');
+
+              Situacao := StrToIntDef(RetornoConsSit.Situacao, 0);
+              Inc(qTentativas);
+              sleep(Intervalo);
+            end;
+          finally
+            Result.Situacao := RetornoConsSit.Situacao;
+            RetornoConsSit.Free;
+          end;
+        end;
+      end;
+
+      if ConfigGeral.ConsultaLote then
+      begin
+        try
+          RetornoConsLote := TNFSeConsultaLoteRpsResponse.Create;
+          RetornoConsLote.Clear;
+
+          if ConfigMsgDados.UsarNumLoteConsLote then
+            RetornoConsLote := ConsultaLoteRps(Protocolo, aLote)
+          else
+            RetornoConsLote := ConsultaLoteRps(Protocolo, '');
+        finally
+          Result.Situacao := RetornoConsLote.Situacao;
+          RetornoConsLote.Free;
+        end;
+      end;
+    end;
+  end;
 end;
 
 function TACBrNFSeXProvider.ConsultaSituacao(const aProtocolo, aNumLote: String): TNFSeConsultaSituacaoResponse;
@@ -1355,7 +1462,7 @@ end;
 
 procedure TACBrNFSeXProvider.AssinarEmitir(Response: TNFSeEmiteResponse);
 var
-  IdAttr, Prefixo: string;
+  IdAttr, Prefixo, PrefixoTS: string;
   AErro: TNFSeEventoCollectionItem;
 begin
   case Response.ModoEnvio of
@@ -1377,22 +1484,27 @@ begin
   else
     Prefixo := ConfigMsgDados.Prefixo + ':';
 
+  if ConfigMsgDados.PrefixoTS = '' then
+    PrefixoTS := ''
+  else
+    PrefixoTS := ConfigMsgDados.PrefixoTS + ':';
+
   try
     case Response.ModoEnvio of
       meLoteSincrono:
         Response.XmlEnvio := FAOwner.SSL.Assinar(Response.XmlEnvio,
           Prefixo + ConfigMsgDados.LoteRpsSincrono.DocElemento,
-          ConfigMsgDados.LoteRpsSincrono.InfElemento, '', '', '', IdAttr);
+          Prefixo + ConfigMsgDados.LoteRpsSincrono.InfElemento, '', '', '', IdAttr);
 
       meTeste,
       meLoteAssincrono:
         Response.XmlEnvio := FAOwner.SSL.Assinar(Response.XmlEnvio,
           Prefixo + ConfigMsgDados.LoteRps.DocElemento,
-          ConfigMsgDados.LoteRps.InfElemento, '', '', '', IdAttr);
+          {Prefixo + }ConfigMsgDados.LoteRps.InfElemento, '', '', '', IdAttr);
     else
       Response.XmlEnvio := FAOwner.SSL.Assinar(Response.XmlEnvio,
         Prefixo + ConfigMsgDados.GerarNFSe.DocElemento,
-        ConfigMsgDados.GerarNFSe.InfElemento, '', '', '', IdAttr);
+        PrefixoTS + ConfigMsgDados.GerarNFSe.InfElemento, '', '', '', IdAttr);
     end;
   except
     on E:Exception do
@@ -1440,6 +1552,8 @@ function TACBrNFSeXProvider.CancelaNFSe(aInfCancelamento: TInfCancelamento): TNF
 var
   AService: TACBrNFSeXWebservice;
   AErro: TNFSeEventoCollectionItem;
+  RetornoConsNFSe: TNFSeConsultaNFSeResponse;
+  InfConsultaNFSe: TInfConsultaNFSe;
 begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeCancelamento);
 
@@ -1504,6 +1618,34 @@ begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeAguardaProcesso);
   TratarRetornoCancelaNFSe(Result);
   TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+
+  if TACBrNFSeX(FAOwner).Configuracoes.Geral.ConsultaAposCancelar and
+     ConfigGeral.ConsultaNFSe then
+  begin
+    try
+      RetornoConsNFSe := TNFSeConsultaNFSeResponse.Create;
+      RetornoConsNFSe.Clear;
+
+      InfConsultaNFSe := TInfConsultaNFSe.Create;
+
+      with InfConsultaNFSe do
+      begin
+        if ConfigGeral.ConsultaPorFaixa then
+          tpConsulta := tcPorFaixa
+        else
+          tpConsulta := tcPorNumero;
+
+        NumeroIniNFSe := Result.InfCancelamento.NumeroNFSe;
+        NumeroFinNFSe := Result.InfCancelamento.NumeroNFSe;
+        Pagina        := 1;
+      end;
+
+      RetornoConsNFSe := ConsultaNFSe(InfConsultaNFSe);
+    finally
+      Result.Situacao := RetornoConsNFSe.Situacao;
+      RetornoConsNFSe.Free;
+    end;
+  end;
 end;
 
 function TACBrNFSeXProvider.SubstituiNFSe(const aNumNFSe, aSerieNFSe, aCodCancelamento,
@@ -1556,7 +1698,7 @@ begin
     Result.PedCanc := Cancelamento.XmlEnvio;
     Result.PedCanc := SepararDados(Result.PedCanc, 'CancelarNfseEnvio', False);
   finally
-    Cancelamento := nil;  //italo Não sei se esta correto
+    FreeAndNil(Cancelamento);
   end;
 
   PrepararSubstituiNFSe(Result);

@@ -98,6 +98,7 @@ begin
 
   ListaDeAlertas.Clear;
 
+  FDocument.SaveOptions := [xmlNoDecl, xmlNoEmpty];
   FDocument.Clear();
 
   NFSeNode := CreateElement('nfd');
@@ -125,7 +126,6 @@ begin
 
   NFSeNode.AppendChild(AddNode(tcStr, '#2', 'razaotomador', 1, 120, 1,
                                                  NFSe.Tomador.RazaoSocial, ''));
-
 
   if NFSe.Tomador.Endereco.CodigoMunicipio = '9999999' then
     NFSeNode.AppendChild(AddNode(tcStr, '#2', 'tppessoa', 1, 1, 1, 'O', ''))
@@ -238,13 +238,20 @@ begin
     NFSeNode.AppendChild(AddNode(tcStr, '#2', 'totaldeducoesconstrucao', 1, 15, 1,
                                                                        '', ''));
   end;
-
+  {
   if NFSe.Tomador.Endereco.CodigoMunicipio <> NFSe.Prestador.Endereco.CodigoMunicipio then
     NFSeNode.AppendChild(AddNode(tcStr, '#1', 'tributadonomunicipio', 1, 5, 1,
                                                                    'false', ''))
   else
     NFSeNode.AppendChild(AddNode(tcStr, '#1', 'tributadonomunicipio', 1, 5, 1,
                                                                    'true', ''));
+  }
+  if NFSe.TipoTributacaoRPS = ttTribnoMun then
+    NFSeNode.AppendChild(AddNode(tcStr, '#1', 'tributadonomunicipio', 1, 5, 1,
+                                                                   'true', ''))
+  else
+    NFSeNode.AppendChild(AddNode(tcStr, '#1', 'tributadonomunicipio', 1, 5, 1,
+                                                                   'false', ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#2', 'numerort', 1, 02, 1,
                                              NFSe.IdentificacaoRps.Numero, ''));
@@ -325,18 +332,24 @@ begin
     Result[i].AppendChild(AddNode(tcStr, '#57', 'codatividade', 1, 20, 1,
                                       NFSe.Servico.ItemServico[i].CodServ, ''));
 
-    Result[i].AppendChild(AddNode(tcDe2, '#57', 'valorunitario', 1, 15, 1,
+    Result[i].AppendChild(AddNode(tcDe4, '#57', 'valorunitario', 1, 15, 1,
                                 NFSe.Servico.ItemServico[i].ValorUnitario, ''));
 
     Result[i].AppendChild(AddNode(tcDe2, '#57', 'aliquota', 1, 15, 1,
                                      NFSe.Servico.ItemServico[i].Aliquota, ''));
 
-    if NFSe.Servico.Valores.IssRetido in [stNormal,stSubstituicao] then
+    if NFSe.NaturezaOperacao = no400 then
       Result[i].AppendChild(AddNode(tcStr, '#57', 'impostoretido', 1, 5, 1,
-                                                                   'false', ''))
+                                                                       'i', ''))
     else
-      Result[i].AppendChild(AddNode(tcStr, '#57', 'impostoretido', 1, 5, 1,
+    begin
+      if NFSe.Servico.Valores.IssRetido in [stNormal, stSubstituicao] then
+        Result[i].AppendChild(AddNode(tcStr, '#57', 'impostoretido', 1, 5, 1,
+                                                                   'false', ''))
+      else
+        Result[i].AppendChild(AddNode(tcStr, '#57', 'impostoretido', 1, 5, 1,
                                                                    'true', ''));
+    end;
   end;
 
   if NFSe.Servico.ItemServico.Count > 10 then

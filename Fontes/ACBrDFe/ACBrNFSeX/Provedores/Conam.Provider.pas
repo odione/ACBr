@@ -69,19 +69,15 @@ type
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
     function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
 
-    //metodos para geração e tratamento dos dados do metodo emitir
     procedure PrepararEmitir(Response: TNFSeEmiteResponse); override;
     procedure TratarRetornoEmitir(Response: TNFSeEmiteResponse); override;
 
-    //metodos para geração e tratamento dos dados do metodo ConsultaSituacao
     procedure PrepararConsultaSituacao(Response: TNFSeConsultaSituacaoResponse); override;
     procedure TratarRetornoConsultaSituacao(Response: TNFSeConsultaSituacaoResponse); override;
 
-    //metodos para geração e tratamento dos dados do metodo ConsultaLoteRps
     procedure PrepararConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); override;
     procedure TratarRetornoConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); override;
 
-    //metodos para geração e tratamento dos dados do metodo CancelaNFSe
     procedure PrepararCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
     procedure TratarRetornoCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
 
@@ -112,6 +108,7 @@ begin
 
     UseCertificateHTTP := False;
     ModoEnvio := meLoteAssincrono;
+    ConsultaNFSe := False;
   end;
 
   SetXmlNameSpace('');
@@ -307,6 +304,24 @@ begin
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := Desc119;
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := Desc120;
+    Exit;
+  end;
+
+  ListaRps := ChangeLineBreak(ListaRps, '');
+
   if OptanteSimples = snSim then
   begin
     xOptante := '<nfe:TipoTrib>4</nfe:TipoTrib>' +
@@ -424,7 +439,7 @@ begin
 
       if ANode <> nil then
       begin
-        with Response.InfRetorno do
+        with Response do
         begin
           Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Protocolo'), tcStr);
         end;
@@ -457,6 +472,22 @@ begin
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
+
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := Desc119;
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := Desc120;
+    Exit;
+  end;
 
   Response.XmlEnvio := '<nfe:Sdt_consultaprotocoloin>' +
                          '<nfe:Protocolo>' +
@@ -502,7 +533,7 @@ begin
 
       if ANode <> nil then
       begin
-        with Response.InfRetorno do
+        with Response do
         begin
           Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('PrtCSerRps'), tcStr);
         end;
@@ -535,6 +566,22 @@ begin
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
+
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := Desc119;
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := Desc120;
+    Exit;
+  end;
 
   Response.XmlEnvio := '<nfe:Sdt_consultanotasprotocoloin>' +
                          '<nfe:Protocolo>' +
@@ -599,25 +646,29 @@ begin
         begin
           ANode := ANodeArray[i];
           AuxNode := ANode.Childrens.FindAnyNs('DeclaracaoPrestacaoServico');
-          AuxNode := AuxNode.Childrens.FindAnyNs('Rps');
-          AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
-          AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
 
           if AuxNode <> nil then
           begin
-            NumRps := AuxNode.AsString;
+            AuxNode := AuxNode.Childrens.FindAnyNs('Rps');
+            AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
+            AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
 
-            ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
-
-            if Assigned(ANota) then
-              ANota.XML := ANode.OuterXml
-            else
+            if AuxNode <> nil then
             begin
-              TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(ANode.OuterXml, False);
-              ANota := TACBrNFSeX(FAOwner).NotasFiscais.Items[TACBrNFSeX(FAOwner).NotasFiscais.Count-1];
-            end;
+              NumRps := AuxNode.AsString;
 
-            SalvarXmlNfse(ANota);
+              ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+
+              if Assigned(ANota) then
+                ANota.XML := ANode.OuterXml
+              else
+              begin
+                TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(ANode.OuterXml, False);
+                ANota := TACBrNFSeX(FAOwner).NotasFiscais.Items[TACBrNFSeX(FAOwner).NotasFiscais.Count-1];
+              end;
+
+              SalvarXmlNfse(ANota);
+            end;
           end;
         end;
       end;
@@ -690,6 +741,22 @@ begin
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := Desc119;
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := Desc120;
+    Exit;
+  end;
+
   Response.XmlEnvio := '<nfe:Sdt_cancelanfe>' +
                          '<nfe:Login>' +
                            '<nfe:CodigoUsuario>' +
@@ -752,7 +819,7 @@ begin
 
       if ANode <> nil then
       begin
-        with Response.InfRetorno do
+        with Response do
         begin
           Protocolo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('PrtCSerRps'), tcStr);
         end;

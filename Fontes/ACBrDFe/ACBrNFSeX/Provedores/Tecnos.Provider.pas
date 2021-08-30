@@ -122,11 +122,6 @@ procedure TACBrNFSeProviderTecnos.Configuracao;
 begin
   inherited Configuracao;
 
-  with ConfigGeral do
-  begin
-    FormatoItemListaServico := filsComFormatacaoSemZeroEsquerda;
-  end;
-
   with ConfigAssinar do
   begin
     Rps := True;
@@ -141,7 +136,6 @@ begin
 
   with ConfigMsgDados do
   begin
-
     with XmlRps do
     begin
       InfElemento := 'InfDeclaracaoPrestacaoServico';
@@ -212,7 +206,7 @@ begin
 
   Result := Executar('http://tempuri.org/mEnvioLoteRPSSincrono', Request,
                      ['mEnvioLoteRPSSincronoResult', 'EnviarLoteRpsSincronoResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.GerarNFSe(ACabecalho, AMSG: String): string;
@@ -227,7 +221,7 @@ begin
 
   Result := Executar('http://tempuri.org/mGerarNfse', Request,
                      ['mGerarNfseResult', 'GerarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.ConsultarLote(ACabecalho,
@@ -243,7 +237,7 @@ begin
 
   Result := Executar('http://tempuri.org/mConsultaLoteRPS', Request,
                      ['mConsultaLoteRPSResult'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.ConsultarNFSePorFaixa(ACabecalho,
@@ -259,7 +253,7 @@ begin
 
   Result := Executar('http://tempuri.org/mConsultaNFSePorFaixa', Request,
                      ['mConsultaNFSePorFaixaResult', 'ConsultarNfseFaixaResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.ConsultarNFSePorRps(ACabecalho,
@@ -275,7 +269,7 @@ begin
 
   Result := Executar('http://tempuri.org/mConsultaNFSePorRPS', Request,
                      ['mConsultaNFSePorRPSResult', 'ConsultarNfseRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.ConsultarNFSeServicoPrestado(ACabecalho,
@@ -291,7 +285,7 @@ begin
 
   Result := Executar('http://tempuri.org/mConsultaNFSeServicoPrestado', Request,
                      ['mConsultaNFSeServicoPrestadoResult', 'ConsultarNfseServicoPrestadoResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.ConsultarNFSeServicoTomado(ACabecalho,
@@ -307,7 +301,7 @@ begin
 
   Result := Executar('http://tempuri.org/mConsultaNFSeServicoTomado', Request,
                      ['mConsultaNFSeServicoTomadoResult', 'ConsultarNfseServicoTomadoResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTecnos.Cancelar(ACabecalho, AMSG: String): string;
@@ -322,7 +316,7 @@ begin
 
   Result := Executar('http://tempuri.org/mCancelamentoNFSe', Request,
                      ['mCancelamentoNFSeResult', 'CancelarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 end.

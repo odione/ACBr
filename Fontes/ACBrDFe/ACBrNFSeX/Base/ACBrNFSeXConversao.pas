@@ -68,16 +68,21 @@ type
 
   TStatusNFSe = (snNormal, snCancelado);
 
-  TnfseNaturezaOperacao = (no0, no1, no2, no3, no4, no5, no6, no7, no8,
-                           no9, no10, no11, no12, no13, no14, no15, no17, no18,
+  TnfseNaturezaOperacao = (no0, no1, no2, no3, no4, no5, no6, no7, no8, no9,
+                           no10, no11, no12, no13, no14, no15, no17, no18,
                            no50, no51, no52, no53, no54, no55, no56, no57, no58, no59,
                            no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
-                           no70, no71, no72, no78, no79, no101, no102, no103, no104, no105,
-                           no106,no107, no108, no109, no110, no111, no112, no113, no114, no115,
-                           no116, no117, no118,
-                           no121, no201, no301, no501, no511,
-                           no512, no515, no521, no522, no539, no541, no549, no551, no601,
-                           no611, no612, no613, no615, no621, no622, no701, no711,no712,
+                           no70, no71, no72, no78, no79,
+                           no101, no102, no103, no104, no105, no106, no107, no108, no109,
+                           no110, no111, no112, no113, no114, no115, no116, no117, no118,
+                           no121,
+                           no200, no201,
+                           no300, no301,
+                           no400,
+                           no501, no511, no512, no515, no521, no522,
+                           no539, no541, no549, no551,
+                           no601, no611, no612, no613, no615, no616, no621, no622,
+                           no701, no711, no712,
                            no901, no902, no911, no912, no921, no931, no951, no952, no971,
                            no981, no991);
 
@@ -105,7 +110,7 @@ type
 
   TnfseDeducaoPor = (dpNenhum, dpPercentual, dpValor);
 
-  TnfseTipoDeducao = (tdNenhum, tdMateriais, tdSubEmpreitada, tdValor);
+  TnfseTipoDeducao = (tdNenhum, tdMateriais, tdSubEmpreitada, tdValor, tdVeiculacao);
 
   TnfseProvedor = (proNenhum,
                    // provedores com layout ABRASF v1
@@ -133,17 +138,18 @@ type
                    proSystemPro, proTcheInfo_2, proTecnos, proTiplan_2,
                    proVersaTecnologia_201, proVersaTecnologia_202, proVirtual,
                    proVitoria, proWebISS_2, proSiapSistemas, proDSF_2,
-                   proTributus,
+                   proTributus, proSudoeste, proSintese,
                    // Provedores com layout proprio
                    proAgili, proAgili_2, proAssessorPublico, proConam,
                    proeGoverneISS, proEL, proEquiplano, proGeisWeb, proGiap,
-                   proGoverna, proInfisc_100, proInfisc_110, proIPM, proIPM_A,
+                   proGoverna, proInfisc_100, proInfisc_110, proIPM, proIPM_120,
                    proIPM_110, proISSDSF, proLencois, proSiat, proSigISS,
-                   proSigISS_103, proSmarAPD, proSP, proWebFisco, proFGMaiss);
+                   proSigISS_103, proSmarAPD, proSP, proWebFisco, proFGMaiss,
+                   proSimple);
 
   TnfseSituacaoTributaria = (stRetencao, stNormal, stSubstituicao);
 
-  TnfseResponsavelRetencao = (ptTomador, rtPrestador, rtIntermediario);
+  TnfseResponsavelRetencao = (rtTomador, rtPrestador, rtIntermediario, rtNenhum);
 
   TTipoEmissao = (teNormalNFSe, teContigenciaNFSe);
 
@@ -405,58 +411,62 @@ end;
 function NaturezaOperacaoToStr(const t: TnfseNaturezaOperacao): string;
 begin
   Result := EnumeradoToStr(t,
-                           ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                            '9', '10', '11', '12', '13', '14', '15', '17', '18',
+                           ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                            '10', '11', '12', '13', '14', '15', '17', '18',
                             '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
                             '60', '61', '62', '63', '64', '65', '66', '67', '68', '69',
-                            '70', '71', '72', '78', '79', '101', '102', '103', '104',
-                            '105','106', '107', '108',  '109' ,'110', '111', '112', '113', '114',
-                            '115', '116', '117', '118', '121', '201', '301', '501', '511', '512',
-                            '515', '521', '522', '539', '541', '549', '551', '601',
-                            '611', '612', '613', '615', '621', '622', '701', '711',
-                            '712', '901', '902', '911', '912', '921', '931', '951',
-                            '952', '971', '981', '991'
+                            '70', '71', '72', '78', '79',
+                            '101', '102', '103', '104', '105', '106', '107', '108',
+                            '109', '110', '111', '112', '113', '114', '115', '116',
+                            '117', '118', '121', '200', '201', '300', '301', '400',
+                            '501', '511', '512', '515', '521', '522', '539', '541',
+                            '549', '551', '601', '611', '612', '613', '615', '616',
+                            '621', '622', '701', '711', '712', '901', '902', '911',
+                            '912', '921', '931', '951', '952', '971', '981', '991'
                            ],
-                           [no0, no1, no2, no3, no4, no5, no6, no7, no8,
-                            no9, no10, no11, no12, no13, no14, no15, no17, no18,
+                           [no0, no1, no2, no3, no4, no5, no6, no7, no8, no9,
+                            no10, no11, no12, no13, no14, no15, no17, no18,
                             no50, no51, no52, no53, no54, no55, no56, no57, no58, no59,
                             no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
-                            no70, no71, no72, no78, no79, no101, no102, no103, no104,
-                            no105, no106, no107, no108, no109, no110, no111, no112, no113, no114,
-                            no115, no116, no117, no118, no121, no201, no301, no501, no511, no512,
-                            no515, no521, no522, no539, no541, no549, no551, no601,
-                            no611, no612, no613, no615, no621, no622, no701, no711,
-                            no712, no901, no902, no911, no912, no921, no931,
-                            no951, no952, no971, no981, no991]);
+                            no70, no71, no72, no78, no79,
+                            no101, no102, no103, no104, no105, no106, no107, no108,
+                            no109, no110, no111, no112, no113, no114, no115, no116,
+                            no117, no118, no121, no200, no201, no300, no301, no400,
+                            no501, no511, no512, no515, no521, no522, no539, no541,
+                            no549, no551, no601, no611, no612, no613, no615, no616,
+                            no621, no622, no701, no711, no712, no901, no902, no911,
+                            no912, no921, no931, no951, no952, no971, no981, no991]);
 
 end;
 
 function StrToNaturezaOperacao(out ok: boolean; const s: string): TnfseNaturezaOperacao;
 begin
   Result := StrToEnumerado(ok, s,
-                          ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                           '9', '10', '11', '12', '13', '14', '15', '17', '18',
-                           '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
-                           '60', '61', '62', '63', '64', '65', '66', '67', '68', '69',
-                           '70', '71', '72', '78', '79', '101', '102', '103' , '104',
-                           '105', '106', '107', '108', '109', '110', '111', '112', '113', '114',
-                           '115', '116', '117', '118', '121', '201', '301', '501', '511', '512',
-                           '515', '521', '522', '539', '541', '549', '551', '601',
-                           '611', '612', '613', '615', '621', '622', '701', '711',
-                           '712', '901', '902', '911', '912', '921', '931', '951',
-                           '952', '971', '981', '991'
+                           ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                            '10', '11', '12', '13', '14', '15', '17', '18',
+                            '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+                            '60', '61', '62', '63', '64', '65', '66', '67', '68', '69',
+                            '70', '71', '72', '78', '79',
+                            '101', '102', '103', '104', '105', '106', '107', '108',
+                            '109', '110', '111', '112', '113', '114', '115', '116',
+                            '117', '118', '121', '200', '201', '300', '301', '400',
+                            '501', '511', '512', '515', '521', '522', '539', '541',
+                            '549', '551', '601', '611', '612', '613', '615', '616',
+                            '621', '622', '701', '711', '712', '901', '902', '911',
+                            '912', '921', '931', '951', '952', '971', '981', '991'
                            ],
-                           [no0, no1, no2, no3, no4, no5, no6, no7, no8,
-                            no9, no10, no11, no12, no13, no14, no15, no17, no18,
+                           [no0, no1, no2, no3, no4, no5, no6, no7, no8, no9,
+                            no10, no11, no12, no13, no14, no15, no17, no18,
                             no50, no51, no52, no53, no54, no55, no56, no57, no58, no59,
                             no60, no61, no62, no63, no64, no65, no66, no67, no68, no69,
-                            no70, no71, no72, no78, no79, no101, no102, no103, no104,
-                            no105, no106, no107, no108, no109, no110, no111, no112, no113, no114,
-                            no115, no116, no117, no118, no121, no201, no301, no501, no511, no512,
-                            no515, no521, no522, no539, no541, no549, no551, no601,
-                            no611, no612, no613, no615, no621, no622, no701, no711,
-                            no712, no901, no902, no911, no912, no921, no931,
-                            no951, no952, no971, no981, no991]);
+                            no70, no71, no72, no78, no79,
+                            no101, no102, no103, no104, no105, no106, no107, no108,
+                            no109, no110, no111, no112, no113, no114, no115, no116,
+                            no117, no118, no121, no200, no201, no300, no301, no400,
+                            no501, no511, no512, no515, no521, no522, no539, no541,
+                            no549, no551, no601, no611, no612, no613, no615, no616,
+                            no621, no622, no701, no711, no712, no901, no902, no911,
+                            no912, no921, no931, no951, no952, no971, no981, no991]);
 end;
 
 function ExigibilidadeISSToStr(const t: TnfseExigibilidadeISS): string;
@@ -610,14 +620,15 @@ begin
          'VersaTecnologia_202', 'CIGA', 'Siam',
          'Agili_2', 'Betha_2', 'Actcon_201', 'Actcon_202', 'Adm',
          'Infisc_110', 'SmarAPD', 'SmarAPD_204', 'SmarAPD_203', 'Sigep', 'SafeWeb',
-         'SH3', 'SiapNet', 'IPM', 'IPM_A', 'ISSJoinville', 'Asten', 'EL_2',
+         'SH3', 'SiapNet', 'IPM', 'IPM_120', 'ISSJoinville', 'Asten', 'EL_2',
          'Tiplan_2', 'Giss', 'DeISS', 'TcheInfo_2', 'DataSmart', 'MetropolisWeb',
          'Desenvolve', 'Centi', 'RLZ', 'SigCorp', 'Giap', 'AssessorPublico',
          'SigISS', 'SigISS_103', 'Elotech', 'SilTecnologia', 'iiBrasil_2', 'WebFisco',
          'DSFSJC', 'SimplISS_2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'ISSFortaleza', 'Futurize', 'Infisc_2', 'AEG', 'GeisWeb',
          'SiapSistemas', 'DSF_2', 'Abaco_204', 'Tributus', 'SilTecnologia_203',
-         'ADPM', 'IPM_110', 'FGMaiss', 'fintelISS_A'],
+         'ADPM', 'IPM_110', 'FGMaiss', 'fintelISS_A', 'Sudoeste', 'Simple',
+         'Sintese'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISS_2, proGinfes, proISSDSF,
          proAbaco, proAbaco_A, proBetha, proEquiplano, proISSIntel,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -633,7 +644,7 @@ begin
          proVersaTecnologia_202, proCIGA,
          proSiam, proAgili_2, proBetha_2, proActcon_201, proActcon_202, proAdm,
          proInfisc_110, proSmarAPD, proSmarAPD_204, proSmarAPD_203, proSigep,
-         proSafeWeb, proSH3, proSiapNet, proIPM, proIPM_A, proISSJoinville,
+         proSafeWeb, proSH3, proSiapNet, proIPM, proIPM_120, proISSJoinville,
          proAsten, proEL_2, proTiplan_2, proGiss, proDeISS, proTcheInfo_2,
          proDataSmart, proMetropolisWeb, proDesenvolve, proCenti, proRLZ, proSigCorp, 
          proGiap, proAssessorPublico, proSigISS, proSigISS_103, proElotech,
@@ -641,7 +652,8 @@ begin
          proLencois, progeNFe, proMegaSoft, proModernizacaoPublica, proSiat,
          proISSFortaleza, proFuturize, proInfisc_2, proAEG, proGeisWeb,
          proSiapSistemas, proDSF_2, proAbaco_204, proTributus, proSilTecnologia_203,
-         proADPM, proIPM_110, proFGMaiss, profintelISS_A]);
+         proADPM, proIPM_110, proFGMaiss, profintelISS_A, proSudoeste, proSimple,
+         proSintese]);
 end;
 
 function StrToProvedor(out ok: boolean; const s: string): TnfseProvedor;
@@ -661,14 +673,15 @@ begin
          'VersaTecnologia_202', 'CIGA', 'Siam',
          'Agili_2', 'Betha_2', 'Actcon_201', 'Actcon_202', 'Adm',
          'Infisc_110', 'SmarAPD', 'SmarAPD_204', 'SmarAPD_203', 'Sigep', 'SafeWeb',
-         'SH3', 'SiapNet', 'IPM', 'IPM_A', 'ISSJoinville', 'Asten', 'EL_2',
+         'SH3', 'SiapNet', 'IPM', 'IPM_120', 'ISSJoinville', 'Asten', 'EL_2',
          'Tiplan_2', 'Giss', 'DeISS', 'TcheInfo_2', 'DataSmart', 'MetropolisWeb',
          'Desenvolve', 'Centi', 'RLZ', 'SigCorp', 'Giap', 'AssessorPublico', 
          'SigISS', 'SigISS_103', 'Elotech', 'SilTecnologia', 'iiBrasil_2', 'WebFisco',
          'DSFSJC', 'SimplISS_2', 'Lencois', 'geNFe', 'MegaSoft', 'ModernizacaoPublica',
          'Siat', 'ISSFortaleza', 'Futurize', 'Infisc_2', 'AEG', 'GeisWeb',
          'SiapSistemas', 'DSF_2', 'Abaco_204', 'Tributus', 'SilTecnologia_203',
-         'ADPM', 'IPM_110', 'FGMaiss', 'fintelISS_A'],
+         'ADPM', 'IPM_110', 'FGMaiss', 'fintelISS_A', 'Sudoeste', 'Simple',
+         'Sintese'],
         [proNenhum, proTiplan, proISSNet, proWebISS, proWebISS_2, proGinfes, proISSDSF,
          proAbaco, proAbaco_A, proBetha, proEquiplano, proISSIntel,
          proGovBR, proRecife, proSimplISS, proThema, proRJ, proPublica,
@@ -684,7 +697,7 @@ begin
          proVersaTecnologia_202, proCIGA, proSiam, proAgili_2,
          proBetha_2, proActcon_201, proActcon_202, proAdm, proInfisc_110,
          proSmarAPD, proSmarAPD_204, proSmarAPD_203, proSigep,
-         proSafeWeb, proSH3, proSiapNet, proIPM, proIPM_A, proISSJoinville,
+         proSafeWeb, proSH3, proSiapNet, proIPM, proIPM_120, proISSJoinville,
          proAsten, proEL_2, proTiplan_2, proGiss, proDeISS, proTcheInfo_2,
          proDataSmart, proMetropolisWeb, proDesenvolve, proCenti, proRLZ, proSigCorp, 
          proGiap, proAssessorPublico, proSigISS, proSigISS_103, proElotech,
@@ -692,7 +705,8 @@ begin
          proLencois, progeNFe, proMegaSoft, proModernizacaoPublica, proSiat,
          proISSFortaleza, proFuturize, proInfisc_2, proAEG, proGeisWeb,
          proSiapSistemas, proDSF_2, proAbaco_204, proTributus, proSilTecnologia_203,
-         proADPM, proIPM_110, proFGMaiss, profintelISS_A]);
+         proADPM, proIPM_110, proFGMaiss, profintelISS_A, proSudoeste, proSimple,
+         proSintese]);
 end;
 
 function CondicaoToStr(const t: TnfseCondicaoPagamento): string;
@@ -18143,15 +18157,15 @@ end;
 function ResponsavelRetencaoToStr(const t: TnfseResponsavelRetencao): string;
 begin
   Result := EnumeradoToStr(t,
-                           ['1', '2'],
-                           [ptTomador, rtPrestador]);
+                           ['1', '', '2', ''],
+                           [rtTomador, rtPrestador, rtIntermediario, rtNenhum]);
 end;
 
 function StrToResponsavelRetencao(out ok: boolean; const s: string): TnfseResponsavelRetencao;
 begin
   Result := StrToEnumerado(ok, s,
-                           ['1', '2', ''],
-                           [ptTomador, rtPrestador, rtPrestador]);
+                           ['1', '', '2', ''],
+                           [rtTomador, rtPrestador, rtIntermediario, rtNenhum]);
 end;
 
 // Tipo de Emissão *********************************************************
@@ -18547,9 +18561,9 @@ end;
 function ResponsavelRetencaoDescricao(const t: TnfseResponsavelRetencao): String;
 begin
   case t of
-    ptTomador      : Result := '1 - Tomador';
-    rtPrestador    : Result := '2 - Prestador';
-    rtIntermediario: Result := '3 - Intermediário';
+    rtTomador      : Result := '1 - Tomador';
+    rtIntermediario: Result := '2 - Intermediário';
+    rtPrestador    : Result := '3 - Prestador';
   else
     Result := '';
   end;

@@ -87,7 +87,7 @@ begin
 
   Result := Executar('http://nfse.abase.com.br/NFSeWS/RecepcionarLoteRps',
                      Request,
-                     ['RecepcionarLoteRpsResult', 'EnviarLoteRpsResposta'], ['']);
+                     ['RecepcionarLoteRpsResult', 'EnviarLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceABase.ConsultarLote(ACabecalho, AMSG: String): string;
@@ -105,7 +105,7 @@ begin
 
   Result := Executar('http://nfse.abase.com.br/NFSeWS/ConsultaLoteRps',
                      Request,
-                     ['ConsultaLoteRpsResult', 'ConsultarLoteRpsResposta'], ['']);
+                     ['ConsultaLoteRpsResult', 'ConsultarLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceABase.ConsultarNFSePorRps(ACabecalho, AMSG: String): string;
@@ -121,7 +121,7 @@ begin
 
   Result := Executar('http://nfse.abase.com.br/NFSeWS/ConsultaNfseRps',
                      Request,
-                     ['ConsultaNfseRpsResult', 'ConsultarNfseRpsResposta'], ['']);
+                     ['ConsultaNfseRpsResult', 'ConsultarNfseRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceABase.Cancelar(ACabecalho, AMSG: String): string;
@@ -137,7 +137,7 @@ begin
 
   Result := Executar('http://nfse.abase.com.br/NFSeWS/CancelaNfse',
                      Request,
-                     ['CancelaNfseResult', 'CancelarNfseResposta'], ['']);
+                     ['CancelaNfseResult', 'CancelarNfseResposta'], []);
 end;
 
 { TACBrNFSeProviderABase }
@@ -146,18 +146,19 @@ procedure TACBrNFSeProviderABase.Configuracao;
 begin
   inherited Configuracao;
 
+  with ConfigGeral do
+  begin
+    UseCertificateHTTP := False;
+    ModoEnvio := meLoteAssincrono;
+    ConsultaNFSe := False;
+  end;
+
   with ConfigAssinar do
   begin
     Rps := True;
     LoteRps := True;
     CancelarNFSe := True;
     RpsGerarNFSe := True;
-  end;
-
-  with ConfigGeral do
-  begin
-    UseCertificateHTTP := False;
-    ModoEnvio := meLoteAssincrono;
   end;
 
   SetXmlNameSpace('http://nfse.abase.com.br/nfse.xsd');

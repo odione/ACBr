@@ -51,38 +51,50 @@ type
 
   TInfRetorno = class
   private
+    FXML: string;
+
     FNumeroLote: String;
     FDataRecebimento: TDateTime;
     FProtocolo: String;
-    FSucesso: String;
     FSituacao: String;
+    FDataHoraCanc: TDateTime;
+    FSucesso: Boolean;
+    FNumeroNota: Integer;
+    FLink: String;
+    FidNota: string;
 
-//    FRetornoNFSe: TRetornoNFSe;
-    FInformacoesLote: TInformacoesLote;
+    FHashIdent: string;
+
+//    FInformacoesLote: TInformacoesLote;
     FListaChaveNFeRPS: TChaveNFeRPSCollection;
     // Retornado pelo GerarNfse
     FChaveNFeRPS: TChaveNFeRPS;
-    FNumeroNota: Integer;
-    FLink: String;
 
     procedure SetListaChaveNFeRPS(const Value: TChaveNFeRPSCollection);
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Clear;
+
+    property XML: string read FXML write FXML;
 
     property NumeroLote: String         read FNumeroLote      write FNumeroLote;
     property DataRecebimento: TDateTime read FDataRecebimento write FDataRecebimento;
     property Protocolo: String          read FProtocolo       write FProtocolo;
-    property Sucesso: String            read FSucesso         write FSucesso;
     property Situacao: String           read FSituacao        write FSituacao;
+    property DataHoraCanc: TDateTime    read FDataHoraCanc    write FDataHoraCanc;
+    property Sucesso: Boolean           read FSucesso         write FSucesso;
+    property NumeroNota: Integer        read FNumeroNota      write FNumeroNota;
+    property Link: String               read FLink            write FLink;
+    property idNota: string             read FidNota          write FidNota;
 
-//    property RetornoNFSe: TRetornoNFSe                read FRetornoNFSe      write FRetornoNFSe;
-    property InformacoesLote: TInformacoesLote        read FInformacoesLote  write FInformacoesLote;
+
+    property HashIdent: string          read FHashIdent       write FHashIdent;
+
+//    property InformacoesLote: TInformacoesLote        read FInformacoesLote  write FInformacoesLote;
     property ListaChaveNFeRPS: TChaveNFeRPSCollection read FListaChaveNFeRPS write SetListaChaveNFeRPS;
     // Retornado pelo GerarNfse
     property ChaveNFeRPS: TChaveNFeRPS read FChaveNFeRPS write FChaveNFeRPS;
-    property NumeroNota: Integer       read FNumeroNota  write FNumeroNota;
-    property Link: String              read FLink        write FLink;
   end;
 
   TNFSeEventoCollectionItem = class
@@ -166,11 +178,49 @@ type
 
   end;
 
+  TNFSeParamsResponse = class
+  private
+    FXml: String;
+    FTagEnvio: String;
+    FPrefixo: String;
+    FPrefixo2: String;
+    FNameSpace: String;
+    FNameSpace2: String;
+    FIdAttr: String;
+    FVersao: String;
+    FSerie: String;
+    FMotivo: String;
+    FCodVerif: String;
+  public
+    procedure Clear;
+
+    property Xml: String read FXml write FXml;
+    property TagEnvio: String read FTagEnvio write FTagEnvio;
+    property Prefixo: String read FPrefixo write FPrefixo;
+    property Prefixo2: String read FPrefixo2 write FPrefixo2;
+    property NameSpace: String read FNameSpace write FNameSpace;
+    property NameSpace2: String read FNameSpace2 write FNameSpace2;
+    property IdAttr: String read FIdAttr write FIdAttr;
+    property Versao: String read FVersao write FVersao;
+    property Serie: String read FSerie write FSerie;
+    property Motivo: String read FMotivo write FMotivo;
+    property CodVerif: String read FCodVerif write FCodVerif;
+  end;
+
   TNFSeWebserviceResponse = class
   private
+    FSituacao: String;
+    FLote: string;
     FSucesso: Boolean;
+    FNumeroNota: Integer;
+    FData: TDateTime;
+    FidNota: string;
+    FLink: String;
+    FProtocolo: String;
+
     FAlertas: TNFSeEventoCollection;
     FErros: TNFSeEventoCollection;
+
     FXmlEnvio: String;
     FXmlRetorno: String;
     FEnvelopeEnvio: String;
@@ -179,10 +229,20 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Clear;
 
+    property Situacao: String read FSituacao write FSituacao;
+    property Lote: string read FLote write FLote;
     property Sucesso: Boolean read FSucesso write FSucesso;
+    property NumeroNota: Integer read FNumeroNota write FNumeroNota;
+    property Data: TDateTime read FData write FData;
+    property idNota: string read FidNota write FidNota;
+    property Link: String read FLink write FLink;
+    property Protocolo: String read FProtocolo write FProtocolo;
+
     property Alertas: TNFSeEventoCollection read FAlertas;
     property Erros: TNFSeEventoCollection read FErros;
+
     property XmlEnvio: String read FXmlEnvio write FXmlEnvio;
     property XmlRetorno: String read FXmlRetorno write FXmlRetorno;
     property EnvelopeEnvio: String read FEnvelopeEnvio write FEnvelopeEnvio;
@@ -192,9 +252,6 @@ type
 
   TNFSeEmiteResponse = class(TNFSeWebserviceResponse)
   private
-    FLote: string;
-    FData: TDateTime;
-    FProtocolo: String;
     FModoEnvio: TmodoEnvio;
     FMaxRps: Integer;
     FInfRetorno: TInfRetorno;
@@ -203,9 +260,6 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    property Lote: string read FLote write FLote;
-    property Data: TDateTime read FData write FData;
-    property Protocolo: String read FProtocolo write FProtocolo;
     property MaxRps: Integer read FMaxRps write FMaxRps;
     property ModoEnvio: TmodoEnvio read FModoEnvio write FModoEnvio;
 
@@ -214,36 +268,24 @@ type
 
   TNFSeConsultaSituacaoResponse = class(TNFSeWebserviceResponse)
   private
-    FLote: string;
-    FSituacao: string;
-    FProtocolo: string;
     FInfRetorno: TInfRetorno;
 
   public
     constructor Create;
     destructor Destroy; override;
-
-    property Lote: string read FLote write FLote;
-    property Protocolo: string read FProtocolo write FProtocolo;
-    property Situacao: string read FSituacao write FSituacao;
+    procedure Clear;
 
     property InfRetorno: TInfRetorno read FInfRetorno write FInfRetorno;
   end;
 
   TNFSeConsultaLoteRpsResponse = class(TNFSeWebserviceResponse)
   private
-    FLote: string;
-    FProtocolo: string;
-    FSituacao: string;
     FInfRetorno: TInfRetorno;
 
   public
     constructor Create;
     destructor Destroy; override;
-
-    property Lote: string read FLote write FLote;
-    property Protocolo: string read FProtocolo write FProtocolo;
-    property Situacao: string read FSituacao write FSituacao;
+    procedure Clear;
 
     property InfRetorno: TInfRetorno read FInfRetorno write FInfRetorno;
   end;
@@ -329,21 +371,17 @@ type
 
   TNFSeAbreSessaoResponse = class(TNFSeWebserviceResponse)
   private
-    FLote: string;
     FHashIdent: String;
 
   public
-    property Lote: string read FLote write FLote;
     property HashIdent: String read FHashIdent write FHashIdent;
   end;
 
   TNFSeFechaSessaoResponse = class(TNFSeWebserviceResponse)
   private
-    FLote: string;
     FHashIdent: String;
 
   public
-    property Lote: string read FLote write FLote;
     property HashIdent: String read FHashIdent write FHashIdent;
   end;
 
@@ -425,6 +463,26 @@ end;
 
 { TNFSeWebserviceResponse }
 
+procedure TNFSeWebserviceResponse.Clear;
+begin
+  Situacao := '';
+  Lote := '';
+  Sucesso := False;
+  NumeroNota := 0;
+  Data := 0;
+  idNota := '';
+  Link := '';
+  Protocolo := '';
+
+//  FAlertas: TNFSeEventoCollection;
+//  FErros: TNFSeEventoCollection;
+
+  XmlEnvio := '';
+  XmlRetorno := '';
+  EnvelopeEnvio := '';
+  EnvelopeRetorno := '';
+end;
+
 constructor TNFSeWebserviceResponse.Create;
 begin
   inherited Create;
@@ -454,7 +512,9 @@ end;
 destructor TNFSeConsultaNFSeResponse.Destroy;
 begin
   FInfRetorno.Free;
-  FreeAndNil(FInfConsultaNFSe);
+
+  if Assigned(FInfConsultaNFSe) then
+    FreeAndNil(FInfConsultaNFSe);
 
   inherited Destroy;
 end;
@@ -475,8 +535,11 @@ destructor TNFSeCancelaNFSeResponse.Destroy;
 begin
   FInfRetorno.Free;
 
-  FreeAndNil(FInfCancelamento);
-  FreeAndNil(FRetCancelamento);
+  if Assigned(FInfCancelamento) then
+    FreeAndNil(FInfCancelamento);
+
+  if Assigned(FRetCancelamento) then
+    FreeAndNil(FRetCancelamento);
 
   inherited Destroy;
 end;
@@ -493,20 +556,34 @@ end;
 
 destructor TNFSeSubstituiNFSeResponse.Destroy;
 begin
-  FreeAndNil(FInfCancelamento);
-  FreeAndNil(FRetCancelamento);
+  if Assigned(FInfCancelamento) then
+    FreeAndNil(FInfCancelamento);
+
+  if Assigned(FRetCancelamento) then
+    FreeAndNil(FRetCancelamento);
 
   inherited Destroy;
 end;
 
 { TInfRetorno }
 
+procedure TInfRetorno.Clear;
+begin
+  XML := '';
+  NumeroLote := '';
+  DataRecebimento := 0;
+  Protocolo := '';
+  Situacao := '1';
+  Sucesso := False;
+  HashIdent := '';
+end;
+
 constructor TInfRetorno.Create;
 begin
   inherited Create;
 
 //  FRetornoNFSe      := TRetornoNFSe.Create;
-  FInformacoesLote  := TInformacoesLote.Create;
+//  FInformacoesLote  := TInformacoesLote.Create;
   FListaChaveNFeRPS := TChaveNFeRPSCollection.Create;
   FChaveNFeRPS      := TChaveNFeRPS.Create;
 end;
@@ -514,7 +591,7 @@ end;
 destructor TInfRetorno.Destroy;
 begin
 //  FRetornoNFSe.Free;
-  FInformacoesLote.Free;
+//  FInformacoesLote.Free;
   FListaChaveNFeRPS.Free;
   FChaveNFeRPS.Free;
 
@@ -545,6 +622,14 @@ end;
 
 { TNFSeConsultaSituacaoResponse }
 
+procedure TNFSeConsultaSituacaoResponse.Clear;
+begin
+  Lote := '';
+  Situacao := '';
+  Protocolo := '';
+  InfRetorno.Clear;
+end;
+
 constructor TNFSeConsultaSituacaoResponse.Create;
 begin
   inherited Create;
@@ -560,6 +645,14 @@ begin
 end;
 
 { TNFSeConsultaLoteRpsResponse }
+
+procedure TNFSeConsultaLoteRpsResponse.Clear;
+begin
+  Lote := '';
+  Protocolo := '';
+  Situacao := '';
+  InfRetorno.Clear;
+end;
 
 constructor TNFSeConsultaLoteRpsResponse.Create;
 begin
@@ -589,6 +682,23 @@ begin
   FInfRetorno.Free;
 
   inherited Destroy;
+end;
+
+{ TNFSeParamsResponse }
+
+procedure TNFSeParamsResponse.Clear;
+begin
+  Xml := '';
+  TagEnvio := '';
+  Prefixo := '';
+  Prefixo2 := '';
+  NameSpace := '';
+  NameSpace2 := '';
+  IdAttr := '';
+  Versao := '';
+  Serie := '';
+  Motivo := '';
+  CodVerif := '';
 end;
 
 end.

@@ -87,6 +87,13 @@ begin
 
   FormatoAliq := tcDe4;
   }
+
+  // elas requerem que seja declarado em uses a unit: ACBrNFSeXConversao
+  {
+  // filsComFormatacao, filsSemFormatacao, filsComFormatacaoSemZeroEsquerda
+  FormatoItemListaServico := filsComFormatacao;
+  }
+
   DivAliq100  := False;
 
   NrMinExigISS := 1;
@@ -116,11 +123,14 @@ begin
   NrOcorrMunIncid := 0;
   NrOcorrInscEstInter := 0;
   NrOcorrOutrasRet := 0;
+  NrOcorrCodigoCNAE := 0;
   NrOcorrEndereco := 0;
+  NrOcorrCodigoPaisTomador := 0;
   NrOcorrUFTomador := 0;
   NrOcorrCepTomador := 0;
   NrOcorrCodTribMun_1 := 0;
   NrOcorrNumProcesso := 0;
+  NrOcorrInscMunTomador := 0;
 
   // Por padrão as tags abaixo são obrigatórias
   NrOcorrIssRetido := 1;
@@ -128,11 +138,9 @@ begin
   NrOcorrIncentCultural := 1;
   NrOcorrItemListaServico := 1;
   NrOcorrCodigoPaisServico := 1;
-  NrOcorrCodigoPaisTomador := 1;
   NrOcorrCompetencia := 1;
   NrOcorrSerieRPS := 1;
   NrOcorrTipoRPS := 1;
-  NrOcorrCodigoCNAE := 1;
   NrOcorrDiscriminacao_1 := 1;
   NrOcorrExigibilidadeISS := 1;
   NrOcorrCodigoMunic_1 := 1;

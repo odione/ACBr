@@ -87,6 +87,13 @@ begin
 
   FormatoAliq := tcDe4;
   }
+
+  // elas requerem que seja declarado em uses a unit: ACBrNFSeXConversao
+  {
+  // filsComFormatacao, filsSemFormatacao, filsComFormatacaoSemZeroEsquerda
+  FormatoItemListaServico := filsComFormatacao;
+  }
+
   DivAliq100  := False;
 
   NrMinExigISS := 1;
@@ -123,6 +130,7 @@ begin
   NrOcorrRazaoSocialInterm := 0;
   NrOcorrValorDeducoes := 0;
   NrOcorrValorISSRetido_1 := 0;
+  NrOcorrInscMunTomador := 0;
 
   // Por padrão as tags abaixo são obrigatórias
   NrOcorrOptanteSN := 1;

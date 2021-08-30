@@ -82,11 +82,8 @@ procedure TACBrNFSeProviderISSNet.Configuracao;
 begin
   inherited Configuracao;
 
-  with ConfigGeral do
-  begin
-    Identificador := 'id';
-    FormatoItemListaServico := filsSemFormatacao;
-  end;
+//  ConfigGeral.Identificador := 'id';
+  ConfigGeral.Identificador := '';
 
   with ConfigMsgDados do
   begin

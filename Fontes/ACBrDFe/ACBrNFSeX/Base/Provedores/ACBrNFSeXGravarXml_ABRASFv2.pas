@@ -132,6 +132,7 @@ type
     procedure Configuracao; override;
 
     procedure DefinirIDRps; override;
+
     function DefinirNameSpaceDeclaracao: string; virtual;
 
     function GerarInfDeclaracaoPrestacaoServico: TACBrXmlNode; virtual;
@@ -278,26 +279,26 @@ begin
   FNrOcorrMunIncid := 0;
   FNrOcorrInscEstInter := 0;
   FNrOcorrOutrasRet := 0;
+  FNrOcorrCodigoCNAE := 0;
   FNrOcorrEndereco := 0;
+  FNrOcorrCodigoPaisTomador := 0;
   FNrOcorrUFTomador := 0;
   FNrOcorrCepTomador := 0;
   FNrOcorrCodTribMun_1 := 0;
   FNrOcorrNumProcesso := 0;
+  FNrOcorrInscMunTomador := 0;
+  FNrOcorrCodigoPaisServico := 0;
 
   // Por padrão as tags abaixo são obrigatórias
   FNrOcorrIssRetido := 1;
   FNrOcorrOptanteSimplesNacional := 1;
   FNrOcorrIncentCultural := 1;
-  FNrOcorrCodigoPaisServico := 1;
-  FNrOcorrCodigoPaisTomador := 1;
   FNrOcorrCompetencia := 1;
   FNrOcorrSerieRPS := 1;
   FNrOcorrTipoRPS := 1;
-  FNrOcorrCodigoCNAE := 1;
   FNrOcorrDiscriminacao_1 := 1;
   FNrOcorrExigibilidadeISS := 1;
   FNrOcorrCodigoMunic_1 := 1;
-  FNrOcorrInscMunTomador := 1;
 
   // Por padrão as tags abaixo não devem ser geradas
   FNrOcorrCodTribMun_2 := -1;
@@ -421,7 +422,7 @@ begin
     Result.AppendChild(AddNode(tcStr, '#6', 'RegimeEspecialTributacao', 1, 1, NrOcorrRegimeEspecialTributacao,
    RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), DSC_REGISSQN));
 
-  Result.AppendChild(AddNode(tcStr, '#7', 'NaturezaOperacao', 1, 1, NrOcorrNaturezaOperacao,
+  Result.AppendChild(AddNode(tcStr, '#7', 'NaturezaOperacao', 1, 3, NrOcorrNaturezaOperacao,
                    NaturezaOperacaoToStr(NFSe.NaturezaOperacao), DSC_INDNATOP));
 
   Result.AppendChild(AddNode(tcStr, '#7', 'OptanteSimplesNacional', 1, 1, NrOcorrOptanteSimplesNacional,
@@ -513,7 +514,7 @@ begin
   Result.AppendChild(AddNode(tcStr, '#1', 'Numero', 1, 15, 1,
                          OnlyNumber(NFSe.IdentificacaoRps.Numero), DSC_NUMRPS));
 
-  Result.AppendChild(AddNode(tcStr, '#2', 'Serie ', 1, 05, NrOcorrSerieRPS,
+  Result.AppendChild(AddNode(tcStr, '#2', 'Serie', 1, 5, NrOcorrSerieRPS,
                                     NFSe.IdentificacaoRps.Serie, DSC_SERIERPS));
 
   Result.AppendChild(GerarTipoRPS);
@@ -531,15 +532,17 @@ begin
     Result.AppendChild(AddNode(tcStr, '#1', 'Numero', 1, 15, 1,
                         OnlyNumber(NFSe.RpsSubstituido.Numero), DSC_NUMRPSSUB));
 
-    Result.AppendChild(AddNode(tcStr, '#2', 'Serie ', 1, 05, 1,
+    Result.AppendChild(AddNode(tcStr, '#2', 'Serie', 1, 5, 1,
                                    NFSe.RpsSubstituido.Serie, DSC_SERIERPSSUB));
 
-    Result.AppendChild(AddNode(tcStr, '#3', 'Tipo  ', 1, 01, 1,
+    Result.AppendChild(AddNode(tcStr, '#3', 'Tipo', 1, 1, 1,
                        TipoRPSToStr(NFSe.RpsSubstituido.Tipo), DSC_TIPORPSSUB));
   end;
 end;
 
 function TNFSeW_ABRASFv2.GerarServico: TACBrXmlNode;
+var
+  item: string;
 begin
   Result := CreateElement('Servico');
 
@@ -547,27 +550,29 @@ begin
 
   if GerarTagServicos then
   begin
-    Result.AppendChild(AddNode(tcStr, '#20', 'IssRetido', 1, 01, NrOcorrIssRetido,
+    Result.AppendChild(AddNode(tcStr, '#20', 'IssRetido', 1, 1, NrOcorrIssRetido,
        SituacaoTributariaToStr(NFSe.Servico.Valores.IssRetido), DSC_INDISSRET));
 
     Result.AppendChild(AddNode(tcStr, '#21', 'ResponsavelRetencao', 1, 1, NrOcorrRespRetencao,
      ResponsavelRetencaoToStr(NFSe.Servico.ResponsavelRetencao), DSC_INDRESPRET));
 
-    case FAOwner.ConfigGeral.FormatoItemListaServico of
+    item := PadronizarItemServico(NFSe.Servico.ItemListaServico);
+
+    case FormatoItemListaServico of
       filsSemFormatacao:
         Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 4, NrOcorrItemListaServico,
-           StringReplace(NFSe.Servico.ItemListaServico, '.', '', []), DSC_CLISTSERV));
+                              StringReplace(item, '.', '', []), DSC_CLISTSERV));
 
       filsComFormatacaoSemZeroEsquerda:
         if Copy(NFSe.Servico.ItemListaServico, 1, 1) = '0' then
           Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 5, NrOcorrItemListaServico,
-                        Copy(NFSe.Servico.ItemListaServico, 2, 4), DSC_CLISTSERV))
+                                               Copy(item, 2, 4), DSC_CLISTSERV))
         else
           Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 5, NrOcorrItemListaServico,
-                                 NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
+                                                          item, DSC_CLISTSERV));
     else
       Result.AppendChild(AddNode(tcStr, '#29', 'ItemListaServico', 1, 5, NrOcorrItemListaServico,
-                                 NFSe.Servico.ItemListaServico, DSC_CLISTSERV));
+                                                          item, DSC_CLISTSERV));
     end;
 
     Result.AppendChild(AddNode(tcStr, '#30', 'CodigoCnae', 1, 7, NrOcorrCodigoCNAE,
@@ -605,10 +610,10 @@ begin
                                NrMinExigISS, NrMaxExigISS, NrOcorrExigibilidadeISS,
     StrToInt(ExigibilidadeISSToStr(NFSe.Servico.ExigibilidadeISS)), DSC_INDISS));
 
-    Result.AppendChild(AddNode(tcInt, '#36', 'MunicipioIncidencia', 7, 07, NrOcorrMunIncid,
+    Result.AppendChild(AddNode(tcInt, '#36', 'MunicipioIncidencia', 7, 7, NrOcorrMunIncid,
                                 NFSe.Servico.MunicipioIncidencia, DSC_MUNINCI));
 
-    Result.AppendChild(AddNode(tcStr, '#37', 'NumeroProcesso     ', 1, 30, NrOcorrNumProcesso,
+    Result.AppendChild(AddNode(tcStr, '#37', 'NumeroProcesso', 1, 30, NrOcorrNumProcesso,
                                    NFSe.Servico.NumeroProcesso, DSC_NPROCESSO));
 
     Result.AppendChild(GerarListaItensServico);
@@ -628,6 +633,8 @@ begin
 end;
 
 function TNFSeW_ABRASFv2.GerarValores: TACBrXmlNode;
+var
+  Aliquota: Double;
 begin
   Result := CreateElement('Valores');
 
@@ -643,41 +650,39 @@ begin
   Result.AppendChild(AddNode(tcDe2, '#14', 'ValorDeducoes', 1, 15, NrOcorrValorDeducoes,
                             NFSe.Servico.Valores.ValorDeducoes, DSC_VDEDUCISS));
 
-  Result.AppendChild(AddNode(tcDe2, '#15', 'ValorPis     ', 1, 15, NrOcorrValorPis,
+  Result.AppendChild(AddNode(tcDe2, '#15', 'ValorPis', 1, 15, NrOcorrValorPis,
                                       NFSe.Servico.Valores.ValorPis, DSC_VPIS));
 
-  Result.AppendChild(AddNode(tcDe2, '#16', 'ValorCofins  ', 1, 15, NrOcorrValorCofins,
+  Result.AppendChild(AddNode(tcDe2, '#16', 'ValorCofins', 1, 15, NrOcorrValorCofins,
                                 NFSe.Servico.Valores.ValorCofins, DSC_VCOFINS));
 
-  Result.AppendChild(AddNode(tcDe2, '#17', 'ValorInss    ', 1, 15, NrOcorrValorInss,
+  Result.AppendChild(AddNode(tcDe2, '#17', 'ValorInss', 1, 15, NrOcorrValorInss,
                                     NFSe.Servico.Valores.ValorInss, DSC_VINSS));
 
-  Result.AppendChild(AddNode(tcDe2, '#18', 'ValorIr      ', 1, 15, NrOcorrValorIr,
+  Result.AppendChild(AddNode(tcDe2, '#18', 'ValorIr', 1, 15, NrOcorrValorIr,
                                         NFSe.Servico.Valores.ValorIr, DSC_VIR));
 
-  Result.AppendChild(AddNode(tcDe2, '#19', 'ValorCsll    ', 1, 15, NrOcorrValorCsll,
+  Result.AppendChild(AddNode(tcDe2, '#19', 'ValorCsll', 1, 15, NrOcorrValorCsll,
                                     NFSe.Servico.Valores.ValorCsll, DSC_VCSLL));
 
-  Result.AppendChild(AddNode(tcDe2, '#23', 'OutrasRetencoes ', 1, 15, NrOcorrOutrasRet,
+  Result.AppendChild(AddNode(tcDe2, '#23', 'OutrasRetencoes', 1, 15, NrOcorrOutrasRet,
                     NFSe.Servico.Valores.OutrasRetencoes, DSC_OUTRASRETENCOES));
 
-  Result.AppendChild(AddNode(tcDe2, '#23', 'ValTotTributos  ', 1, 15, NrOcorrValTotTrib,
+  Result.AppendChild(AddNode(tcDe2, '#23', 'ValTotTributos', 1, 15, NrOcorrValTotTrib,
                                   NFSe.Servico.Valores.ValorTotalTributos, ''));
 
-  Result.AppendChild(AddNode(tcDe2, '#21', 'ValorIss        ', 1, 15, NrOcorrValorISS,
+  Result.AppendChild(AddNode(tcDe2, '#21', 'ValorIss', 1, 15, NrOcorrValorISS,
                                       NFSe.Servico.Valores.ValorIss, DSC_VISS));
 
-  if DivAliq100 then
-    Result.AppendChild(AddNode(FormatoAliq, '#25', 'Aliquota', 1, 05, NrOcorrAliquota,
-                              (NFSe.Servico.Valores.Aliquota / 100), DSC_VALIQ))
-  else
-    Result.AppendChild(AddNode(FormatoAliq, '#25', 'Aliquota', 1, 05, NrOcorrAliquota,
-                                     NFSe.Servico.Valores.Aliquota, DSC_VALIQ));
+  Aliquota := AjustarAliquota(NFSe.Servico.Valores.Aliquota, DivAliq100);
+
+  Result.AppendChild(AddNode(FormatoAliq, '#25', 'Aliquota', 1, 5, NrOcorrAliquota,
+                                                          Aliquota, DSC_VALIQ));
 
   Result.AppendChild(AddNode(tcDe2, '#27', 'DescontoIncondicionado', 1, 15, NrOcorrDescIncond,
                  NFSe.Servico.Valores.DescontoIncondicionado, DSC_VDESCINCOND));
 
-  Result.AppendChild(AddNode(tcDe2, '#28', 'DescontoCondicionado  ', 1, 15, NrOcorrDescCond,
+  Result.AppendChild(AddNode(tcDe2, '#28', 'DescontoCondicionado', 1, 15, NrOcorrDescCond,
                      NFSe.Servico.Valores.DescontoCondicionado, DSC_VDESCCOND));
 end;
 
@@ -809,25 +814,25 @@ begin
     Result.AppendChild(AddNode(tcStr, '#39', 'Endereco', 1, 125, NrOcorrEndereco,
                                      NFSe.Tomador.Endereco.Endereco, DSC_XLGR));
 
-    Result.AppendChild(AddNode(tcStr, '#39', 'TipoLogradouro', 1, 050, NrOcorrTipoLogradouro,
+    Result.AppendChild(AddNode(tcStr, '#39', 'TipoLogradouro', 1, 50, NrOcorrTipoLogradouro,
                                NFSe.Tomador.Endereco.TipoLogradouro, DSC_XLGR));
 
     Result.AppendChild(AddNode(tcStr, '#39', 'Logradouro', 1, 125, NrOcorrLogradouro,
                                      NFSe.Tomador.Endereco.Endereco, DSC_XLGR));
 
-    Result.AppendChild(AddNode(tcStr, '#40', 'Numero', 1, 010, 0,
+    Result.AppendChild(AddNode(tcStr, '#40', 'Numero', 1, 10, 0,
                                         NFSe.Tomador.Endereco.Numero, DSC_NRO));
 
-    Result.AppendChild(AddNode(tcStr, '#41', 'Complemento', 1, 060, NrOcorrComplTomador,
+    Result.AppendChild(AddNode(tcStr, '#41', 'Complemento', 1, 60, NrOcorrComplTomador,
                                   NFSe.Tomador.Endereco.Complemento, DSC_XCPL));
 
-    Result.AppendChild(AddNode(tcStr, '#42', 'Bairro', 1, 060, 0,
+    Result.AppendChild(AddNode(tcStr, '#42', 'Bairro', 1, 60, 0,
                                     NFSe.Tomador.Endereco.Bairro, DSC_XBAIRRO));
 
-    Result.AppendChild(AddNode(tcStr, '#43', 'CodigoMunicipio', 7, 007, 0,
+    Result.AppendChild(AddNode(tcStr, '#43', 'CodigoMunicipio', 7, 7, 0,
                   OnlyNumber(NFSe.Tomador.Endereco.CodigoMunicipio), DSC_CMUN));
 
-    Result.AppendChild(AddNode(tcStr, '#44', 'Uf', 2, 002, NrOcorrUFTomador,
+    Result.AppendChild(AddNode(tcStr, '#44', 'Uf', 2, 2, NrOcorrUFTomador,
                                              NFSe.Tomador.Endereco.UF, DSC_UF));
 
     Result.AppendChild(AddNode(tcInt, '#44', 'CodigoPais', 4, 4, NrOcorrCodigoPaisTomador,

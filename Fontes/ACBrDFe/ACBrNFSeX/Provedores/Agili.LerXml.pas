@@ -528,7 +528,7 @@ begin
       aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Codigo'), tcStr);
 
       ResponsavelRetencao := StrToEnumerado(Ok, aValor, ['-1', '-2', '-3'],
-                                         [ptTomador, rtPrestador, rtPrestador]);
+                                         [rtTomador, rtIntermediario, rtPrestador]);
     end;
   end;
 end;
@@ -552,7 +552,7 @@ var
   XmlNode: TACBrXmlNode;
   xRetorno: string;
 begin
-  xRetorno := TratarRetorno(Arquivo);
+  xRetorno := TratarXmlRetorno(Arquivo);
 
   if EstaVazio(xRetorno) then
     raise Exception.Create('Arquivo xml não carregado.');

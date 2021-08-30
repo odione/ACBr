@@ -90,8 +90,9 @@ begin
                               ['Percentual', 'Valor'], [dpPercentual, dpValor]);
 
     sTipoDeducao := EnumeradoToStr( NFSe.Servico.Deducao.Items[i].TipoDeducao,
-      ['', 'Despesas com Materiais', 'Despesas com Subempreitada', 'Deducao de Valor'],
-      [tdNenhum, tdMateriais, tdSubEmpreitada, tdValor]);
+      ['', 'Despesas com Materiais', 'Despesas com Subempreitada',
+       'Deducao de Valor', 'Servicos de Veiculacao e Divulgacao'],
+      [tdNenhum, tdMateriais, tdSubEmpreitada, tdValor, tdVeiculacao]);
 
     Result[i].AppendChild(AddNode(tcStr, '#', 'DeducaoPor', 1, 20, 1,
                                                               sDeducaoPor, ''));
@@ -208,6 +209,8 @@ var
 begin
   Configuracao;
 
+  Opcoes.SuprimirDecimais := True;
+  Opcoes.DecimalChar := '.';
   Opcoes.QuebraLinha := FAOwner.ConfigGeral.QuebradeLinha;
 
   ListaDeAlertas.Clear;
@@ -305,9 +308,6 @@ begin
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'RazaoSocialTomador', 1, 120, 1,
                                                  NFSe.Tomador.RazaoSocial, ''));
 
-  NFSeNode.AppendChild(AddNode(tcStr, '#1', 'DocTomadorEstrangeiro', 0, 20, 0,
-                  NFSe.Tomador.IdentificacaoTomador.DocTomadorEstrangeiro, ''));
-
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'TipoLogradouroTomador', 0, 10, 1,
                                      NFSe.Tomador.Endereco.TipoLogradouro, ''));
 
@@ -342,11 +342,14 @@ begin
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'EmailTomador', 1, 60, 1,
                                                NFSe.Tomador.Contato.Email, ''));
 
+  NFSeNode.AppendChild(AddNode(tcStr, '#1', 'DocTomadorEstrangeiro', 0, 20, 0,
+                  NFSe.Tomador.IdentificacaoTomador.DocTomadorEstrangeiro, ''));
+
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CodigoAtividade', 1, 9, 1,
                                                   NFSe.Servico.CodigoCnae, ''));
-
-  NFSeNode.AppendChild(AddNode(tcInt, '#1', 'CodigoServico', 4, 5, 0,
-                                OnlyNumber(NFSe.Servico.ItemListaServico), ''));
+  //Não existe essa tag nesse provedor
+  //NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CodigoServico', 4, 5, 0,
+  //                              OnlyNumber(NFSe.Servico.ItemListaServico), ''));
 
   NFSeNode.AppendChild(AddNode(tcDe4, '#1', 'AliquotaAtividade', 1, 11, 1,
                                             NFSe.Servico.Valores.Aliquota, ''));

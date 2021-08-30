@@ -72,7 +72,10 @@ begin
 
   FormatoEmissao := tcDatHor;
   FormatoCompetencia := tcDatHor;
+  FormatoAliq := tcDe2;
+
   NrOcorrAliquota := 1;
+
   GerarIDDeclaracao := False;
   GerarIDRps := True;
 end;

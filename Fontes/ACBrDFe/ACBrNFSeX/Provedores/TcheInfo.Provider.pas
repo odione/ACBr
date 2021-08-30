@@ -70,6 +70,8 @@ uses
 { TACBrNFSeProviderTcheInfo }
 
 procedure TACBrNFSeProviderTcheInfo.Configuracao;
+var
+  CodigoIBGE: string;
 begin
   inherited Configuracao;
 
@@ -78,12 +80,13 @@ begin
     Identificador := '';
     UseCertificateHTTP := False;
     ModoEnvio := meUnitario;
+    ConsultaNFSe := False;
   end;
 
   with ConfigAssinar do
   begin
-    Rps := True;
-    LoteRps := True;
+//    Rps := True;
+//    LoteRps := True;
     CancelarNFSe := True;
     RpsGerarNFSe := True;
     IncluirURI := False;
@@ -99,9 +102,14 @@ begin
   begin
     with TACBrNFSeX(FAOwner).Configuracoes.Geral do
     begin
+      if TACBrNFSeX(FAOwner).Configuracoes.WebServices.AmbienteCodigo = 1 then
+        CodigoIBGE := IntToStr(CodigoMunicipio)
+      else
+        CodigoIBGE := '9999999';
+
       DadosCabecalho := '<cabecalho versao="1.00" xmlns="http://www.abrasf.org.br/nfse.xsd">' +
                         '<versaoDados>2.04</versaoDados>' +
-                        '<CodigoIBGE>' + IntToStr(CodigoMunicipio) + '</CodigoIBGE>' +
+                        '<CodigoIBGE>' + CodigoIBGE + '</CodigoIBGE>' +
                         '<CpfCnpj>' + Emitente.WSUser + '</CpfCnpj>' +
                         '<Token>' + Emitente.WSSenha + '</Token>' +
                         '</cabecalho>';

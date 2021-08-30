@@ -120,7 +120,7 @@ begin
       aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Obrigacao'), tcStr);
 
       if aValor = '1' then
-        ResponsavelRetencao := ptTomador
+        ResponsavelRetencao := rtTomador
       else
         ResponsavelRetencao := rtPrestador;
 
@@ -164,7 +164,7 @@ var
   XmlNode: TACBrXmlNode;
   xRetorno: string;
 begin
-  xRetorno := TratarRetorno(Arquivo);
+  xRetorno := TratarXmlRetorno(Arquivo);
 
   if EstaVazio(xRetorno) then
     raise Exception.Create('Arquivo xml não carregado.');

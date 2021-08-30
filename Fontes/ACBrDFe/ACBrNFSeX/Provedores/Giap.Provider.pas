@@ -38,7 +38,7 @@ interface
 
 uses
   SysUtils, Classes, Variants,
-  ACBrDFeSSL,
+  ACBrBase, ACBrDFeSSL,
   ACBrXmlBase, ACBrXmlDocument,
   ACBrNFSeXNotasFiscais,
   ACBrNFSeXClass, ACBrNFSeXConversao,
@@ -48,6 +48,8 @@ uses
 
 type
   TACBrNFSeXWebserviceGiap = class(TACBrNFSeXWebserviceNoSoap)
+  protected
+    procedure SetHeaders(aHeaderReq: THTTPHeader); override;
   public
     function Recepcionar(ACabecalho, AMSG: String): string; override;
     function ConsultarNFSePorRps(ACabecalho, AMSG: String): string; override;
@@ -63,15 +65,15 @@ type
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
     function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
 
-    //metodos para geração e tratamento dos dados do metodo emitir
-    procedure PrepararEmitir(Response: TNFSeEmiteResponse); override;
+    function PrepararRpsParaLote(const aXml: string): string; override;
+
+    procedure GerarMsgDadosEmitir(Response: TNFSeEmiteResponse;
+      Params: TNFSeParamsResponse); override;
     procedure TratarRetornoEmitir(Response: TNFSeEmiteResponse); override;
 
-    //metodos para geração e tratamento dos dados do metodo ConsultaNFSeporRps
     procedure PrepararConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); override;
     procedure TratarRetornoConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); override;
 
-    //metodos para geração e tratamento dos dados do metodo CancelaNFSe
     procedure PrepararCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
     procedure TratarRetornoCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
 
@@ -85,7 +87,7 @@ type
 implementation
 
 uses
-  ACBrUtil, ACBrDFeException,
+  ACBrUtil, ACBrDFeException, synacode,
   ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   Giap.GravarXml, Giap.LerXml;
 
@@ -99,11 +101,11 @@ begin
   begin
     Identificador := '';
     QuebradeLinha := '\\';
-
     UseCertificateHTTP := False;
-
     UseAuthorizationHeader := True;
     ModoEnvio := meLoteAssincrono;
+    ConsultaLote := False;
+    ConsultaNFSe := False;
   end;
 
   SetXmlNameSpace('');
@@ -165,9 +167,15 @@ begin
   ANode := RootNode.Childrens.FindAnyNs(AListTag);
 
   if (ANode = nil) then
+    ANode := RootNode.Childrens.FindAnyNs('ListaMensagemRetorno');
+
+  if (ANode = nil) then
     ANode := RootNode;
 
   ANodeArray := ANode.Childrens.FindAllAnyNs(AMessageTag);
+
+  if not Assigned(ANodeArray) then
+    ANodeArray := ANode.Childrens.FindAllAnyNs('MensagemRetorno');
 
   if not Assigned(ANodeArray) then Exit;
 
@@ -176,74 +184,23 @@ begin
     AErro := Response.Erros.New;
     AErro.Codigo := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Erro'), tcStr);
     AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Status'), tcStr);
+
+    if AErro.Descricao = '' then
+      AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
+
     AErro.Correcao := '';
   end;
 end;
 
-procedure TACBrNFSeProviderGiap.PrepararEmitir(Response: TNFSeEmiteResponse);
-var
-  AErro: TNFSeEventoCollectionItem;
-  Nota: NotaFiscal;
-  IdAttr, ListaRps, xRps: string;
-  I: Integer;
+function TACBrNFSeProviderGiap.PrepararRpsParaLote(const aXml: string): string;
 begin
-  if TACBrNFSeX(FAOwner).NotasFiscais.Count <= 0 then
-  begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := Cod002;
-    AErro.Descricao := Desc002;
-  end;
+  Result := aXml;
+end;
 
-  if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
-  begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := Cod003;
-    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
-                       IntToStr(Response.MaxRps) + ' RPS)' +
-                       ' excedido. Quantidade atual: ' +
-                       IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
-  end;
-
-  if Response.Erros.Count > 0 then Exit;
-
-  ListaRps := '';
-
-  if ConfigAssinar.IncluirURI then
-    IdAttr := ConfigGeral.Identificador
-  else
-    IdAttr := 'ID';
-
-  for I := 0 to TACBrNFSeX(FAOwner).NotasFiscais.Count -1 do
-  begin
-    Nota := TACBrNFSeX(FAOwner).NotasFiscais.Items[I];
-
-    if EstaVazio(Nota.XMLAssinado) then
-    begin
-      Nota.GerarXML;
-      if ConfigAssinar.Rps or ConfigAssinar.RpsGerarNFSe then
-      begin
-        Nota.XMLOriginal := FAOwner.SSL.Assinar(ConverteXMLtoUTF8(Nota.XMLOriginal), ConfigMsgDados.XmlRps.DocElemento,
-                                                ConfigMsgDados.XmlRps.InfElemento, '', '', '', IdAttr);
-      end;
-    end;
-
-    if FAOwner.Configuracoes.Arquivos.Salvar then
-    begin
-      if NaoEstaVazio(Nota.NomeArqRps) then
-        TACBrNFSeX(FAOwner).Gravar(Nota.NomeArqRps, Nota.XMLOriginal)
-      else
-      begin
-        Nota.NomeArqRps := Nota.CalcularNomeArquivoCompleto(Nota.NomeArqRps, '');
-        TACBrNFSeX(FAOwner).Gravar(Nota.NomeArqRps, Nota.XMLOriginal);
-      end;
-    end;
-
-    xRps := RemoverDeclaracaoXML(Nota.XMLOriginal);
-
-    ListaRps := ListaRps + xRps;
-  end;
-
-  Response.XmlEnvio := '<nfe>' + ListaRps + '</nfe>';
+procedure TACBrNFSeProviderGiap.GerarMsgDadosEmitir(
+  Response: TNFSeEmiteResponse; Params: TNFSeParamsResponse);
+begin
+  Response.XmlEnvio := '<nfe>' + Params.Xml + '</nfe>';
 end;
 
 procedure TACBrNFSeProviderGiap.TratarRetornoEmitir(Response: TNFSeEmiteResponse);
@@ -381,8 +338,8 @@ begin
 
       if ANode <> nil then
       begin
-        Response.InfRetorno.Situacao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('notaExiste'), tcStr);
-        Response.InfRetorno.NumeroNota := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('numeroNota'), tcInt);
+        Response.Situacao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('notaExiste'), tcStr);
+        Response.NumeroNota := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('numeroNota'), tcInt);
       end;
     except
       on E:Exception do
@@ -461,7 +418,7 @@ begin
 
       ANode := Document.Root;
 
-      Response.InfRetorno.NumeroLote := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('NumeroLote'), tcStr);
+      Response.Lote := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('NumeroLote'), tcStr);
 
       ANodeArray := ANode.Childrens.FindAllAnyNs('Nfse');
       if not Assigned(ANode) then
@@ -508,6 +465,20 @@ end;
 
 { TACBrNFSeXWebserviceGiap }
 
+procedure TACBrNFSeXWebserviceGiap.SetHeaders(aHeaderReq: THTTPHeader);
+var
+  Auth, Token: string;
+begin
+  with TConfiguracoesNFSe(FPConfiguracoes).Geral.Emitente do
+  begin
+    Token := WSChaveAutoriz;
+    Auth := InscMun + '-' + UpperCase(EncodeBase64(Token));
+  end;
+
+  aHeaderReq.AddHeader('Authorization', Auth);
+  aHeaderReq.AddHeader('postman-token', Token);
+end;
+
 function TACBrNFSeXWebserviceGiap.Recepcionar(ACabecalho,
   AMSG: String): string;
 begin
@@ -515,7 +486,7 @@ begin
 
   Result := Executar('', AMSG,
                      ['EnviaLoteRpsResposta', 'EnviaLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceGiap.ConsultarNFSePorRps(ACabecalho,
@@ -523,14 +494,14 @@ function TACBrNFSeXWebserviceGiap.ConsultarNFSePorRps(ACabecalho,
 begin
   FPMsgOrig := AMSG;
 
-  Result := Executar('', AMSG, [''], ['']);
+  Result := Executar('', AMSG, [''], []);
 end;
 
 function TACBrNFSeXWebserviceGiap.Cancelar(ACabecalho, AMSG: String): string;
 begin
   FPMsgOrig := AMSG;
 
-  Result := Executar('', AMSG, [''], ['']);
+  Result := Executar('', AMSG, [''], []);
 end;
 
 end.

@@ -408,8 +408,11 @@ type
     cobBancoPine,
     cobBancoPineBradesco,
     cobUnicredSC,
+    cobBancoAlfa,
     cobBancoDoBrasilAPI,
-    cobBancoDoBrasilWS
+    cobBancoDoBrasilWS,
+    cobBancoCresol,
+    cobMoneyPlus
     );
 
   TACBrTitulo = class;
@@ -843,6 +846,7 @@ type
     function DefineDataMulta(const ACBrTitulo: TACBrTitulo; AFormat: String = 'ddmmyyyy'): String; virtual;       //Utilizado para definir data multa na Remessa
     function DefineNossoNumeroRetorno(const Retorno: String): String; virtual;      //Define a leitura do Nosso Número no Retorno
     function DefineTamanhoContaRemessa: Integer; virtual;                           //Define o tamnhano da Conta para Remessa e Retorno  (pode ser diferente do tamanho padrão no Boleto)
+    function DefineTamanhoAgenciaRemessa: Integer; virtual;                         //Define o tamnhano da Agencia para Remessa e Retorno  (pode ser diferente do tamanho padrão no Boleto)
     function DefinePosicaoNossoNumeroRetorno: Integer; virtual;                     //Define posição para leitura de Retorno campo: NossoNumero
     function DefineTamanhoNossoNumeroRetorno: Integer; virtual;                     //Define posição para leitura de Retorno campo: NossoNumero
     function DefinePosicaoCarteiraRetorno:Integer; virtual;                         //Define posição para leitura de Retorno campo: NumeroDocumento
@@ -931,6 +935,8 @@ type
   [ComponentPlatformsAttribute(piacbrAllPlatforms)]
   {$ENDIF RTL230_UP}
   TACBrBanco = class(TComponent)
+  protected
+    procedure Loaded; override;
   private
     fACBrBoleto        : TACBrBoleto;
     fNumeroBanco       : Integer;
@@ -1015,6 +1021,8 @@ type
     function CalcularNomeArquivoRemessa : String;
     function ValidarDadosRetorno(const AAgencia, AContaCedente: String; const ACNPJCPF: String= '';
        const AValidaCodCedente: Boolean= False ): Boolean;
+    function ConverterCodigoBarrasITF25ParaLinhaDigitavel(const ACodigoBarras:String):String;
+
   published
     property Numero    : Integer        read GetNumero  write SetNumero default 0;
     property Digito    : Integer        read GetDigito  write SetDigito stored false;
@@ -1480,6 +1488,8 @@ type
     fPercentualMinPagamento: Currency;
     fPercentualMaxPagamento: Currency;
     fQrCode: TACBrBoletoPIXQRCode;
+    fRetornoWeb: TRetEnvio;
+    fOrgaoNegativador:String;
 
     procedure SetCarteira(const AValue: String);
     procedure SetCodigoMora(const AValue: String);
@@ -1498,6 +1508,8 @@ type
     procedure AtualizaDadosProtesto();
     procedure AtualizaDadosNegativacao();
     procedure SetQrCode(const Value: TACBrBoletoPIXQRCode);
+    procedure SetRetornoWeb(const Value: TRetEnvio);
+    procedure SetOrgaoNegativador(const Value: String);
    public
      constructor Create(ACBrBoleto:TACBrBoleto);
      destructor Destroy; override;
@@ -1562,6 +1574,7 @@ type
      property DiasDeProtesto                 : Integer   read fDiasDeProtesto    write SetDiasDeProtesto;
      property DataNegativacao                : TDateTime read fDataNegativacao   write SetDataNegativacao;
      property DiasDeNegativacao              : Integer   read fDiasDeNegativacao write SetDiasDeNegativacao;
+     property OrgaoNegativador               : String    read fOrgaoNegativador  write SetOrgaoNegativador;
      property DataBaixa                      : TDateTime read fDataBaixa         write fDataBaixa;
      property DataLimitePagto                : TDateTime read fDataLimitePagto   write fDataLimitePagto;
 
@@ -1601,6 +1614,7 @@ type
      property PercentualMaxPagamento: currency read fPercentualMaxPagamento write fPercentualMaxPagamento;
      property ListaDadosNFe : TACBrListadeNFes read fListaDadosNFe;
      property QrCode: TACBrBoletoPIXQRCode read fQrCode write SetQrCode; // Utilizado somente em alguns bancos e com comunicação de API (uso manual por conta e risco da SwHouse)
+     property RetornoWeb: TRetEnvio read fRetornoWeb write SetRetornoWeb;
 
      function CriarNFeNaLista: TACBrDadosNFe;
    end;
@@ -1800,8 +1814,9 @@ Uses Forms, Math, dateutils, strutils,  ACBrBoletoWS,
      ACBrBancoNordeste , ACBrBancoBRB, ACBrBancoBic, ACBrBancoBradescoSICOOB,
      ACBrBancoSafra, ACBrBancoSafraBradesco, ACBrBancoCecred, ACBrBancoBrasilSicoob,
      ACBrUniprime, ACBrBancoUnicredRS, ACBrBancoBanese, ACBrBancoCredisis, ACBrBancoUnicredES,
-     ACBrBancoCresol, ACBrBancoCitiBank, ACBrBancoABCBrasil, ACBrBancoDaycoval, ACBrUniprimeNortePR,
-     ACBrBancoPine, ACBrBancoPineBradesco, ACBrBancoUnicredSC;
+     ACBrBancoCresolSCRS, ACBrBancoCitiBank, ACBrBancoABCBrasil, ACBrBancoDaycoval, ACBrUniprimeNortePR,
+     ACBrBancoPine, ACBrBancoPineBradesco, ACBrBancoUnicredSC, ACBrBancoAlfa, ACBrBancoCresol,
+     ACBrBancoBradescoMoneyPlus;
 
 { TACBrBoletoWSFiltroConsulta }
 
@@ -1860,6 +1875,11 @@ end;
 procedure TACBrBoletoWSFiltroConsulta.SetModalidadeCobranca(const Value: integer);
 begin
   FModalidadeCobrancao:= Value;
+end;
+
+procedure TACBrTitulo.SetOrgaoNegativador(const Value: String);
+begin
+  ForgaoNegativador := Value;
 end;
 
 procedure TACBrBoletoWSFiltroConsulta.SetCarteira(const Value: Integer);
@@ -2397,7 +2417,7 @@ begin
   AtualizaDadosNegativacao();
 end;
 
-procedure TACBrTitulo.AtualizaDadosProtesto;
+procedure TACBrTitulo.AtualizaDadosProtesto();
 begin
   if fVencimento <= 0 then
     Exit;
@@ -2418,7 +2438,7 @@ begin
   end;
 end;
 
-procedure TACBrTitulo.AtualizaDadosNegativacao;
+procedure TACBrTitulo.AtualizaDadosNegativacao();
 begin
   if fVencimento <= 0 then
     Exit;
@@ -2451,6 +2471,11 @@ end;
 procedure TACBrTitulo.SetQrCode(const Value: TACBrBoletoPIXQRCode);
 begin
   fQrCode := Value;
+end;
+
+procedure TACBrTitulo.SetRetornoWeb(const Value: TRetEnvio);
+begin
+  fRetornoWeb:= Value;
 end;
 
 procedure TACBrTitulo.SetTotalParcelas ( const AValue: Integer ) ;
@@ -2612,6 +2637,7 @@ begin
 
    fListaDadosNFe := TACBrListadeNFes.Create(true);
    fQrCode := TACBrBoletoPIXQRCode.Create();
+   fRetornoWeb := TRetEnvio.Create;
 
 end;
 
@@ -2628,7 +2654,6 @@ begin
    fDescricaoMotivoRejeicaoComando.Free;
    fListaDadosNFe.Free;
    fQrCode.Free;
-
    inherited;
 end;
 
@@ -3194,7 +3219,7 @@ begin
      cobBancoSafra          : fBancoClass := TACBrBancoSafra.create(Self);          {422}
      cobSafraBradesco       : fBancoClass := TACBrBancoSafraBradesco.Create(Self);  {422 + 237}
      cobBanese              : fBancoClass := TACBrBancoBanese.Create(Self);         {047}
-     cobBancoCresolSCRS     : fBancoClass := TACBrBancoCresol.create(Self);         {133 + 237}
+     cobBancoCresolSCRS     : fBancoClass := TACBrBancoCresolSCRS.create(Self);     {133 + 237}
      cobCitiBank            : fBancoClass := TACBrBancoCitiBank.Create(Self);       {745}
      cobBancoABCBrasil      : fBancoClass := TACBrBancoABCBrasil.Create(Self);      {246}
      cobDaycoval            : fBancoClass := TACBrBancoDaycoval.Create(Self);       {745}
@@ -3202,6 +3227,9 @@ begin
      cobBancoPine           : fBancoClass := TACBrBancoPine.create(Self);
      cobBancoPineBradesco   : fBancoClass := TACBrBancoPineBradesco.create(Self);   {643 + 237}
      cobUnicredSC           : fBancoClass := TACBrBancoUnicredSC.Create(Self);      {136 + 237}
+     cobBancoAlfa           : fBancoClass := TACBrBancoAlfa.Create(Self);           {025}
+     cobBancoCresol         : fBancoClass := TACBrBancoCresol.Create(Self);         {133}
+     cobMoneyPlus           : fBancoClass := TACBrBancoBradescoMoneyPlus.create(Self); {274}
    else
      fBancoClass := TACBrBancoClass.create(Self);
    end;
@@ -3230,6 +3258,12 @@ function TACBrBanco.CompOcorrenciaOutrosDadosToDescricao(
   const CompOcorrencia: TACBrComplementoOcorrenciaOutrosDados): String;
 begin
   Result:= BancoClass.CompOcorrenciaOutrosDadosToDescricao(CompOcorrencia);
+end;
+
+function TACBrBanco.ConverterCodigoBarrasITF25ParaLinhaDigitavel(
+  const ACodigoBarras: String): String;
+begin
+  result := OnlyNumber(BancoClass.MontarLinhaDigitavel(ACodigoBarras, nil));
 end;
 
 function TACBrBanco.CompOcorrenciaOutrosDadosToCodigo(
@@ -3321,6 +3355,21 @@ begin
    BancoClass.LerRetorno400(ARetorno);
 end;
 
+procedure TACBrBanco.Loaded;
+begin
+  inherited;
+  case TipoCobranca of
+    cobBanrisul :
+      begin
+        if (LayoutVersaoArquivo = 0) then
+        LayoutVersaoArquivo := 40;
+
+        if (LayoutVersaoLote = 0) then
+          LayoutVersaoLote    := 20;
+      end;
+  end;
+end;
+
 procedure TACBrBanco.LerRetorno240(ARetorno: TStringList);
 begin
    BancoClass.LerRetorno240(ARetorno);
@@ -3400,10 +3449,10 @@ begin
              PadLeft(CodigoCedente, 20, '0')                    +  { Codigo da Empresa no Banco }
              PadRight(Nome, 30)                                 +  { Nome da Empresa }
              IntToStrZero(fpNumero, 3)                          +  { Código do Banco 091 }
-             PadRight(fpNome, 15)                               +  { Nome do Banco(091 - Unicred ) }
+             PadRight(fpNome, 15)                               +  { Nome do Banco }
              FormatDateTime('ddmmyy',Now)                       +  { Data de geração do arquivo }
              Space(07)                                          +  { brancos }
-             PadLeft(fpCodParametroMovimento, 3 )               +  { Cód. Parâm. Movto da Unicred }
+             PadLeft(fpCodParametroMovimento, 3 )               +  { Cód. Parâm. Movto }
              IntToStrZero(NumeroRemessa, 7)                     +  { Nr. Sequencial de Remessa  }
              Space(277)                                         +  { brancos }
              IntToStrZero(1, 6);                                   { Nr. Sequencial de Remessa + brancos + Contador }
@@ -4077,7 +4126,7 @@ begin
         if not AValidaCodCedente then
         begin
           if (not LeCedenteRetorno) and
-             ((AAgencia <> OnlyNumber(Cedente.Agencia)) or
+             ((StrToIntDef(AAgencia,0) <> StrToIntDef(OnlyNumber(Cedente.Agencia),0)) or
               (AContaCedente <> RightStr(OnlyNumber( Cedente.Conta  ),Length(AContaCedente)))
              ) then
             raise Exception.CreateFmt(ACBrStr('Agencia: %s \ Conta: %s do arquivo não correspondem aos dados do Cedente!')
@@ -4612,6 +4661,11 @@ begin
   Result:= ACBrBanco.TamanhoConta;
 end;
 
+function TACBrBancoClass.DefineTamanhoAgenciaRemessa: Integer;
+begin
+  Result:= ACBrBanco.TamanhoAgencia;
+end;
+
 function TACBrBancoClass.DefinePosicaoNossoNumeroRetorno: Integer;
 begin
   if ACBrBanco.ACBrBoleto.LayoutRemessa = c240 then
@@ -4901,7 +4955,7 @@ begin
     Raise Exception.Create(ACBrStr('Nome do cedente não informado'));
   if Cedente.Conta = '' then
     Raise Exception.Create(ACBrStr('Conta não informada'));
-  if (Cedente.ContaDigito = '') and (not (Banco.TipoCobranca in [cobBanestes,cobBanese, cobCitiBank,cobBancoDoBrasilAPI])) then
+  if (Cedente.ContaDigito = '') and (not (Banco.TipoCobranca in [cobBanestes,cobBanese, cobCitiBank,cobBancoDoBrasilAPI,cobBancoCECRED])) then
     Raise Exception.Create(ACBrStr('Dígito da conta não informado'));
   if Cedente.Agencia = '' then
     Raise Exception.Create(ACBrStr('Agência não informada'));
@@ -4973,8 +5027,10 @@ begin
     097: Result := cobCrediSIS;
     099: Result := cobUniprime;
     104: Result := cobCaixaEconomica;
+    133: Result := cobBancoCresol;
     136: Result := cobUnicredES;
     237: Result := cobBradesco;
+    274: Result := cobMoneyPlus;
     341: Result := cobItau;
     389: Result := cobBancoMercantil;
     748: Result := cobSicred;
@@ -4987,6 +5043,7 @@ begin
     246: Result := cobBancoABCBrasil;
     707: Result := cobDaycoval;
     084: Result := cobUniprimeNortePR;
+    025: Result := cobBancoAlfa;
     643: begin
           if StrToInt(Carteira) = 9 then
              Result := cobBancoPineBradesco
@@ -5384,16 +5441,22 @@ begin
         IniRetorno.WriteString(wSessao, 'Cod_Retorno',ListaRetornoWeb[i].CodRetorno);
         IniRetorno.WriteString(wSessao, 'Msg_Retorno',ListaRetornoWeb[i].MsgRetorno);
         IniRetorno.WriteString(wSessao, 'Ori_Retorno',ListaRetornoWeb[i].OriRetorno);
+        IniRetorno.WriteInteger(wSessao, 'HTTP_Result',ListaRetornoWeb[i].HTTPResultCode);
+        IniRetorno.WriteBool(wSessao, 'IndicadorContinuidade',ListaRetornoWeb[i].indicadorContinuidade);
+        IniRetorno.WriteInteger(wSessao, 'ProximoIndice',ListaRetornoWeb[i].proximoIndice);
 
         for j:= 0 to ListaRetornoWeb[i].ListaRejeicao.Count -1 do
         begin
-          wSessao := 'REJEICAO' + IntToStr(j + 1);
+          wSessao := 'REJEICAO' + IntToStr(i + 1)+'-'+ IntToStr(j + 1);
+          IniRetorno.WriteString(wSessao, 'Codigo', ListaRetornoWeb[i].ListaRejeicao[j].Codigo);
           IniRetorno.WriteString(wSessao, 'Campo', ListaRetornoWeb[i].ListaRejeicao[j].Campo);
           IniRetorno.WriteString(wSessao, 'Mensagem', ListaRetornoWeb[i].ListaRejeicao[j].Mensagem);
           IniRetorno.WriteString(wSessao, 'Valor', ListaRetornoWeb[i].ListaRejeicao[j].Valor);
+          IniRetorno.WriteString(wSessao, 'Ocorrencia', ListaRetornoWeb[i].ListaRejeicao[j].Ocorrencia);
+          IniRetorno.WriteString(wSessao, 'Versao', ListaRetornoWeb[i].ListaRejeicao[j].Versao);
         end;
 
-        wSessao := 'HEADER';
+        wSessao := 'HEADER' + IntToStr(i + 1);
         IniRetorno.WriteString(wSessao, 'Versao',ListaRetornoWeb[i].Header.Versao);
         IniRetorno.WriteString(wSessao, 'Autenticacao',ListaRetornoWeb[i].Header.Autenticacao);
         IniRetorno.WriteString(wSessao, 'Usuario_Servico',ListaRetornoWeb[i].Header.Usuario_Servico);
@@ -5406,20 +5469,20 @@ begin
         IniRetorno.WriteDateTime(wSessao, 'Data_Hora',ListaRetornoWeb[i].Header.Data_Hora);
         IniRetorno.WriteString(wSessao, 'ID_Processo',ListaRetornoWeb[i].Header.Id_Processo);
 
-        wSessao := 'DADOS';
+        wSessao := 'DADOS' + IntToStr(i + 1);
         IniRetorno.WriteString(wSessao, 'Excessao',ListaRetornoWeb[i].DadosRet.Excecao);
 
-        wSessao := 'CONTROLE_NEGOCIAL';
+        wSessao := 'CONTROLE_NEGOCIAL' + IntToStr(i + 1);
         IniRetorno.WriteString(wSessao, 'Origem_Retorno',ListaRetornoWeb[i].DadosRet.ControleNegocial.OriRetorno);
         IniRetorno.WriteString(wSessao, 'NSU',ListaRetornoWeb[i].DadosRet.ControleNegocial.NSU);
         IniRetorno.WriteString(wSessao, 'Cod_Retorno',ListaRetornoWeb[i].DadosRet.ControleNegocial.CodRetorno);
         IniRetorno.WriteString(wSessao, 'Msg_Retorno',ListaRetornoWeb[i].DadosRet.ControleNegocial.Retorno);
 
-        wSessao := 'COMPROVANTE';
+        wSessao := 'COMPROVANTE' + IntToStr(i + 1);
         IniRetorno.WriteDate(wSessao, 'Data',ListaRetornoWeb[i].DadosRet.Comprovante.Data);
         IniRetorno.WriteString(wSessao, 'Hora',ListaRetornoWeb[i].DadosRet.Comprovante.Hora);
 
-        wSessao := 'ID_BOLETO';
+        wSessao := 'ID_BOLETO' + IntToStr(i + 1);
         IniRetorno.WriteString(wSessao, 'Codigo_Barras',ListaRetornoWeb[i].DadosRet.IDBoleto.CodBarras);
         IniRetorno.WriteString(wSessao, 'Linha_Digitavel',ListaRetornoWeb[i].DadosRet.IDBoleto.LinhaDig);
         IniRetorno.WriteString(wSessao, 'Nosso_Numero',ListaRetornoWeb[i].DadosRet.IDBoleto.NossoNum);
@@ -5427,19 +5490,21 @@ begin
 
         if NaoEstaVazio(ListaRetornoWeb[i].DadosRet.TituloRet.NumeroDocumento) then
         begin
-          wSessao := 'CONSULTA_BOLETO';
+          wSessao := 'CONSULTA_BOLETO' + IntToStr(i + 1);
           IniRetorno.WriteString(wSessao, 'Numero_Documento',ListaRetornoWeb[i].DadosRet.TituloRet.NumeroDocumento);
           IniRetorno.WriteDate(wSessao, 'Data_Vencimento',ListaRetornoWeb[i].DadosRet.TituloRet.Vencimento);
           IniRetorno.WriteFloat(wSessao, 'Valor',ListaRetornoWeb[i].DadosRet.TituloRet.ValorDocumento);
 
         end;
 
-        if NaoEstaVazio(ListaRetornoWeb[i].DadosRet.TituloRet.CodBarras) then
+        if NaoEstaVazio(ListaRetornoWeb[i].DadosRet.TituloRet.CodBarras)
+           or (NaoEstaVazio(ListaRetornoWeb[i].DadosRet.TituloRet.Contrato)) then
         begin
-          wSessao := 'TITULO_RETORNO';
+          wSessao := 'TITULO_RETORNO' + IntToStr(i + 1);
 
           IniRetorno.WriteDate(wSessao, 'vencimento_titulo',ListaRetornoWeb[i].DadosRet.TituloRet.Vencimento);
           IniRetorno.WriteString(wSessao, 'tipo_carteira_titulo',ListaRetornoWeb[i].DadosRet.TituloRet.Carteira);
+          IniRetorno.WriteInteger(wSessao, 'modalidade_carteira',ListaRetornoWeb[i].DadosRet.TituloRet.Modalidade);
           IniRetorno.WriteString(wSessao, 'nosso_numero',ListaRetornoWeb[i].DadosRet.TituloRet.NossoNumero);
           IniRetorno.WriteString(wSessao, 'seu_numero',ListaRetornoWeb[i].DadosRet.TituloRet.SeuNumero);
           IniRetorno.WriteString(wSessao, 'especie',ListaRetornoWeb[i].DadosRet.TituloRet.EspecieDoc);
@@ -5448,6 +5513,7 @@ begin
           IniRetorno.WriteString(wSessao, 'local_pagamento',ListaRetornoWeb[i].DadosRet.TituloRet.Mensagem.Text);
           IniRetorno.WriteDate(wSessao, 'data_processamento',ListaRetornoWeb[i].DadosRet.TituloRet.DataProcessamento);
           IniRetorno.WriteDate(wSessao, 'data_emissao',ListaRetornoWeb[i].DadosRet.TituloRet.DataDocumento);
+          IniRetorno.WriteDate(wSessao, 'data_credito',ListaRetornoWeb[i].DadosRet.TituloRet.DataCredito);
           IniRetorno.WriteString(wSessao, 'uso_banco',ListaRetornoWeb[i].DadosRet.TituloRet.UsoBanco);
           IniRetorno.WriteFloat(wSessao, 'valor_titulo',ListaRetornoWeb[i].DadosRet.TituloRet.ValorDocumento);
           IniRetorno.WriteFloat(wSessao, 'valor_desconto',ListaRetornoWeb[i].DadosRet.TituloRet.ValorDesconto);
@@ -5456,7 +5522,20 @@ begin
           IniRetorno.WriteFloat(wSessao, 'valor_outro_acrescimo',ListaRetornoWeb[i].DadosRet.TituloRet.ValorOutrosCreditos);
           IniRetorno.WriteFloat(wSessao, 'valor_total_cobrado',ListaRetornoWeb[i].DadosRet.TituloRet.ValorPago);
           IniRetorno.WriteString(wSessao, 'texto_informacao_cliente_beneficiario',ListaRetornoWeb[i].DadosRet.TituloRet.Informativo.Text);
+          IniRetorno.WriteString(wSessao, 'codigo_estado_titulo_cobranca',ListaRetornoWeb[i].DadosRet.TituloRet.CodigoEstadoTituloCobranca);
+          IniRetorno.WriteString(wSessao, 'estado_titulo_cobranca',ListaRetornoWeb[i].DadosRet.TituloRet.EstadoTituloCobranca);
 
+          IniRetorno.WriteFloat(wSessao, 'codigo_cliente',ListaRetornoWeb[i].DadosRet.TituloRet.CodigoCliente);
+          IniRetorno.WriteString(wSessao, 'contrato',ListaRetornoWeb[i].DadosRet.TituloRet.Contrato);
+          IniRetorno.WriteDate(wSessao, 'data_baixa',ListaRetornoWeb[i].DadosRet.TituloRet.DataBaixa);
+          IniRetorno.WriteString(wSessao, 'hora_baixa',ListaRetornoWeb[i].DadosRet.TituloRet.HoraBaixa);
+
+          if ( ListaRetornoWeb[i].DadosRet.TituloRet.EMV  <> EmptyStr) then
+          begin
+            IniRetorno.WriteString(wSessao, 'EMV',ListaRetornoWeb[i].DadosRet.TituloRet.EMV);
+            IniRetorno.WriteString(wSessao, 'URL_Pix',ListaRetornoWeb[i].DadosRet.TituloRet.UrlPix);
+            IniRetorno.WriteString(wSessao, 'Tx_ID',ListaRetornoWeb[i].DadosRet.TituloRet.TxId);
+          end;
         end;
 
 

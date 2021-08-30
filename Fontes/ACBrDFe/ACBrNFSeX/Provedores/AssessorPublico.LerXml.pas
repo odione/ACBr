@@ -71,7 +71,7 @@ var
   XmlNode: TACBrXmlNode;
   xRetorno: string;
 begin
-  xRetorno := TratarRetorno(Arquivo);
+  xRetorno := TratarXmlRetorno(Arquivo);
 
   if EstaVazio(xRetorno) then
     raise Exception.Create('Arquivo xml não carregado.');
@@ -116,6 +116,8 @@ begin
   NFSe.Link       := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('LINK'), tcStr);
   NFSe.NumeroLote := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('LOTE'), tcStr);
   NFSe.Numero     := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('COD'), tcStr);
+
+  NFSe.InfID.ID := NFSe.Numero;
 
   NFSe.IdentificacaoRps.Numero := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('RPS'), tcStr);
   NFSe.IdentificacaoRps.Serie  := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('SEQUENCIA'), tcStr);

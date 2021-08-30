@@ -77,7 +77,11 @@ procedure TACBrNFSeProviderCenti.Configuracao;
 begin
   inherited Configuracao;
 
-  ConfigGeral.ModoEnvio := meUnitario;
+  with ConfigGeral do
+  begin
+    ModoEnvio := meUnitario;
+    ConsultaNFSe := False;
+  end;
 
   with ConfigAssinar do
   begin
@@ -153,7 +157,7 @@ begin
   Request := Request + '</GerarNfse>';
 
   Result := Executar('http://tempuri.org/IServiceNfse/GerarNfse' + Operacao, Request,
-                            ['return', 'outputXML', 'GerarNfseResposta'], ['']);
+                            ['return', 'outputXML', 'GerarNfseResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceCenti.ConsultarNFSePorRps(ACabecalho,
@@ -169,7 +173,7 @@ begin
   Request := Request + '</ConsultarNfseRps>';
 
   Result := Executar('http://tempuri.org/IServiceNfse/ConsultarNfseRps', Request,
-                     ['return', 'outputXML', 'ConsultarNfseRpsResposta'], ['']);
+                     ['return', 'outputXML', 'ConsultarNfseRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceCenti.Cancelar(ACabecalho, AMSG: String): string;
@@ -184,7 +188,7 @@ begin
   Request := Request + '</CancelarNfse>';
 
   Result := Executar('http://tempuri.org/IServiceNfse/CancelarNfse', Request,
-                         ['return', 'outputXML', 'CancelarNfseResposta'], ['']);
+                         ['return', 'outputXML', 'CancelarNfseResposta'], []);
 end;
 
 end.

@@ -101,8 +101,6 @@ procedure TACBrNFSeProviderTiplan.Configuracao;
 begin
   inherited Configuracao;
 
-  ConfigGeral.FormatoItemListaServico := filsSemFormatacao;
-
   with ConfigAssinar do
   begin
     LoteRps := True;
@@ -153,7 +151,7 @@ begin
   Result := Executar('http://www.nfe.com.br/RecepcionarLoteRps',
                      Request,
                      ['outputXML', 'EnviarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTiplan.ConsultarSituacao(ACabecalho,
@@ -170,7 +168,7 @@ begin
   Result := Executar('http://www.nfe.com.br/ConsultarSituacaoLoteRps',
                      Request,
                      ['outputXML', 'ConsultarSituacaoLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTiplan.ConsultarLote(ACabecalho,
@@ -187,7 +185,7 @@ begin
   Result := Executar('http://www.nfe.com.br/ConsultarLoteRps',
                      Request,
                      ['outputXML', 'ConsultarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTiplan.ConsultarNFSePorRps(ACabecalho,
@@ -204,7 +202,7 @@ begin
   Result := Executar('http://www.nfe.com.br/ConsultarNfsePorRps',
                      Request,
                      ['outputXML', 'ConsultarNfseRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTiplan.ConsultarNFSe(ACabecalho,
@@ -221,7 +219,7 @@ begin
   Result := Executar('http://www.nfe.com.br/ConsultarNfse',
                      Request,
                      ['outputXML', 'ConsultarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceTiplan.Cancelar(ACabecalho,
@@ -238,7 +236,7 @@ begin
   Result := Executar('http://www.nfe.com.br/CancelarNfse',
                      Request,
                      ['outputXML', 'CancelarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 { TACBrNFSeProviderTiplanv2 }

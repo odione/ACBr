@@ -369,30 +369,12 @@ begin
 
     rllCompetencia.Caption := FormatDateTime('mm/yyyy', Competencia);
 
-    {
-    if length( Competencia ) = 6 then
-      rllCompetencia.Caption := Copy(Competencia, 5, 2) + '/' + Copy(Competencia, 1, 4)
-    else if length( Competencia ) = 7 then
-      rllCompetencia.Caption := Competencia
-    else
-    begin
-      if length( Competencia ) >= 10 then // dd/mm/aaaa ou aaaa/mm/dd
-      begin
-        if (Pos('/', Competencia) = 3) or (Pos('-', Competencia) = 3) then
-          rllCompetencia.Caption := Copy(Competencia, 4, 7)
-        else
-          rllCompetencia.Caption := Copy(Competencia, 6, 2) + '/' + Copy(Competencia, 1, 4);
-      end
-      else
-        rllCompetencia.Caption := Copy(Competencia, 6, 2) + '/' + Copy(Competencia, 1, 4);		
-    end;
-    }
     rllNumeroRPS.Caption          := IdentificacaoRps.Numero;
     rllNumNFSeSubstituida.Caption := NfseSubstituida;
-    rllMunicipioPrestacaoServico.Caption := CodIBGEToCidade(StrToIntDef(Servico.CodigoMunicipio, 0));
+
 	// Será necessário uma analise melhor para saber em que condições devemos usar o código do municipio
-	// do tomador em vez do que foi informado em Serviço. 
-//    rllMunicipioPrestacaoServico.Caption := CodCidadeToCidade(StrToIntDef(Tomador.Endereco.CodigoMunicipio, 0));
+	// do tomador em vez do que foi informado em Serviço.
+    rllMunicipioPrestacaoServico.Caption := CodIBGEToCidade(StrToIntDef(Servico.CodigoMunicipio, 0));
   end;
 end;
 
@@ -503,31 +485,31 @@ begin
   inherited;
 
   rlmDescricao.Lines.Clear;
-  rlmDescricao.Lines.Add( StringReplace( fpNFSe.Servico.Discriminacao,
-                          FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
+  rlmDescricao.Lines.Add(fpNFSe.Servico.Discriminacao);
+//  rlmDescricao.Lines.Add( StringReplace( fpNFSe.Servico.Discriminacao,
+//                          FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
 end;
 
-procedure TfrlXDANFSeRLRetrato.rlbPrestadorBeforePrint(Sender: TObject;
-  var PrintIt: Boolean);
+procedure TfrlXDANFSeRLRetrato.rlbPrestadorBeforePrint(Sender: TObject; var PrintIt: Boolean);
 var
   CarregouLogoPrest: Boolean;
 begin
   inherited;
-  CarregouLogoPrest := TDFeReportFortes.CarregarLogo(rliPrestLogo, fpDANFSe.PrestLogo);
+  CarregouLogoPrest := TDFeReportFortes.CarregarLogo(rliPrestLogo, fpDANFSe.Prestador.Logo);
 
   with fpNFSe do
   begin
     with Prestador do
     begin
-      rllPrestNome.Caption := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.RazaoSocial);
+      rllPrestNome.Caption := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.Prestador.RazaoSocial);
 
       if rllPrestNome.Caption = '' then
-        rllPrestNome.Caption := IfThen(NomeFantasia <> '', NomeFantasia, fpDANFSe.RazaoSocial);
+        rllPrestNome.Caption := IfThen(NomeFantasia <> '', NomeFantasia, fpDANFSe.Prestador.NomeFantasia);
 
       with IdentificacaoPrestador do
       begin
-        rllPrestCNPJ.Caption          := FormatarCNPJouCPF( ifThen (Cnpj <> '', Cnpj,fpDANFSe.CNPJ_Prestador) );
-        rllPrestInscMunicipal.Caption := IfThen(InscricaoMunicipal <> '', InscricaoMunicipal, fpDANFSe.InscMunicipal);
+        rllPrestCNPJ.Caption          := FormatarCNPJouCPF( ifThen (Cnpj <> '', Cnpj,fpDANFSe.Prestador.CNPJ) );
+        rllPrestInscMunicipal.Caption := IfThen(InscricaoMunicipal <> '', InscricaoMunicipal, fpDANFSe.Prestador.InscricaoMunicipal);
       end;
 
       with Endereco do
@@ -537,20 +519,20 @@ begin
                                                                 Trim( Bairro )+
                                                                 ' - CEP: '+
                                                                 FormatarCEP( CEP ) ,
-                                                                Trim(fpDANFSe.Endereco) ) ;
+                                                                Trim(fpDANFSe.Prestador.Endereco) ) ;
 
-        rllPrestComplemento.Caption := IfThen( Complemento <> '', Complemento , fpDANFSe.Complemento);
-        rllPrestMunicipio.Caption   := IfThen( xMunicipio <> '' , CodigoMunicipio + ' - ' + xMunicipio , fpDANFSe.Municipio);
-        rllPrestUF.Caption          := IfThen( UF <> ''         , UF  , fpDANFSe.UF);
+        rllPrestComplemento.Caption := IfThen( Complemento <> '', Complemento , fpDANFSe.Prestador.Complemento);
+        rllPrestMunicipio.Caption   := IfThen( xMunicipio <> '' , CodigoMunicipio + ' - ' + xMunicipio , fpDANFSe.Prestador.Municipio);
+        rllPrestUF.Caption          := IfThen( UF <> ''         , UF  , fpDANFSe.Prestador.UF);
       end;
 
       with Contato do
       begin
-        rllPrestTelefone.Caption := IfThen( Telefone <> '' , FormatarFone( Telefone) , FormatarFone(fpDANFSe.Fone) );
-        rllPrestEmail.Caption    := IfThen( Email <> '' , Email , fpDANFSe.EMail_Prestador);
+        rllPrestTelefone.Caption := IfThen( Telefone <> '' , FormatarFone( Telefone) , FormatarFone(fpDANFSe.Prestador.Fone) );
+        rllPrestEmail.Caption    := IfThen( Email <> '' , Email , fpDANFSe.Prestador.EMail);
       end;
 
-      rllPrestNomeEnt.Caption   := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.RazaoSocial);
+      rllPrestNomeEnt.Caption   := IfThen(RazaoSocial <> '', RazaoSocial, fpDANFSe.Prestador.RazaoSocial);
       rllNumNF0Ent.Caption      := FormatFloat('00000000000', StrToFloatDef(Numero, 0));
       rllTomadorNomeEnt.Caption := ACBrStr('Emissão:') + FormatDateTime('dd/mm/yy',DataEmissao) +
                                          '-Tomador:'+Tomador.RazaoSocial+
@@ -576,9 +558,9 @@ begin
         else
           rllTomaCNPJ.Caption := FormatarCNPJ( CpfCnpj );
 
-        rllTomaInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal , fpDANFSe.T_InscMunicipal);
+        rllTomaInscMunicipal.Caption := IfThen( InscricaoMunicipal <> '' , InscricaoMunicipal , fpDANFSe.Tomador.InscricaoMunicipal);
 
-        rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> '', InscricaoEstadual, fpDANFSe.T_InscEstadual );
+        rllTomaInscEstadual.Caption := IfThen( InscricaoEstadual <> '', InscricaoEstadual, fpDANFSe.Tomador.InscricaoEstadual );
       end;
 
       with Endereco do
@@ -591,10 +573,10 @@ begin
                                       FormatarCEP(CEP);
         end
         else
-         rllTomaEndereco.Caption := Trim(fpDANFSe.T_Endereco) + ' - CEP: ' +
+         rllTomaEndereco.Caption := Trim(fpDANFSe.Tomador.Endereco) + ' - CEP: ' +
                                     FormatarCEP(CEP);
 
-        rllTomaComplemento.Caption := IfThen( Complemento <> '' , Complemento , fpDANFSe.T_Complemento);
+        rllTomaComplemento.Caption := IfThen( Complemento <> '' , Complemento , fpDANFSe.Tomador.Complemento);
 
         rllTomaMunicipio.Caption := CodigoMunicipio + ' - ' + xMunicipio;
         rllTomaUF.Caption        := UF;
@@ -602,8 +584,8 @@ begin
 
       with Contato do
       begin
-        rllTomaTelefone.Caption := IfThen( Telefone <> '' , FormatarFone(Telefone) , FormatarFone(fpDANFSe.T_Fone));
-        rllTomaEmail.Caption    := IfThen( Email    <> '' , Email , fpDANFSe.T_Email);
+        rllTomaTelefone.Caption := IfThen( Telefone <> '' , FormatarFone(Telefone) , FormatarFone(fpDANFSe.Tomador.Fone));
+        rllTomaEmail.Caption    := IfThen( Email    <> '' , Email , fpDANFSe.Tomador.Email);
       end;
 
       rllMsgTeste.Visible := (fpDANFSe.Producao = snNao);
@@ -628,7 +610,7 @@ begin
 
   RLNFSe.Title := 'NFS-e: ' + fpNFSe.Numero;
   TDFeReportFortes.AjustarMargem(RLNFSe, fpDANFSe);
-  rlbItens.Visible := Not(fpDANFSe.DetalharServico);
+  rlbItens.Visible := not (fpDANFSe.DetalharServico);
   rlbHeaderItensDetalhado.Visible := fpDANFSe.DetalharServico;
   subItens.Visible := fpDANFSe.DetalharServico;
 end;
@@ -638,19 +620,15 @@ procedure TfrlXDANFSeRLRetrato.subItensDataRecord(Sender: TObject;
    var RecordAction: TRLRecordAction);
 begin
   inherited;
-  FNumItem := RecNo - 1 ;
-  Eof := (RecNo > fpNFSe.Servico.ItemServico.Count) ;
-  RecordAction := raUseIt ;
+  FNumItem := RecNo - 1;
+  Eof := (RecNo > fpNFSe.Servico.ItemServico.Count);
+  RecordAction := raUseIt;
 end;
 
 Function TfrlXDANFSeRLRetrato.ManterAliquota( dAliquota : Double ) : String;
 begin
-  // thema precisa ser desta forma pois usa aliquota 2,5 => 0,025
-//  if (dAliquota > 0) and (dAliquota < 1) then
-//    Result := FormatFloat(',0.00', dAliquota * 100 )
-//  else
   // Agora a multiplicação por 100 é feita pela rotina que lê o XML.
-    Result := FormatFloat(',0.00', dAliquota );
+  Result := FormatFloat(',0.00', dAliquota );
 end;
 
 end.

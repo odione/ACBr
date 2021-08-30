@@ -41,6 +41,7 @@ interface
 
 uses
   SysUtils, Classes,
+  ACBrXmlBase,
   ACBrNFSeXClass, ACBrNFSeXConversao,
   ACBrNFSeXGravarXml, ACBrNFSeXLerXml,
   ACBrNFSeXProviderABRASFv1, ACBrNFSeXWebserviceBase;
@@ -96,14 +97,17 @@ begin
     NumMaxRpsGerar  := 1;
     NumMaxRpsEnviar := 50;
 
-    // filsComFormatacao, filsSemFormatacao, filsComFormatacaoSemZeroEsquerda
-    FormatoItemListaServico := filsComFormatacao;
-
     TabServicosExt := False;
     Identificador := 'Id';
+    QuebradeLinha := ';';
 
     // meLoteAssincrono, meLoteSincrono ou meUnitario
     ModoEnvio := meLoteAssincrono;
+
+    ConsultaSitLote := True;
+    ConsultaLote := True;
+    ConsultaNFSe := True;
+    ConsultaPorFaixa := False;
   end;
 
   // Inicializa os parâmetros de configuração: WebServices
@@ -123,6 +127,8 @@ begin
   begin
     // Usado na tag raiz dos XML de envio do Lote, Consultas, etc.
     Prefixo := '';
+
+    UsarNumLoteConsLote := False;
 
     DadosCabecalho := GetCabecalho('');
 
@@ -320,7 +326,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'EnviarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceModeloV1.ConsultarLote(ACabecalho, AMSG: String): string;
@@ -336,7 +342,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'ConsultarLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceModeloV1.ConsultarSituacao(ACabecalho, AMSG: String): string;
@@ -352,7 +358,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'ConsultarSituacaoLoteRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceModeloV1.ConsultarNFSePorRps(ACabecalho, AMSG: String): string;
@@ -368,7 +374,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'ConsultarNfseRpsResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceModeloV1.ConsultarNFSe(ACabecalho, AMSG: String): string;
@@ -384,7 +390,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'ConsultarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 function TACBrNFSeXWebserviceModeloV1.Cancelar(ACabecalho, AMSG: String): string;
@@ -400,7 +406,7 @@ begin
 
   Result := Executar('', Request,
                      ['outputXML', 'CancelarNfseResposta'],
-                     ['']);
+                     []);
 end;
 
 end.

@@ -41,6 +41,7 @@ interface
 
 uses
   SysUtils, Classes,
+  ACBrXmlBase,
   ACBrNFSeXClass, ACBrNFSeXConversao,
   ACBrNFSeXGravarXml, ACBrNFSeXLerXml,
   ACBrNFSeXProviderABRASFv2, ACBrNFSeXWebserviceBase;
@@ -100,14 +101,17 @@ begin
     NumMaxRpsGerar  := 1;
     NumMaxRpsEnviar := 50;
 
-    // filsComFormatacao, filsSemFormatacao, filsComFormatacaoSemZeroEsquerda
-    FormatoItemListaServico := filsComFormatacao;
-
     TabServicosExt := False;
     Identificador := 'Id';
+    QuebradeLinha := ';';
 
     // meLoteAssincrono, meLoteSincrono ou meUnitario
     ModoEnvio := meLoteSincrono;
+
+    ConsultaSitLote := False;
+    ConsultaLote := True;
+    ConsultaNFSe := True;
+    ConsultaPorFaixa := True;
   end;
 
   // Inicializa os parâmetros de configuração: WebServices
@@ -127,6 +131,8 @@ begin
   begin
     // Usado na tag raiz dos XML de envio do Lote, Consultas, etc.
     Prefixo := '';
+
+    UsarNumLoteConsLote := False;
 
     DadosCabecalho := GetCabecalho('');
 

@@ -85,7 +85,7 @@ begin
   begin
     QuebradeLinha := '\n';
     ModoEnvio := meLoteAssincrono;
-    FormatoItemListaServico := filsComFormatacaoSemZeroEsquerda;
+    ConsultaNFSe := False;
   end;
 
   with ConfigAssinar do

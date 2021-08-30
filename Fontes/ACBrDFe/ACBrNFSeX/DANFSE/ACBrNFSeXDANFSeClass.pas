@@ -42,41 +42,91 @@ uses
   ACBrNFSeXClass, ACBrNFSeXConversao;
 
 type
+  { TPrestadorConfig }
   {$IFDEF RTL230_UP}
   [ComponentPlatformsAttribute(piacbrAllPlatforms)]
   {$ENDIF RTL230_UP}
- TACBrNFSeXDANFSeClass = class(TACBrDFeReport)
+  TPrestadorConfig = class(TComponent)
+  private
+    FRazaoSocial: String;
+    FNomeFantasia: String;
+    FInscMunicipal: String;
+    FCNPJ: String;
+    FEndereco : String;
+    FComplemento : String;
+    FMunicipio : String;
+    FUF : String;
+    FEMail: String;
+    FFone : String;
+    FLogo: String;
+
+  public
+    constructor Create(AOwner: TComponent); override;
+
+  published
+    property RazaoSocial: String read FRazaoSocial write FRazaoSocial;
+    property NomeFantasia: String read FNomeFantasia write FNomeFantasia;
+    property InscricaoMunicipal: String read FInscMunicipal write FInscMunicipal;
+    property CNPJ: String read FCNPJ write FCNPJ;
+    property Endereco: String read FEndereco write FEndereco;
+    property Complemento: String read FComplemento write FComplemento;
+    property Municipio: String read FMunicipio write FMunicipio;
+    property UF: String read FUF write FUF;
+    property Fone: String read FFone write FFone;
+    property EMail: String read FEMail write FEMail;
+    property Logo: String read FLogo write FLogo;
+
+  end;
+
+  { TTomadorConfig }
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(piacbrAllPlatforms)]
+  {$ENDIF RTL230_UP}
+  TTomadorConfig = class(TComponent)
+  private
+    FInscEstadual : String;
+    FInscMunicipal : String;
+    FFone          : String;
+    FEndereco      : String;
+    FComplemento   : String;
+    FEmail         : String;
+
+  public
+    constructor Create(AOwner: TComponent); override;
+
+  published
+    property InscricaoEstadual: String read FInscEstadual write FInscEstadual;
+    property InscricaoMunicipal: String read FInscMunicipal write FInscMunicipal;
+    property Fone: String read FFone write FFone;
+    property Endereco: String read FEndereco write FEndereco;
+    property Complemento: String read FComplemento write FComplemento;
+    property Email: String read FEmail write FEmail;
+
+  end;
+
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(piacbrAllPlatforms)]
+  {$ENDIF RTL230_UP}
+  TACBrNFSeXDANFSeClass = class(TACBrDFeReport)
   private
     FProducao: TnfseSimNao;
     procedure SetACBrNFSe(const Value: TComponent);
     procedure ErroAbstract( const NomeProcedure: String );
+
   protected
     FACBrNFSe: TComponent;
-    FPrestLogo: String;
     FPrefeitura: String;
-    FRazaoSocial: String;
-    FEndereco : String;
-    FComplemento : String;
-    FFone : String;
-    FMunicipio : String;
     FOutrasInformacaoesImp : String;
-    FInscMunicipal : String;
-    FT_InscEstadual : String;
-    FT_InscMunicipal : String;
-    FT_Fone          : String;
-    FT_Endereco      : String;
-    FT_Complemento   : String;
-    FT_Email         : String;
-    FEMail_Prestador : String;
-    FCNPJ_Prestador  : String;
     FFormatarNumeroDocumentoNFSe  : Boolean;
-    FUF : String;
     FAtividade : String;
     FNFSeCancelada: boolean;
     FImprimeCanhoto: Boolean;
     FTipoDANFSE: TTipoDANFSE;
     FProvedor: TNFSeProvedor;
     FTamanhoFonte: Integer;
+    FPrestador: TPrestadorConfig;
+    FTomador: TTomadorConfig;
+
 
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function GetSeparadorPathPDF(const aInitialPath: String): String; override;
@@ -85,41 +135,24 @@ type
     destructor Destroy; override;
     procedure VisualizarDANFSe(NFSe: TNFSe = nil); virtual;
     procedure ImprimirDANFSe(NFSe: TNFSe = nil); virtual;
-    procedure ImprimirDANFSePDF(NFSe: TNFSe = nil); virtual;
+    procedure ImprimirDANFSePDF(NFSe: TNFSe = nil); overload; virtual;
+    procedure ImprimirDANFSePDF(AStream: TStream; NFSe: TNFSe = nil); overload; virtual;
 
   published
     property ACBrNFSe: TComponent  read FACBrNFSe write SetACBrNFSe;
-    property PrestLogo: String read FPrestLogo write FPrestLogo;
-    property Prefeitura: String read FPrefeitura write FPrefeitura;
-
-    property RazaoSocial: String read FRazaoSocial write FRazaoSocial;
-    property UF: String read FUF write FUF;
-    property Endereco: String read FEndereco write FEndereco;
-    property Complemento: String read FComplemento write FComplemento;
-    property Fone: String read FFone write FFone;
-    property Municipio: String read FMunicipio write FMunicipio;
+    property Prestador: TPrestadorConfig read FPrestador;
+    property Tomador: TTomadorConfig read FTomador;
     property OutrasInformacaoesImp: String read FOutrasInformacaoesImp write FOutrasInformacaoesImp;
-    property InscMunicipal: String read FInscMunicipal write FInscMunicipal;
-    property EMail_Prestador: String read FEMail_Prestador write FEMail_Prestador;
-    property CNPJ_Prestador: String read FCNPJ_Prestador write FCNPJ_Prestador;
-
-    property T_InscEstadual: String read FT_InscEstadual write FT_InscEstadual;
-    property T_InscMunicipal: String read FT_InscMunicipal write FT_InscMunicipal;
-    property T_Fone: String read FT_Fone write FT_Fone;
-
-    property T_Endereco: String read FT_Endereco write FT_Endereco;
-    property T_Complemento: String read FT_Complemento write FT_Complemento;
-    property T_Email: String read FT_Email write FT_Email;
-
+    property Prefeitura: String read FPrefeitura write FPrefeitura;
     property Atividade: String read FAtividade write FAtividade;
     property Cancelada: Boolean read FNFSeCancelada write FNFSeCancelada;
     property ImprimeCanhoto: Boolean read FImprimeCanhoto write FImprimeCanhoto default False;
-
     property TipoDANFSE: TTipoDANFSE read FTipoDANFSE   write FTipoDANFSE default tpPadrao;
     property Provedor: TNFSeProvedor read FProvedor     write FProvedor;
     property TamanhoFonte: Integer   read FTamanhoFonte write FTamanhoFonte;
     property FormatarNumeroDocumentoNFSe: Boolean read FFormatarNumeroDocumentoNFSe write FFormatarNumeroDocumentoNFSe;
     property Producao: TnfseSimNao   read FProducao     write FProducao;
+
   end;
 
 implementation
@@ -127,41 +160,67 @@ implementation
 uses
   ACBrNFSeX, ACBrUtil;
 
+{ TPrestadorConfig }
+constructor TPrestadorConfig.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+
+  RazaoSocial := '';
+  Endereco := '';
+  Complemento := '';
+  Fone := '';
+  Municipio := '';
+  InscricaoMunicipal := '';
+  EMail := '';
+  Logo := '';
+  UF := '';
+end;
+
+{ TTomadorConfig }
+constructor TTomadorConfig.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+
+  Fone := '';
+  Endereco := '';
+  Complemento := '';
+  Email := '';
+  InscricaoEstadual := '';
+  InscricaoMunicipal := '';
+end;
+
 { TACBrNFSeXDANFSeClass }
 
 constructor TACBrNFSeXDANFSeClass.Create(AOwner: TComponent);
 begin
   inherited create( AOwner );
 
-  FACBrNFSe       := nil;
-  FPrestLogo      := '';
-  FPrefeitura     := '';
-  FRazaoSocial    := '';
-  FEndereco       := '';
-  FComplemento    := '';
-  FFone           := '';
-  FMunicipio      := '';
-  FTamanhoFonte   := 6;
+  FACBrNFSe := nil;
 
+  FPrestador := TPrestadorConfig.Create(Self);
+  FPrestador.Name := 'Prestador';
+
+  FTomador := TTomadorConfig.Create(Self);
+  FTomador.Name := 'Tomador';
+
+  {$IFDEF COMPILER6_UP}
+  FPrestador.SetSubComponent(True);{ para gravar no DFM/XFM }
+  FTomador.SetSubComponent(True);{ para gravar no DFM/XFM }
+  {$ENDIF}
+
+  FPrefeitura := '';
+  FTamanhoFonte := 6;
   FOutrasInformacaoesImp := '';
-  FInscMunicipal         := '';
-  FEMail_Prestador       := '';
-  FUF                    := '';
-  FT_InscEstadual        := '';
-  FT_InscMunicipal       := '';
-  FAtividade             := '';
-  FT_Fone                := '';
-  FT_Endereco            := '';
-  FT_Complemento         := '';
-  FT_Email               := '';
+  FAtividade := '';
   FFormatarNumeroDocumentoNFSe := True;
   FNFSeCancelada := False;
-
   FProvedor := proNenhum;
 end;
 
 destructor TACBrNFSeXDANFSeClass.Destroy;
 begin
+  FPrestador.Free;
+  FTomador.Free;
 
   inherited Destroy;
 end;
@@ -252,6 +311,11 @@ begin
 end;
 
 procedure TACBrNFSeXDANFSeClass.ImprimirDANFSePDF(NFSe: TNFSe);
+begin
+  ErroAbstract('ImprimirDANFSePDF');
+end;
+
+procedure TACBrNFSeXDANFSeClass.ImprimirDANFSePDF(AStream: TStream; NFSe: TNFSe);
 begin
   ErroAbstract('ImprimirDANFSePDF');
 end;

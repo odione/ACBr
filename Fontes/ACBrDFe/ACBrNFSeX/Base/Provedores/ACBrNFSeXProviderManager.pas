@@ -121,8 +121,10 @@ uses
   SiapSistemas.Provider,
   SigCorp.Provider,
   Sigep.Provider,
+  Sintese.Provider,
   SisPMJP.Provider,
   Sistemas4R.Provider,
+  Sudoeste.Provider,
   SystemPro.Provider,
   TcheInfo.Provider,
   Tecnos.Provider,
@@ -161,6 +163,7 @@ uses
   Lencois.Provider,
   Siat.Provider,
   SigISS.Provider,
+  Simple.Provider,
   SP.Provider,
   WebFisco.Provider;
 
@@ -282,9 +285,11 @@ begin
       Result := TACBrNFSeProviderSilTecnologiaV203.Create(ACBrNFSe);
 
     proSimplISS_2:   Result := TACBrNFSeProviderSimplISSv2.Create(ACBrNFSe);
+    proSintese:      Result := TACBrNFSeProviderSintese.Create(ACBrNFSe);
     proSisPMJP:      Result := TACBrNFSeProviderSisPMJP.Create(ACBrNFSe);
     proSmarAPD_203:  Result := TACBrNFSeProviderSmarAPDv203.Create(ACBrNFSe);
     proSmarAPD_204:  Result := TACBrNFSeProviderSmarAPDv204.Create(ACBrNFSe);
+    proSudoeste:     Result := TACBrNFSeProviderSudoeste.Create(ACBrNFSe);
     proSystemPro:    Result := TACBrNFSeProviderSystemPro.Create(ACBrNFSe);
     proTcheInfo_2:   Result := TACBrNFSeProviderTcheInfo.Create(ACBrNFSe);
     proTecnos:       Result := TACBrNFSeProviderTecnos.Create(ACBrNFSe);
@@ -330,7 +335,7 @@ begin
 
     proIPM:     Result := TACBrNFSeProviderIPM.Create(ACBrNFSe);
     proIPM_110: Result := TACBrNFSeProviderIPMV110.Create(ACBrNFSe);
-    proIPM_A:   Result := TACBrNFSeProviderIPMa.Create(ACBrNFSe);
+    proIPM_120: Result := TACBrNFSeProviderIPMV120.Create(ACBrNFSe);
     proISSDSF:  Result := TACBrNFSeProviderISSDSF.Create(ACBrNFSe);
     proLencois: Result := TACBrNFSeProviderLencois.Create(ACBrNFSe);
     proSiat:    Result := TACBrNFSeProviderSiat.Create(ACBrNFSe);
@@ -339,6 +344,7 @@ begin
     proSigISS_103:
       Result := TACBrNFSeProviderSigISS_103.Create(ACBrNFSe);
 
+    proSimple:  Result := TACBrNFSeProviderSimple.Create(ACBrNFSe);
     proSmarAPD: Result := TACBrNFSeProviderSmarAPD.Create(ACBrNFSe);
     proSP:      Result := TACBrNFSeProviderSP.Create(ACBrNFSe);
 

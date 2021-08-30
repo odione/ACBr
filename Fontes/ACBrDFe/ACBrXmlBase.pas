@@ -67,7 +67,10 @@ function XmlToStr(const AXML: string): string;
 function StrToXml(const AXML: string): string;
 function IncluirCDATA(const aXML: string): string;
 function RemoverCDATA(const aXML: string): string;
-function TratarRetorno(const aXML: string): string;
+function ConverterUnicode(const aXML: string): string;
+function TratarXmlRetorno(const aXML: string): string;
+function RemoverPrefixos(const aXML: string; APrefixo: array of string): string;
+function RemoverPrefixosDesnecessarios(const aXML: string): string;
 
 function ProcessarConteudoXml(const ANode: TACBrXmlNode; const Tipo: TACBrTipoCampo): variant;
 
@@ -170,14 +173,54 @@ begin
   Result := StringReplace(Result, ']]>', '', [rfReplaceAll]);
 end;
 
-function TratarRetorno(const aXML: string): string;
+function ConverterUnicode(const aXML: string): string;
+var
+  Xml: string;
+  p: Integer;
+begin
+  Xml := aXML;
+  p := Pos('&#', Xml);
+
+  while p > 0 do
+  begin
+    if Xml[p+5] = ';' then
+      Xml := StringReplace(Xml, Copy(Xml, p, 6), '\' + Copy(Xml, p+2, 3), [rfReplaceAll])
+    else
+      Xml := StringReplace(Xml, Copy(Xml, p, 5), '\' + Copy(Xml, p+2, 3), [rfReplaceAll]);
+
+    p := Pos('&#', Xml);
+  end;
+
+  Result := StringToBinaryString(Xml);
+end;
+
+function TratarXmlRetorno(const aXML: string): string;
 begin
   Result := StrToXml(aXML);
   Result := RemoverCDATA(Result);
   Result := RemoverDeclaracaoXML(Result);
-  Result := ConverteXMLtoUTF8(Result);
-  Result := RemoverDeclaracaoXML(Result);
   Result := RemoverIdentacao(Result);
+  Result := RemoverPrefixosDesnecessarios(Result);
+end;
+
+function RemoverPrefixos(const aXML: string; APrefixo: array of string): string;
+var
+  i: Integer;
+begin
+  Result := aXML;
+
+  if (Result = '') or (Length(APrefixo) = 0) then
+    exit ;
+
+  for i := Low(APrefixo) to High(APrefixo) do
+    Result := StringReplace(StringReplace(Result, '<' + APrefixo[i], '<', [rfReplaceAll]),
+                          '</' + APrefixo[i], '</', [rfReplaceAll]);
+end;
+
+function RemoverPrefixosDesnecessarios(const aXML: string): string;
+begin
+  Result := RemoverPrefixos(aXML, ['ns1:', 'ns2:', 'ns3:', 'ns4:', 'ns5:', 'tc:',
+              'ii:', 'p1:']);
 end;
 
 function ProcessarConteudoXml(const ANode: TACBrXmlNode; const Tipo: TACBrTipoCampo): variant;
@@ -190,45 +233,48 @@ begin
     ConteudoTag := Trim(ANode.Content);
 
   case Tipo of
-    tcStr:
+    tcStr,
+    tcEsp:
       result := ConteudoTag;
 
     tcDat:
       begin
-        if length(ConteudoTag)>0 then
-          result := EncodeDate(StrToInt(copy(ConteudoTag, 01, 4)), StrToInt(copy(ConteudoTag, 06, 2)), StrToInt(copy(ConteudoTag, 09, 2)))
+        if length(ConteudoTag) > 0 then
+          result := EncodeDate(StrToInt(copy(ConteudoTag, 1, 4)), StrToInt(copy(ConteudoTag, 6, 2)), StrToInt(copy(ConteudoTag, 9, 2)))
         else
           result := 0;
       end;
 
     tcDatVcto:
       begin
-        if length(ConteudoTag)>0 then
-          result := EncodeDate(StrToInt(copy(ConteudoTag, 07, 4)), StrToInt(copy(ConteudoTag, 04, 2)), StrToInt(copy(ConteudoTag, 01, 2)))
+        if length(ConteudoTag) > 0 then
+          result := EncodeDate(StrToInt(copy(ConteudoTag, 7, 4)), StrToInt(copy(ConteudoTag, 4, 2)), StrToInt(copy(ConteudoTag, 1, 2)))
         else
           Result := 0;
       end;
 
     tcDatCFe:
       begin
-        if length(ConteudoTag)>0 then
-          result := EncodeDate(StrToInt(copy(ConteudoTag, 01, 4)), StrToInt(copy(ConteudoTag, 05, 2)), StrToInt(copy(ConteudoTag, 07, 2)))
+        if length(ConteudoTag) > 0 then
+          result := EncodeDate(StrToInt(copy(ConteudoTag, 1, 4)), StrToInt(copy(ConteudoTag, 5, 2)), StrToInt(copy(ConteudoTag, 7, 2)))
         else
           result := 0;
       end;
 
     tcDatHor:
       begin
-        if length(ConteudoTag)>0 then
-          result := EncodeDate(StrToInt(copy(ConteudoTag, 01, 4)), StrToInt(copy(ConteudoTag, 06, 2)), StrToInt(copy(ConteudoTag, 09, 2))) +
-                    EncodeTime(StrToInt(copy(ConteudoTag, 12, 2)), StrToInt(copy(ConteudoTag, 15, 2)), StrToIntDef(copy(ConteudoTag, 18, 2), 0), 0)
+        if length(ConteudoTag) > 0 then
+          result := EncodeDate(StrToInt(copy(ConteudoTag, 1, 4)), StrToInt(copy(ConteudoTag, 6, 2)), StrToInt(copy(ConteudoTag, 9, 2))) +
+                    EncodeTime(StrToIntDef(copy(ConteudoTag, 12, 2), 0),
+                               StrToIntDef(copy(ConteudoTag, 15, 2), 0),
+                               StrToIntDef(copy(ConteudoTag, 18, 2), 0), 0)
         else
           result := 0;
       end;
 
     tcHor:
       begin
-        if length(ConteudoTag)>0 then
+        if length(ConteudoTag) > 0 then
           result := EncodeTime(StrToInt(copy(ConteudoTag, 1, 2)), StrToInt(copy(ConteudoTag, 4, 2)), StrToInt(copy(ConteudoTag, 7, 2)), 0)
         else
           result := 0;
@@ -236,7 +282,7 @@ begin
 
     tcHorCFe:
       begin
-        if length(ConteudoTag)>0 then
+        if length(ConteudoTag) > 0 then
           result := EncodeTime(StrToInt(copy(ConteudoTag, 1, 2)), StrToInt(copy(ConteudoTag, 3, 2)), StrToInt(copy(ConteudoTag, 5, 2)), 0)
         else
           result := 0;
@@ -244,28 +290,25 @@ begin
 
     tcDatHorCFe:
       begin
-        if length(ConteudoTag)>0 then
-          result := EncodeDate(StrToInt(copy(ConteudoTag, 01, 4)), StrToInt(copy(ConteudoTag, 05, 2)), StrToInt(copy(ConteudoTag, 07, 2)))+
-                    EncodeTime(StrToInt(copy(ConteudoTag, 09, 2)), StrToInt(copy(ConteudoTag, 11, 2)), StrToInt(copy(ConteudoTag, 13, 2)), 0)
+        if length(ConteudoTag) > 0 then
+          result := EncodeDate(StrToInt(copy(ConteudoTag, 1, 4)), StrToInt(copy(ConteudoTag, 05, 2)), StrToInt(copy(ConteudoTag, 07, 2))) +
+                    EncodeTime(StrToInt(copy(ConteudoTag, 9, 2)), StrToInt(copy(ConteudoTag, 11, 2)), StrToInt(copy(ConteudoTag, 13, 2)), 0)
         else
           result := 0;
       end;
 
     tcDe2, tcDe3, tcDe4, tcDe6, tcDe10:
       begin
-        if length(ConteudoTag)>0 then
+        if length(ConteudoTag) > 0 then
           result := StringToFloatDef(ConteudoTag, 0)
         else
           result := 0;
       end;
 
-    tcEsp:
-      result := ConteudoTag;
-
     tcInt:
       begin
-        if length(ConteudoTag)>0 then
-          result := StrToIntDef(Trim(OnlyNumber(ConteudoTag)),0)
+        if length(ConteudoTag) > 0 then
+          result := StrToIntDef(Trim(OnlyNumber(ConteudoTag)), 0)
         else
           result := 0;
       end;

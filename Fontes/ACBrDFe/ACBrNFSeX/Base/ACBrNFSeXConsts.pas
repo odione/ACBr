@@ -121,6 +121,10 @@ const
   Desc117 = 'Código de Verificação/Validação não informado.';
   Cod118 = 'X118';
   Desc118	= 'Chave da NFSe não informada.';
+  Cod119 = 'X119';
+  Desc119	= 'Emitente.WSUser não informado.';
+  Cod120 = 'X120';
+  Desc120	= 'Emitente.WSSenha não informada.';
 
   Cod201 = 'X201';
   Desc201 = 'WebService retornou um XML vazio.';
@@ -138,6 +142,11 @@ const
   Desc207 = 'Nfse Substituidora não encontrada.';
   Cod208 = 'X208';
   Desc208	= 'Não foi retornado nenhum Rps.';
+
+  Cod209 = 'X209';
+  Desc209 = 'Retorno do Cancelamento não encontrada.';
+  Cod210 = 'X210';
+  Desc210 = 'Nfse do Cancelamento não encontrada.';
 
   Cod999 = 'X999';
 

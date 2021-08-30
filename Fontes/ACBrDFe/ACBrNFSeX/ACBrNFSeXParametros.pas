@@ -57,12 +57,18 @@ type
     FNumMaxRpsGerar: integer;
     // define o numero maximo de Rps a serem incluidos no EnviarLoteRpsEnvio e EnviarLoteRpsSincronoEnvio
     FNumMaxRpsEnviar: integer;
-    // define o formato que o código do ItemListaServico deve ser gerado
-    FFormItemLServico: TFormatoItemListaServico;
     // define se vai ser utilizado uma tabela externa de serviço ou não
     FTabServicosExt: Boolean;
     // define o modo de envio dos Rps para o webservice
     FModoEnvio: TmodoEnvio;
+    // define se vai consultar a situação do lote ou não, após o envio
+    FConsultaSitLote: Boolean;
+    // define se vai consultar o lote ou não, após o envio
+    FConsultaLote: Boolean;
+    // define se vai consultar a NFS-e ou não, após o cancelamento
+    FConsultaNFSe: Boolean;
+    // define se vai consultar a NFS-e por faixa ou não, após o cancelamento
+    FConsultaPorFaixa: Boolean;
     // uso diverso
     FParams1: string;
     // uso diverso
@@ -78,9 +84,12 @@ type
     property UseAuthorizationHeader: boolean read FUseAuthorizationHeader write FUseAuthorizationHeader;
     property NumMaxRpsGerar: integer read FNumMaxRpsGerar write FNumMaxRpsGerar;
     property NumMaxRpsEnviar: integer read FNumMaxRpsEnviar write FNumMaxRpsEnviar;
-    property FormatoItemListaServico: TFormatoItemListaServico read FFormItemLServico write FFormItemLServico;
     property TabServicosExt: Boolean read FTabServicosExt write FTabServicosExt;
     property ModoEnvio: TmodoEnvio read FModoEnvio write FModoEnvio;
+    property ConsultaSitLote: Boolean read FConsultaSitLote write FConsultaSitLote;
+    property ConsultaLote: Boolean read FConsultaLote write FConsultaLote;
+    property ConsultaNFSe: Boolean read FConsultaNFSe write FConsultaNFSe;
+    property ConsultaPorFaixa: Boolean read FConsultaPorFaixa write FConsultaPorFaixa;
     // Parametros lidos no arquivo .Res ou .ini
     property Params1: string read FParams1;
     property Params2: string read FParams2;
@@ -173,7 +182,9 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure LoadUrl(AINI: TCustomIniFile; ASession: string);
+    procedure LoadUrlProducao(AINI: TCustomIniFile; ASession: string);
+    procedure LoadUrlHomologacao(AINI: TCustomIniFile; ASession: string);
+    procedure HomologacaoIgualProducao(AINI: TCustomIniFile; ASession: string);
 
     property VersaoDados: string read FVersaoDados write FVersaoDados;
     property VersaoAtrib: string read FVersaoAtrib write FVersaoAtrib;
@@ -202,29 +213,52 @@ type
   { TConfigMsgDados }
   TConfigMsgDados = class
   private
+    // Alguns provedores como o Ginfes existem a presença de prefixo nas tags
     FPrefixo: String;
+    // Prefixo para Tipo Simples usado na montagem do XML de envio
     FPrefixoTS: String;
+    // Contem o XML do cabeçalho exigido por alguns provedores
     FDadosCabecalho: String;
 
+    // Contem a definição dos campos TDocElement para o XML do Rps
     FXmlRps: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Lote Rps
     FLoteRps: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Lote Rps Sincrono
     FLoteRpsSincrono: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a Situação
     FConsultarSituacao: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta ao Lote
     FConsultarLote: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFSe por Rps
     FConsultarNFSeRps: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFS-e
     FConsultarNFSe: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFS-e por Faixa
     FConsultarNFSePorFaixa: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFS-e Serviço Prestado
     FConsultarNFSeServicoPrestado: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFS-e Serviço Tomado
     FConsultarNFSeServicoTomado: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Consulta a NFS-e URL
     FConsultarNFSeURL: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Cancelamento da NFS-e
     FCancelarNFSe: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Gerar NFS-e
     FGerarNFSe: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML da Substituição da NFS-e
     FSubstituirNFSe: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Abrir Sessão
     FAbrirSessao: TDocElement;
+    // Contem a definição dos campos TDocElement para o XML do Fechar Sessão
     FFecharSessao: TDocElement;
 
+    // Se True gera o namespace no Lote de Rps
     FGerarNSLoteRps: Boolean;
+    // Se True gera o Prestador no Lote de Rps
     FGerarPrestadorLoteRps: Boolean;
+    // Se True gera o grupo <NumeroLote> ao Consultar a Situação e o Lote
+    FUsarNumLoteConsLote: Boolean;
 
   public
     constructor Create;
@@ -253,28 +287,47 @@ type
 
     property GerarNSLoteRps: Boolean read FGerarNSLoteRps write FGerarNSLoteRps;
     property GerarPrestadorLoteRps: Boolean read FGerarPrestadorLoteRps write FGerarPrestadorLoteRps;
+    property UsarNumLoteConsLote: Boolean read FUsarNumLoteConsLote write FUsarNumLoteConsLote;
   end;
 
   { TConfigAssinar }
   TConfigAssinar = class
   private
+    // Se True assina o Rps
     FRps: boolean;
+    // Se True assina o Lote de Rps
     FLoteRps: boolean;
+    // Se True assina a Consulta a Situação
     FConsultarSituacao: boolean;
+    // Se True assina a Consulta ao Lote
     FConsultarLote: boolean;
+    // Se True assina a Consulta a NFS-e por Rps
     FConsultarNFSeRps: boolean;
+    // Se True assina a Consulta a NFS-e
     FConsultarNFSe: boolean;
+    // Se True assina a Consulta a NFS-e por Faixa
     FConsultarNFSePorFaixa: boolean;
+    // Se True assina a Consulta a NFS-e Serviço Prestado
     FConsultarNFSeServicoPrestado: boolean;
+    // Se True assina a Consulta a NFS-e Serviço Tomado
     FConsultarNFSeServicoTomado: boolean;
+    // Se True assina o Cancelamento da NFS-e
     FCancelarNFSe: boolean;
+    // Se True assina o Rps do Gerar NFS-e
     FRpsGerarNFSe: boolean;
+    // Se True assina o Lote do Gerar NFS-e
     FLoteGerarNFSe: boolean;
+    // Se True assina o Rps do Substituir NFS-e
     FRpsSubstituirNFSe: boolean;
+    // Se True assina o Substituir NFS-e
     FSubstituirNFSe: boolean;
+    // Se True assina o Abrir Sessão
     FAbrirSessao: boolean;
+    // Se True assina o Fechar Sessão
     FFecharSessao: boolean;
+    // Se True Incluir o valor de ID na URI da assinatura
     FIncluirURI: boolean;
+    // Se True gera uma assinatura adicional
     FAssinaturaAdicional: boolean;
 
   public
@@ -302,22 +355,39 @@ type
   { TConfigSchemas }
   TConfigSchemas = class
   private
+    // Nome do arquivo XSD para validar o Recepcionar (Envio do Lote de Rps)
     FRecepcionar: string;
+    // Nome do arquivo XSD para validar o Consultar Situação
     FConsultarSituacao: string;
+    // Nome do arquivo XSD para validar o Consultar Lote
     FConsultarLote: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe por Rps
     FConsultarNFSeRps: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe
     FConsultarNFSe: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe URL
     FConsultarNFSeURL: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe por Faixa
     FConsultarNFSePorFaixa: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe Serviço Prestado
     FConsultarNFSeServicoPrestado: string;
+    // Nome do arquivo XSD para validar o Consultar NFSe Serviço Tomado
     FConsultarNFSeServicoTomado: string;
+    // Nome do arquivo XSD para validar o Cancelar NFSe
     FCancelarNFSe: string;
+    // Nome do arquivo XSD para validar o Gerar NFSe
     FGerarNFSe: string;
+    // Nome do arquivo XSD para validar o Recepcionar Sincrono (Envio do Lote de Rps)
     FRecepcionarSincrono: string;
+    // Nome do arquivo XSD para validar o Substituir NFSe
     FSubstituirNFSe: string;
+    // Nome do arquivo XSD para validar o Abrir Sessão
     FAbrirSessao: string;
+    // Nome do arquivo XSD para validar o Fechar Sessão
     FFecharSessao: string;
+    // Nome do arquivo XSD para validar o Teste de Envio
     FTeste: string;
+    // Se True realiza a validação do XML com os Schemas
     FValidar: boolean;
 
   public
@@ -359,7 +429,39 @@ begin
   inherited Destroy;
 end;
 
-procedure TConfigWebServices.LoadUrl(AINI: TCustomIniFile; ASession: string);
+procedure TConfigWebServices.LoadUrlHomologacao(AINI: TCustomIniFile;
+  ASession: string);
+begin
+  with Homologacao do
+  begin
+    FRecepcionar         := AINI.ReadString(ASession, 'HomRecepcionar'        , '');
+    FConsultarSituacao   := AINI.ReadString(ASession, 'HomConsultarSituacao'  , FRecepcionar);
+    FConsultarLote       := AINI.ReadString(ASession, 'HomConsultarLote'      , FRecepcionar);
+    FConsultarNFSeRPS    := AINI.ReadString(ASession, 'HomConsultarNFSeRps'   , FRecepcionar);
+    FConsultarNFSe       := AINI.ReadString(ASession, 'HomConsultarNFSe'      , FRecepcionar);
+    FConsultarNFSeURL    := AINI.ReadString(ASession, 'HomConsultarNFSeURL'   , FRecepcionar);
+    FCancelarNFSe        := AINI.ReadString(ASession, 'HomCancelarNFSe'       , FRecepcionar);
+    FGerarNFSe           := AINI.ReadString(ASession, 'HomGerarNFSe'          , FRecepcionar);
+    FRecepcionarSincrono := AINI.ReadString(ASession, 'HomRecepcionarSincrono', FRecepcionar);
+    FSubstituirNFSe      := AINI.ReadString(ASession, 'HomSubstituirNFSe'     , FRecepcionar);
+    FAbrirSessao         := AINI.ReadString(ASession, 'HomAbrirSessao'        , FRecepcionar);
+    FFecharSessao        := AINI.ReadString(ASession, 'HomFecharSessao'       , FRecepcionar);
+
+    FConsultarNFSePorFaixa        := AINI.ReadString(ASession, 'HomConsultarNFSePorFaixa'       , FRecepcionar);
+    FConsultarNFSeServicoPrestado := AINI.ReadString(ASession, 'HomConsultarNFSeServicoPrestado', FRecepcionar);
+    FConsultarNFSeServicoTomado   := AINI.ReadString(ASession, 'HomConsultarNFSeServicoTomado'  , FRecepcionar);
+
+    FXMLNameSpace := AINI.ReadString(ASession, 'HomXMLNameSpace', '');
+
+    FNameSpace := AINI.ReadString(ASession, 'HomNameSpace', '');
+
+    FSoapAction := AINI.ReadString(ASession, 'HomSoapAction', '');
+
+    FLinkURL := AINI.ReadString(ASession, 'HomLinkURL', '');
+  end;
+end;
+
+procedure TConfigWebServices.LoadUrlProducao(AINI: TCustomIniFile; ASession: string);
 begin
   with Producao do
   begin
@@ -388,34 +490,13 @@ begin
 
     FLinkURL := AINI.ReadString(ASession, 'ProLinkURL', '');
   end;
+end;
 
+procedure TConfigWebServices.HomologacaoIgualProducao(AINI: TCustomIniFile;
+  ASession: string);
+begin
   with Homologacao do
   begin
-    FRecepcionar         := AINI.ReadString(ASession, 'HomRecepcionar'        , '');
-    FConsultarSituacao   := AINI.ReadString(ASession, 'HomConsultarSituacao'  , FRecepcionar);
-    FConsultarLote       := AINI.ReadString(ASession, 'HomConsultarLote'      , FRecepcionar);
-    FConsultarNFSeRPS    := AINI.ReadString(ASession, 'HomConsultarNFSeRps'   , FRecepcionar);
-    FConsultarNFSe       := AINI.ReadString(ASession, 'HomConsultarNFSe'      , FRecepcionar);
-    FConsultarNFSeURL    := AINI.ReadString(ASession, 'HomConsultarNFSeURL'   , FRecepcionar);
-    FCancelarNFSe        := AINI.ReadString(ASession, 'HomCancelarNFSe'       , FRecepcionar);
-    FGerarNFSe           := AINI.ReadString(ASession, 'HomGerarNFSe'          , FRecepcionar);
-    FRecepcionarSincrono := AINI.ReadString(ASession, 'HomRecepcionarSincrono', FRecepcionar);
-    FSubstituirNFSe      := AINI.ReadString(ASession, 'HomSubstituirNFSe'     , FRecepcionar);
-    FAbrirSessao         := AINI.ReadString(ASession, 'HomAbrirSessao'        , FRecepcionar);
-    FFecharSessao        := AINI.ReadString(ASession, 'HomFecharSessao'       , FRecepcionar);
-
-    FConsultarNFSePorFaixa        := AINI.ReadString(ASession, 'HomConsultarNFSePorFaixa'       , FRecepcionar);
-    FConsultarNFSeServicoPrestado := AINI.ReadString(ASession, 'HomConsultarNFSeServicoPrestado', FRecepcionar);
-    FConsultarNFSeServicoTomado   := AINI.ReadString(ASession, 'HomConsultarNFSeServicoTomado'  , FRecepcionar);
-
-    FXMLNameSpace := AINI.ReadString(ASession, 'HomXMLNameSpace', '');
-
-    FNameSpace := AINI.ReadString(ASession, 'HomNameSpace', '');
-
-    FSoapAction := AINI.ReadString(ASession, 'HomSoapAction', '');
-
-    FLinkURL := AINI.ReadString(ASession, 'HomLinkURL', '');
-
     if FRecepcionar = '' then
     begin
       FRecepcionar         := Producao.Recepcionar;

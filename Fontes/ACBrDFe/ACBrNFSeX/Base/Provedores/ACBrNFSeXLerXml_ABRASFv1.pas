@@ -41,7 +41,7 @@ uses
   LResources, Controls, Graphics, Dialogs,
 {$ENDIF}
   SysUtils, Classes, StrUtils,
-  ACBrUtil,
+  ACBrUtil, ACBrConsts,
   ACBrXmlBase, ACBrXmlDocument,
   ACBrNFSeXParametros, ACBrNFSeXLerXml, ACBrNFSeXConversao;
 
@@ -51,10 +51,7 @@ type
   TNFSeR_ABRASFv1 = class(TNFSeRClass)
   private
 
-    procedure SetxItemListaServico(Codigo: string);
   protected
-    function LerDatas(const DataStr: string): TDateTime;
-
     procedure LerInfNfse(const ANode: TACBrXmlNode);
     procedure LerIdentificacaoRps(const ANode: TACBrXmlNode);
     procedure LerServico(const ANode: TACBrXmlNode);
@@ -87,8 +84,6 @@ type
 
     procedure LerRpsSubstituido(const ANode: TACBrXmlNode);
     procedure LerPrestador(const ANode: TACBrXmlNode);
-
-    function TipodeXMLLeitura(aArquivo: string): TtpXML;
   public
     function LerXml: Boolean; override;
     function LerXmlRps(const ANode: TACBrXmlNode): Boolean;
@@ -166,20 +161,6 @@ begin
   end;
 end;
 
-function TNFSeR_ABRASFv1.LerDatas(const DataStr: string): TDateTime;
-begin
-  if DataStr = '' then
-    Result := 0
-  else
-  begin
-    if Length(DataStr) > 10 then
-      Result := EncodeDate(StrToInt(copy(DataStr, 01, 4)), StrToInt(copy(DataStr, 06, 2)), StrToInt(copy(DataStr, 09, 2))) +
-                EncodeTime(StrToInt(copy(DataStr, 12, 2)), StrToInt(copy(DataStr, 15, 2)), StrToInt(copy(DataStr, 18, 2)), 0)
-    else
-      Result := EncodeDate(StrToInt(copy(DataStr, 01, 4)), StrToInt(copy(DataStr, 06, 2)), StrToInt(copy(DataStr, 09, 2)));
-  end;
-end;
-
 procedure TNFSeR_ABRASFv1.LerEnderecoPrestadorServico(const ANode: TACBrXmlNode;
   aTag: string);
 var
@@ -199,6 +180,7 @@ begin
       UF              := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Uf'), tcStr);
       CodigoPais      := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('CodigoPais'), tcInt);
       CEP             := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Cep'), tcStr);
+      xMunicipio      := CodIBGEToCidade(StrToIntDef(CodigoMunicipio, 0));
     end;
   end;
 end;
@@ -220,6 +202,7 @@ begin
       CodigoMunicipio := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('CodigoMunicipio'), tcStr);
       UF              := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Uf'), tcStr);
       CEP             := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Cep'), tcStr);
+      xMunicipio      := CodIBGEToCidade(StrToIntDef(CodigoMunicipio, 0));
     end;
   end;
 end;
@@ -357,6 +340,9 @@ begin
       Sucesso  := StrToBool(ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Sucesso'), tcBoolStr));
       DataHora := LerDatas(ProcessarConteudo(AuxNode.Childrens.FindAnyNs('DataHora'), tcStr));
     end;
+
+    if NFSe.NfseCancelamento.DataHora > 0 then
+      NFSe.Status := srCancelado;
   end;
 end;
 
@@ -551,7 +537,7 @@ end;
 procedure TNFSeR_ABRASFv1.LerServico(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
-  ItemServico: string;
+  CodigoItemServico: string;
 begin
   AuxNode := ANode.Childrens.FindAnyNs('Servico');
 
@@ -559,12 +545,12 @@ begin
   begin
     LerValores(AuxNode);
 
-    ItemServico := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('ItemListaServico'), tcStr);
-
-    SetxItemListaServico(ItemServico);
+    CodigoItemServico := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('ItemListaServico'), tcStr);
 
     with NFSe.Servico do
     begin
+      ItemListaServico          := NormatizaItemListaServico(CodigoItemServico);
+      xItemListaServico         := ItemListaServicoDescricao(ItemListaServico);
       CodigoCnae                := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('CodigoCnae'), tcStr);
       CodigoTributacaoMunicipio := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('CodigoTributacaoMunicipio'), tcStr);
       Discriminacao             := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Discriminacao'), tcStr);
@@ -647,7 +633,17 @@ var
   XmlNode: TACBrXmlNode;
   xRetorno: string;
 begin
-  xRetorno := TratarRetorno(Arquivo);
+  xRetorno := Arquivo;
+
+  // Se o XML não tiver a codificação incluir ela.
+  if ObtemDeclaracaoXML(xRetorno) = '' then
+    xRetorno := CUTF8DeclaracaoXML + xRetorno;
+
+  // Alguns provedores não retornam o XML em UTF-8
+  xRetorno := ConverteXMLtoUTF8(xRetorno);
+
+  xRetorno := TratarXmlRetorno(xRetorno);
+  xRetorno := TiraAcentos(xRetorno);
 
   if EstaVazio(xRetorno) then
     raise Exception.Create('Arquivo xml não carregado.');
@@ -679,7 +675,12 @@ begin
 
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
-  AuxNode := ANode.Childrens.FindAnyNs('Nfse');
+  AuxNode := ANode.Childrens.FindAnyNs('tcCompNfse');
+
+  if AuxNode = nil then
+    AuxNode := ANode.Childrens.FindAnyNs('Nfse')
+  else
+    AuxNode := AuxNode.Childrens.FindAnyNs('Nfse');
 
   LerInfNfse(AuxNode);
 
@@ -724,45 +725,6 @@ begin
     LerIntermediarioServico(AuxNode);
     LerConstrucaoCivil(AuxNode);
   end;
-end;
-
-procedure TNFSeR_ABRASFv1.SetxItemListaServico(Codigo: string);
-var
-  Item: Integer;
-  ItemServico: string;
-begin
-  NFSe.Servico.ItemListaServico := Codigo;
-
-  Item := StrToIntDef(OnlyNumber(Nfse.Servico.ItemListaServico), 0);
-  if Item < 100 then
-    Item := Item * 100 + 1;
-
-  ItemServico := FormatFloat('0000', Item);
-
-  with FAOwner do
-  begin
-    case ConfigGeral.FormatoItemListaServico of
-      filsSemFormatacao: NFSe.Servico.ItemListaServico := ItemServico;
-       filsComFormatacaoSemZeroEsquerda: NFSe.Servico.ItemListaServico := IntToStr(Item);
-    else
-     // filsComFormatacao
-      NFSe.Servico.ItemListaServico := Copy(ItemServico, 1, 2) + '.' + Copy(ItemServico, 3, 2);
-    end;
-
-    if ConfigGeral.TabServicosExt then
-      NFSe.Servico.xItemListaServico := ObterDescricaoServico(ItemServico)
-    else
-      NFSe.Servico.xItemListaServico := CodItemServToDesc(ItemServico);
-  end;
-end;
-
-function TNFSeR_ABRASFv1.TipodeXMLLeitura(aArquivo: string): TtpXML;
-begin
-  if (Pos('CompNfse', Arquivo) > 0) or (Pos('ComplNfse', Arquivo) > 0) or
-     (Pos('tcCompNfse', Arquivo) > 0) then
-    Result := txmlNFSe
-  else
-    Result := txmlRPS;
 end;
 
 end.
