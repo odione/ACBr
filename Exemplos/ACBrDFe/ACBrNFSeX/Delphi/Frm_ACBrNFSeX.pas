@@ -7,7 +7,7 @@ uses
   Dialogs, ExtCtrls, StdCtrls, Spin, Buttons, ComCtrls, OleCtrls, SHDocVw,
   ShellAPI, XMLIntf, XMLDoc, zlib,
   ACBrBase, ACBrUtil, ACBrDFe, ACBrDFeReport, ACBrMail, ACBrNFSeX,
-  ACBrNFSeXWebservicesResponse,
+  ACBrNFSeXConversao, ACBrNFSeXWebservicesResponse,
   ACBrNFSeXDANFSeClass, ACBrNFSeXDANFSeRLClass;
 
 type
@@ -147,17 +147,11 @@ type
     tsCancelamento: TTabSheet;
     pgRespostas: TPageControl;
     TabSheet5: TTabSheet;
-    MemoResp: TMemo;
     TabSheet6: TTabSheet;
-    WBResposta: TWebBrowser;
+    WBXmlRetorno: TWebBrowser;
     TabSheet8: TTabSheet;
     memoLog: TMemo;
     TabSheet9: TTabSheet;
-    trvwDocumento: TTreeView;
-    TabSheet10: TTabSheet;
-    memoRespWS: TMemo;
-    Dados: TTabSheet;
-    MemoDados: TMemo;
     OpenDialog1: TOpenDialog;
     Label6: TLabel;
     lblSchemas: TLabel;
@@ -227,6 +221,8 @@ type
     Label44: TLabel;
     edtChaveAcessoWeb: TEdit;
     edtChaveAutorizWeb: TEdit;
+    WBXmlEnvio: TWebBrowser;
+    WBXmlNotas: TWebBrowser;
 
     procedure FormCreate(Sender: TObject);
     procedure btnSalvarConfigClick(Sender: TObject);
@@ -297,12 +293,13 @@ type
     procedure LerConfiguracao;
     procedure ConfigurarComponente;
     procedure AlimentarNFSe(NumDFe, NumLote: String);
-    procedure LoadXML(RetWS: String; MyWebBrowser: TWebBrowser);
+    procedure LoadXML(RetWS: String; MyWebBrowser: TWebBrowser;
+      NomeArq: string = 'temp.xml');
     procedure AtualizarSSLLibsCombo;
     procedure AtualizarCidades;
     function RoundTo5(Valor: Double; Casas: Integer): Double;
 
-    procedure ChecarResposta(const Response: TNFSeWebserviceResponse);
+    procedure ChecarResposta(aMetodo: TMetodo);
   public
     { Public declarations }
   end;
@@ -317,7 +314,6 @@ uses
   IniFiles, Printers,
   pcnAuxiliar, pcnConversao,
   ACBrDFeConfiguracoes, ACBrDFeSSL, ACBrDFeOpenSSL, ACBrDFeUtil,
-  ACBrNFSeXConversao,
   ACBrNFSeXWebserviceBase,
   Frm_Status, Frm_SelecionarCertificado;
 
@@ -448,9 +444,11 @@ begin
 
       case ACBrNFSeX1.Configuracoes.Geral.Provedor of
         proNFSeBrasil,
-        proEquiplano,
-        proSudoeste:
+        proEquiplano:
           IdentificacaoRps.Serie := '1';
+
+        proSudoeste:
+          IdentificacaoRps.Serie := 'E';
 
         proBetha,
         proBetha_2,
@@ -566,7 +564,7 @@ begin
       Servico.Valores.BaseCalculo := Servico.Valores.ValorServicos -
         Servico.Valores.ValorDeducoes - Servico.Valores.DescontoIncondicionado;
 
-      Servico.Valores.Aliquota := 4;
+      Servico.Valores.Aliquota := 2;
 
       ValorISS := Servico.Valores.BaseCalculo * Servico.Valores.Aliquota / 100;
 
@@ -595,7 +593,7 @@ begin
           proAgili_2] then
         Servico.CodigoCnae := '452000200'
       else
-        Servico.CodigoCnae := '852010';
+        Servico.CodigoCnae := '6203100';
 
       if (ACBrNFSeX1.Configuracoes.Geral.Provedor = proISSNet) and
          (ACBrNFSeX1.Configuracoes.WebServices.Ambiente = taHomologacao)  then
@@ -627,18 +625,16 @@ begin
       // Informar A Exigibilidade ISS para fintelISS [1/2/3/4/5/6/7]
       Servico.ExigibilidadeISS := exiExigivel;
 
-      // Informar para Saatri
-      Servico.CodigoPais := 1058; // Brasil
+      // Para alguns provedores não devemos informar o código do pais
+//      Servico.CodigoPais := 1058; // Brasil
       Servico.MunicipioIncidencia := StrToIntDef(edtCodCidade.Text, 0);
 
-      // Somente o provedor SimplISS permite infomar mais de 1 serviço
+      // Provedores que permitem informar mais de 1 serviço:
+      // Agili, AssessorPublico, EL, EloTech, Equiplano, fintelISS, Governa,
+      // Infisc, IPM, ISSDSF, Simple, SmarAPD, WebFisco
       with Servico.ItemServico.New do
       begin
-        // fintelISS, Agili, EL, Equiplano
-        // Para o provedor Elotech o tamanho máximo é de 20 caracteres
         Descricao := 'Desc. do Serv. 1';
-
-        // fintelISS
         ItemListaServico := '09.01';
 
         // infisc, EL
@@ -647,20 +643,58 @@ begin
         codLCServ := '123';
 
         ValorDeducoes := 0;
-        ValorIss := 0;
-        Aliquota := 4;
-        BaseCalculo := 100;
+        xJustDeducao := '';
+
+        AliqReducao := 0;
+        ValorReducao := 0;
+
         DescontoIncondicionado := 0;
         DescontoCondicionado := 0;
 
-        //EloTech
-        Tributavel := snNao;
-
-        // SimplISS, EloTech
+        // TUnidade = (tuHora, tuQtde);
+        TipoUnidade := tuQtde;
+        Unidade := 'UN';
         Quantidade := 10;
         ValorUnitario := 5;
 
+        QtdeDiaria := 0;
+        ValorTaxaTurismo := 0;
+
         ValorTotal := Quantidade * ValorUnitario;
+
+        BaseCalculo := ValorTotal - ValorDeducoes - DescontoIncondicionado;
+
+        Aliquota := 4;
+
+        ValorISS := BaseCalculo * Aliquota / 100;
+
+        ValorISSRetido := 0;
+
+        AliqISSST := 0;
+        ValorISSST := 0;
+
+        ValorBCCSLL := 0;
+        AliqRetCSLL := 0;
+        ValorCSLL := 0;
+
+        ValorBCPIS := 0;
+        AliqRetPIS := 0;
+        ValorPIS := 0;
+
+        ValorBCCOFINS := 0;
+        AliqRetCOFINS := 0;
+        ValorCOFINS := 0;
+
+        ValorBCINSS := 0;
+        AliqRetINSS := 0;
+        ValorINSS := 0;
+
+        ValorBCRetIRRF := 0;
+        AliqRetIRRF := 0;
+        ValorIRRF := 0;
+
+        //EloTech
+        Tributavel := snNao;
       end;
 
       Prestador.IdentificacaoPrestador.CNPJ := edtEmitCNPJ.Text; //'88888888888888';
@@ -690,8 +724,8 @@ begin
 
       // Para o provedor SigISS usar os valores acima de forma adquada
       Tomador.IdentificacaoTomador.Tipo := tpPJdoMunicipio;
-      Tomador.IdentificacaoTomador.CpfCnpj := edtEmitCNPJ.Text; //'55555555555555';
-      Tomador.IdentificacaoTomador.InscricaoMunicipal := '17331600';
+      Tomador.IdentificacaoTomador.CpfCnpj := '11222333000144';
+      Tomador.IdentificacaoTomador.InscricaoMunicipal := '';
 
       Tomador.RazaoSocial := 'INSCRICAO DE TESTE';
 
@@ -704,10 +738,11 @@ begin
       Tomador.Endereco.CodigoMunicipio := edtCodCidade.Text;
       Tomador.Endereco.xMunicipio := CodIBGEToCidade(StrToIntDef(edtCodCidade.Text, 0));
       Tomador.Endereco.UF := edtEmitUF.Text;
-      Tomador.Endereco.CodigoPais := 1058; // Brasil
+      // Para alguns provedores não devemos informar o código do país.
+//      Tomador.Endereco.CodigoPais := 1058; // Brasil
       Tomador.Endereco.CEP := edtEmitCEP.Text;
 
-      // Provedor Equiplano é obrigatório o pais e IE
+      // Provedor Equiplano é obrigatório o pais e Insc. Est.
       Tomador.Endereco.xPais := 'BRASIL';
       Tomador.IdentificacaoTomador.InscricaoEstadual := '123456';
 
@@ -804,7 +839,6 @@ var
   SerRps, ValNFSe, ChNFSe: String;
   CodCanc: Integer;
   InfCancelamento: TInfCancelamento;
-  Response: TNFSeCancelaNFSeResponse;
   Titulo: string;
 begin
   Titulo := 'Cancelar NFSe';
@@ -828,7 +862,7 @@ begin
       exit;
 
     if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proiiBrasil_2, proWebFisco,
-      proSimple, proFGMaiss, proIPM_110] then
+      proSimple, proFGMaiss, proIPM, proIPM_110, proIPM_120] then
     begin
       SerNFSe := '1';
       if not (InputQuery(Titulo, 'Série da NFSe', SerNFSe)) then
@@ -922,12 +956,12 @@ begin
       CodVerificacao  := CodVerif;
     end;
 
-    Response := ACBrNFSeX1.CancelarNFSe(InfCancelamento);
+    ACBrNFSeX1.CancelarNFSe(InfCancelamento);
   finally
     InfCancelamento.Free;
   end;
 
-  ChecarResposta(Response);
+  ChecarResposta(tmCancelarNFSe);
 end;
 
 procedure TfrmACBrNFSe.btnCNPJClick(Sender: TObject);
@@ -939,7 +973,6 @@ procedure TfrmACBrNFSe.btnConsNFSeURLClick(Sender: TObject);
 var
   xTitulo, NumIniNFSe, CodTrib: String;
   InfConsultaNFSe: TInfConsultaNFSe;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe URL Retornado';
 
@@ -965,21 +998,20 @@ begin
       NumeroIniNFSe := NumIniNFSe;
       NumeroFinNFSe := NumIniNFSe;
 
-      CodTribMun := CodTrib;
+      CadEconomico := CodTrib;
     end;
 
-    Response := ACBrNFSeX1.ConsultarNFSe(InfConsultaNFSe);
+    ACBrNFSeX1.ConsultarNFSe;
   finally
     InfConsultaNFSe.Free;
   end;
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeURL);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarLoteClick(Sender: TObject);
 var
   Protocolo, Lote: String;
-  Response: TNFSeConsultaLoteRpsResponse;
 begin
   Protocolo := '';
   if not (InputQuery('Consultar Lote', 'Número do Protocolo (Obrigatório):', Protocolo)) then
@@ -994,15 +1026,14 @@ begin
       exit;
   end;
 
-  Response := ACBrNFSeX1.ConsultarLoteRps(Protocolo, Lote);
+  ACBrNFSeX1.ConsultarLoteRps(Protocolo, Lote);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarLote);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeFaixaClick(Sender: TObject);
 var
   xTitulo, NumNFSeIni, NumNFSeFin, NumPagina: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Por Faixa';
 
@@ -1018,9 +1049,9 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSePorFaixa(NumNFSeIni, NumNFSeFin, StrToIntDef(NumPagina, 1));
+  ACBrNFSeX1.ConsultarNFSePorFaixa(NumNFSeIni, NumNFSeFin, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSePorFaixa);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeGenericoClick(Sender: TObject);
@@ -1029,7 +1060,6 @@ var
   CPFCNPJ_Prestador, IM_Prestador, CPFCNPJ_Tomador, IM_Tomador,
   CPFCNPJ_Inter, IM_Inter, NumLote, NumPagina: String;
   InfConsultaNFSe: TInfConsultaNFSe;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Genérico';
 
@@ -1125,18 +1155,17 @@ begin
       Pagina := StrToIntDef(NumPagina, 1);
     end;
 
-    Response := ACBrNFSeX1.ConsultarNFSe(InfConsultaNFSe);
+    ACBrNFSeX1.ConsultarNFSe;
   finally
     InfConsultaNFSe.Free;
   end;
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSe);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSePeloNumeroClick(Sender: TObject);
 var
   xTitulo, NumeroNFSe, NumPagina, NumLote, xDataIni, xDataFin, xTipo: String;
-  Response: TNFSeConsultaNFSeResponse;
   InfConsultaNFSe: TInfConsultaNFSe;
 begin
   xTitulo := 'Consultar NFSe Por Numero';
@@ -1198,13 +1227,13 @@ begin
             Pagina := StrToIntDef(NumPagina, 1);
           end;
 
-          Response := ACBrNFSeX1.ConsultarNFSe(InfConsultaNFSe);
+          ACBrNFSeX1.ConsultarNFSe;
         finally
           InfConsultaNFSe.Free;
         end;
       end;
 
-//      Response := ACBrNFSeX1.ConsultarNFSePorPeriodo(StrToDateDef(DataIni, 0),
+//      ACBrNFSeX1.ConsultarNFSePorPeriodo(StrToDateDef(DataIni, 0),
 //                  StrToDateDef(DataFin, 0), StrToIntDef(NumPagina, 1), NumLote);
 
     proFGMaiss,
@@ -1221,7 +1250,7 @@ begin
             Tipo := xTipo;
           end;
 
-          Response := ACBrNFSeX1.ConsultarNFSe(InfConsultaNFSe);
+          ACBrNFSeX1.ConsultarNFSe;
         finally
           InfConsultaNFSe.Free;
         end;
@@ -1241,22 +1270,21 @@ begin
             Pagina := StrToIntDef(NumPagina, 1);
           end;
 
-          Response := ACBrNFSeX1.ConsultarNFSe(InfConsultaNFSe);
+          ACBrNFSeX1.ConsultarNFSe;
         finally
           InfConsultaNFSe.Free;
         end;
       end;
   else
-    Response := ACBrNFSeX1.ConsultarNFSeporNumero(NumeroNFSe);
+    ACBrNFSeX1.ConsultarNFSeporNumero(NumeroNFSe);
   end;
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSe);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSePeriodoClick(Sender: TObject);
 var
   xTitulo, DataIni, DataFin, NumPagina, NumLote: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe por Período';
 
@@ -1279,10 +1307,10 @@ begin
       exit;
   end;
 
-  Response := ACBrNFSeX1.ConsultarNFSeporPeriodo(StrToDateDef(DataIni, 0),
+  ACBrNFSeX1.ConsultarNFSeporPeriodo(StrToDateDef(DataIni, 0),
     StrToDateDef(DataFin, 0), StrToIntDef(NumPagina, 1), NumLote);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSePorFaixa);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeRPSClick(Sender: TObject);
@@ -1290,7 +1318,6 @@ var
   NumeroRps, SerieRps, TipoRps, //NumeroLote,
   CodVerificacao: String;
   iTipoRps: Integer;
-  Response: TNFSeConsultaNFSeporRpsResponse;
 begin
   NumeroRps := '';
   if not (InputQuery('Consultar NFSe por RPS', 'Numero do RPS:', NumeroRps)) then
@@ -1346,17 +1373,16 @@ begin
       exit;
   end;
 
-  Response := ACBrNFSeX1.ConsultarNFSeporRps(NumeroRps, SerieRps, TipoRps, //NumeroLote,
+  ACBrNFSeX1.ConsultarNFSeporRps(NumeroRps, SerieRps, TipoRps, //NumeroLote,
     CodVerificacao);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSePorRps);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoPrestadoPorIntermediarioClick(
   Sender: TObject);
 var
   xTitulo, NumPagina, CPFCNPJInter, IMInter: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Prestado Por Intermediário';
 
@@ -1372,16 +1398,15 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorIntermediario(CPFCNPJInter,
+  ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorIntermediario(CPFCNPJInter,
     IMInter, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoPrestado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoPrestadoPorNumeroClick(Sender: TObject);
 var
   xTitulo, NumeroNFSe, NumPagina: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Prestado Por Número';
 
@@ -1393,16 +1418,15 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorNumero(NumeroNFSe, StrToIntDef(NumPagina, 1));
+  ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorNumero(NumeroNFSe, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoPrestado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoPrestadoPorPeriodoClick(
   Sender: TObject);
 var
   xTitulo, NumPagina, DataIni, DataFin: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Prestado Por Periodo';
 
@@ -1418,17 +1442,16 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorPeriodo(StrToDateDef(DataIni, 0),
+  ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorPeriodo(StrToDateDef(DataIni, 0),
     StrToDateDef(DataFin, 0), StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoPrestado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoPrestadoPorTomadorClick(
   Sender: TObject);
 var
   xTitulo, NumPagina, CPFCNPJTomador, IMTomador: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Prestado Por Tomador';
 
@@ -1444,17 +1467,16 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorTomador(CPFCNPJTomador,
+  ACBrNFSeX1.ConsultarNFSeServicoPrestadoPorTomador(CPFCNPJTomador,
     IMTomador, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoPrestado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoTomadoPorIntermediarioClick(
   Sender: TObject);
 var
   xTitulo, NumPagina, CPFCNPJInter, IMInter: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Tomado Por Intermediário';
 
@@ -1470,16 +1492,15 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoTomadoPorIntermediario(CPFCNPJInter,
+  ACBrNFSeX1.ConsultarNFSeServicoTomadoPorIntermediario(CPFCNPJInter,
     IMInter, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoTomado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoTomadoPorNumeroClick(Sender: TObject);
 var
   xTitulo, NumeroNFSe, NumPagina: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Tomado Por Número';
 
@@ -1491,15 +1512,14 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoTomadoPorNumero(NumeroNFSe, StrToIntDef(NumPagina, 1));
+  ACBrNFSeX1.ConsultarNFSeServicoTomadoPorNumero(NumeroNFSe, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoTomado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarSitLoteClick(Sender: TObject);
 var
   Protocolo, Lote: String;
-  Response: TNFSeConsultaSituacaoResponse;
 begin
   Protocolo := '';
   if not (InputQuery('Consultar Lote', 'Número do Protocolo (Obrigatório):', Protocolo)) then
@@ -1513,9 +1533,9 @@ begin
       exit;
   end;
 
-  Response := ACBrNFSeX1.ConsultarSituacao(Protocolo, Lote);
+  ACBrNFSeX1.ConsultarSituacao(Protocolo, Lote);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarSituacao);
 end;
 
 procedure TfrmACBrNFSe.btnDataValidadeClick(Sender: TObject);
@@ -1527,7 +1547,6 @@ procedure TfrmACBrNFSe.btnEmitirClick(Sender: TObject);
 var
   sQtde, vNumRPS, vNumLote: String;
   iQtde, iAux, I: Integer;
-  Response: TNFSeEmiteResponse;
 begin
   sQtde := '1';
   if not(InputQuery('Emitir', 'Quantidade de RPS', sQtde)) then
@@ -1553,9 +1572,9 @@ begin
     inc(iAux);
   end;
 
-  Response := ACBrNFSeX1.Emitir(vNumLote);
+  ACBrNFSeX1.Emitir(vNumLote);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmRecepcionar);
 end;
 
 procedure TfrmACBrNFSe.btnEnviaremailClick(Sender: TObject);
@@ -1588,11 +1607,9 @@ begin
 
     sCC.Free;
 
-    MemoDados.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
-    MemoResp.Lines.LoadFromFile(ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
-    LoadXML(MemoResp.Text, WBResposta);
+    memoLog.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
 
-    pgRespostas.ActivePageIndex := 2;
+    pgRespostas.ActivePageIndex := 0;
   end;
 end;
 
@@ -1600,7 +1617,6 @@ procedure TfrmACBrNFSe.btnGerarEnviarLoteClick(Sender: TObject);
 var
   sQtde, vNumRPS, vNumLote: String;
   iQtde, iAux, I: Integer;
-  Response: TNFSeEmiteResponse;
 begin
   sQtde := '1';
   if not(InputQuery('Gerar e Enviar um Lote de RPS (Assíncrono)', 'Quantidade de RPS', sQtde)) then
@@ -1632,15 +1648,14 @@ begin
      aModEnvio [meAutomatico, meLoteAssincrono, meLoteSincrono, meUnitario, meTeste]
      aImprimir (Boolean)
   }
-  Response := ACBrNFSeX1.Emitir(vNumLote, meLoteAssincrono);
+  ACBrNFSeX1.Emitir(vNumLote, meLoteAssincrono);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmRecepcionar);
 end;
 
 procedure TfrmACBrNFSe.btnGerarEnviarNFSeClick(Sender: TObject);
 var
   vNumRPS, vNumLote, sNomeArq: String;
-  Response: TNFSeEmiteResponse;
 begin
   // **************************************************************************
   //
@@ -1664,9 +1679,9 @@ begin
      aModEnvio [meAutomatico, meLoteAssincrono, meLoteSincrono, meUnitario]
      aImprimir (Boolean)
   }
-  Response := ACBrNFSeX1.Emitir(vNumLote, meUnitario);
+  ACBrNFSeX1.Emitir(vNumLote, meUnitario);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmGerar);
 
   sNomeArq := ACBrNFSeX1.NotasFiscais.Items[0].NomeArq;
 
@@ -1676,14 +1691,13 @@ begin
     ACBrNFSeX1.NotasFiscais.LoadFromFile(sNomeArq, False);
     ACBrNFSeX1.NotasFiscais.Imprimir;
 
-    MemoDados.Lines.Add('Arquivo Carregado de: ' + sNomeArq);
+    memoLog.Lines.Add('Arquivo Carregado de: ' + sNomeArq);
   end;
 end;
 
 procedure TfrmACBrNFSe.btnGerarEnviarSincronoClick(Sender: TObject);
 var
   sQtde, vNumRPS, vNumLote: String;
-  Response: TNFSeEmiteResponse;
   iQtde, iAux, i: Integer;
 begin
   sQtde := '1';
@@ -1716,9 +1730,9 @@ begin
      aModEnvio [meAutomatico, meLoteAssincrono, meLoteSincrono, meUnitario, meTeste]
      aImprimir (Boolean)
   }
-  Response := ACBrNFSeX1.Emitir(vNumLote, meLoteSincrono);
+  ACBrNFSeX1.Emitir(vNumLote, meLoteSincrono);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmRecepcionarSincrono);
 end;
 
 procedure TfrmACBrNFSe.btnGerarLoteRPSClick(Sender: TObject);
@@ -1749,7 +1763,7 @@ begin
 
   ACBrNFSeX1.NotasFiscais.Clear;
 
-  pgRespostas.ActivePageIndex := 2;
+  pgRespostas.ActivePageIndex := 0;
 end;
 
 procedure TfrmACBrNFSe.btnHTTPSClick(Sender: TObject);
@@ -1772,7 +1786,7 @@ begin
   ACBrNFSeX1.SSL.UseCertificateHTTP := False;
 
   try
-    MemoResp.Lines.Text := ACBrNFSeX1.SSL.Enviar(Acao, 'https://apps.correios.com.br/SigepMasterJPA/AtendeClienteService/AtendeCliente?wsdl', '');
+    memoLog.Lines.Text := ACBrNFSeX1.SSL.Enviar(Acao, 'https://apps.correios.com.br/SigepMasterJPA/AtendeClienteService/AtendeCliente?wsdl', '');
   finally
     ACBrNFSeX1.SSL.UseCertificateHTTP := OldUseCert;
   end;
@@ -1792,26 +1806,20 @@ begin
   begin
     ACBrNFSeX1.NotasFiscais.Clear;
     ACBrNFSeX1.NotasFiscais.LoadFromFile(OpenDialog1.FileName, False);
+//    ACBrNFSeX1.NotasFiscais.LoadFromLoteNfse(OpenDialog1.FileName);
     ACBrNFSeX1.NotasFiscais.Imprimir;
     ACBrNFSeX1.NotasFiscais.ImprimirPDF;
 
     if ACBrNFSeX1.NotasFiscais.Items[0].NomeArqRps <> '' then
-      MemoDados.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArqRps)
+      memoLog.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArqRps)
     else
-      MemoDados.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
+      memoLog.Lines.Add('Arquivo Carregado de: ' + ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
 
-    MemoDados.Lines.Add('Nota Numero: ' + ACBrNFSeX1.NotasFiscais.Items[0].NFSe.Numero);
-    MemoDados.Lines.Add('Código de Verificação: ' + ACBrNFSeX1.NotasFiscais.Items[0].NFSe.CodigoVerificacao);
-    MemoDados.Lines.Add('Data de Emissão: ' + DateToStr(ACBrNFSeX1.NotasFiscais.Items[0].NFSe.DataEmissao));
+    memoLog.Lines.Add('Nota Numero: ' + ACBrNFSeX1.NotasFiscais.Items[0].NFSe.Numero);
+    memoLog.Lines.Add('Código de Verificação: ' + ACBrNFSeX1.NotasFiscais.Items[0].NFSe.CodigoVerificacao);
+    memoLog.Lines.Add('Data de Emissão: ' + DateToStr(ACBrNFSeX1.NotasFiscais.Items[0].NFSe.DataEmissao));
 
-    if ACBrNFSeX1.NotasFiscais.Items[0].NomeArqRps <> '' then
-      MemoResp.Lines.LoadFromFile(ACBrNFSeX1.NotasFiscais.Items[0].NomeArqRps)
-    else
-      MemoResp.Lines.LoadFromFile(ACBrNFSeX1.NotasFiscais.Items[0].NomeArq);
-
-    LoadXML(MemoResp.Text, WBResposta);
-
-    pgRespostas.ActivePageIndex := 2;
+    pgRespostas.ActivePageIndex := 0;
   end;
 end;
 
@@ -1827,12 +1835,12 @@ procedure TfrmACBrNFSe.btnLeituraX509Click(Sender: TObject);
 begin
   with ACBrNFSeX1.SSL do
   begin
-     CarregarCertificadoPublico(AnsiString(MemoDados.Lines.Text));
-     MemoResp.Lines.Add(CertIssuerName);
-     MemoResp.Lines.Add(CertRazaoSocial);
-     MemoResp.Lines.Add(CertCNPJ);
-     MemoResp.Lines.Add(CertSubjectName);
-     MemoResp.Lines.Add(CertNumeroSerie);
+     CarregarCertificadoPublico(AnsiString(memoLog.Lines.Text));
+     memoLog.Lines.Add(CertIssuerName);
+     memoLog.Lines.Add(CertRazaoSocial);
+     memoLog.Lines.Add(CertCNPJ);
+     memoLog.Lines.Add(CertSubjectName);
+     memoLog.Lines.Add(CertNumeroSerie);
 
     //MemoDados.Lines.LoadFromFile('c:\temp\teste2.xml');
     //MemoResp.Lines.Text := Assinar(MemoDados.Lines.Text, 'Entrada', 'Parametros');
@@ -1858,7 +1866,7 @@ begin
 
   sLink := ACBrNFSeX1.LinkNFSe(vNumNFSe, sCodVerif);
 
-  MemoResp.Lines.Add('Link Gerado: ' + sLink);
+  memoLog.Lines.Add('Link Gerado: ' + sLink);
 
   pgRespostas.ActivePageIndex := 0;
 end;
@@ -1883,7 +1891,7 @@ begin
     xAssinatura.Add(edtTexto.Text);
 
     Ahash := string(ACBrNFSeX1.SSL.CalcHash(xAssinatura, dgstSHA256, outBase64, cbAssinar.Checked));
-    MemoResp.Lines.Add( Ahash );
+    memoLog.Lines.Add( Ahash );
     pgRespostas.ActivePageIndex := 0;
   finally
     xAssinatura.Free;
@@ -1900,7 +1908,6 @@ procedure TfrmACBrNFSe.btnSubsNFSeClick(Sender: TObject);
 var
   vNumRPS, Codigo, Motivo, sNumNFSe, sSerieNFSe, NumLote, CodVerif: String;
   CodCanc: Integer;
-  Response: TNFSeSubstituiNFSeResponse;
 begin
   vNumRPS := '';
   if not(InputQuery('Substituir NFS-e', 'Numero do novo RPS', vNumRPS)) then
@@ -1966,19 +1973,18 @@ begin
       exit;
   end;
 
-  Response := ACBrNFSeX1.SubstituirNFSe(sNumNFSe, sSerieNFSe, Codigo,
+  ACBrNFSeX1.SubstituirNFSe(sNumNFSe, sSerieNFSe, Codigo,
                                         Motivo, NumLote, CodVerif);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmSubstituirNFSe);
 
-  MemoDados.Lines.Add('Retorno da Substituição:');
-  MemoDados.Lines.Add('Cód. Cancelamento: ' + Response.InfCancelamento.CodCancelamento);
+  memoLog.Lines.Add('Retorno da Substituição:');
+//  MemoDados.Lines.Add('Cód. Cancelamento: ' + Response.InfCancelamento.CodCancelamento);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoTomadoPorPeriodoClick(Sender: TObject);
 var
   xTitulo, NumPagina, DataIni, DataFin: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Tomado Por Periodo';
 
@@ -1994,16 +2000,15 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoTomadoPorPeriodo(StrToDateDef(DataIni, 0),
+  ACBrNFSeX1.ConsultarNFSeServicoTomadoPorPeriodo(StrToDateDef(DataIni, 0),
     StrToDateDef(DataFin, 0), StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoTomado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoTomadoPorPrestadorClick(Sender: TObject);
 var
   xTitulo, NumPagina, CPFCNPJPrestador, IMPrestador: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Tomado Por Prestador';
 
@@ -2019,17 +2024,16 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoTomadoPorPrestador(CPFCNPJPrestador,
+  ACBrNFSeX1.ConsultarNFSeServicoTomadoPorPrestador(CPFCNPJPrestador,
     IMPrestador, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoTomado);
 end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeServicoTomadoPorTomadorClick(
   Sender: TObject);
 var
   xTitulo, NumPagina, CPFCNPJTomador, IMTomador: String;
-  Response: TNFSeConsultaNFSeResponse;
 begin
   xTitulo := 'Consultar NFSe Serviço Tomado Por Tomador';
 
@@ -2045,17 +2049,16 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
-  Response := ACBrNFSeX1.ConsultarNFSeServicoTomadoPorTomador(CPFCNPJTomador,
+  ACBrNFSeX1.ConsultarNFSeServicoTomadoPorTomador(CPFCNPJTomador,
     IMTomador, StrToIntDef(NumPagina, 1));
 
-  ChecarResposta(Response);
+  ChecarResposta(tmConsultarNFSeServicoTomado);
 end;
 
 procedure TfrmACBrNFSe.btnGerarEnviarTeste_SPClick(Sender: TObject);
 var
   sQtde, vNumRPS, vNumLote: String;
   iQtde, iAux, I: Integer;
-  Response: TNFSeEmiteResponse;
 begin
   sQtde := '1';
   if not(InputQuery('Teste de Envio', 'Quantidade de RPS', sQtde)) then
@@ -2087,9 +2090,9 @@ begin
      aModEnvio [meAutomatico, meLoteAssincrono, meLoteSincrono, meUnitario, meTeste]
      aImprimir (Boolean)
   }
-  Response := ACBrNFSeX1.Emitir(vNumLote, meTeste);
+  ACBrNFSeX1.Emitir(vNumLote, meTeste);
 
-  ChecarResposta(Response);
+  ChecarResposta(tmTeste);
 end;
 
 procedure TfrmACBrNFSe.cbCryptLibChange(Sender: TObject);
@@ -2179,7 +2182,7 @@ begin
 
   LerConfiguracao;
 
-  pgRespostas.ActivePageIndex := 2;
+  pgRespostas.ActivePageIndex := 0;
 end;
 
 procedure TfrmACBrNFSe.GravarConfiguracao;
@@ -2412,119 +2415,585 @@ begin
   end;
 end;
 
-procedure TfrmACBrNFSe.ChecarResposta(const Response: TNFSeWebserviceResponse);
+procedure TfrmACBrNFSe.ChecarResposta(aMetodo: TMetodo);
 var
   i: Integer;
 begin
   memoLog.Clear;
+  memoLog.Lines.Clear;
+  memoLog.Update;
 
-  if Response is TNFSeEmiteResponse then
+  with ACBrNFSeX1.WebService do
   begin
-    memoLog.Lines.Add('Modo de Envio : ' + ModoEnvioToStr(TNFSeEmiteResponse(Response).ModoEnvio));
-    memoLog.Lines.Add('Numero do Lote: ' + TNFSeEmiteResponse(Response).Lote);
-    memoLog.Lines.Add('Data de Envio : ' + DateToStr(TNFSeEmiteResponse(Response).Data));
-    memoLog.Lines.Add('Numero do Prot: ' + TNFSeEmiteResponse(Response).Protocolo);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-    memoLog.Lines.Add(' ');
+    case aMetodo of
+      tmRecepcionar,
+      tmTeste:
+        begin
+          with Emite do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + ModoEnvioToStr(ModoEnvio));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero do Lote: ' + Lote);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Data de Envio : ' + DateToStr(Data));
+            memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+            memoLog.Lines.Add('Numero da Nota: ' + IntToStr(NumeroNota));
+            memoLog.Lines.Add('Link          : ' + Link);
+            memoLog.Lines.Add('Código Verif. : ' + CodVerificacao);
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
 
-    memoLog.Lines.Add('Modo de Envio : ' + ModoEnvioToStr(TNFSeEmiteResponse(Response).ModoEnvio));
-    memoLog.Lines.Add('Numero do Lote: ' + ACBrNFSeX1.Resposta.Lote);
-    memoLog.Lines.Add('Data de Envio : ' + DateToStr(ACBrNFSeX1.Resposta.Data));
-    memoLog.Lines.Add('Numero do Prot: ' + ACBrNFSeX1.Resposta.Protocolo);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
 
-  if Response is TNFSeSubstituiNFSeResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(tmSubstituirNFSe));
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
 
-  if Response is TNFSeConsultaSituacaoResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(tmConsultarSituacao));
-    memoLog.Lines.Add('Numero do Lote: ' + TNFSeConsultaSituacaoResponse(Response).Lote);
-    memoLog.Lines.Add('Numero do Prot: ' + TNFSeConsultaSituacaoResponse(Response).Protocolo);
-    memoLog.Lines.Add('Situação Lote : ' + TNFSeConsultaSituacaoResponse(Response).Situacao);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
 
-  if Response is TNFSeConsultaLoteRpsResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(tmConsultarLote));
-    memoLog.Lines.Add('Numero do Lote: ' + TNFSeConsultaLoteRpsResponse(Response).Lote);
-    memoLog.Lines.Add('Numero do Prot: ' + TNFSeConsultaLoteRpsResponse(Response).Protocolo);
-    memoLog.Lines.Add('Situação Lote : ' + TNFSeConsultaLoteRpsResponse(Response).Situacao);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+          if ACBrNFSeX1.Configuracoes.Geral.ConsultaLoteAposEnvio and
+             (Emite.Protocolo <> '') then
+          begin
+            if ACBrNFSeX1.Provider.ConfigGeral.ConsultaSitLote then
+            begin
+              with ConsultaSituacao do
+              begin
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmConsultarSituacao));
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Parâmetros de Envio');
+                memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+                memoLog.Lines.Add('Numero do Lote: ' + Lote);
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Parâmetros de Retorno');
+                memoLog.Lines.Add('Situação Lote : ' + Situacao);
+                memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
 
-  if Response is TNFSeConsultaNFSeporRpsResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(tmConsultarNFSePorRps));
-    memoLog.Lines.Add('Numero do Rps : ' + TNFSeConsultaNFSeporRpsResponse(Response).NumRPS);
-    memoLog.Lines.Add('Série do Rps  : ' + TNFSeConsultaNFSeporRpsResponse(Response).Serie);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+                LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+                LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
 
-  if Response is TNFSeConsultaNFSeResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(TNFSeConsultaNFSeResponse(Response).Metodo));
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-  end;
+                if Erros.Count > 0 then
+                begin
+                  memoLog.Lines.Add(' ');
+                  memoLog.Lines.Add('Erro(s):');
+                  for i := 0 to Erros.Count -1 do
+                  begin
+                    memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                    memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                    memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                    memoLog.Lines.Add('---------');
+                  end;
+                end;
 
-  if Response is TNFSeCancelaNFSeResponse then
-  begin
-    memoLog.Lines.Add('Modo de Envio : ' + MetodoToStr(tmCancelarNFSe));
-    memoLog.Lines.Add('Numero da NFSe: ' + TNFSeCancelaNFSeResponse(Response).InfCancelamento.NumeroNFSe);
-    memoLog.Lines.Add('Série da NFSe : ' + TNFSeCancelaNFSeResponse(Response).InfCancelamento.SerieNFSe);
-    memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Response.Sucesso, True));
-    memoLog.Lines.Add(' ');
-    memoLog.Lines.Add('Retorno do Pedido de Cancelamento:');
-    memoLog.Lines.Add('Situação : ' + TNFSeCancelaNFSeResponse(Response).RetCancelamento.Situacao);
-  end;
+                if Alertas.Count > 0 then
+                begin
+                  memoLog.Lines.Add(' ');
+                  memoLog.Lines.Add('Alerta(s):');
+                  for i := 0 to Alertas.Count -1 do
+                  begin
+                    memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                    memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                    memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                    memoLog.Lines.Add('---------');
+                  end;
+                end;
+              end;
+            end;
 
-  if Response.Erros.Count > 0 then
-  begin
-    memoLog.Lines.Add(' ');
-    memoLog.Lines.Add('Erro(s):');
-    for i := 0 to Response.Erros.Count -1 do
-    begin
-      memoLog.Lines.Add('Código  : ' + Response.Erros[i].Codigo);
-      memoLog.Lines.Add('Mensagem: ' + Response.Erros[i].Descricao);
-      memoLog.Lines.Add('Correção: ' + Response.Erros[i].Correcao);
-      memoLog.Lines.Add('---------');
+            if ACBrNFSeX1.Provider.ConfigGeral.ConsultaLote then
+            begin
+              with ConsultaLoteRps do
+              begin
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmConsultarLote));
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Parâmetros de Envio');
+                memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+                memoLog.Lines.Add('Numero do Lote: ' + Lote);
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Parâmetros de Retorno');
+                memoLog.Lines.Add('Situação Lote : ' + Situacao);
+                memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+                LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+                LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+                if Erros.Count > 0 then
+                begin
+                  memoLog.Lines.Add(' ');
+                  memoLog.Lines.Add('Erro(s):');
+                  for i := 0 to Erros.Count -1 do
+                  begin
+                    memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                    memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                    memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                    memoLog.Lines.Add('---------');
+                  end;
+                end;
+
+                if Alertas.Count > 0 then
+                begin
+                  memoLog.Lines.Add(' ');
+                  memoLog.Lines.Add('Alerta(s):');
+                  for i := 0 to Alertas.Count -1 do
+                  begin
+                    memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                    memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                    memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                    memoLog.Lines.Add('---------');
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+
+      tmRecepcionarSincrono,
+      tmGerar:
+        begin
+          with Emite do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + ModoEnvioToStr(ModoEnvio));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero do Lote: ' + Lote);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Data de Envio : ' + DateToStr(Data));
+            memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+            memoLog.Lines.Add('Numero da Nota: ' + IntToStr(NumeroNota));
+            memoLog.Lines.Add('Link          : ' + Link);
+            memoLog.Lines.Add('Código Verif. : ' + CodVerificacao);
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmConsultarSituacao:
+        begin
+          with ConsultaSituacao do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmConsultarSituacao));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+            memoLog.Lines.Add('Numero do Lote: ' + Lote);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Situação Lote : ' + Situacao);
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmConsultarLote:
+        begin
+          with ConsultaLoteRps do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmConsultarLote));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+            memoLog.Lines.Add('Numero do Lote: ' + Lote);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Situação Lote : ' + Situacao);
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmConsultarNFSePorRps:
+        begin
+          with ConsultaNFSeporRps do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmConsultarNFSePorRps));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero do Rps : ' + NumRPS);
+            memoLog.Lines.Add('Série do Rps  : ' + Serie);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Numero do Lote: ' + Lote);
+            memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
+            memoLog.Lines.Add('Situação Lote : ' + Situacao);
+            memoLog.Lines.Add('Link          : ' + Link);
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmConsultarNFSe,
+      tmConsultarNFSePorFaixa,
+      tmConsultarNFSeServicoPrestado,
+      tmConsultarNFSeServicoTomado,
+      tmConsultarNFSeURL:
+        begin
+          with ConsultaNFSe do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(Metodo));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Num. Ini. NFSe: ' + InfConsultaNFSe.NumeroIniNFSe);
+            memoLog.Lines.Add('Num. Fin. NFSe: ' + InfConsultaNFSe.NumeroFinNFSe);
+            memoLog.Lines.Add('Data Inicial  : ' + DateToStr(InfConsultaNFSe.DataInicial));
+            memoLog.Lines.Add('Data Final    : ' + DateToStr(InfConsultaNFSe.DataFinal));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmCancelarNFSe:
+        begin
+          with CancelaNFSe do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmCancelarNFSe));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero da NFSe: ' + InfCancelamento.NumeroNFSe);
+            memoLog.Lines.Add('Série da NFSe : ' + InfCancelamento.SerieNFSe);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Situação: ' + Situacao);
+            memoLog.Lines.Add('Link    : ' + Link);
+            memoLog.Lines.Add('Sucesso : ' + BoolToStr(Sucesso, True));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Retorno do Pedido de Cancelamento:');
+            memoLog.Lines.Add('Situação : ' + RetCancelamento.Situacao);
+            memoLog.Lines.Add('Data/Hora: ' + DateToStr(RetCancelamento.DataHora));
+            memoLog.Lines.Add('Mensagem : ' + RetCancelamento.MsgCanc);
+            memoLog.Lines.Add('Sucesso  : ' + RetCancelamento.Sucesso);
+            memoLog.Lines.Add('Link     : ' + RetCancelamento.Link);
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+
+          if ACBrNFSeX1.Configuracoes.Geral.ConsultaAposCancelar and
+             ACBrNFSeX1.Provider.ConfigGeral.ConsultaNFSe then
+          begin
+            with ConsultaNFSe do
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Método Executado: ' + MetodoToStr(Metodo));
+              memoLog.Lines.Add('Parâmetros de Envio');
+              memoLog.Lines.Add('Num. Ini. NFSe: ' + InfConsultaNFSe.NumeroIniNFSe);
+              memoLog.Lines.Add('Num. Fin. NFSe: ' + InfConsultaNFSe.NumeroFinNFSe);
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Parâmetros de Retorno');
+              memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
+
+              LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+              LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+              if Erros.Count > 0 then
+              begin
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Erro(s):');
+                for i := 0 to Erros.Count -1 do
+                begin
+                  memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                  memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                  memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                  memoLog.Lines.Add('---------');
+                end;
+              end;
+
+              if Alertas.Count > 0 then
+              begin
+                memoLog.Lines.Add(' ');
+                memoLog.Lines.Add('Alerta(s):');
+                for i := 0 to Alertas.Count -1 do
+                begin
+                  memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                  memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                  memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                  memoLog.Lines.Add('---------');
+                end;
+              end;
+            end;
+          end;
+        end;
+
+      tmSubstituirNFSe:
+        begin
+          with SubstituiNFSe do
+          begin
+            memoLog.Lines.Add('Método Executado: ' + MetodoToStr(tmSubstituirNFSe));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Envio');
+            memoLog.Lines.Add('Numero da NFSe: ' + InfCancelamento.NumeroNFSe);
+            memoLog.Lines.Add('Série da NFSe : ' + InfCancelamento.SerieNFSe);
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Parâmetros de Retorno');
+            memoLog.Lines.Add('Situação: ' + Situacao);
+            memoLog.Lines.Add('Link    : ' + Link);
+            memoLog.Lines.Add('Sucesso : ' + BoolToStr(Sucesso, True));
+            memoLog.Lines.Add(' ');
+            memoLog.Lines.Add('Retorno do Pedido de Cancelamento:');
+            memoLog.Lines.Add('Situação : ' + RetCancelamento.Situacao);
+            memoLog.Lines.Add('Data/Hora: ' + DateToStr(RetCancelamento.DataHora));
+            memoLog.Lines.Add('Mensagem : ' + RetCancelamento.MsgCanc);
+            memoLog.Lines.Add('Sucesso  : ' + RetCancelamento.Sucesso);
+            memoLog.Lines.Add('Link     : ' + RetCancelamento.Link);
+
+            LoadXML(XmlEnvio, WBXmlEnvio, 'temp1.xml');
+            LoadXML(XmlRetorno, WBXmlRetorno, 'temp2.xml');
+
+            if Erros.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Erro(s):');
+              for i := 0 to Erros.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Erros[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Erros[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Erros[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+
+            if Alertas.Count > 0 then
+            begin
+              memoLog.Lines.Add(' ');
+              memoLog.Lines.Add('Alerta(s):');
+              for i := 0 to Alertas.Count -1 do
+              begin
+                memoLog.Lines.Add('Código  : ' + Alertas[i].Codigo);
+                memoLog.Lines.Add('Mensagem: ' + Alertas[i].Descricao);
+                memoLog.Lines.Add('Correção: ' + Alertas[i].Correcao);
+                memoLog.Lines.Add('---------');
+              end;
+            end;
+          end;
+        end;
+
+      tmAbrirSessao:
+        begin
+        end;
+
+      tmFecharSessao:
+        begin
+        end;
     end;
+
   end;
 
-  if Response.Alertas.Count > 0 then
-  begin
-    memoLog.Lines.Add(' ');
-    memoLog.Lines.Add('Alerta(s):');
-    for i := 0 to Response.Alertas.Count -1 do
-    begin
-      memoLog.Lines.Add('Código  : ' + Response.Alertas[i].Codigo);
-      memoLog.Lines.Add('Mensagem: ' + Response.Alertas[i].Descricao);
-      memoLog.Lines.Add('Correção: ' + Response.Alertas[i].Correcao);
-      memoLog.Lines.Add('---------');
-    end;
-  end;
-
-  MemoResp.Lines.Text := Response.XmlEnvio;
-  memoRespWS.Lines.Text := Response.XmlRetorno;
-  LoadXML(Response.XmlEnvio, WBResposta);
-
-
-  MemoDados.Lines.Clear;
+//  MemoDados.Lines.Clear;
 
   for i := 0 to ACBrNFSeX1.NotasFiscais.Count -1 do
   begin
-    MemoDados.Lines.Add('NFS-e Numero....: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.Numero);
-    MemoDados.Lines.Add('Cod. Verificacao: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.CodigoVerificacao);
-    MemoDados.Lines.Add('Nome do arquivo.: ' + ACBrNFSeX1.Configuracoes.Arquivos.GetPathNFSe() + '\' +
-                                               ACBrNFSeX1.NotasFiscais.Items[i].NomeArq);
+    memoLog.Lines.Add(' ');
+    memoLog.Lines.Add('NFS-e Numero....: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.Numero);
+    memoLog.Lines.Add('Cod. Verificacao: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.CodigoVerificacao);
+    memoLog.Lines.Add('Prestador.......: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.Prestador.RazaoSocial);
+    memoLog.Lines.Add('Tomador.........: ' + ACBrNFSeX1.NotasFiscais.Items[i].NFSe.Tomador.RazaoSocial);
+    memoLog.Lines.Add('Nome do arquivo.: ' + ACBrNFSeX1.Configuracoes.Arquivos.GetPathNFSe() + '\' +
+                                             ACBrNFSeX1.NotasFiscais.Items[i].NomeArq);
+    if ACBrNFSeX1.Configuracoes.Arquivos.Salvar then
+      memoLog.Lines.Add('==> Xml da nota salvo na pasta e com o nome informado acima.')
+    else
+      memoLog.Lines.Add('==> Xml da nota não salvo em disco.');
+
+    // Na propriedade XML temos o XML da NFS-e
+    LoadXML(ACBrNFSeX1.NotasFiscais.Items[i].XML, WBXmlNotas);
   end;
 
-  pgRespostas.ActivePageIndex := 2;
+  pgRespostas.ActivePageIndex := 0;
 end;
 
 procedure TfrmACBrNFSe.ConfigurarComponente;
@@ -2685,15 +3154,17 @@ begin
   lblSchemas.Caption := ACBrNFSeX1.Configuracoes.Geral.xProvedor;
 end;
 
-procedure TfrmACBrNFSe.LoadXML(RetWS: String; MyWebBrowser: TWebBrowser);
+procedure TfrmACBrNFSe.LoadXML(RetWS: String; MyWebBrowser: TWebBrowser; NomeArq: string);
 begin
-  ACBrUtil.WriteToTXT(PathWithDelim(ExtractFileDir(application.ExeName)) + 'temp.xml',
-                      AnsiString(ACBrUtil.ConverteXMLtoUTF8(RetWS)), False, False);
+//  ACBrUtil.WriteToTXT(PathWithDelim(ExtractFileDir(application.ExeName)) + 'temp.xml',
+//                      AnsiString(ACBrUtil.ConverteXMLtoUTF8(RetWS)), False, False);
 
-  MyWebBrowser.Navigate(PathWithDelim(ExtractFileDir(application.ExeName)) + 'temp.xml');
+  ACBrUtil.WriteToTXT(PathWithDelim(ExtractFileDir(application.ExeName)) + NomeArq,
+                      AnsiString(RetWS), False, False);
 
-  if ACBrNFSeX1.NotasFiscais.Count > 0then
-    MemoResp.Lines.Add('Empresa: ' + ACBrNFSeX1.NotasFiscais.Items[0].NFSe.Prestador.RazaoSocial);
+  MyWebBrowser.Navigate(PathWithDelim(ExtractFileDir(application.ExeName)) + NomeArq);
+
+  sleep(1000);
 end;
 
 procedure TfrmACBrNFSe.PathClick(Sender: TObject);

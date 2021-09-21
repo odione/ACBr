@@ -159,6 +159,7 @@ var
   ValorIssRet: Double;
 begin
   Result := True;
+  NFSe.SituacaoNfse := snNormal;
 
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -171,15 +172,14 @@ begin
 
   with NFSe do
   begin
-    Protocolo      := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumNf'), tcStr);
+    Numero         := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumNf'), tcStr);
+//    Protocolo      := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumNf'), tcStr);
     SeriePrestacao := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('SerNf'), tcStr);
 
     aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('SitNf'), tcStr);
 
     if aValor = '2' then
-      Cancelada := snSim
-    else
-      Cancelada := snNao;
+      NFSe.SituacaoNfse := snCancelado;
 
     MotivoCancelamento := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('MotivoCncNf'), tcStr);
 

@@ -642,8 +642,7 @@ begin
         begin
           AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
           AuxNode := AuxNode.Childrens.FindAnyNs('IdentificacaoRps');
-          AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Numero'), tcStr);
 
           ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -794,6 +793,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -828,8 +829,7 @@ begin
         AuxNode := AuxNode.Childrens.FindAnyNs('Nfse');
 
       AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
-      AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-      NumNFSe := ProcessarConteudoXml(AuxNode, tcStr);
+      NumNFSe := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Numero'), tcStr);
 
       ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumNFSe);
 
@@ -1011,6 +1011,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -1056,9 +1058,16 @@ begin
         else
           AuxNode := AuxNode.Childrens.FindAnyNs('Nfse');
 
+        if AuxNode = nil then
+        begin
+          AErro := Response.Erros.New;
+          AErro.Codigo := Cod203;
+          AErro.Descricao := Desc203;
+          Exit;
+        end;
+
         AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
-        AuxNode := AuxNode.Childrens.FindAnyNs('Numero');
-        NumNFSe := ProcessarConteudoXml(AuxNode, tcStr);
+        NumNFSe := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Numero'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumNFSe);
 
@@ -1272,9 +1281,9 @@ begin
       else
         IdAttr := 'ID';
 
-      ANode := ANode.Childrens.FindAnyNs('Pedido').Childrens.FindAnyNs('InfPedidoCancelamento');
-
-      Ret.Pedido.InfID.ID := ANode.Attributes.Items[IdAttr].Content;
+      ANode := ANode.Childrens.FindAnyNs('Pedido');
+      ANode := ANode.Childrens.FindAnyNs('InfPedidoCancelamento');
+//      Ret.Pedido.InfID.ID := ANode.Attributes.Items[IdAttr].Content;
       Ret.Pedido.CodigoCancelamento := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('CodigoCancelamento'), tcStr);
 
       ANode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');

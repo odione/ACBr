@@ -230,6 +230,7 @@ var
   Ok: Boolean;
 begin
   Result := True;
+  NFSe.SituacaoNfse := snNormal;
 
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -260,7 +261,7 @@ begin
     aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NaturezaOperacao'), tcStr);
     NaturezaOperacao := StrToNaturezaOperacao(Ok, aValor);
 
-    Protocolo         := CodigoVerificacao;
+//    Protocolo         := CodigoVerificacao;
     OutrasInformacoes := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Observacao'), tcStr);
 
     MotivoCancelamento           := '';
@@ -270,14 +271,8 @@ begin
 
     if aValor = 'Cancelada' then
     begin
-      Status    := srCancelado;
-      Cancelada := snSim;
+      NFSe.SituacaoNfse := snCancelado;
       NfseCancelamento.DataHora := DataEmissao;
-    end
-    else
-    begin
-      Status    := srNormal;
-      Cancelada := snNao;
     end;
 
     IdentificacaoRps.Numero := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('NumeroRps'), tcStr);

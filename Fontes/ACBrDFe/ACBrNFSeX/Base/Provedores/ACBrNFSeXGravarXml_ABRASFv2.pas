@@ -131,8 +131,6 @@ type
   protected
     procedure Configuracao; override;
 
-    procedure DefinirIDRps; override;
-
     function DefinirNameSpaceDeclaracao: string; virtual;
 
     function GerarInfDeclaracaoPrestacaoServico: TACBrXmlNode; virtual;
@@ -288,6 +286,7 @@ begin
   FNrOcorrNumProcesso := 0;
   FNrOcorrInscMunTomador := 0;
   FNrOcorrCodigoPaisServico := 0;
+  FNrOcorrRespRetencao := 0;
 
   // Por padrão as tags abaixo são obrigatórias
   FNrOcorrIssRetido := 1;
@@ -325,7 +324,6 @@ begin
   FNrOcorrValorCargaTribEst := -1;
   FNrOcorrInformacoesComplemetares := -1;
   FNrOcorrValTotTrib := -1;
-  FNrOcorrRespRetencao := -1;
   FNrOcorrTipoLogradouro := -1;
   FNrOcorrLogradouro := -1;
   FNrOcorrDDD := -1;
@@ -370,15 +368,7 @@ begin
   xmlNode := GerarInfDeclaracaoPrestacaoServico;
   NFSeNode.AppendChild(xmlNode);
 
-  // Define a tag raiz que vai conter o XML da NFS-e
-//  DefinirRetornoNFSe;
-
   Result := True;
-end;
-
-procedure TNFSeW_ABRASFv2.DefinirIDRps;
-begin
-  NFSe.InfID.ID := '';
 end;
 
 function TNFSeW_ABRASFv2.DefinirNameSpaceDeclaracao: string;

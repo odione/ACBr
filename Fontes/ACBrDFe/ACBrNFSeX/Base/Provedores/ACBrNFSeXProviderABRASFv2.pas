@@ -587,7 +587,7 @@ begin
                   Response.Protocolo +
                 '</' + Prefixo + 'Protocolo>';
 
-    if Response.Lote <> '' then
+    if ConfigMsgDados.UsarNumLoteConsLote then
       NumeroLote := '<' + Prefixo + 'NumeroLote>' +
                       Response.Lote +
                     '</' + Prefixo + 'NumeroLote>';
@@ -813,6 +813,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -827,7 +829,13 @@ begin
 
       Response.Sucesso := (Response.Erros.Count = 0);
 
-      ANode := Document.Root.Childrens.FindAnyNs('CompNfse');
+      ANode := Document.Root.Childrens.FindAnyNs('ListaNfse');
+
+      if ANode = nil then
+        ANode := Document.Root.Childrens.FindAnyNs('CompNfse')
+      else
+        ANode := ANode.Childrens.FindAnyNs('CompNfse');
+
       if not Assigned(ANode) then
       begin
         AErro := Response.Erros.New;
@@ -1001,14 +1009,21 @@ begin
 
   Response.Metodo := tmConsultarNFSePorFaixa;
 
-  XmlConsulta := '<' + Prefixo + 'Faixa>' +
-                   '<' + PrefixoTS + 'NumeroNfseInicial>' +
-                      OnlyNumber(Response.InfConsultaNFSe.NumeroIniNFSe) +
-                   '</' + PrefixoTS + 'NumeroNfseInicial>' +
-                   '<' + PrefixoTS + 'NumeroNfseFinal>' +
-                      OnlyNumber(Response.InfConsultaNFSe.NumeroFinNFSe) +
-                   '</' + PrefixoTS + 'NumeroNfseFinal>' +
-                 '</' + Prefixo + 'Faixa>';
+  if OnlyNumber(Response.InfConsultaNFSe.NumeroIniNFSe) <> OnlyNumber(Response.InfConsultaNFSe.NumeroFinNFSe) then
+    XmlConsulta := '<' + Prefixo + 'Faixa>' +
+                     '<' + PrefixoTS + 'NumeroNfseInicial>' +
+                        OnlyNumber(Response.InfConsultaNFSe.NumeroIniNFSe) +
+                     '</' + PrefixoTS + 'NumeroNfseInicial>' +
+                     '<' + PrefixoTS + 'NumeroNfseFinal>' +
+                        OnlyNumber(Response.InfConsultaNFSe.NumeroFinNFSe) +
+                     '</' + PrefixoTS + 'NumeroNfseFinal>' +
+                   '</' + Prefixo + 'Faixa>'
+  else
+    XmlConsulta := '<' + Prefixo + 'Faixa>' +
+                     '<' + PrefixoTS + 'NumeroNfseInicial>' +
+                        OnlyNumber(Response.InfConsultaNFSe.NumeroIniNFSe) +
+                     '</' + PrefixoTS + 'NumeroNfseInicial>' +
+                   '</' + Prefixo + 'Faixa>';
 
   aParams := TNFSeParamsResponse.Create;
   aParams.Clear;
@@ -1100,6 +1115,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -1353,6 +1370,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -1617,6 +1636,8 @@ begin
 
   try
     try
+      TACBrNFSeX(FAOwner).NotasFiscais.Clear;
+
       if Response.XmlRetorno = '' then
       begin
         AErro := Response.Erros.New;
@@ -1900,7 +1921,8 @@ begin
         IdAttr := 'ID';
 
       ANode := ANode.Childrens.FindAnyNs('Pedido').Childrens.FindAnyNs('InfPedidoCancelamento');
-      Ret.Pedido.InfID.ID := ANode.Attributes.Items[IdAttr].Content;
+
+      //      Ret.Pedido.InfID.ID := ANode.Attributes.Items[IdAttr].Content;
       Ret.Pedido.CodigoCancelamento := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('CodigoCancelamento'), tcStr);
 
       ANode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');
@@ -1910,10 +1932,16 @@ begin
         Numero := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Numero'), tcStr);
 
         AuxNode := ANode.Childrens.FindAnyNs('CpfCnpj');
-        Cnpj := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Cnpj'), tcStr);
 
-        if Cnpj = '' then
-          Cnpj := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Cpf'), tcStr);
+        if AuxNode <> nil then
+        begin
+          Cnpj := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Cnpj'), tcStr);
+
+          if Cnpj = '' then
+            Cnpj := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('Cpf'), tcStr);
+        end
+        else
+          Cnpj := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Cnpj'), tcStr);
 
         InscricaoMunicipal := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('InscricaoMunicipal'), tcStr);
         CodigoMunicipio := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('CodigoMunicipio'), tcStr);
@@ -2230,6 +2258,9 @@ begin
   ANode := RootNode.Childrens.FindAnyNs(AListTag);
 
   if (ANode = nil) then
+    ANode := RootNode.Childrens.FindAnyNs('ListaMensagemRetornoLote');
+
+  if (ANode = nil) then
     ANode := RootNode.Childrens.FindAnyNs('MensagemRetorno');
 
   if Assigned(ANode) then
@@ -2245,41 +2276,39 @@ begin
         AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
         AErro.Correcao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
       end;
+    end
+    else
+    begin
+      AErro := Response.Erros.New;
+      AErro.Codigo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Codigo'), tcStr);
+      AErro.Descricao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Mensagem'), tcStr);
+      AErro.Correcao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Correcao'), tcStr);
     end;
   end;
 
   ANode := RootNode.Childrens.FindAnyNs('ListaMensagemAlertaRetorno');
 
-  if (ANode = nil) then Exit;
-
-  ANodeArray := ANode.Childrens.FindAllAnyNs(AMessageTag);
-  if not Assigned(ANodeArray) then Exit;
-
-  for I := Low(ANodeArray) to High(ANodeArray) do
+  if Assigned(ANode) then
   begin
-    AAlerta := Response.Alertas.New;
-    AAlerta.Codigo := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Codigo'), tcStr);
-    AAlerta.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
-    AAlerta.Correcao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
-  end;
+    ANodeArray := ANode.Childrens.FindAllAnyNs(AMessageTag);
 
-  {
-    Para os serviços que recepcionam o Lote de Rps tanto no modo assíncrono
-    quanto no modo síncrono do provedor RLZ o nome da tag é diferente.
-  }
-  ANode := RootNode.Childrens.FindAnyNs('ListaMensagemRetornoLote');
-
-  if (ANode = nil) then Exit;
-
-  ANodeArray := ANode.Childrens.FindAllAnyNs(AMessageTag);
-  if not Assigned(ANodeArray) then Exit;
-
-  for I := Low(ANodeArray) to High(ANodeArray) do
-  begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Codigo'), tcStr);
-    AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
-    AErro.Correcao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
+    if Assigned(ANodeArray) then
+    begin
+      for I := Low(ANodeArray) to High(ANodeArray) do
+      begin
+        AAlerta := Response.Alertas.New;
+        AAlerta.Codigo := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Codigo'), tcStr);
+        AAlerta.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
+        AAlerta.Correcao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
+      end;
+    end
+    else
+    begin
+      AErro := Response.Erros.New;
+      AErro.Codigo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Codigo'), tcStr);
+      AErro.Descricao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Mensagem'), tcStr);
+      AErro.Correcao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Correcao'), tcStr);
+    end;
   end;
 end;
 

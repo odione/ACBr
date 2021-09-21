@@ -72,14 +72,14 @@ type
     procedure LerOrgaoGerador(const ANode: TACBrXmlNode);
     procedure LerConstrucaoCivil(const ANode: TACBrXmlNode);
 
-    procedure LerInfNfseCancelamento(const ANode: TACBrXmlNode);
+    procedure LerNfseCancelamento(const ANode: TACBrXmlNode);
     procedure LerConfirmacao(const ANode: TACBrXmlNode);
     procedure LerPedido(const ANode: TACBrXmlNode);
     procedure LerInfConfirmacaoCancelamento(const ANode: TACBrXmlNode);
     procedure LerInfPedidoCancelamento(const ANode: TACBrXmlNode);
     procedure LerIdentificacaoNfse(const ANode: TACBrXmlNode);
 
-    procedure LerInfNfseSubstituicao(const ANode: TACBrXmlNode);
+    procedure LerNfseSubstituicao(const ANode: TACBrXmlNode);
     procedure LerSubstituicaoNfse(const ANode: TACBrXmlNode);
 
     procedure LerRpsSubstituido(const ANode: TACBrXmlNode);
@@ -104,12 +104,22 @@ procedure TNFSeR_ABRASFv1.LerConfirmacao(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
 begin
+  if not Assigned(ANode) or (ANode = nil) then Exit;
+
   AuxNode := ANode.Childrens.FindAnyNs('Confirmacao');
 
   if AuxNode <> nil then
   begin
     LerPedido(AuxNode);
     LerInfConfirmacaoCancelamento(AuxNode);
+
+    with NFSe.NfseCancelamento do
+    begin
+      DataHora := LerDatas(ProcessarConteudo(AuxNode.Childrens.FindAnyNs('DataHoraCancelamento'), tcStr));
+
+      if DataHora > 0 then
+        NFSe.SituacaoNfse := snCancelado;
+    end;
   end;
 end;
 
@@ -333,16 +343,18 @@ var
 begin
   AuxNode := ANode.Childrens.FindAnyNs('InfConfirmacaoCancelamento');
 
+  NFSe.SituacaoNfse := snNormal;
+
   if AuxNode <> nil then
   begin
     with NFSe.NfseCancelamento do
     begin
-      Sucesso  := StrToBool(ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Sucesso'), tcBoolStr));
+      Sucesso  := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('Sucesso'), tcBool);
       DataHora := LerDatas(ProcessarConteudo(AuxNode.Childrens.FindAnyNs('DataHora'), tcStr));
-    end;
 
-    if NFSe.NfseCancelamento.DataHora > 0 then
-      NFSe.Status := srCancelado;
+      if DataHora > 0 then
+        NFSe.SituacaoNfse := snCancelado;
+    end;
   end;
 end;
 
@@ -385,7 +397,7 @@ begin
   end;
 end;
 
-procedure TNFSeR_ABRASFv1.LerInfNfseCancelamento(const ANode: TACBrXmlNode);
+procedure TNFSeR_ABRASFv1.LerNfseCancelamento(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
 begin
@@ -393,13 +405,10 @@ begin
 
   AuxNode := ANode.Childrens.FindAnyNs('NfseCancelamento');
 
-  if AuxNode <> nil then
-  begin
-    LerConfirmacao(AuxNode);
-  end;
+  LerConfirmacao(AuxNode);
 end;
 
-procedure TNFSeR_ABRASFv1.LerInfNfseSubstituicao(const ANode: TACBrXmlNode);
+procedure TNFSeR_ABRASFv1.LerNfseSubstituicao(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
 begin
@@ -407,10 +416,7 @@ begin
 
   AuxNode := ANode.Childrens.FindAnyNs('NfseSubstituicao');
 
-  if AuxNode <> nil then
-  begin
-    LerSubstituicaoNfse(AuxNode);
-  end;
+  LerSubstituicaoNfse(AuxNode);
 end;
 
 procedure TNFSeR_ABRASFv1.LerInfPedidoCancelamento(const ANode: TACBrXmlNode);
@@ -563,6 +569,8 @@ procedure TNFSeR_ABRASFv1.LerSubstituicaoNfse(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
 begin
+  if not Assigned(ANode) or (ANode = nil) then Exit;
+
   AuxNode := ANode.Childrens.FindAnyNs('SubstituicaoNfse');
 
   if AuxNode <> nil then
@@ -661,6 +669,8 @@ begin
   if XmlNode = nil then
     raise Exception.Create('Arquivo xml vazio.');
 
+  NFSe.Clear;
+
   if tpXML = txmlNFSe then
     Result := LerXmlNfse(XmlNode)
   else
@@ -683,14 +693,8 @@ begin
     AuxNode := AuxNode.Childrens.FindAnyNs('Nfse');
 
   LerInfNfse(AuxNode);
-
-  AuxNode := ANode.Childrens.FindAnyNs('NfseCancelamento');
-
-  LerInfNfseCancelamento(AuxNode);
-
-  AuxNode := ANode.Childrens.FindAnyNs('NfseSubstituicao');
-
-  LerInfNfseSubstituicao(AuxNode);
+  LerNfseCancelamento(AuxNode);
+  LerNfseSubstituicao(AuxNode);
 end;
 
 function TNFSeR_ABRASFv1.LerXmlRps(const ANode: TACBrXmlNode): Boolean;

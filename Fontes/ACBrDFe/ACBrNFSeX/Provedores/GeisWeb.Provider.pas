@@ -247,7 +247,7 @@ begin
       ANode := Document.Root;
 
       ANodeArray := ANode.Childrens.FindAllAnyNs('Nfse');
-      if not Assigned(ANode) then
+      if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
@@ -258,11 +258,10 @@ begin
       for I := Low(ANodeArray) to High(ANodeArray) do
       begin
         ANode := ANodeArray[I];
-        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoRps');
-        AuxNode := AuxNode.Childrens.FindAnyNs('NumeroRps');
+        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');
 
         if AuxNode <> nil then
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('NumeroRps'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -363,11 +362,10 @@ begin
       for I := Low(ANodeArray) to High(ANodeArray) do
       begin
         ANode := ANodeArray[I];
-        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoRps');
-        AuxNode := AuxNode.Childrens.FindAnyNs('NumeroRps');
+        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');
 
         if AuxNode <> nil then
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('NumeroRps'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -518,11 +516,10 @@ begin
       for I := Low(ANodeArray) to High(ANodeArray) do
       begin
         ANode := ANodeArray[I];
-        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoRps');
-        AuxNode := AuxNode.Childrens.FindAnyNs('NumeroRps');
+        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');
 
         if AuxNode <> nil then
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('NumeroRps'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -625,11 +622,10 @@ begin
       for I := Low(ANodeArray) to High(ANodeArray) do
       begin
         ANode := ANodeArray[I];
-        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoRps');
-        AuxNode := AuxNode.Childrens.FindAnyNs('NumeroRps');
+        AuxNode := ANode.Childrens.FindAnyNs('IdentificacaoNfse');
 
         if AuxNode <> nil then
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('NumeroRps'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -698,7 +694,7 @@ begin
   Request := Request + '</geis:EnviaLoteRps>';
 
   Result := Executar(SoapAction + 'EnviaLoteRps', Request,
-                     ['EnviaLoteRpsResposta', 'EnviaLoteRpsResposta'],
+                     ['EnviaLoteRpsResposta', 'EnviaLoteRPSResposta'],
                      ['xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
                       'xmlns:xsd="http://www.w3.org/2001/XMLSchema"',
                       NameSpace]);

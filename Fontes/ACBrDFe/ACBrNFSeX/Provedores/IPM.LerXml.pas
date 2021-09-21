@@ -133,12 +133,12 @@ begin
           ValorTotal    := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('valor_tributavel'), tcDe2);
           ValorDeducoes := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('valor_deducao'), tcDe2);
           BaseCalculo   := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('valor_tributavel'), tcDe2);
-          ValorIss      := BaseCalculo * Aliquota / 100;
+          ValorISS      := BaseCalculo * Aliquota / 100;
 
           Valores.ValorIssRetido := Valores.ValorIssRetido +
               ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('valor_issrf'), tcDe2);
           Valores.BaseCalculo    := Valores.BaseCalculo + BaseCalculo;
-          Valores.ValorIss       := Valores.ValorIss + ValorIss;
+          Valores.ValorIss       := Valores.ValorIss + ValorISS;
         end;
       end;
     end;
@@ -149,6 +149,7 @@ procedure TNFSeR_IPM.LerNota(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
   aValor: string;
+  Ok: Boolean;
 begin
   AuxNode := ANode.Childrens.FindAnyNs('nf');
 
@@ -172,18 +173,8 @@ begin
         DataEmissao := StrToDateTimeDef(aValor, 0);
       end;
 
+      SituacaoNfse := StrToStatusNFSe(Ok, ProcessarConteudoXml(AuxNode.Childrens.FindAnyNs('situacao_codigo_nfse'), tcStr));
       aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('situacao'), tcStr);
-
-      if aValor = 'C' then
-      begin
-        Status := srCancelado;
-        Cancelada := snSim;
-      end
-      else
-      begin
-        Status := srNormal;
-        Cancelada := snNao;
-      end;
 
       OutrasInformacoes := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('observacao'), tcStr);
 

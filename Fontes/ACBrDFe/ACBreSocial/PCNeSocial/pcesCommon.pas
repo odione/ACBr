@@ -206,6 +206,7 @@ type
     FAliqRatAjust: Double;
     FProcAdmJudRat: TProcAdmJudRat;
     FProcAdmJudFap: TProcAdmJudFap;
+    FReenvioFap: tpSimNao;
     function getProcAdmJudRat(): TProcAdmJudRat;
     function getProcAdmJudFap(): TProcAdmJudFap;
   public
@@ -219,6 +220,7 @@ type
     property AliqRatAjust: Double read FAliqRatAjust write FAliqRatAjust;
     property ProcAdmJudRat: TProcAdmJudRat read getProcAdmJudRat write FProcAdmJudRat;
     property ProcAdmJudFap: TProcAdmJudFap read getProcAdmJudFap write FProcAdmJudFap;
+    property ReenvioFap: tpSimNao read FReenvioFap write FReenvioFap;
   end;
 
   TAlvaraJudicial = class
@@ -397,6 +399,7 @@ type
     property depSF: tpSimNao read FdepSF write FdepSF;
     property sexoDep: string read FsexoDep write FsexoDep;
     property incTrab: tpSimNao read FIncTrab write FIncTrab;
+    property incFisMen: tpSimNao read FIncTrab write FIncTrab;
   end;
 
   TDescAtividadeCollection = class(TACBrObjectList)
@@ -611,9 +614,11 @@ type
   private
     FIndApuracao: tpIndApuracao;
     FPerApur: string;
+    FindGuia: string;
   public
     property IndApuracao: tpIndApuracao read FIndApuracao write FIndApuracao;
     property perApur: string read FPerApur write FPerApur;
+    property indGuia: string read FindGuia write FindGuia;
   end;
 
   TIdeEvento4 = class(TObject)
@@ -1853,6 +1858,7 @@ begin
   inherited;
   FProcAdmJudRat := nil;
   FProcAdmJudFap := nil;
+  FReenvioFap    := tpNao;
 end;
 
 destructor TAliqGilRat.Destroy;

@@ -139,7 +139,7 @@ begin
 
   ANodeArray := ANode.Childrens.FindAllAnyNs('Erro');
 
-  if not Assigned(ANodeArray) then
+  if not Assigned(ANodeArray) and (ANodeArray <> nil) then
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('Codigo'), tcStr);
@@ -252,7 +252,7 @@ begin
   Request := Request + '</def:ConsultarNfsePorFaixa>';
 
   Result := Executar('', Request,
-                     ['ConsultarNfsePorFaixaReturn'],
+                     ['ConsultarNfsePorFaixaReturn', 'ConsultarNfseFaixaResposta'],
                      ['xmlns:def="http://DefaultNamespace"']);
 end;
 
@@ -269,7 +269,7 @@ begin
   Request := Request + '</def:ConsultarNfsePorRps>';
 
   Result := Executar('', Request,
-                     ['ConsultarNfsePorRpsReturn'],
+                     ['ConsultarNfsePorRpsReturn', 'ConsultarNfseRpsResposta'],
                      ['xmlns:def="http://DefaultNamespace"']);
 end;
 
@@ -286,7 +286,7 @@ begin
   Request := Request + '</def:ConsultarNfseServicoPrestado>';
 
   Result := Executar('', Request,
-                     ['ConsultarNfseServicoPrestadoReturn'],
+                     ['ConsultarNfseServicoPrestadoReturn', 'ConsultarNfseServicoPrestadoResposta'],
                      ['xmlns:def="http://DefaultNamespace"']);
 end;
 

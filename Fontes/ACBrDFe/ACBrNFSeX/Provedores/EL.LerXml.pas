@@ -339,7 +339,7 @@ begin
         ValorUnitario := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('ValorServico'), tcDe2);
         Descricao     := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('Descricao'), tcStr);
         Aliquota      := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('Aliquota'), tcDe2);
-        ValorIss      := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('ValorIssqn'), tcDe4);
+        ValorISS      := ProcessarConteudo(ANodes[i].Childrens.FindAnyNs('ValorIssqn'), tcDe4);
 
         aValorTotal := Quantidade * ValorUnitario;
 
@@ -416,6 +416,7 @@ var
   Ok: Boolean;
 begin
   Result := True;
+  NFSe.SituacaoNfse := snNormal;
 
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -435,10 +436,7 @@ begin
     aValor := ProcessarConteudo(AuxNode.Childrens.FindAnyNs('situacao'), tcStr);
 
     if aValor <> 'A' then
-    begin
-      NFSe.Cancelada := snSim;
-      NFSe.Status    := srCancelado;
-    end;
+      NFSe.SituacaoNfse := snCancelado;
 
     LerIdNota(AuxNode);
   end;

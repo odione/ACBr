@@ -1,8 +1,8 @@
 object dmACBrBoletoFCFR: TdmACBrBoletoFCFR
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Left = 266
-  Top = 244
+  Left = 194
+  Top = 236
   Height = 341
   Width = 539
   object frxPDFExport: TfrxPDFExport
