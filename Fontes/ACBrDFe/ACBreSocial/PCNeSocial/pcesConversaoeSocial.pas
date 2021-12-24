@@ -267,8 +267,8 @@ type
                              cicpContribuicaoDescontadadoSeguradoeBeneficiarioDecimo,
                              cicpSuspensaodeIncidenciaemDecorrenciadeDecisaoJudicial,
                              cicpNenhum);
-  
-  tpCodIncFGTS            = (cdfNaoeBasedeCalculo, cdfBasedeCalculoFGTS, cdfBasedeCalculoFGTS13Sal, cdfBasedeCalculoFGTSRescisorio, cdfIncidenciadecisaojudicial);
+
+  tpCodIncFGTS            = (cdfNaoeBasedeCalculo, cdfBasedeCalculoFGTS, cdfBasedeCalculoFGTS13Sal, cdfBasedeCalculoFGTSRescisorio, cdfIncidenciadecisaoJudicialFGTSMensal, cdfIncidenciadecisaoJudicialFGTS13Sal, cdfIncidenciadecisaoJudicial);
 
   tpCodIncSIND            = (cisNaoebasedecalculo, cisBasedecalculo, cisValorlaboraldescontada, cisIncidenciasuspensajudicial);
 
@@ -432,7 +432,7 @@ type
 
   tpUndSalFixo            = (sfPorHora, sfPorDia, sfPorSemana, sfPorQuinzena, sfPorMes, sfPorTarefa, sfNaoaplicavel);
 
-  tpTpContr               = (PrazoIndeterminado, PrazoDeterminado, PrazoDeterminadoVincOcDeUmFato);
+  tpTpContr               = (PrazoIndeterminado, PrazoDeterminado, PrazoDeterminadoVincOcDeUmFato, PrazoNaoAplicavel);
 
   tpTpJornada             = (tjJornadaComHorarioDiarioFolgaFixos,                      { Item válido até a versão 2.5 }
                              tjJornada12x36,
@@ -529,8 +529,14 @@ type
 
   tpInclContr             = (icNenhum, icLocaisSemFiliais, icEstudoDeMercado, icContratacaoSuperior3Meses);
 
-  tpPlanRP                = (prpNenhum = -1, prpSemSegregacaoDaMassa, prpFundoEmCapitalizacao, prpFundoEmReparticao, prpMantidoPeloTesouro);
-  
+  tpPlanRP                = (prpNenhum = -1,
+                             prpSemSegregacaoDaMassa,
+                             prpFundoEmCapitalizacao,
+                             prpFundoEmReparticao,
+                             prpMantidoPeloTesouro,
+                             prpPlanoPrevidenciarioOuUnico,
+                             prpPlanoFinanceiro);
+
   tpMtvAlt                = (maPromocao, maReadaptacao, maAproveitamento, maOutros);
 
   tpOrigemAltAfast        = (oaaPorIniciativaDoEmpregador, oaaRevisaoAdministrativa, oaaDeterminacaoJudicial);
@@ -633,6 +639,11 @@ const
                                           'evtCdBenefAlt', 'evtCdBenIn', 
                                           'evtCessao', 'evtCdBenAlt', 
                                           'evtReativBen','evtCdBenTerm');
+
+  TTrabalhadorSemVinculo: Array[0..27] of integer = (
+                                          201, 202, 304, 305, 308, 311, 313, 401, 410, 501, 
+                                          701, 711, 712, 721, 722, 723, 731, 734, 738, 741, 
+                                          751, 761, 771, 781, 901, 902, 903, 904);
 
 function TipoEventoToStr(const t: TTipoEvento ): string;
 function StrToTipoEvento(out ok: boolean; const s: string): TTipoEvento;
@@ -1077,6 +1088,8 @@ function eSStrToTpMotCessBenef(var ok: boolean; const s: string): tpMotCessBenef
 function eStpTpMtvSuspensaoToStr(const t: tpMtvSuspensao): string;
 function eSStrToTpMtvSuspensao(var ok: boolean; const s: string): tpMtvSuspensao;
 
+function IntToTpProf(codCateg : Integer): tpTpProf;
+
 implementation
 
 uses
@@ -1375,12 +1388,12 @@ end;
 
 function eStpPlanRPToStr(const t: tpPlanRP): string;
 begin
-  result := EnumeradoToStr2(t, TGenericosString0_3 );
+  result := EnumeradoToStr2(t, [ '0', '1', '2', '3', '1', '2' ] );
 end;
 
 function eSStrTotpPlanRP(var ok: Boolean; const s: string): tpPlanRP;
 begin
-  result := tpPlanRP( StrToEnumerado2(ok, s, TGenericosString0_3) );
+  result := tpPlanRP( StrToEnumerado2(ok, s, [ '0', '1', '2', '3', '1', '2' ]) );
 end;
 
 function eSTpRegTrabToStr(const t: tpTpRegTrab ): string;
@@ -1897,19 +1910,19 @@ end;
 function eSCodIncIRRFToStr(const t:tpCodIncIRRF ): string;
 begin
   result := EnumeradoToStr2(t,[    '00',   '01',   '09',   '11',   '12',   '13',   '14',   '15',   '31',   '32',   '33',
-                                   '34',   '35',   '41',   '42',   '43',   '44',   '46',   '47',   '48',   '51',   '52',  
+                                   '34',   '35',   '41',   '42',   '43',   '44',   '46',   '47',   '48',   '51',   '52',
                                    '53',   '54',   '55',   '61',   '62',   '63',   '64',   '65',   '66',   '67',   '70',
                                    '71',   '72',   '73',   '74',   '75',   '76',   '77',   '78',   '79',   '81',   '82',
-                                   '83',   '91',   '92',   '93',   '94',   '95',  '700',  '701', '9011', '9012', '9013', 
+                                   '83',   '91',   '92',   '93',   '94',   '95',  '700',  '701', '9011', '9012', '9013',
                                  '9014', '9031', '9032', '9033', '9034', '9831', '9832', '9833', '9834', '9041', '9042',
-                                 '9043', '9046', '9047', '9048', '9051', '9052', '9053', '9054', '9061', '9062', '9063', 
+                                 '9043', '9046', '9047', '9048', '9051', '9052', '9053', '9054', '9061', '9062', '9063',
                                  '9064', '9065', '9066', '9067', '9082', '9083'  ] );
 end;
 
 function eSStrToCodIncIRRF(var ok: boolean; const s: string): tpCodIncIRRF;
 begin
   result := tpCodIncIRRF( StrToEnumerado2(ok , s,[    '00',   '01',   '09',   '11',   '12',   '13',   '14',   '15',   '31',   '32',   '33',
-                                                      '34',   '35',   '41',   '42',   '43',   '44',   '46',   '47',   '48',   '51',   '52', 
+                                                      '34',   '35',   '41',   '42',   '43',   '44',   '46',   '47',   '48',   '51',   '52',
                                                       '53',   '54',   '55',   '61',   '62',   '63',   '64',   '65',   '66',   '67',   '70',   
                                                       '71',   '72',   '73',   '74',   '75',   '76',   '77',   '78',   '79',   '81',   '82',   
                                                       '83',   '91',   '92',   '93',   '94',   '95',  '700',  '701', '9011', '9012', '9013',
@@ -1920,7 +1933,7 @@ end;
 
 function eSCodIncFGTSToStr(const t:tpCodIncFGTS ): string;
 begin
-  result := EnumeradoToStr2(t,[ '00', '11', '12', '21', '91' ] );
+  result := EnumeradoToStr2(t,[ '00', '11', '12', '21', '91', '92', '93' ] );
 end;
 
 function eSStrToCodIncFGTS(var ok: boolean; const s: string): tpCodIncFGTS;
@@ -2849,5 +2862,18 @@ begin
                             mtvSuspensaoPorNaoRecadastramento,
                             mtvOutrosMotivosDeSuspensao]);
 end;
+
+function IntToTpProf(codCateg : Integer): tpTpProf;
+var
+        ix : integer;
+Begin
+  result := ttpProfissionalEmpregado;
+  for ix := low(TTrabalhadorSemVinculo) to High(TTrabalhadorSemVinculo) do
+    if TTrabalhadorSemVinculo[ix] = codCateg then
+    Begin
+      result := ttpProfissionalSemVinculo;
+      break;
+    End;
+End;
 
 end.

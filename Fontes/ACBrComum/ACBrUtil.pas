@@ -251,6 +251,7 @@ function FloatToString(const AValue: Double; SeparadorDecimal: Char = '.';
 function FormatFloatBr(const AValue: Extended; AFormat: String = ''): String; overload;
 function FormatFloatBr(const AFormat: TFormatMask; const AValue: Extended): String; overload;
 function FloatMask(const DecimalDigits: SmallInt = 2; UseThousandSeparator: Boolean = True): String;
+function StringDecimalToFloat(const AValue: String; const DecimalDigits: SmallInt = 2): Double;
 Function StringToFloat(NumString : String): Double;
 Function StringToFloatDef( const NumString : String ;
    const DefaultValue : Double ) : Double ;
@@ -397,6 +398,8 @@ function StringIsINI(const AString: String): Boolean;
 function StringIsAFile(const AString: String): Boolean;
 function StringIsXML(const AString: String): Boolean;
 
+procedure RttiSetProp(AObject: TObject; AProp: String; AValue: String);
+
 {$IfDef FPC}
 var ACBrANSIEncoding: String;
 {$EndIf}
@@ -421,7 +424,7 @@ implementation
 
 Uses
   synautil,
-  ACBrCompress, StrUtilsEx;
+  ACBrCompress, StrUtilsEx, typinfo;
 
 var
   Randomized : Boolean ;
@@ -1805,7 +1808,7 @@ begin
     NumString := StringReplace(NumString, DS, '', []);
 
   Result := StrToFloat(NumString);
-end ;
+end;
 
 {-----------------------------------------------------------------------------
   Converte um Double para string, SEM o separator decimal, considerando as
@@ -1818,6 +1821,25 @@ var
 begin
   Pow    := intpower(10, abs(DecimalDigits) );
   Result := IntToStr( Trunc( SimpleRoundTo( AValue * Pow ,0) ) ) ;
+end;
+
+{-----------------------------------------------------------------------------
+  Converte um String, SEM separador decimal, para Double, considerando a
+  parte final da String como as decimais. Ex: 10000 = "100,00"; 123 = "1,23"
+ ---------------------------------------------------------------------------- }
+function StringDecimalToFloat(const AValue: String; const DecimalDigits: SmallInt): Double;
+var
+  iTam: Integer;
+  sValue: String;
+begin
+  sValue := AValue;
+  iTam   := LengthNativeString(sValue);
+  if (iTam < DecimalDigits) then
+    sValue := StringOfChar('0', (DecimalDigits - iTam)) + sValue;
+
+  sValue := ReverseString(sValue);
+  Insert({$IFDEF HAS_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, sValue, DecimalDigits+1);
+  Result := StrToFloat(ReverseString(sValue));
 end;
 
 {-----------------------------------------------------------------------------
@@ -1910,9 +1932,31 @@ Var
   DS, TS: Char;
   {$IFDEF HAS_FORMATSETTINGS}
   FS: TFormatSettings;
+  DateFormat, TimeFormat: String;
+  p: Integer;
   {$ELSE}
   OldShortDateFormat: String ;
   {$ENDIF}
+
+  function AjustarDateTimeString(const DateTimeString: String; DS, TS: Char): String;
+  var
+    AStr: String;
+  begin
+    AStr := Trim(DateTimeString);
+    if (DS <> '.') then
+      AStr := StringReplace(AStr, '.', DS, [rfReplaceAll]);
+
+    if (DS <> '-') then
+      AStr := StringReplace(AStr, '-', DS, [rfReplaceAll]);
+
+    if (DS <> '/') then
+      AStr := StringReplace(AStr, '/', DS, [rfReplaceAll]);
+
+    if (TS <> ':') then
+      AStr := StringReplace(AStr, ':', TS, [rfReplaceAll]) ;
+
+    Result := AStr;
+  end;
 begin
   Result := 0;
   if (DateTimeString = '0') or (DateTimeString = '') then
@@ -1920,21 +1964,38 @@ begin
 
   {$IFDEF HAS_FORMATSETTINGS}
   FS := CreateFormatSettings;
-  if Format <> '' then
-    FS.ShortDateFormat := Format;
+  if (Format <> '') then
+  begin
+    DateFormat := Format;
+    TimeFormat := '';
+    p := pos(' ',Format);
+    if (p > 0) then
+    begin
+      TimeFormat := Trim(Copy(Format, p, Length(Format)));
+      DateFormat := Trim(copy(Format, 1, p));
+    end;
+    FS.ShortDateFormat := DateFormat;
+    if (TimeFormat <> '') then
+      FS.ShortTimeFormat := TimeFormat;
+  end;
 
   DS := FS.DateSeparator;
   TS := FS.TimeSeparator;
+                           
+  if (Format <> '') then
+  begin
+    if (DS <> '/') and (pos('/', Format) > 0) then
+      DS := '/'
+    else if (DS <> '-') and (pos('-', Format) > 0) then
+      DS := '-'
+    else if (DS <> '.') and (pos('.', Format) > 0) then
+      DS := '.';
 
-  if DS <> '-' then
-    AStr := Trim( StringReplace(DateTimeString,'-',DS, [rfReplaceAll])) ;
+    if (DS <> FS.DateSeparator) then
+      FS.DateSeparator := DS;
+  end;
 
-  if DS <> '/' then
-    AStr := Trim( StringReplace(DateTimeString,'/',DS, [rfReplaceAll])) ;
-
-  if TS <> ':' then
-    AStr := StringReplace(AStr,':',TS, [rfReplaceAll]) ;
-
+  AStr := AjustarDateTimeString(DateTimeString, DS, TS);
   Result := StrToDateTime(AStr, FS);
   {$ELSE}
   OldShortDateFormat := ShortDateFormat ;
@@ -1945,15 +2006,7 @@ begin
     DS := DateSeparator;
     TS := TimeSeparator;
 
-    if DS <> '-' then
-      AStr := Trim( StringReplace(DateTimeString,'-',DS, [rfReplaceAll])) ;
-
-    if DS <> '/' then
-      AStr := Trim( StringReplace(DateTimeString,'/',DS, [rfReplaceAll])) ;
-
-    if TS <> ':' then
-      AStr := StringReplace(AStr,':',TS, [rfReplaceAll]) ;
-
+    AStr := AjustarDateTimeString(DateTimeString, DS, TS);
     Result := StrToDateTime( AStr ) ;
   finally
     ShortDateFormat := OldShortDateFormat ;
@@ -2947,7 +3000,7 @@ begin
         AFileName := APath + LastFile;
         if (SortType = fstDateTime) then
         begin
-          {$IfDef FMX}
+          {$IfDef DELPHIXE_UP}
             AFileDateTime := SearchRec.TimeStamp;
           {$Else}
             AFileDateTime := FileDateToDateTime(SearchRec.Time);
@@ -4564,6 +4617,18 @@ begin
 end;
 
 {$ENDIF}
+{------------------------------------------------------------------------------
+   Inserir um valor a propriedade por RTTI
+ ------------------------------------------------------------------------------}
+procedure RttiSetProp(AObject: TObject; AProp, AValue: String);
+var
+  Propinfo: PPropInfo;
+begin
+  PropInfo := GetPropInfo(AObject.ClassInfo, AProp);
+  if (PropInfo = nil) then
+    Exit;
+  SetPropValue(AObject, AProp, AValue);
+end;
 
 initialization
 {$IfDef MSWINDOWS}

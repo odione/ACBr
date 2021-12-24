@@ -37,16 +37,13 @@ unit ISSDigital.GravarXml;
 interface
 
 uses
-{$IFDEF FPC}
-  LResources, Controls, Graphics, Dialogs,
-{$ENDIF}
   SysUtils, Classes, StrUtils,
   ACBrNFSeXParametros, ACBrNFSeXGravarXml_ABRASFv2, ACBrNFSeXConversao;
 
 type
-  { TNFSeW_ISSDigital }
+  { TNFSeW_ISSDigital200 }
 
-  TNFSeW_ISSDigital = class(TNFSeW_ABRASFv2)
+  TNFSeW_ISSDigital200 = class(TNFSeW_ABRASFv2)
   protected
     procedure Configuracao; override;
 
@@ -59,9 +56,9 @@ implementation
 //     ISSDigital
 //==============================================================================
 
-{ TNFSeW_ISSDigital }
+{ TNFSeW_ISSDigital200 }
 
-procedure TNFSeW_ISSDigital.Configuracao;
+procedure TNFSeW_ISSDigital200.Configuracao;
 begin
   inherited Configuracao;
 

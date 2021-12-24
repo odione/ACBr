@@ -37,17 +37,14 @@ unit Sistemas4R.GravarXml;
 interface
 
 uses
-{$IFDEF FPC}
-  LResources, Controls, Graphics, Dialogs,
-{$ENDIF}
   SysUtils, Classes, StrUtils,
   ACBrXmlBase,
   ACBrNFSeXParametros, ACBrNFSeXGravarXml_ABRASFv2, ACBrNFSeXConversao;
 
 type
-  { TNFSeW_Sistemas4R }
+  { TNFSeW_Sistemas4R200 }
 
-  TNFSeW_Sistemas4R = class(TNFSeW_ABRASFv2)
+  TNFSeW_Sistemas4R200 = class(TNFSeW_ABRASFv2)
   protected
     procedure Configuracao; override;
 
@@ -60,9 +57,9 @@ implementation
 //     Sistemas4R
 //==============================================================================
 
-{ TNFSeW_Sistemas4R }
+{ TNFSeW_Sistemas4R200 }
 
-procedure TNFSeW_Sistemas4R.Configuracao;
+procedure TNFSeW_Sistemas4R200.Configuracao;
 begin
   inherited Configuracao;
 

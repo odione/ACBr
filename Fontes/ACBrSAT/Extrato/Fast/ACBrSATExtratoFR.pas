@@ -320,6 +320,8 @@ end;
 
 destructor TACBrSATExtratoFR.Destroy;
 begin
+  if Assigned(frxReport) then
+    frxReport.Free;
   inherited Destroy;
 end;
 
@@ -432,6 +434,8 @@ begin
   frxPDFExport := TfrxPDFExport.Create(Self);
   frxPDFExport.PrintOptimized := True;
   frxPDFExport.ShowProgress := False;
+
+  RttiSetProp(frxPDFExport, 'Transparency', 'False');
 
   frxHTMLExport := TfrxHTMLExport.Create(Self);
 

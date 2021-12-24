@@ -79,6 +79,7 @@ type
     procedure SalvarXmlNfse(aNota: NotaFiscal);
 
     function GetWebServiceURL(const AMetodo: TMetodo): string;
+    function GetSchemaPath: string; virtual;
 
     function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; virtual; abstract;
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; virtual; abstract;
@@ -89,6 +90,9 @@ type
     function GetCpfCnpj(const CpfCnpj: string; const Prefixo: string = ''): string;
     function GetInscMunic(const InscMunic: string; const Prefixo: string = ''): string;
     function GetCabecalho(const Xmlns: string = ''): string;
+    function DefinirIDLote(const ID: string): string; virtual;
+    function DefinirIDCancelamento(const CNPJ: string; const InscMunic: string;
+                                   const NumNfse: string): string; virtual;
 
     //metodos para geração e tratamento dos dados do metodo emitir
     procedure PrepararEmitir(Response: TNFSeEmiteResponse); virtual; abstract;
@@ -196,6 +200,24 @@ begin
   Configuracao;
 end;
 
+function TACBrNFSeXProvider.DefinirIDCancelamento(const CNPJ: string;
+  const InscMunic: string; const NumNfse: string): string;
+begin
+  if ConfigGeral.Identificador <> '' then
+    Result := ' ' + ConfigGeral.Identificador + '="Canc_' + CNPJ + InscMunic +
+              NumNfse + '"'
+  else
+    Result := '';
+end;
+
+function TACBrNFSeXProvider.DefinirIDLote(const ID: string): string;
+begin
+  if ConfigGeral.Identificador <> '' then
+    Result := ' ' + ConfigGeral.Identificador + '="Lote_' + ID + '"'
+  else
+    Result := '';
+end;
+
 destructor TACBrNFSeXProvider.Destroy;
 begin
   FConfigGeral.Free;
@@ -252,6 +274,15 @@ begin
   Result := TACBrNFSeX(FAOwner).Webservice.CancelaNFSe;
 end;
 
+function TACBrNFSeXProvider.GetSchemaPath: string;
+begin
+  with TACBrNFSeX(FAOwner).Configuracoes do
+  begin
+    Result := PathWithDelim(Arquivos.PathSchemas + Geral.xProvedor);
+    Result := PathWithDelim(Result + VersaoNFSeToStr(Geral.Versao));
+  end;
+end;
+
 function TACBrNFSeXProvider.GetSubstituiNFSeResponse: TNFSeSubstituiNFSeResponse;
 begin
   Result := TACBrNFSeX(FAOwner).Webservice.SubstituiNFSe;
@@ -277,7 +308,7 @@ end;
 function TACBrNFSeXProvider.GetInscMunic(const InscMunic: string; const Prefixo: string): string;
 begin
   if NaoEstaVazio(InscMunic) then
-    Result := '<' + Prefixo + 'InscricaoMunicipal>' + OnlyNumber(InscMunic) +
+    Result := '<' + Prefixo + 'InscricaoMunicipal>' + InscMunic +
               '</' + Prefixo + 'InscricaoMunicipal>'
   else
     Result := '';
@@ -307,7 +338,6 @@ begin
         tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
 
         // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
-        tmConsultarNFSeURL: Result := ConsultarNFSeURL;
         tmAbrirSessao: Result := AbrirSessao;
         tmFecharSessao: Result := FecharSessao;
         tmTeste: Result := TesteEnvio;
@@ -338,7 +368,6 @@ begin
         tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
 
         // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
-        tmConsultarNFSeURL: Result := ConsultarNFSeURL;
         tmAbrirSessao: Result := AbrirSessao;
         tmFecharSessao: Result := FecharSessao;
         tmTeste: Result := TesteEnvio;
@@ -398,6 +427,22 @@ begin
     ConsultaLote := True;
     ConsultaNFSe := True;
     QuebradeLinha := ';';
+    CancPreencherMotivo := False;
+    CancPreencherSerieNfse := False;
+    CancPreencherCodVerificacao := False;
+
+    with TACBrNFSeX(FAOwner) do
+    begin
+      Provedor := Configuracoes.Geral.Provedor;
+      Versao := Configuracoes.Geral.Versao;
+
+      if Configuracoes.WebServices.AmbienteCodigo = 1 then
+        Ambiente := taProducao
+      else
+        Ambiente := taHomologacao;
+
+      CodIBGE := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+    end;
   end;
 
   // Inicializa os parâmetros de configuração: MsgDados
@@ -577,22 +622,19 @@ begin
   try
     with TACBrNFSeX(FAOwner) do
     begin
-      Sessao := Configuracoes.Geral.xProvedor;
+      // Primeiro verifica as URLs definidas para a cidade
+      Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
       ConfigWebServices.LoadUrlProducao(IniParams, Sessao);
       ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
       ConfigGeral.LoadParams1(IniParams, Sessao);
       ConfigGeral.LoadParams2(IniParams, Sessao);
+      ConfigGeral.LoadParams3(IniParams, Sessao);
 
+      // Depois verifica as URls definidas para o provedor
       if ConfigWebServices.Producao.Recepcionar = '' then
       begin
-        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+        Sessao := Configuracoes.Geral.xProvedor;
         ConfigWebServices.LoadUrlProducao(IniParams, Sessao);
-      end;
-
-      if ConfigWebServices.Homologacao.Recepcionar = '' then
-      begin
-        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
-        ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
       end;
 
       if ConfigWebServices.Homologacao.Recepcionar = '' then
@@ -601,22 +643,25 @@ begin
         ConfigWebServices.LoadUrlHomologacao(IniParams, Sessao);
       end;
 
-      if ConfigWebServices.Homologacao.Recepcionar = '' then
-      begin
-        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
-        ConfigWebServices.HomologacaoIgualProducao(IniParams, Sessao);
-      end;
-
+      // Se Params1 estiver vazio usar o que foi definido para o provedor
       if ConfigGeral.Params1 = '' then
       begin
-        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+        Sessao := Configuracoes.Geral.xProvedor;
         ConfigGeral.LoadParams1(IniParams, Sessao);
       end;
 
+      // Se Params2 estiver vazio usar o que foi definido para o provedor
       if ConfigGeral.Params2 = '' then
       begin
-        Sessao := IntToStr(Configuracoes.Geral.CodigoMunicipio);
+        Sessao := Configuracoes.Geral.xProvedor;
         ConfigGeral.LoadParams2(IniParams, Sessao);
+      end;
+
+      // Se Params3 estiver vazio usar o que foi definido para o provedor
+      if ConfigGeral.Params3 = '' then
+      begin
+        Sessao := Configuracoes.Geral.xProvedor;
+        ConfigGeral.LoadParams3(IniParams, Sessao);
       end;
     end;
   finally
@@ -663,7 +708,6 @@ begin
     ConsultarLote := aNome;
     ConsultarNFSeRps := aNome;
     ConsultarNFSe := aNome;
-    ConsultarNFSeURL := aNome;
     ConsultarNFSePorFaixa := aNome;
     ConsultarNFSeServicoPrestado := aNome;
     ConsultarNFSeServicoTomado := aNome;
@@ -724,6 +768,7 @@ begin
       AWriter.ChaveAutoriz := Configuracoes.Geral.Emitente.WSChaveAutoriz;
       AWriter.FraseSecreta := Configuracoes.Geral.Emitente.WSFraseSecr;
       AWriter.Provedor     := Configuracoes.Geral.Provedor;
+      AWriter.VersaoNFSe   := Configuracoes.Geral.Versao;
 
       if AWriter.Ambiente = taProducao then
         AWriter.Municipio := ConfigGeral.Params1
@@ -754,11 +799,7 @@ begin
   AReader.Arquivo := aXML;
 
   try
-    with TACBrNFSeX(FAOwner) do
-    begin
-      AReader.Provedor     := Configuracoes.Geral.Provedor;
-      AReader.ProvedorConf := Configuracoes.Geral.Provedor;
-    end;
+    AReader.Provedor := TACBrNFSeX(FAOwner).Configuracoes.Geral.Provedor;
 
     Result := AReader.LerXml;
   finally
@@ -796,7 +837,6 @@ begin
     tmConsultarSituacao: Schema := ConfigSchemas.ConsultarSituacao;
     tmConsultarLote: Schema := ConfigSchemas.ConsultarLote;
     tmConsultarNFSePorRps: Schema := ConfigSchemas.ConsultarNFSeRps;
-    tmConsultarNFSeURL: Schema := ConfigSchemas.ConsultarNFSeURL;
 
     tmConsultarNFSe: Schema := ConfigSchemas.ConsultarNFSe;
     tmConsultarNFSePorFaixa: Schema := ConfigSchemas.ConsultarNFSePorFaixa;
@@ -814,21 +854,32 @@ begin
     Schema := ConfigSchemas.Teste;
   end;
 
-  Schema := FAOwner.Configuracoes.Arquivos.PathSchemas + Schema;
+  if TACBrNFSeX(FAOwner).Configuracoes.Geral.MontarPathSchema then
+    Schema := PathWithDelim(GetSchemaPath) + Schema
+  else
+    Schema := FAOwner.Configuracoes.Arquivos.PathSchemas + Schema;
 
   FAOwner.SSL.Validar(Response.XmlEnvio, Schema, Erros);
 
   if NaoEstaVazio(Erros) then
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := Cod999;
-    AErro.Descricao := Erros;
+    AErro.Codigo := Cod800;
+    AErro.Descricao := 'Erro de Validação: ' + Erros;
   end;
 end;
 
 procedure TACBrNFSeXProvider.GeraLote;
 begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeRecepcao);
+
+  if GerarResponse.ModoEnvio = meAutomatico then
+    GerarResponse.ModoEnvio := ConfigGeral.ModoEnvio;
+
+  if GerarResponse.ModoEnvio <> meUnitario then
+    GerarResponse.MaxRps := ConfigGeral.NumMaxRpsEnviar
+  else
+    GerarResponse.MaxRps := ConfigGeral.NumMaxRpsGerar;
 
   PrepararEmitir(GerarResponse);
   if (GerarResponse.Erros.Count > 0) then
@@ -843,9 +894,6 @@ begin
     TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
     Exit;
   end;
-
-  if GerarResponse.ModoEnvio = meAutomatico then
-    GerarResponse.ModoEnvio := ConfigGeral.ModoEnvio;
 
   case GerarResponse.ModoEnvio of
     meLoteAssincrono,
@@ -862,13 +910,13 @@ begin
     Exit;
   end;
 
-  if not GerarResponse.Sucesso then
-  begin
-    TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
-    Exit;
-  end;
+  GerarResponse.NomeArq := GerarResponse.Lote + '-env-lot.xml';
 
-  FAOwner.Gravar(GerarResponse.Lote + 'env-lot.xml', GerarResponse.XmlEnvio);
+  FAOwner.Gravar(GerarResponse.NomeArq, GerarResponse.XmlEnvio);
+
+  GerarResponse.NomeArq := PathWithDelim(TACBrNFSeX(FAOwner).Configuracoes.Arquivos.PathSalvar) +
+                           GerarResponse.NomeArq;
+
   TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
 end;
 
@@ -958,7 +1006,7 @@ begin
       begin
         AErro := EmiteResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1021,7 +1069,7 @@ begin
       begin
         AErro := ConsultaSituacaoResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1083,7 +1131,7 @@ begin
       begin
         AErro := ConsultaLoteRpsResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1146,7 +1194,7 @@ begin
       begin
         AErro := ConsultaNFSeporRpsResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1209,10 +1257,6 @@ begin
       AService.Prefixo := Prefixo;
 
       case ConsultaNFSeResponse.Metodo of
-        tmConsultarNFSe:
-          ConsultaNFSeResponse.XmlRetorno := AService.ConsultarNFSe(ConfigMsgDados.DadosCabecalho,
-                                                                    ConsultaNFSeResponse.XmlEnvio);
-
         tmConsultarNFSePorFaixa:
           ConsultaNFSeResponse.XmlRetorno := AService.ConsultarNFSePorFaixa(ConfigMsgDados.DadosCabecalho,
                                                                             ConsultaNFSeResponse.XmlEnvio);
@@ -1226,9 +1270,8 @@ begin
                                                                                  ConsultaNFSeResponse.XmlEnvio);
 
       else
-        // tmConsultarNFSeURL
-        ConsultaNFSeResponse.XmlRetorno := AService.ConsultarNFSeUrl(ConfigMsgDados.DadosCabecalho,
-                                                                     ConsultaNFSeResponse.XmlEnvio);
+        ConsultaNFSeResponse.XmlRetorno := AService.ConsultarNFSe(ConfigMsgDados.DadosCabecalho,
+                                                                  ConsultaNFSeResponse.XmlEnvio);
       end;
 
       ConsultaNFSeResponse.Sucesso := True;
@@ -1239,7 +1282,7 @@ begin
       begin
         AErro := ConsultaNFSeResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1306,7 +1349,7 @@ begin
       begin
         AErro := CancelaNFSeResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1402,7 +1445,7 @@ begin
       begin
         AErro := SubstituiNFSeResponse.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -1446,8 +1489,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1478,8 +1521,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1510,8 +1553,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1542,8 +1585,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1573,8 +1616,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1629,8 +1672,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;
@@ -1660,8 +1703,8 @@ begin
     on E:Exception do
     begin
       AErro := Response.Erros.New;
-      AErro.Codigo := Cod999;
-      AErro.Descricao := E.Message;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
     end;
   end;
 end;

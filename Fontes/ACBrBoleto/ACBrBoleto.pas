@@ -6,7 +6,7 @@
 { Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
 {                                                                              }
 { Colaboradores nesse arquivo: Juliana Tamizou, André Ferreira de Moraes,      }
-{ José M S Junior                                                              }
+{ José M S Junior, Victor Hugo Gonzales - Panda                                }
 {                                                                              }
 {  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
 { Componentes localizado em      http://www.sourceforge.net/projects/acbr      }
@@ -413,7 +413,8 @@ type
     cobBancoDoBrasilWS,
     cobBancoCresol,
     cobMoneyPlus,
-    cobBancoC6
+    cobBancoC6,
+    cobBancoRendimento
     );
 
   TACBrTitulo = class;
@@ -1666,6 +1667,7 @@ type
     fLerNossoNumeroCompleto: Boolean;
     fConfiguracoes: TConfiguracoes;
     fListaRetornoWeb: TListaRetEnvio;
+    fPrefixArqRemessa : string;
     procedure SetACBrBoletoFC(const Value: TACBrBoletoFCClass);
     procedure SetMAIL(AValue: TACBrMail);
 
@@ -1711,6 +1713,7 @@ type
     property Homologacao    : Boolean            read fHomologacao            write fHomologacao default False;
     property Banco          : TACBrBanco         read fBanco                  write fBanco;
     property Cedente        : TACBrCedente       read fCedente                write fCedente ;
+    property PrefixArqRemessa : String           read fPrefixArqRemessa       write fPrefixArqRemessa;
     property NomeArqRemessa : String             read fNomeArqRemessa         write fNomeArqRemessa;
     property DirArqRemessa  : String             read fDirArqRemessa          write fDirArqRemessa;
     property NomeArqRetorno : String             read fNomeArqRetorno         write fNomeArqRetorno;
@@ -1817,7 +1820,7 @@ Uses Forms, Math, dateutils, strutils,  ACBrBoletoWS,
      ACBrUniprime, ACBrBancoUnicredRS, ACBrBancoBanese, ACBrBancoCredisis, ACBrBancoUnicredES,
      ACBrBancoCresolSCRS, ACBrBancoCitiBank, ACBrBancoABCBrasil, ACBrBancoDaycoval, ACBrUniprimeNortePR,
      ACBrBancoPine, ACBrBancoPineBradesco, ACBrBancoUnicredSC, ACBrBancoAlfa, ACBrBancoCresol,
-     ACBrBancoBradescoMoneyPlus,ACBrBancoC6;
+     ACBrBancoBradescoMoneyPlus,ACBrBancoC6,ACBrBancoRendimento;
 
 { TACBrBoletoWSFiltroConsulta }
 
@@ -2644,6 +2647,7 @@ end;
 
 destructor TACBrTitulo.Destroy;
 begin
+   fRetornoWeb.Free;
    fMensagem.Free;
    fDetalhamento.Free;
    fInformativo.Free;
@@ -3232,6 +3236,7 @@ begin
      cobBancoCresol         : fBancoClass := TACBrBancoCresol.Create(Self);         {133}
      cobMoneyPlus           : fBancoClass := TACBrBancoBradescoMoneyPlus.create(Self); {274}
      cobBancoC6             : fBancoClass := TACBrBancoC6.Create(Self);             {336}
+     cobBancoRendimento     : fBancoClass := TACBrBancoRendimento.Create(Self);     {633}
    else
      fBancoClass := TACBrBancoClass.create(Self);
    end;
@@ -3900,7 +3905,7 @@ begin
 
            TempData := copy(Linha, 74, 2) + '/'+copy(Linha, 76, 2)+'/'+copy(Linha, 78, 4);
            if TempData <> '00/00/0000' then
-              Vencimento := StringToDateTimeDef(TempData, 0, 'DDMMYYYY');
+              Vencimento := StringToDateTimeDef(TempData, 0, 'DD/MM/YYYY');
 
            ValorDocumento := StrToFloatDef(copy(Linha, 82, 15), 0) / 100;
            NossoNumero    := DefineNossoNumeroRetorno(Linha);
@@ -3933,11 +3938,11 @@ begin
 
            TempData            := copy(Linha, 138, 2)+'/'+copy(Linha, 140, 2)+'/'+copy(Linha, 142, 4);
            if TempData <> '00/00/0000' then
-               DataOcorrencia  := StringToDateTimeDef(TempData, 0, 'DDMMYYYY');
+               DataOcorrencia  := StringToDateTimeDef(TempData, 0, 'DD/MM/YYYY');
 
            TempData := copy(Linha, 146, 2)+'/'+copy(Linha, 148, 2)+'/'+copy(Linha, 150, 4);
            if TempData <> '00/00/0000' then
-               DataCredito     := StringToDateTimeDef(TempData, 0, 'DDMMYYYY');
+               DataCredito     := StringToDateTimeDef(TempData, 0, 'DD/MM/YYYY');
         end;
      end;
 
@@ -4970,7 +4975,7 @@ function TACBrBoleto.EnviarBoleto: boolean;
 var
   RemessaWS: TBoletoWS;
 begin
-  if not ((Banco.TipoCobranca in [cobBancoDoBrasilAPI]) and (Configuracoes.WebService.Operacao in [tpConsulta])) then
+  if not ((Banco.TipoCobranca in [cobBancoDoBrasilAPI, cobSicred]) and (Configuracoes.WebService.Operacao in [tpConsulta])) then
     if ListadeBoletos.Count < 1 then
       raise Exception.Create(ACBrStr('Lista de Boletos está vazia'));
 
@@ -5047,6 +5052,7 @@ begin
     707: Result := cobDaycoval;
     084: Result := cobUniprimeNortePR;
     025: Result := cobBancoAlfa;
+    633: Result := cobBancoRendimento;
     643: begin
           if StrToInt(Carteira) = 9 then
              Result := cobBancoPineBradesco
@@ -5067,7 +5073,7 @@ var
   wTipoInscricao, wRespEmissao, wLayoutBoleto: Integer;
   wNumeroBanco, wIndiceACBr, wCNAB, wNumeroCorrespondente,
   wVersaoLote, wVersaoArquivo: Integer;
-  wLocalPagto, MemFormatada, MemDetalhamento: String;
+  wLocalPagto, MemFormatada, MemInformativo, MemDetalhamento: String;
   Sessao, sFim: String;
   I, N: Integer;
 begin
@@ -5203,13 +5209,16 @@ begin
 
           MemDetalhamento := IniBoletos.ReadString(Sessao,'Detalhamento','') ;
           MemDetalhamento := StringReplace( MemDetalhamento,'|',sLineBreak, [rfReplaceAll] );
+
+          MemInformativo := IniBoletos.ReadString(Sessao,'Informativo','') ;
+          MemInformativo := StringReplace( MemInformativo,'|',sLineBreak, [rfReplaceAll] );
+
           with Titulo do
           begin
             Aceite        := TACBrAceiteTitulo(IniBoletos.ReadInteger(Sessao,'Aceite',1));
 //            Sacado.Pessoa := TACBrPessoa( IniBoletos.ReadInteger(Sessao,'Sacado.Pessoa',2) );
             Sacado.Pessoa := TACBrPessoa( IniBoletos.ReadInteger(Sessao,'Sacado.Pessoa',2) );
-            OcorrenciaOriginal.Tipo := TACBrTipoOcorrencia(
-                  IniBoletos.ReadInteger(Sessao,'OcorrenciaOriginal.TipoOcorrencia',0) ) ;
+            OcorrenciaOriginal.Tipo := TACBrTipoOcorrencia(IniBoletos.ReadInteger(Sessao,'OcorrenciaOriginal.TipoOcorrencia',0)) ;
             TipoDiasProtesto := TACBrTipoDiasIntrucao(IniBoletos.ReadInteger(Sessao,'TipoDiasProtesto',0));
             TipoDiasNegativacao := TACBrTipoDiasIntrucao(IniBoletos.ReadInteger(Sessao,'TipoDiasNegativacao',0));
             TipoImpressao := TACBrTipoImpressao(IniBoletos.ReadInteger(Sessao,'TipoImpressao',1));
@@ -5217,6 +5226,8 @@ begin
             TipoDesconto2 := TACBrTipoDesconto(IniBoletos.ReadInteger(Sessao,'TipoDesconto2',0));
             CarteiraEnvio:= TACBrCarteiraEnvio(IniBoletos.ReadInteger(Sessao,'CarteiraEnvio', 0));
             MultaValorFixo := IniBoletos.ReadBool(Sessao,'MultaValorFixo',False);
+
+            CodigoNegativacao := TACBrCodigoNegativacao(IniBoletos.ReadInteger(Sessao,'CodigoNegativacao', 3));
 
             wLocalPagto := IniBoletos.ReadString(Sessao,'LocalPagamento','');
 
@@ -5253,6 +5264,7 @@ begin
             Sacado.Email        := IniBoletos.ReadString(Sessao,'Sacado.Email',Sacado.Email);
             EspecieMod          := IniBoletos.ReadString(Sessao,'EspecieMod',EspecieMod);
             Mensagem.Text       := MemFormatada;
+            Informativo.Text    := MemInformativo;
             Detalhamento.Text   := MemDetalhamento;
             Instrucao1          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao1',Instrucao1),2);
             Instrucao2          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao2',Instrucao2),2);

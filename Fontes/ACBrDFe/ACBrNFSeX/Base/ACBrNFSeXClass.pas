@@ -226,6 +226,9 @@ type
     FValorIRRF: Double;
 
     FTributavel: TnfseSimNao;
+    FTribMunPrestador: TnfseSimNao;
+    FCodMunPrestacao: string;
+    FSituacaoTributaria: Integer;
   public
     constructor Create;
 
@@ -280,7 +283,13 @@ type
     property AliqRetIRRF: Double read FAliqRetIRRF write FAliqRetIRRF;
     property ValorIRRF: Double read FValorIRRF write FValorIRRF;
 
+    // Provedor EloTech
     property Tributavel: TnfseSimNao read FTributavel write FTributavel;
+
+    // Provedor IPM
+    property TribMunPrestador: TnfseSimNao read FTribMunPrestador write FTribMunPrestador;
+    property CodMunPrestacao: string read FCodMunPrestacao write FCodMunPrestacao;
+    property SituacaoTributaria: Integer read FSituacaoTributaria write FSituacaoTributaria;
   end;
 
   TItemServicoCollection = class(TACBrObjectList)
@@ -386,18 +395,21 @@ type
 
   TIdentificacaoPrestador = class(TObject)
   private
-    FCnpj: string;
+    FCpfCnpj: string;
     FInscricaoMunicipal: string;
     FInscricaoEstadual: string;
+    function GetCnpj: string;
+    procedure SetCnpj(const Value: string);
   public
-    property Cnpj: string read FCnpj write FCnpj;
+    property Cnpj: string read GetCnpj write SetCnpj;
+    property CpfCnpj: string read FCpfCnpj write FCpfCnpj;
     property InscricaoMunicipal: string read FInscricaoMunicipal write FInscricaoMunicipal;
     property InscricaoEstadual: string read FInscricaoEstadual write FInscricaoEstadual;
   end;
 
   TEndereco = class(TObject)
   private
-    FEnderecoInformado: Boolean;
+    FEnderecoInformado: string;
     FTipoLogradouro: string;
     FEndereco: string;
     FNumero: string;
@@ -411,7 +423,7 @@ type
     FCodigoPais: Integer;
     FxPais: string;
   public
-    property EnderecoInformado: Boolean read FEnderecoInformado write FEnderecoInformado;
+    property EnderecoInformado: string read FEnderecoInformado write FEnderecoInformado;
     property TipoLogradouro: string read FTipoLogradouro write FTipoLogradouro;
     property Endereco: string read FEndereco write FEndereco;
     property Numero: string read FNumero write FNumero;
@@ -754,10 +766,29 @@ type
     property Items[Index: Integer]: TQuartoCollectionItem read GetItem write SetItem; default;
   end;
 
+  TGenericosCollectionItem = class(TObject)
+  private
+    FTitulo: string;
+    FDescricao: string;
+  public
+    property Titulo: string read FTitulo write FTitulo;
+    property Descricao: string read FDescricao write FDescricao;
+  end;
+
+  TGenericosCollection = class(TACBrObjectList)
+  private
+    function GetItem(Index: Integer): TGenericosCollectionItem;
+    procedure SetItem(Index: Integer; Value: TGenericosCollectionItem);
+  public
+    function Add: TGenericosCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
+    function New: TGenericosCollectionItem;
+    property Items[Index: Integer]: TGenericosCollectionItem read GetItem write SetItem; default;
+  end;
+
   TNFSe = class(TPersistent)
   private
     // RPS e NFSe
-    FSituacao: TSituacaoLoteRPS;
+    FSituacao: Integer;
 
     FSituacaoNfse: TStatusNFSe;
     FNomeArq: string;
@@ -843,12 +874,15 @@ type
     Fid_sis_legado: Integer;
     FSituacaoTrib: TSituacaoTrib;
     FrefNF: string;
+    FGenericos: TGenericosCollection;
 
     procedure Setemail(const Value: TemailCollection);
     procedure SetInformacoesComplementares(const Value: string);
     procedure SetDespesa(const Value: TDespesaCollection);
     procedure SetAssinaComChaveParams(
       const Value: TAssinaComChaveParamsCollection);
+    procedure SetGenericos(const Value: TGenericosCollection);
+    procedure SetQuartos(const Value: TQuartoCollection);
   public
     constructor Create;
     destructor Destroy; override;
@@ -856,7 +890,7 @@ type
     procedure Clear;
   published
     // RPS e NFSe
-    property Situacao: TSituacaoLoteRPS read FSituacao write FSituacao;
+    property Situacao: Integer read FSituacao write FSituacao;
     property SituacaoNfse: TStatusNFSe read FSituacaoNfse write FSituacaoNfse;
     property NomeArq: string read FNomeArq write FNomeArq;
     property InfID: TInfID read FInfID write FInfID;
@@ -877,7 +911,7 @@ type
     // Provedor IssDsf
     property SeriePrestacao: string read FSeriePrestacao write FSeriePrestacao;
     property Servico: TDadosServico read FServico write FServico;
-    property Quartos: TQuartoCollection read FQuartos write FQuartos;
+    property Quartos: TQuartoCollection read FQuartos write SetQuartos;
     property Prestador: TDadosPrestador read FPrestador write FPrestador;
     property Tomador: TDadosTomador read FTomador write FTomador;
     property IntermediarioServico: TIdentificacaoIntermediarioServico read FIntermediarioServico write FIntermediarioServico;
@@ -945,6 +979,8 @@ type
     // Código da nota no sistema legado do contribuinte.
     property id_sis_legado: Integer read Fid_sis_legado write Fid_sis_legado;
     property SituacaoTrib: TSituacaoTrib read FSituacaoTrib write FSituacaoTrib;
+    // Provedor IPM
+    property Genericos: TGenericosCollection read FGenericos write SetGenericos;
   end;
 
   TSubstituicaoNfse = class(TObject)
@@ -959,48 +995,6 @@ type
     property NfseSubstituidora: string read FNfseSubstituidora write FNfseSubstituidora;
   end;
 
-// =============================================================================
-// Classes utilizadas pelos retornos
-(*
-  TChaveNFeRPS = class(TObject)
-  private
-    FInscricaoPrestador: string;
-    FNumero: string;
-    FCodigoVerificacao: string;
-    FLink: string;
-    FNumeroRPS: string;
-    FSerieRPS: string;
-  public
-    property InscricaoPrestador: string read FInscricaoPrestador write FInscricaoPrestador;
-    // NFS-e
-    property Numero: string            read FNumero            write FNumero;
-    property CodigoVerificacao: string read FCodigoVerificacao write FCodigoVerificacao;
-    property Link: string              read FLink              write FLink;
-    // RPS
-    property SerieRPS: string  read FSerieRPS  write FSerieRPS;
-    property NumeroRPS: string read FNumeroRPS write FNumeroRPS;
-  end;
-
-  TChaveNFeRPSCollectionItem = class(TObject)
-  private
-    FChaveNFeRPS: TChaveNFeRPS;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    property ChaveNFeRPS: TChaveNFeRPS read FChaveNFeRPS write FChaveNFeRPS;
-  end;
-
-  TChaveNFeRPSCollection = class(TACBrObjectList)
-  private
-    function GetItem(Index: Integer): TChaveNFeRPSCollectionItem;
-    procedure SetItem(Index: Integer; Value: TChaveNFeRPSCollectionItem);
-  public
-    function Add: TChaveNFeRPSCollectionItem; overload; deprecated {$IfDef SUPPORTS_DEPRECATED_DETAILS} 'Obsoleta: Use a função New'{$EndIf};
-    function New: TChaveNFeRPSCollectionItem;
-    property Items[Index: Integer]: TChaveNFeRPSCollectionItem read GetItem write SetItem; default;
-  end;
-*)
 const
   CMUN_EXTERIOR = 9999999;
   XMUN_EXTERIOR = 'EXTERIOR';
@@ -1073,7 +1067,7 @@ begin
 
   with FIdentificacaoPrestador do
   begin
-    Cnpj := '';
+    CpfCnpj := '';
     InscricaoMunicipal := '';
     InscricaoEstadual := '';
   end;
@@ -1166,6 +1160,7 @@ begin
   Femail := TemailCollection.Create;
   FDespesa := TDespesaCollection.Create;
   FAssinaComChaveParams := TAssinaComChaveParamsCollection.Create;
+  FGenericos := TGenericosCollection.Create;
 
   Clear;
 end;
@@ -1192,6 +1187,7 @@ begin
   FDespesa.Free;
   FAssinaComChaveParams.Free;
   FTransportadora.Free;
+  FGenericos.Free;
 
   inherited Destroy;
 end;
@@ -1201,9 +1197,19 @@ begin
   FInformacoesComplementares := Value;
 end;
 
+procedure TNFSe.SetQuartos(const Value: TQuartoCollection);
+begin
+  FQuartos := Value;
+end;
+
 procedure TNFSe.Setemail(const Value: TemailCollection);
 begin
   Femail := Value;
+end;
+
+procedure TNFSe.SetGenericos(const Value: TGenericosCollection);
+begin
+  FGenericos := Value;
 end;
 
 procedure TNFSe.SetDespesa(const Value: TDespesaCollection);
@@ -1444,47 +1450,6 @@ begin
   Self.Add(Result);
 end;
 
-{ TChaveNFeRPSCollectionItem }
-(*
-constructor TChaveNFeRPSCollectionItem.Create;
-begin
-  inherited Create;
-
-  FChaveNFeRPS := TChaveNFeRPS.Create;
-end;
-
-destructor TChaveNFeRPSCollectionItem.Destroy;
-begin
-  FChaveNFeRPS.Free;
-
-  inherited;
-end;
-*)
-{ TChaveNFeRPSCollection }
-(*
-function TChaveNFeRPSCollection.Add: TChaveNFeRPSCollectionItem;
-begin
-  Result := Self.New;
-end;
-
-function TChaveNFeRPSCollection.GetItem(
-  Index: Integer): TChaveNFeRPSCollectionItem;
-begin
-  Result := TChaveNFeRPSCollectionItem(inherited Items[Index]);
-end;
-
-function TChaveNFeRPSCollection.New: TChaveNFeRPSCollectionItem;
-begin
-  Result := TChaveNFeRPSCollectionItem.Create;
-  Self.Add(Result);
-end;
-
-procedure TChaveNFeRPSCollection.SetItem(Index: Integer;
-  Value: TChaveNFeRPSCollectionItem);
-begin
-  inherited Items[Index] := Value;
-end;
-*)
 { TQuartoCollection }
 
 function TQuartoCollection.GetItem(Index: Integer): TQuartoCollectionItem;
@@ -1508,6 +1473,42 @@ end;
 constructor TQuartoCollectionItem.Create;
 begin
   inherited Create;
+end;
+
+{ TIdentificacaoPrestador }
+
+function TIdentificacaoPrestador.GetCnpj: string;
+begin
+  Result := FCpfCnpj;
+end;
+
+procedure TIdentificacaoPrestador.SetCnpj(const Value: string);
+begin
+  FCpfCnpj := Value;
+end;
+
+{ TGenericosCollection }
+
+function TGenericosCollection.Add: TGenericosCollectionItem;
+begin
+  Result := Self.New;
+end;
+
+function TGenericosCollection.GetItem(Index: Integer): TGenericosCollectionItem;
+begin
+  Result := TGenericosCollectionItem(inherited Items[Index]);
+end;
+
+function TGenericosCollection.New: TGenericosCollectionItem;
+begin
+  Result := TGenericosCollectionItem.Create;
+  Self.Add(Result);
+end;
+
+procedure TGenericosCollection.SetItem(Index: Integer;
+  Value: TGenericosCollectionItem);
+begin
+  inherited Items[Index] := Value;
 end;
 
 end.

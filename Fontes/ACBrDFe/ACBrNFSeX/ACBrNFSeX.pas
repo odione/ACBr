@@ -39,7 +39,7 @@ interface
 uses
   Classes, SysUtils,
   ACBrBase, ACBrUtil, ACBrDFe, ACBrDFeException, ACBrDFeConfiguracoes,
-  ACBrNFSeXDANFSEClass, ACBrNFSeXConfiguracoes, ACBrNFSeXNotasFiscais,
+  ACBrNFSeXDANFSeClass, ACBrNFSeXConfiguracoes, ACBrNFSeXNotasFiscais,
   ACBrNFSeXClass, ACBrXmlBase, ACBrNFSeXWebservices,
   ACBrNFSeXInterface, ACBrNFSeXWebserviceBase,
   ACBrNFSeXWebservicesResponse, ACBrNFSeXProviderManager, ACBrNFSeXConversao;
@@ -57,7 +57,7 @@ type
   TACBrNFSeX = class(TACBrDFe)
   private
     FProvider: IACBrNFSeXProvider;
-    FDANFSE: TACBrNFSeXDANFSEClass;
+    FDANFSE: TACBrNFSeXDANFSeClass;
     FNotasFiscais: TNotasFiscais;
     FStatus: TStatusACBrNFSe;
     fpCidadesJaCarregadas: Boolean;
@@ -65,7 +65,7 @@ type
 
     function GetConfiguracoes: TConfiguracoesNFSe;
     procedure SetConfiguracoes(AValue: TConfiguracoesNFSe);
-    procedure SetDANFSE(const Value: TACBrNFSeXDANFSEClass);
+    procedure SetDANFSE(const Value: TACBrNFSeXDANFSeClass);
 
   protected
     function CreateConfiguracoes: TConfiguracoes; override;
@@ -75,7 +75,9 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure SetProvedor;
+    procedure SetProvedor(aProvedor: TnfseProvedor = proNenhum;
+      aVersao: TVersaoNFSe = ve100);
+    procedure SetProvider;
 
     function GetNumID(ANFSe: TNFSe): String;
 
@@ -100,8 +102,7 @@ type
       const ACodVerificacao: string = '');
 
     // Usado pelos provedores que seguem a versão 1 do layout da ABRASF.
-    procedure ConsultarNFSePorNumero(const aNumero: string;
-      aRetorno: TtpRetorno = trXML; aPagina: Integer = 1);
+    procedure ConsultarNFSePorNumero(const aNumero: string; aPagina: Integer = 1);
 
     // Usado pelos provedores que seguem a versão 2 do layout da ABRASF.
     procedure ConsultarNFSePorFaixa(const aNumeroInicial, aNumeroFinal: string;
@@ -155,6 +156,9 @@ type
       aPagina: Integer = 1; aDataInicial: TDateTime = 0; aDataFinal: TDateTime = 0;
       aTipoPeriodo: TtpPeriodo = tpEmissao);
 
+    // Usado Para realizar consultas genericas
+    procedure ConsultarNFSeGenerico(aInfConsultaNFSe: TInfConsultaNFSe);
+
     procedure ConsultarNFSe;
 
     procedure CancelarNFSe(aInfCancelamento: TInfCancelamento);
@@ -164,7 +168,7 @@ type
       const ANumLote: String = ''; const ACodVerificacao: String = '');
 
     function LinkNFSe(ANumNFSe: String; const ACodVerificacao: String;
-      const AChaveAcesso: String = ''): String;
+      const AChaveAcesso: String = ''; const AValorServico: String = ''): String;
 
     function GetNomeModeloDFe: String; override;
     function GetNameSpaceURI: String; override;
@@ -181,7 +185,7 @@ type
 
   published
     property Configuracoes: TConfiguracoesNFSe read GetConfiguracoes write SetConfiguracoes;
-    property DANFSE: TACBrNFSeXDANFSEClass     read FDANFSE          write SetDANFSE;
+    property DANFSE: TACBrNFSeXDANFSeClass     read FDANFSE          write SetDANFSE;
 
   end;
 
@@ -205,6 +209,7 @@ begin
 
   FNotasFiscais := TNotasFiscais.Create(Self);
   FWebService := TWebservices.Create;
+
 
   fpCidadesJaCarregadas := False;
 end;
@@ -237,7 +242,7 @@ begin
   inherited Notification(AComponent, Operation);
 
   if (Operation = opRemove) and (FDANFSE <> nil) and
-     (AComponent is TACBrNFSeXDANFSEClass) then
+     (AComponent is TACBrNFSeXDANFSeClass) then
     FDANFSE := nil;
 end;
 
@@ -246,9 +251,9 @@ begin
   Result := TConfiguracoesNFSe.Create(Self);
 end;
 
-procedure TACBrNFSeX.SetDANFSE(const Value: TACBrNFSeXDANFSEClass);
+procedure TACBrNFSeX.SetDANFSE(const Value: TACBrNFSeXDANFSeClass);
 var
-  OldValue: TACBrNFSeXDANFSEClass;
+  OldValue: TACBrNFSeXDANFSeClass;
 begin
   if Value <> FDANFSE then
   begin
@@ -270,7 +275,16 @@ begin
   end;
 end;
 
-procedure TACBrNFSeX.SetProvedor;
+procedure TACBrNFSeX.SetProvedor(aProvedor: TnfseProvedor; aVersao: TVersaoNFSe);
+begin
+  Configuracoes.Geral.Provedor := aProvedor;
+  Configuracoes.Geral.Versao := aVersao;
+
+  if aProvedor <> proNenhum then
+    SetProvider;
+end;
+
+procedure TACBrNFSeX.SetProvider;
 begin
   if Assigned(FProvider) then
     FProvider := nil;
@@ -307,7 +321,7 @@ begin
   else
     NumDoc := ANFSe.Numero;
 
-  xCNPJ := ANFSe.Prestador.IdentificacaoPrestador.Cnpj;
+  xCNPJ := ANFSe.Prestador.IdentificacaoPrestador.CpfCnpj;
 
   if Configuracoes.Arquivos.NomeLongoNFSe then
     Result := GerarNomeNFSe(Configuracoes.WebServices.UFCodigo,
@@ -483,6 +497,33 @@ begin
   FProvider.ConsultaNFSe;
 end;
 
+procedure TACBrNFSeX.ConsultarNFSeGenerico(aInfConsultaNFSe: TInfConsultaNFSe);
+begin
+  FWebService.ConsultaNFSe.Clear;
+
+  with FWebService.ConsultaNFSe.InfConsultaNFSe do
+  begin
+    tpConsulta := aInfConsultaNFSe.tpConsulta;
+    NumeroIniNFSe := aInfConsultaNFSe.NumeroIniNFSe;
+    NumeroFinNFSe := aInfConsultaNFSe.NumeroFinNFSe;
+    SerieNFSe := aInfConsultaNFSe.SerieNFSe;
+    tpPeriodo := aInfConsultaNFSe.tpPeriodo;
+    DataInicial := aInfConsultaNFSe.DataInicial;
+    DataFinal := aInfConsultaNFSe.DataFinal;
+    CNPJPrestador := aInfConsultaNFSe.CNPJPrestador;
+    IMPrestador := aInfConsultaNFSe.IMPrestador;
+    CNPJTomador := aInfConsultaNFSe.CNPJTomador;
+    IMTomador := aInfConsultaNFSe.IMTomador;
+    CNPJInter := aInfConsultaNFSe.CNPJInter;
+    IMInter   := aInfConsultaNFSe.IMInter;
+    NumeroLote := aInfConsultaNFSe.NumeroLote;
+    Pagina := aInfConsultaNFSe.Pagina;
+    CadEconomico := aInfConsultaNFSe.CadEconomico;
+  end;
+
+  ConsultarNFSe;
+end;
+
 procedure TACBrNFSeX.ConsultarNFSePorFaixa(const aNumeroInicial, aNumeroFinal: string; aPagina: Integer);
 begin
   FWebService.ConsultaNFSe.Clear;
@@ -499,16 +540,13 @@ begin
   ConsultarNFSe;
 end;
 
-procedure TACBrNFSeX.ConsultarNFSePorNumero(const aNumero: string; aRetorno: TtpRetorno; aPagina: Integer);
+procedure TACBrNFSeX.ConsultarNFSePorNumero(const aNumero: string; aPagina: Integer);
 begin
   FWebService.ConsultaNFSe.Clear;
 
   with FWebService.ConsultaNFSe.InfConsultaNFSe do
   begin
-    if aRetorno = trXML then
-      tpConsulta := tcPorNumero
-    else
-      tpConsulta := tcPorNumeroURLRetornado;
+    tpConsulta := tcPorNumero;
 
     NumeroIniNFSe := aNumero;
     NumeroFinNFSe := aNumero;
@@ -831,7 +869,7 @@ begin
 end;
 
 function TACBrNFSeX.LinkNFSe(ANumNFSe: String; const ACodVerificacao,
-  AChaveAcesso: String): String;
+  AChaveAcesso, AValorServico: String): String;
 var
   Texto, xNumeroNFSe, xNomeMunic: String;
 begin
@@ -857,6 +895,7 @@ begin
   Texto := StringReplace(Texto, '%InscMunic%', Configuracoes.Geral.Emitente.InscMun, [rfReplaceAll]);
   Texto := StringReplace(Texto, '%ChaveAcesso%', AChaveAcesso, [rfReplaceAll]);
   Texto := StringReplace(Texto, '%Cnpj%', Configuracoes.Geral.Emitente.CNPJ, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%ValorServico%', AValorServico, [rfReplaceAll]);
 
   Result := Texto;
 end;

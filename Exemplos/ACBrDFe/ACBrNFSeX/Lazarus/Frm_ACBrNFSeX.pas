@@ -216,7 +216,6 @@ type
     btnConsultarNFSeServicoTomadoPorIntermediario: TButton;
     btnConsultarNFSeServicoTomadoPorTomador: TButton;
     btnConsultarNFSeGenerico: TButton;
-    btnConsNFSeURL: TButton;
     Label30: TLabel;
     edtSenhaWeb: TEdit;
     Label33: TLabel;
@@ -291,7 +290,6 @@ type
       Sender: TObject);
     procedure btnConsultarNFSeServicoTomadoPorTomadorClick(Sender: TObject);
     procedure btnConsultarNFSeGenericoClick(Sender: TObject);
-    procedure btnConsNFSeURLClick(Sender: TObject);
   private
     { Private declarations }
     procedure GravarConfiguracao;
@@ -450,7 +448,6 @@ begin
           IdentificacaoRps.Serie := '1';
 
         proBetha,
-        proBetha_2,
         proISSDSF,
         proSiat:
           IdentificacaoRps.Serie := 'NF';
@@ -595,7 +592,7 @@ begin
       Servico.ItemListaServico := '09.01';
 
       if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proISSDSF, proSiat,
-          proAgili_2] then
+          proAgili] then
         Servico.CodigoCnae := '452000200'
       else
         Servico.CodigoCnae := '852010';
@@ -605,7 +602,7 @@ begin
         Servico.CodigoCnae := '6511102';
 
       case ACBrNFSeX1.Configuracoes.Geral.Provedor of
-        proSJP:
+        proISSSJP:
           Servico.CodigoTributacaoMunicipio := '631940000';
 
         proCenti:
@@ -628,14 +625,12 @@ begin
       Servico.CodigoPais := 1058; // Brasil
       Servico.MunicipioIncidencia := StrToIntDef(edtCodCidade.Text, 0);
 
-      // Somente o provedor SimplISS permite infomar mais de 1 serviço
+      // Provedores que permitem informar mais de 1 serviço:
+      // Agili, AssessorPublico, EL, EloTech, Equiplano, fintelISS, Governa,
+      // Infisc, IPM, ISSDSF, Simple, SmarAPD, WebFisco
       with Servico.ItemServico.New do
       begin
-        // fintelISS, Agili, EL, Equiplano
-        // Para o provedor Elotech o tamanho máximo é de 20 caracteres
         Descricao := 'Desc. do Serv. 1';
-
-        // fintelISS
         ItemListaServico := '09.01';
 
         // infisc, EL
@@ -644,20 +639,66 @@ begin
         codLCServ := '123';
 
         ValorDeducoes := 0;
-        ValorIss := 0;
-        Aliquota := 4;
-        BaseCalculo := 100;
+        xJustDeducao := '';
+
+        AliqReducao := 0;
+        ValorReducao := 0;
+
         DescontoIncondicionado := 0;
         DescontoCondicionado := 0;
 
-        //EloTech
-        Tributavel := snNao;
-
-        // SimplISS, EloTech
+        // TUnidade = (tuHora, tuQtde);
+        TipoUnidade := tuQtde;
+        Unidade := 'UN';
         Quantidade := 10;
         ValorUnitario := 5;
 
+        QtdeDiaria := 0;
+        ValorTaxaTurismo := 0;
+
         ValorTotal := Quantidade * ValorUnitario;
+
+        BaseCalculo := ValorTotal - ValorDeducoes - DescontoIncondicionado;
+
+        Aliquota := 4;
+
+        ValorISS := BaseCalculo * Aliquota / 100;
+
+        ValorISSRetido := 0;
+
+        AliqISSST := 0;
+        ValorISSST := 0;
+
+        ValorBCCSLL := 0;
+        AliqRetCSLL := 0;
+        ValorCSLL := 0;
+
+        ValorBCPIS := 0;
+        AliqRetPIS := 0;
+        ValorPIS := 0;
+
+        ValorBCCOFINS := 0;
+        AliqRetCOFINS := 0;
+        ValorCOFINS := 0;
+
+        ValorBCINSS := 0;
+        AliqRetINSS := 0;
+        ValorINSS := 0;
+
+        ValorBCRetIRRF := 0;
+        AliqRetIRRF := 0;
+        ValorIRRF := 0;
+
+        // Provedor EloTech
+        Tributavel := snNao;
+
+        // Provedor IPM
+        { define se o tributo é no municipio do prestador ou não }
+        TribMunPrestador := snNao;
+        { codigo do municipio que ocorreu a prestação de serviço }
+        CodMunPrestacao :=  edtCodCidade.Text;
+        { codigo da situação tributária: 0 até 15 }
+        SituacaoTributaria := 0;
       end;
 
       Prestador.IdentificacaoPrestador.CNPJ := edtEmitCNPJ.Text; //'88888888888888';
@@ -692,6 +733,10 @@ begin
 
       Tomador.RazaoSocial := 'INSCRICAO DE TESTE';
 
+      // O campo EnderecoInformado é utilizado pelo provedor IMP
+      // A tag <endereco_informado> é opcional, caso não deseje que ela seja
+      // gerada devemos informar uma string vazia, ou S = Sim ou N = Não
+      Tomador.Endereco.EnderecoInformado := 'S';
       Tomador.Endereco.TipoLogradouro := 'RUA';
       Tomador.Endereco.Endereco := 'RUA PRINCIPAL';
       Tomador.Endereco.Numero := '100';
@@ -806,7 +851,8 @@ begin
 
   // Os Provedores da lista requerem que seja informado a chave e o código
   // de cancelamento
-  if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proInfisc_100, proInfisc_110] then
+  if (ACBrNFSeX1.Configuracoes.Geral.Provedor = proInfisc) and
+     (ACBrNFSeX1.Configuracoes.Geral.Versao <> ve201) then
   begin
     ChNFSe := '12345678';
     if not (InputQuery(Titulo, 'Chave da NFSe', ChNFSe)) then
@@ -822,7 +868,7 @@ begin
     if not (InputQuery(Titulo, 'Numero da NFSe', NumNFSe)) then
       exit;
 
-    if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proiiBrasil_2, proWebFisco] then
+    if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proiiBrasil, proWebFisco] then
     begin
       SerNFSe := '1';
       if not (InputQuery(Titulo, 'Série da NFSe', SerNFSe)) then
@@ -873,8 +919,8 @@ begin
 
     // Os Provedores da lista requerem que seja informado o motivo do cancelamento
     if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proAgili, proAssessorPublico,
-      proConam, proEquiplano, proGoverna, proIPM, proIPM_110, proIPM_120, proISSDSF,
-      proLencois, proModernizacaoPublica, proPublica, proSiat, proSigISS, proSigep,
+      proConam, proEquiplano, proGoverna, proIPM, proISSDSF, proISSLencois,
+      proModernizacaoPublica, proPublica, proSiat, proSigISS, proSigep,
       proSmarAPD, proWebFisco, proTecnos] then
     begin
       Motivo := 'Motivo do Cancelamento';
@@ -890,8 +936,8 @@ begin
     end;
 
     // Os Provedores da lista requerem que seja informado o código de verificação
-    if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proInfisc_100, proInfisc_110,
-         proISSDSF, proLencois, proGoverna, proSiat, proSigep] then
+    if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proInfisc, proISSDSF,
+         proISSLencois, proGoverna, proSiat, proSigep] then
     begin
       CodVerif := '12345678';
       if not (InputQuery(Titulo, 'Código de Verificação ou Chave de Autenticação', CodVerif)) then
@@ -929,46 +975,6 @@ begin
   ShowMessage(ACBrNFSeX1.SSL.CertCNPJ);
 end;
 
-procedure TfrmACBrNFSe.btnConsNFSeURLClick(Sender: TObject);
-var
-  xTitulo, NumIniNFSe, CodTrib: String;
-  InfConsultaNFSe: TInfConsultaNFSe;
-begin
-  xTitulo := 'Consultar NFSe URL Retornado';
-
-  NumIniNFSe := '';
-  if not(InputQuery(xTitulo, 'Numero NFSe:', NumIniNFSe)) then
-    exit;
-
-  CodTrib := '';
-  if not(InputQuery(xTitulo, 'Código de Tributação do Municipio:', CodTrib)) then
-    exit;
-
-  InfConsultaNFSe := TInfConsultaNFSe.Create;
-
-  try
-    with InfConsultaNFSe do
-    begin
-      // Valores aceito para o Tipo de Consulta:
-      // tcPorNumero, tcPorFaixa, tcPorPeriodo, tcServicoPrestado,
-      // tcServicoTomado, tcPorNumeroURLRetornado
-      tpConsulta := tcPorNumeroURLRetornado;
-
-      // Necessário para a consulta por numero e por faixa
-      NumeroIniNFSe := NumIniNFSe;
-      NumeroFinNFSe := NumIniNFSe;
-
-      CadEconomico := CodTrib;
-    end;
-
-    ACBrNFSeX1.ConsultarNFSe;
-  finally
-    InfConsultaNFSe.Free;
-  end;
-
-  ChecarResposta(tmConsultarNFSeURL);
-end;
-
 procedure TfrmACBrNFSe.btnConsultarLoteClick(Sender: TObject);
 var
   Protocolo, Lote: String;
@@ -979,8 +985,8 @@ begin
 
   Lote := '';
   if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proAssessorPublico, proElotech,
-       proInfisc_100, proInfisc_110, proIPM, proISSDSF, proEquiplano,
-       proeGoverneISS, proGeisWeb, proSiat, proSP] then
+       proInfisc, proIPM, proISSDSF, proEquiplano, proeGoverneISS, proGeisWeb,
+       proSiat, proISSSaoPaulo] then
   begin
     if not (InputQuery('Consultar Lote', 'Número do Lote:', Lote)) then
       exit;
@@ -1016,9 +1022,9 @@ end;
 
 procedure TfrmACBrNFSe.btnConsultarNFSeGenericoClick(Sender: TObject);
 var
-  xTitulo, NumIniNFSe, NumFinNFSe, DataIni, DataFin,
+  xTitulo, NumIniNFSe, NumFinNFSe, SerNFSe, DataIni, DataFin,
   CPFCNPJ_Prestador, IM_Prestador, CPFCNPJ_Tomador, IM_Tomador,
-  CPFCNPJ_Inter, IM_Inter, NumLote, NumPagina: String;
+  CPFCNPJ_Inter, IM_Inter, NumLote, NumPagina, CadEcon: String;
   InfConsultaNFSe: TInfConsultaNFSe;
 begin
   xTitulo := 'Consultar NFSe Genérico';
@@ -1029,6 +1035,10 @@ begin
 
   NumFinNFSe := '';
   if not(InputQuery(xTitulo, 'Numero Final da NFSe:', NumFinNFSe)) then
+    exit;
+
+  SerNFSe := '1';
+  if not(InputQuery(xTitulo, 'Série da NFSe:', SerNFSe)) then
     exit;
 
   DataIni := DateToStr(Date);
@@ -1074,6 +1084,10 @@ begin
   if not(InputQuery(xTitulo, 'Pagina:', NumPagina)) then
     exit;
 
+  CadEcon := '';
+  if not(InputQuery(xTitulo, 'Cadastro Economico (Insc. Munic.):', CadEcon)) then
+    exit;
+
   InfConsultaNFSe := TInfConsultaNFSe.Create;
 
   try
@@ -1087,6 +1101,7 @@ begin
       // Necessário para a consulta por numero e por faixa
       NumeroIniNFSe := NumIniNFSe;
       NumeroFinNFSe := NumFinNFSe;
+      SerieNFSe := SerNFSe;
 
       // Valores aceito para o Tipo de Periodo:
       // tpEmissao, tpCompetencia
@@ -1113,9 +1128,11 @@ begin
 
       // Necessário para os provedores que seguem a versão 2 do layout da ABRASF
       Pagina := StrToIntDef(NumPagina, 1);
+
+      CadEconomico := CadEcon;
     end;
 
-    ACBrNFSeX1.ConsultarNFSe;
+    ACBrNFSeX1.ConsultarNFSeGenerico(InfConsultaNFSe);
   finally
     InfConsultaNFSe.Free;
   end;
@@ -1187,14 +1204,11 @@ begin
             Pagina := StrToIntDef(NumPagina, 1);
           end;
 
-          ACBrNFSeX1.ConsultarNFSe;
+          ACBrNFSeX1.ConsultarNFSeGenerico(InfConsultaNFSe);
         finally
           InfConsultaNFSe.Free;
         end;
       end;
-
-//      ACBrNFSeX1.ConsultarNFSePorPeriodo(StrToDateDef(DataIni, 0),
-//                  StrToDateDef(DataFin, 0), StrToIntDef(NumPagina, 1), NumLote);
 
     proFGMaiss,
     proWebFisco:
@@ -1210,7 +1224,7 @@ begin
             Tipo := xTipo;
           end;
 
-          ACBrNFSeX1.ConsultarNFSe;
+          ACBrNFSeX1.ConsultarNFSeGenerico(InfConsultaNFSe);
         finally
           InfConsultaNFSe.Free;
         end;
@@ -1230,7 +1244,7 @@ begin
             Pagina := StrToIntDef(NumPagina, 1);
           end;
 
-          ACBrNFSeX1.ConsultarNFSe;
+          ACBrNFSeX1.ConsultarNFSeGenerico(InfConsultaNFSe);
         finally
           InfConsultaNFSe.Free;
         end;
@@ -1487,7 +1501,7 @@ begin
 
   Lote := '';
   if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proAssessorPublico,
-      proEquiplano, proSP] then
+      proEquiplano, proISSSaoPaulo] then
   begin
     if not (InputQuery('Consultar Lote', 'Número do Lote:', Lote)) then
       exit;
@@ -1901,8 +1915,8 @@ begin
   end;
 
   if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proAgili, proConam, proEquiplano,
-    proGoverna, proIPM, proIPM_110, proIPM_120, proISSDSF, proLencois,
-    proModernizacaoPublica, proPublica, proSiat, proSigISS, proSmarAPD, proWebFisco] then
+    proGoverna, proIPM, proISSDSF, proISSLencois, proModernizacaoPublica,
+    proPublica, proSiat, proSigISS, proSmarAPD, proWebFisco] then
   begin
     Motivo := 'Teste de Cancelamento';
     if not (InputQuery('Cancelar NFSe', 'Motivo de Cancelamento', Motivo)) then
@@ -1914,7 +1928,7 @@ begin
     exit;
 
   sSerieNFSe := '';
-  if ACBrNFSeX1.Configuracoes.Geral.Provedor = proiiBrasil_2 then
+  if ACBrNFSeX1.Configuracoes.Geral.Provedor = proiiBrasil then
   begin
     if not(InputQuery('Substituir NFS-e', 'Série da NFS-e', sSerieNFSe)) then
       exit;
@@ -1927,7 +1941,7 @@ begin
       exit;
   end;
 
-  if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proLencois, proGoverna,
+  if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proISSLencois, proGoverna,
        proSiat, proSigep] then
   begin
     CodVerif := '12345678';
@@ -2401,7 +2415,7 @@ begin
             memoLog.Lines.Add('Parâmetros de Retorno');
             memoLog.Lines.Add('Data de Envio : ' + DateToStr(Data));
             memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
-            memoLog.Lines.Add('Numero da Nota: ' + IntToStr(NumeroNota));
+            memoLog.Lines.Add('Numero da Nota: ' + NumeroNota);
             memoLog.Lines.Add('Link          : ' + Link);
             memoLog.Lines.Add('Código Verif. : ' + CodVerificacao);
             memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
@@ -2548,7 +2562,7 @@ begin
             memoLog.Lines.Add('Parâmetros de Retorno');
             memoLog.Lines.Add('Data de Envio : ' + DateToStr(Data));
             memoLog.Lines.Add('Numero do Prot: ' + Protocolo);
-            memoLog.Lines.Add('Numero da Nota: ' + IntToStr(NumeroNota));
+            memoLog.Lines.Add('Numero da Nota: ' + NumeroNota);
             memoLog.Lines.Add('Link          : ' + Link);
             memoLog.Lines.Add('Código Verif. : ' + CodVerificacao);
             memoLog.Lines.Add('Sucesso       : ' + BoolToStr(Sucesso, True));
@@ -2725,8 +2739,7 @@ begin
       tmConsultarNFSe,
       tmConsultarNFSePorFaixa,
       tmConsultarNFSeServicoPrestado,
-      tmConsultarNFSeServicoTomado,
-      tmConsultarNFSeURL:
+      tmConsultarNFSeServicoTomado:
         begin
           with ConsultaNFSe do
           begin
@@ -2885,6 +2898,8 @@ begin
             memoLog.Lines.Add('Situação: ' + Situacao);
             memoLog.Lines.Add('Link    : ' + Link);
             memoLog.Lines.Add('Sucesso : ' + BoolToStr(Sucesso, True));
+            memoLog.Lines.Add('Numero da NFSe Substituida  : ' + NumNotaSubstituida);
+            memoLog.Lines.Add('Numero da NFSe Substituidora: ' + NumNotaSubstituidora);
             memoLog.Lines.Add(' ');
             memoLog.Lines.Add('Retorno do Pedido de Cancelamento:');
             memoLog.Lines.Add('Situação : ' + RetCancelamento.Situacao);
@@ -3100,7 +3115,7 @@ begin
 
     // Exemplos de valores para WSChaveAcesso para alguns provedores.
 
-    if Provedor in [proAgili, proAgili_2, proElotech] then
+    if Provedor in [proAgili, proElotech] then
       Emitente.WSChaveAcesso := '0aA1bB2cC3dD4eE5fF6aA7bB8cC9dDEF';
 
     if Provedor = proISSNet then
@@ -3109,7 +3124,7 @@ begin
     if Provedor = proSigep then
       Emitente.WSChaveAcesso := 'A001.B0001.C0001';
 
-    if Provedor = proiiBrasil_2 then
+    if Provedor = proiiBrasil then
       Emitente.WSChaveAcesso := 'TLXX4JN38KXTRNSEAJYYEA==';
   end;
 

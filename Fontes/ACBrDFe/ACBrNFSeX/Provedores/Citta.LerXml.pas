@@ -37,16 +37,13 @@ unit Citta.LerXml;
 interface
 
 uses
-{$IFDEF FPC}
-  LResources, Controls, Graphics, Dialogs,
-{$ENDIF}
   SysUtils, Classes, StrUtils,
   ACBrNFSeXLerXml_ABRASFv2;
 
 type
-  { TNFSeR_Citta }
+  { TNFSeR_Citta203 }
 
-  TNFSeR_Citta = class(TNFSeR_ABRASFv2)
+  TNFSeR_Citta203 = class(TNFSeR_ABRASFv2)
   protected
 
   public

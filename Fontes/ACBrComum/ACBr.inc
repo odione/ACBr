@@ -39,7 +39,7 @@
 // Descomente a linha abaixo, se você quer que seu Executável NÃO dependa das DLLs LibXML2. (NAO RECOMENDADO)
 {.$DEFINE DFE_SEM_LIBXML2}
 // Descomente a linha abaixo, se você não utiliza a obsoleta Capicom para Criptografia (RECOMENDADO)
-{.$DEFINE DFE_SEM_CAPICOM}
+{$DEFINE DFE_SEM_CAPICOM}
 // Descomente a linha abaixo, se você não utiliza a obsoleta MSXML para Assinatura de XML (RECOMENDADO)
 {.$DEFINE DFE_SEM_MSXML}
 // Descomente a linha abaixo, se você não deseja adicionar a Dependência da INDY nos seus Projetos
@@ -107,6 +107,12 @@
   {$UNDEF REMOVE_CAST_WARN} //Devido a problemas com a mensagem de erro "Message recordind not yet supported"
 {$ELSE}
   {$DEFINE BORLAND}
+{$ENDIF}
+
+{$IFNDEF DELPHIXE2_UP}
+  {$IFDEF BORLAND}
+   	{$UNDEF REMOVE_CAST_WARN}
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF REMOVE_CAST_WARN}

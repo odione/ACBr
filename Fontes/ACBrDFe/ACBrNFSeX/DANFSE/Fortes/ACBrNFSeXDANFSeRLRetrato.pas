@@ -284,10 +284,10 @@ begin
   rlmDadosAdicionais.Lines.Clear;
 
   if fpNFSe.OutrasInformacoes <> '' then
-    rlmDadosAdicionais.Lines.Add(StringReplace(fpNFSe.OutrasInformacoes, ';', #13#10, [rfReplaceAll,rfIgnoreCase]))
+    rlmDadosAdicionais.Lines.Add(StringReplace(fpNFSe.OutrasInformacoes, FQuebradeLinha, #13#10, [rfReplaceAll,rfIgnoreCase]))
   else
     if fpDANFSe.OutrasInformacaoesImp <> '' then
-      rlmDadosAdicionais.Lines.Add(StringReplace(fpDANFSe.OutrasInformacaoesImp, ';', #13#10, [rfReplaceAll,rfIgnoreCase]));
+      rlmDadosAdicionais.Lines.Add(StringReplace(fpDANFSe.OutrasInformacaoesImp, FQuebradeLinha, #13#10, [rfReplaceAll,rfIgnoreCase]));
 
   if ( (pos('http://', LowerCase( fpNFSe.OutrasInformacoes) ) > 0) or (pos('http://', LowerCase( fpNFSe.Link) ) > 0) or (pos('https://', LowerCase( fpNFSe.Link) ) > 0) ) then
   begin
@@ -359,7 +359,7 @@ begin
   TDFeReportFortes.CarregarLogo(rliLogo, fpDANFSe.Logo);
 
   rlmPrefeitura.Lines.Clear;
-  rlmPrefeitura.Lines.Add(StringReplace( fpDANFSe.Prefeitura, ';', #13#10, [rfReplaceAll,rfIgnoreCase] ) );
+  rlmPrefeitura.Lines.Add(StringReplace( fpDANFSe.Prefeitura, FQuebradeLinha, #13#10, [rfReplaceAll,rfIgnoreCase] ) );
 
   With fpNFSe do
   begin
@@ -441,7 +441,9 @@ begin
           rllCodTributacaoMunicipio.Visible     := True;
           rlmDescCodTributacaoMunicipio.Visible := True;
           rlmDescCodTributacaoMunicipio.Lines.Append( Servico.xCodigoTributacaoMunicipio );
-        end;
+        end
+        else
+          rlmCodServico.Height := Trunc(rlmCodServico.Height * 2.5);
       end
       else
       begin
@@ -485,9 +487,9 @@ begin
   inherited;
 
   rlmDescricao.Lines.Clear;
-  rlmDescricao.Lines.Add(fpNFSe.Servico.Discriminacao);
-//  rlmDescricao.Lines.Add( StringReplace( fpNFSe.Servico.Discriminacao,
-//                          FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
+//  rlmDescricao.Lines.Add(fpNFSe.Servico.Discriminacao);
+  rlmDescricao.Lines.Add( StringReplace( fpNFSe.Servico.Discriminacao,
+                          FQuebradeLinha, #13#10, [rfReplaceAll, rfIgnoreCase] ) );
 end;
 
 procedure TfrlXDANFSeRLRetrato.rlbPrestadorBeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -508,7 +510,7 @@ begin
 
       with IdentificacaoPrestador do
       begin
-        rllPrestCNPJ.Caption          := FormatarCNPJouCPF( ifThen (Cnpj <> '', Cnpj,fpDANFSe.Prestador.CNPJ) );
+        rllPrestCNPJ.Caption := FormatarCNPJouCPF(ifThen(CpfCnpj <> '', CpfCnpj,fpDANFSe.Prestador.CNPJ));
         rllPrestInscMunicipal.Caption := IfThen(InscricaoMunicipal <> '', InscricaoMunicipal, fpDANFSe.Prestador.InscricaoMunicipal);
       end;
 

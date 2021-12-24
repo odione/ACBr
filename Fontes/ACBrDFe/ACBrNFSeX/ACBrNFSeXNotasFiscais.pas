@@ -151,6 +151,7 @@ type
     function LoadFromStream(AStream: TStringStream; AGerarNFSe: Boolean = True): Boolean;
     function LoadFromString(AXMLString: String; AGerarNFSe: Boolean = True): Boolean;
     function LoadFromIni(const AIniString: String): Boolean;
+    function LoadFromLoteNfse(const CaminhoArquivo: String): Boolean;
 
     function GravarXML(const PathNomeArquivo: String = ''): Boolean;
 
@@ -171,7 +172,7 @@ type
 implementation
 
 uses
-  ACBrUtil, synautil, IniFiles,
+  ACBrUtil, synautil, IniFiles, StrUtilsEx,
   ACBrNFSeX, ACBrNFSeXInterface;
 
 function CompRpsPorNumero(const Item1,
@@ -284,6 +285,9 @@ begin
 
       SituacaoTrib := StrToSituacaoTrib(Ok, INIRec.ReadString(sSecao, 'SituacaoTrib', 'tp'));
 
+      // Provedor AssessorPublico
+      Situacao := INIRec.ReadInteger(sSecao, 'Situacao', 0);
+
       Producao := StrToSimNao(Ok, INIRec.ReadString(sSecao, 'Producao', '1'));
       Status := StrToStatusRPS(Ok, INIRec.ReadString(sSecao, 'Status', '1'));
       OutrasInformacoes := INIRec.ReadString(sSecao, 'OutrasInformacoes', '');
@@ -322,7 +326,7 @@ begin
 
       with Prestador do
       begin
-        IdentificacaoPrestador.Cnpj := INIRec.ReadString(sSecao, 'CNPJ', '');
+        IdentificacaoPrestador.CpfCnpj := INIRec.ReadString(sSecao, 'CNPJ', '');
         IdentificacaoPrestador.InscricaoMunicipal := INIRec.ReadString(sSecao, 'InscricaoMunicipal', '');
 
         // Para o provedor ISSDigital deve-se informar também:
@@ -677,7 +681,7 @@ begin
       Data := Now;
 
     Result := PathWithDelim(Configuracoes.Arquivos.GetPathRPS(Data,
-      FNFSe.Prestador.IdentificacaoPrestador.Cnpj,
+      FNFSe.Prestador.IdentificacaoPrestador.CpfCnpj,
       FNFSe.Prestador.IdentificacaoPrestador.InscricaoEstadual));
   end;
 end;
@@ -897,6 +901,115 @@ begin
     LerArqIni(AIniString);
 
   Result := Self.Count > 0;
+end;
+
+function TNotasFiscais.LoadFromLoteNfse(const CaminhoArquivo: String): Boolean;
+var
+  XMLStr: String;
+  XMLUTF8: AnsiString;
+  i, l: integer;
+  MS: TMemoryStream;
+  P, N, TamTag, j: Integer;
+  aXml, aXmlLote: string;
+  TagF: Array[1..13] of String;
+
+  function PrimeiraNFSe: Integer;
+  begin
+    TagF[01] := '<CompNfse>';
+    TagF[02] := '<ComplNfse>';
+    TagF[03] := '<NFS-e>';
+    TagF[04] := '<Nfse>';
+    TagF[05] := '<nfse>'; // IPM
+    TagF[06] := '<Nota>';
+    TagF[07] := '<NFe>';
+    TagF[08] := '<tbnfd>';
+    TagF[09] := '<nfs>';
+    TagF[10] := '<nfeRpsNotaFiscal>'; // Provedor EL
+    TagF[11] := '<notasFiscais>';     // Provedor EL
+    TagF[12] := '<notaFiscal>';       // Provedor GIAP
+    TagF[13] := '<NOTA>';             // Provedor AssessorPublico
+
+    j := 0;
+
+    repeat
+      inc(j);
+      TamTAG := Length(TagF[j]) -1;
+      Result := Pos(TagF[j], aXmlLote);
+    until (j = High(TagF)) or (Result <> 0);
+  end;
+
+  function PosNFSe: Integer;
+  begin
+    TagF[01] := '</CompNfse>';
+    TagF[02] := '</ComplNfse>';
+    TagF[03] := '</NFS-e>';
+    TagF[04] := '</Nfse>';
+    TagF[05] := '</nfse>'; // IPM
+    TagF[06] := '</Nota>';
+    TagF[07] := '</NFe>';
+    TagF[08] := '</tbnfd>';
+    TagF[09] := '</nfs>';
+    TagF[10] := '</nfeRpsNotaFiscal>'; // Provedor EL
+    TagF[11] := '</notasFiscais>';     // Provedor EL
+    TagF[12] := '</notaFiscal>';       // Provedor GIAP
+    TagF[13] := '</NOTA>';             // Provedor AssessorPublico
+
+    j := 0;
+
+    repeat
+      inc(j);
+      TamTAG := Length(TagF[j]) -1;
+      Result := Pos(TagF[j], aXmlLote);
+    until (j = High(TagF)) or (Result <> 0);
+  end;
+
+  function LimparXml(const XMLStr: string): string;
+  begin
+    Result := FaststringReplace(XMLStr, ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"', '', [rfReplaceAll]);
+    Result := FaststringReplace(Result, ' xmlns:xsd="http://www.w3.org/2001/XMLSchema"', '', [rfReplaceAll]);
+  end;
+begin
+  MS := TMemoryStream.Create;
+  try
+    MS.LoadFromFile(CaminhoArquivo);
+    XMLUTF8 := ReadStrFromStream(MS, MS.Size);
+  finally
+    MS.Free;
+  end;
+
+  l := Self.Count; // Indice da última nota já existente
+
+  // Converte de UTF8 para a String nativa da IDE //
+  XMLStr := DecodeToString(XMLUTF8, True);
+  XMLStr := LimparXml(XMLStr);
+
+  aXmlLote := XMLStr;
+  Result := False;
+  P := PrimeiraNFSe;
+  aXmlLote := copy(aXmlLote, P, length(aXmlLote));
+  N := PosNFSe;
+
+  while N > 0 do
+  begin
+    aXml := copy(aXmlLote, 1, N + TamTAG);
+    aXmlLote := Trim(copy(aXmlLote, N + TamTAG + 1, length(aXmlLote)));
+
+    Result := LoadFromString(aXml, False);
+
+    N := PosNFSe;
+  end;
+
+  if Result then
+  begin
+    // Atribui Nome do arquivo a novas notas inseridas //
+    for i := l to Self.Count - 1 do
+    begin
+      if Pos('-rps.xml', CaminhoArquivo) > 0 then
+        Self.Items[i].NomeArqRps := CaminhoArquivo
+      else
+        Self.Items[i].NomeArq := CaminhoArquivo;
+    end;
+  end;
 end;
 
 function TNotasFiscais.LoadFromStream(AStream: TStringStream;

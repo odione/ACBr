@@ -152,7 +152,12 @@ begin
   if URL <> '' then
     Result := TACBrNFSeXWebserviceGiap.Create(FAOwner, AMetodo, URL)
   else
-    raise EACBrDFeException.Create(ERR_NAO_IMP);
+  begin
+    if ConfigGeral.Ambiente = taProducao then
+      raise EACBrDFeException.Create(ERR_SEM_URL_PRO)
+    else
+      raise EACBrDFeException.Create(ERR_SEM_URL_HOM);
+  end;
 end;
 
 procedure TACBrNFSeProviderGiap.ProcessarMensagemErros(
@@ -182,11 +187,11 @@ begin
   for I := Low(ANodeArray) to High(ANodeArray) do
   begin
     AErro := Response.Erros.New;
-    AErro.Codigo := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Erro'), tcStr);
-    AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Status'), tcStr);
+    AErro.Codigo := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Erro'), tcStr);
+    AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Status'), tcStr);
 
     if AErro.Descricao = '' then
-      AErro.Descricao := ProcessarConteudoXml(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
+      AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
 
     AErro.Correcao := '';
   end;
@@ -232,11 +237,20 @@ begin
       Response.Sucesso := (Response.Erros.Count = 0);
 
       ANode := Document.Root;
-
+      {
       ANode := ANode.Childrens.FindAnyNs('nfeResposta');
 
-      ANodeArray := ANode.Childrens.FindAllAnyNs('notaFiscal');
       if not Assigned(ANode) then
+      begin
+        AErro := Response.Erros.New;
+        AErro.Codigo := Cod203;
+        AErro.Descricao := Desc203;
+        Exit;
+      end;
+      }
+      ANodeArray := ANode.Childrens.FindAllAnyNs('notaFiscal');
+
+      if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
@@ -250,13 +264,13 @@ begin
 
         with Response do
         begin
-          NumeroNota := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('numeroNota'), tcInt);
-          CodVerificacao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('codigoVerificacao'), tcStr);
-          Situacao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('statusEmissao'), tcStr);
-          Link := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('link'), tcStr);
+          NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('numeroNota'), tcStr);
+          CodVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('codigoVerificacao'), tcStr);
+          Situacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('statusEmissao'), tcStr);
+          Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('link'), tcStr);
         end;
 
-        NumRps := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('numeroRps'), tcStr);
+        NumRps := ObterConteudoTag(ANode.Childrens.FindAnyNs('numeroRps'), tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -275,7 +289,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -345,15 +359,15 @@ begin
 
       if ANode <> nil then
       begin
-        Response.Situacao := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('notaExiste'), tcStr);
-        Response.NumeroNota := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('numeroNota'), tcInt);
+        Response.Situacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('notaExiste'), tcStr);
+        Response.NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('numeroNota'), tcStr);
       end;
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally
@@ -425,10 +439,11 @@ begin
 
       ANode := Document.Root;
 
-      Response.Lote := ProcessarConteudoXml(ANode.Childrens.FindAnyNs('NumeroLote'), tcStr);
+      Response.Lote := ObterConteudoTag(ANode.Childrens.FindAnyNs('NumeroLote'), tcStr);
 
       ANodeArray := ANode.Childrens.FindAllAnyNs('Nfse');
-      if not Assigned(ANode) then
+
+      if not Assigned(ANodeArray) then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
@@ -443,7 +458,7 @@ begin
         AuxNode := AuxNode.Childrens.FindAnyNs('NumeroRps');
 
         if AuxNode <> nil then
-          NumRps := ProcessarConteudoXml(AuxNode, tcStr);
+          NumRps := ObterConteudoTag(AuxNode, tcStr);
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
@@ -462,7 +477,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := E.Message;
+        AErro.Descricao := Desc999 + E.Message;
       end;
     end;
   finally

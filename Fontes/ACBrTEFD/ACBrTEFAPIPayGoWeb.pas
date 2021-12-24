@@ -119,6 +119,7 @@ type
 
     procedure ResolverTransacaoPendente(
       AStatus: TACBrTEFStatusTransacao = tefstsSucessoManual); override;
+    procedure AbortarTransacaoEmAndamento; override;
 
     procedure ExibirMensagemPinPad(const MsgPinPad: String); override;
     function ObterDadoPinPad(TipoDado: TACBrTEFAPIDadoPinPad; TimeOut: SmallInt = 30000
@@ -497,9 +498,6 @@ var
   Resp: TACBrTEFResp;
   PGWebStatus: LongWord;
 begin
- if (Rede = '') or (NSU = '') then
-    Exit;
-
   i := fpACBrTEFAPI.RespostasTEF.AcharTransacao(Rede, NSU, CodigoFinalizacao);
   if (i >= 0) then
     Resp := fpACBrTEFAPI.RespostasTEF[i]
@@ -598,6 +596,11 @@ begin
   fTEFPayGoAPI.FinalizarTransacao(PGWebStatus,
           fpndReqNum, fPndLocRef, fPndExtRef, fPndVirtMerch, fPndAuthSyst);
   LimparUltimaTransacaoPendente;
+end;
+
+procedure TACBrTEFAPIClassPayGoWeb.AbortarTransacaoEmAndamento;
+begin
+  fTEFPayGoAPI.AbortarTransacao;
 end;
 
 procedure TACBrTEFAPIClassPayGoWeb.ExibirMensagemPinPad(const MsgPinPad: String

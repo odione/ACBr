@@ -99,9 +99,9 @@ type
     procedure GerarHorario(pHorario: THorarioCollection);
     procedure GerarHorContratual(pHorContratual: THorContratual);
     procedure GerarIdeEvento(pEvt: TIdeEvento; const GeraGrupo: boolean = True);
-    procedure GerarIdeEvento2(pEvt: TIdeEvento2; const GeraGrupo: boolean = True; GeraRetif: Boolean = True);
-    procedure GerarIdeEvento3(pEvt: TIdeEvento3; IndRetif: Boolean=True);
-    procedure GerarIdeEvento4(pEvt: TIdeEvento4);
+    procedure GerarIdeEvento2(pEvt: TIdeEvento2; const GeraGrupo: Boolean=True; GeraIndRetif: Boolean=True; GeraIndGuia: Boolean=False);
+    procedure GerarIdeEvento3(pEvt: TIdeEvento3; GeraIndRetif: Boolean=True; GeraIndApuracao: Boolean=True; GeraIndGuia: Boolean=True);
+    procedure GerarIdeEvento4(pEvt: TIdeEvento4; GeraIndApuracao: Boolean=True; GeraIndGuia: Boolean=True);
     procedure GerarIdeEvento5(pEvt: TIdeEvento5; nrRecArqBase: Boolean = True; IndApuracao: Boolean = True);
     procedure GerarIdePeriodo(pIdePeriodo: TidePeriodo; const GroupName: string = 'idePeriodo');
     procedure GerarIdeEmpregador(pEmp: TIdeEmpregador);
@@ -496,9 +496,12 @@ begin
     Gerador.wCampo(tcStr, '', 'codCarreira', 0, 30,  0, pInfoContrato.codCarreira);
     Gerador.wCampo(tcDat, '', 'dtIngrCarr',  0, 10,  0, pInfoContrato.dtIngrCarr);
   end;
-  
-  GerarRemuneracao(pInfoContrato.Remuneracao);
-  GerarDuracao(pInfoContrato.Duracao, pTipo);
+
+  if (pInfoContrato.Remuneracao.vrSalFx > 0) or 
+     (pInfoContrato.Remuneracao.undSalFixo = sfNaoaplicavel) then
+    GerarRemuneracao(pInfoContrato.Remuneracao);
+  if pInfoContrato.Duracao.tpContr <> PrazoNaoAplicavel then
+    GerarDuracao(pInfoContrato.Duracao, pTipo);
   GerarLocalTrabalho(pInfoContrato.LocalTrabalho);
 
   //Informações do Horário Contratual do Trabalhador. O preenchimento é obrigatório se {tpRegJor} = [1]
@@ -638,10 +641,14 @@ procedure TeSocialEvento.GerarEndereco(pEndereco: TEndereco;
 begin
   Gerador.wGrupo('endereco');
 
-  if not pExterior then
-    GerarEnderecoBrasil(pEndereco.Brasil)
+  if (not pExterior) or (pEndereco.Exterior.PaisResid = '105') or (pEndereco.Exterior.PaisResid = '') then
+  begin // Mora no Brasil
+     GerarEnderecoBrasil(pEndereco.Brasil);
+  end
   else
-    GerarEnderecoExterior(pEndereco.Exterior);
+  begin
+     GerarEnderecoExterior(pEndereco.Exterior);
+  end;
 
   Gerador.wGrupo('/endereco');
 end;
@@ -1096,7 +1103,8 @@ begin
     if pAliqRat.ProcAdmJudFap.nrProc <> EmptyStr then
       bProcJudFap := True;
 
-  if not(VersaoDF <= veS01_00_00) and not(bProcJudRat) and not(bProcJudFap) and not(pTpInscEstab = tiCNO) then
+  if (VersaoDF >= veS01_00_00) and (not bProcJudRat) and (not bProcJudFap) and 
+     (pTpInscEstab <> tiCNO) and (pAliqRat.Fap <= 0) then
     Exit;
 
   Gerador.wGrupo(GroupName);
@@ -1176,16 +1184,19 @@ begin
   	Gerador.wGrupo('/ideEvento');
 end;
 
-procedure TeSocialEvento.GerarIdeEvento2(pEvt: TIdeEvento2; const GeraGrupo: boolean = True; GeraRetif: Boolean = True);
+procedure TeSocialEvento.GerarIdeEvento2(pEvt: TIdeEvento2; const GeraGrupo: Boolean=True; GeraIndRetif: Boolean=True; GeraIndGuia: Boolean=False);
 begin
   if GeraGrupo then
     Gerador.wGrupo('ideEvento');
 
-  if (GeraRetif) then
+  if (GeraIndRetif) then
     Gerador.wCampo(tcStr, '', 'indRetif', 1, 1, 1, eSIndRetificacaoToStr(pEvt.indRetif));
 
   if (eSIndRetificacaoToStr(pEvt.indRetif) = '2') then
     Gerador.wCampo(tcStr, '', 'nrRecibo', 1, 40, 0, pEvt.nrRecibo);
+
+  if (GeraIndGuia) and (VersaoDF >= veS01_00_00) and (pEvt.indGuia <> '') then
+    Gerador.wCampo(tcStr, '', 'indGuia', 1, 1, 0, pEvt.indGuia);
 
   if GeraGrupo then
     GerarIdeEvento(pEvt, False);
@@ -1194,17 +1205,18 @@ begin
     Gerador.wGrupo('/ideEvento');
 end;
 
-procedure TeSocialEvento.GerarIdeEvento3(pEvt: TIdeEvento3; IndRetif: Boolean=True);
+procedure TeSocialEvento.GerarIdeEvento3(pEvt: TIdeEvento3; GeraIndRetif: Boolean=True; GeraIndApuracao: Boolean=True; GeraIndGuia: Boolean=True);
 begin
   Gerador.wGrupo('ideEvento');
 
-  if (indRetif) then
-    GerarIdeEvento2(pEvt, false, indRetif);
+  GerarIdeEvento2(pEvt, false, GeraIndRetif, false);
 
-  Gerador.wCampo(tcStr, '', 'indApuracao', 1, 1, 1, eSIndApuracaoToStr(pEvt.IndApuracao));
+  if (GeraIndApuracao) then
+    Gerador.wCampo(tcStr, '', 'indApuracao', 1, 1, 1, eSIndApuracaoToStr(pEvt.IndApuracao));
+
   Gerador.wCampo(tcStr, '', 'perApur',     7, 7, 1, pEvt.perApur);
 
-  if  (VersaoDF = veS01_00_00) then
+  if (GeraIndGuia) and (VersaoDF >= veS01_00_00) and (pEvt.indGuia <> '') then
     Gerador.wCampo(tcStr, '', 'indGuia', 1, 1, 0, pEvt.indGuia);
 
   GerarIdeEvento(pEvt, false);
@@ -1212,15 +1224,19 @@ begin
   Gerador.wGrupo('/ideEvento');
 end;
 
-procedure TeSocialEvento.GerarIdeEvento4(pEvt: TIdeEvento4);
+procedure TeSocialEvento.GerarIdeEvento4(pEvt: TIdeEvento4; GeraIndApuracao: Boolean=True; GeraIndGuia: Boolean=True);
 begin
   Gerador.wGrupo('ideEvento');
 
-  Gerador.wCampo(tcStr, '', 'indApuracao', 1,  1, 1, eSIndApuracaoToStr(pEvt.IndApuracao));
-  Gerador.wCampo(tcStr, '', 'perApur',     7,  7, 1, pEvt.perApur);
-  Gerador.wCampo(tcStr, '', 'tpAmb',       1,  1, 1, TpAmbToStr(TACBreSocial(FACBreSocial).Configuracoes.WebServices.Ambiente));
-  Gerador.wCampo(tcStr, '', 'procEmi',     1,  1, 1, eSProcEmiToStr(pEvt.ProcEmi));
-  Gerador.wCampo(tcStr, '', 'verProc',     1, 20, 1, pEvt.VerProc);
+  if (GeraIndApuracao) then
+    Gerador.wCampo(tcStr, '', 'indApuracao', 1, 1, 1, eSIndApuracaoToStr(pEvt.IndApuracao));
+
+  Gerador.wCampo(tcStr, '', 'perApur',     7, 7, 1, pEvt.perApur);
+
+  if (GeraIndGuia) and (VersaoDF >= veS01_00_00) and (pEvt.indGuia <> '') then
+    Gerador.wCampo(tcStr, '', 'indGuia', 1, 1, 0, pEvt.indGuia);
+
+  GerarIdeEvento(pEvt, false);
 
   Gerador.wGrupo('/ideEvento');
 end;
@@ -1324,8 +1340,9 @@ begin
       else
         Gerador.wCampo(tcStr, '', 'nisTrab', 1, 11, 1, pIdeVinculo.nisTrab);
     end;
-  
-  Gerador.wCampo(tcStr, '', 'matricula', 1, 30, 1, pIdeVinculo.matricula);
+
+  if (IntToTpProf(pIdeVinculo.codCateg) = ttpProfissionalEmpregado) then
+          Gerador.wCampo(tcStr, '', 'matricula', 1, 30, 1, pIdeVinculo.matricula);
   
   if not(pCessao) then
     if (pcodCateg) then

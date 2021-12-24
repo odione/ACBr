@@ -37,16 +37,13 @@ unit Prodata.GravarXml;
 interface
 
 uses
-{$IFDEF FPC}
-  LResources, Controls, Graphics, Dialogs,
-{$ENDIF}
   SysUtils, Classes, StrUtils,
   ACBrNFSeXParametros, ACBrNFSeXGravarXml_ABRASFv2, ACBrNFSeXConversao;
 
 type
-  { TNFSeW_Prodata }
+  { TNFSeW_Prodata201 }
 
-  TNFSeW_Prodata = class(TNFSeW_ABRASFv2)
+  TNFSeW_Prodata201 = class(TNFSeW_ABRASFv2)
   protected
     procedure Configuracao; override;
 
@@ -59,9 +56,9 @@ implementation
 //     Prodata
 //==============================================================================
 
-{ TNFSeW_Prodata }
+{ TNFSeW_Prodata201 }
 
-procedure TNFSeW_Prodata.Configuracao;
+procedure TNFSeW_Prodata201.Configuracao;
 begin
   inherited Configuracao;
 
