@@ -94,7 +94,7 @@ var
 begin
   Configuracao;
 
-  Opcoes.QuebraLinha := FAOwner.ConfigGeral.QuebradeLinha;
+  Opcoes.QuebraLinha := FpAOwner.ConfigGeral.QuebradeLinha;
 
   ListaDeAlertas.Clear;
 
@@ -162,7 +162,7 @@ begin
                                                    NFSe.OutrasInformacoes, ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'Status', 1, 1, 1,
-                                              StatusRPSToStr(NFSe.Status), ''));
+                                       StatusRPSToStr(NFSe.StatusRps), ''));
 
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'CodigoMunicipioPrestacao', 7, 7, 0,
                       OnlyNumber(NFSe.Prestador.Endereco.CodigoMunicipio), ''));
@@ -208,16 +208,16 @@ begin
                                               NFSe.Prestador.NomeFantasia, ''));
 
   Result.AppendChild(AddNode(tcStr, '#1', 'IncentivadorCultural', 1, 1, 1,
-                                   SimNaoToStr(NFSe.IncentivadorCultural), ''));
+      FpAOwner.SimNaoToStr(NFSe.IncentivadorCultural), ''));
 
   Result.AppendChild(AddNode(tcStr, '#1', 'OptanteSimplesNacional', 1, 1, 1,
-                                 SimNaoToStr(NFSe.OptanteSimplesNacional), ''));
+    FpAOwner.SimNaoToStr(NFSe.OptanteSimplesNacional), ''));
 
   Result.AppendChild(AddNode(tcStr, '#1', 'NaturezaOperacao', 1, 1, 1,
                              NaturezaOperacaoToStr(NFSe.NaturezaOperacao), ''));
 
   Result.AppendChild(AddNode(tcInt, '#1', 'RegimeEspecialTributacao', 1, 1, 1,
-             RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), ''));
+    FpAOwner.RegimeEspecialTributacaoToStr(NFSe.RegimeEspecialTributacao), ''));
 
   xmlNode := GerarEnderecoPrestador;
   Result.AppendChild(xmlNode);

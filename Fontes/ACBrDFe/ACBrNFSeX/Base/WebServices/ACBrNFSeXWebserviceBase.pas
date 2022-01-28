@@ -70,6 +70,7 @@ type
     HttpClient: TDFeSSLHttpClass;
 
     FPFaultNode: string;
+    FPSoapFaultNode: string;
     FPFaultCodeNode: string;
     FPFaultMsgNode: string;
 
@@ -295,6 +296,7 @@ begin
   FUseOuterXml := True;
 
   FPFaultNode := 'Fault';
+  FPSoapFaultNode := 'soap:Fault';
   FPFaultCodeNode := 'faultcode';
   FPFaultMsgNode := 'faultstring';
 
@@ -525,7 +527,7 @@ Var
   ANode: TACBrXmlNode;
   aMsg: string;
 begin
-  if ADocument.Root.Name = FPFaultNode then
+  if ((ADocument.Root.Name = FPFaultNode) or (ADocument.Root.Name = FPSoapFaultNode)) then
     ANode := ADocument.Root
   else
     ANode := ADocument.Root.Childrens.FindAnyNs(FPFaultNode);
@@ -684,12 +686,12 @@ begin
 
             HttpClient.DataResp.Position := 0;
 
-            CharSet := HttpClient.HeaderResp.GetHeaderValue('Content-Type');
+            CharSet := LowerCase(HttpClient.HeaderResp.GetHeaderValue('Content-Type'));
 
-            if Pos('utf-8', CharSet) > 0 then
-              FPRetorno := ReadStrFromStream(HttpClient.DataResp, HttpClient.DataResp.Size)
+            if (Pos('application/xml', CharSet) > 0) and (Pos('utf-8', CharSet) > 0) then
+              FPRetorno := UTF8ToNativeString(ReadStrFromStream(HttpClient.DataResp, HttpClient.DataResp.Size))
             else
-              FPRetorno := UTF8ToNativeString(ReadStrFromStream(HttpClient.DataResp, HttpClient.DataResp.Size));
+              FPRetorno := string(ReadStrFromStream(HttpClient.DataResp, HttpClient.DataResp.Size));
 
             // Alsuns provedores retorna uma string apenas com a mensagem de erro
             if Pos('Body', FPRetorno) = 0 then
@@ -698,7 +700,7 @@ begin
             if Pos('ISO-8859-1', FPRetorno) > 0 then
             begin
               FPRetorno := RemoverDeclaracaoXML(FPRetorno);
-              FPRetorno := TranslateString(FPRetorno, 0, 28591);
+              FPRetorno := string(TranslateString(AnsiString(FPRetorno), 0, 28591));
             end;
 
             if Pos('<?xml version="1.0" ?>', FPRetorno) > 0 then

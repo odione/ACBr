@@ -239,6 +239,8 @@ procedure TACBrNFSeProviderSilTecnologia203.Configuracao;
 begin
   inherited Configuracao;
 
+  ConfigGeral.ConsultaPorFaixaPreencherNumNfseFinal := True;
+
   with ConfigAssinar do
   begin
     LoteRps := True;
@@ -302,11 +304,11 @@ begin
 
   if not Response.Sucesso then
   begin
-    if Pos(Response.XmlRetorno, '<return>') > 0 then
+    if Pos(Response.ArquivoRetorno, '<return>') > 0 then
     begin
       AErro := Response.Erros.New;
       AErro.Codigo := '';
-      AErro.Descricao := SeparaDados(Response.XmlRetorno, 'return');
+      AErro.Descricao := SeparaDados(Response.ArquivoRetorno, 'return');
     end;
   end;
 end;

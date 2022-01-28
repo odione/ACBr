@@ -534,7 +534,7 @@ begin
         Producao := snNao;
 
       // TnfseStatusRPS = ( srNormal, srCancelado );
-      Status := srNormal;
+      StatusRps := srNormal;
 
       // Somente Os provedores Betha, FISSLex e SimplISS permitem incluir no RPS
       // a TAG: OutrasInformacoes os demais essa TAG é gerada e preenchida pelo
@@ -558,6 +558,18 @@ begin
       Servico.Valores.ValorInss := 0.00;
       Servico.Valores.ValorIr := 0.00;
       Servico.Valores.ValorCsll := 0.00;
+
+      // Provedor Elotech
+      Servico.Valores.AliquotaPis := 0;
+      Servico.Valores.RetidoPis := snNao;
+      Servico.Valores.AliquotaCofins := 0;
+      Servico.Valores.RetidoCofins := snNao;
+      Servico.Valores.AliquotaInss := 0;
+      Servico.Valores.RetidoInss := snNao;
+      Servico.Valores.AliquotaIr := 0;
+      Servico.Valores.RetidoIr := snNao;
+      Servico.Valores.AliquotaCsll := 0;
+      Servico.Valores.RetidoCsll := snNao;
 
       // TnfseSituacaoTributaria = ( stRetencao, stNormal, stSubstituicao );
       // stRetencao = snSim
@@ -716,7 +728,7 @@ begin
         SituacaoTributaria := 0;
       end;
 
-      Prestador.IdentificacaoPrestador.CNPJ := edtEmitCNPJ.Text; //'88888888888888';
+      Prestador.IdentificacaoPrestador.CpfCnpj := edtEmitCNPJ.Text; //'88888888888888';
       Prestador.IdentificacaoPrestador.InscricaoMunicipal := edtEmitIM.Text;
 
       Prestador.RazaoSocial  := edtEmitRazao.Text;
@@ -1284,7 +1296,7 @@ begin
             tpConsulta := tcPorNumero;
 
             NumeroIniNFSe := NumeroNFSe;
-            SerNFSe := SerNFSe;
+            SerieNFSe := SerNFSe;
             CadEconomico := edtEmitIM.Text;
           end;
 
@@ -3169,6 +3181,7 @@ begin
     ACBrNFSeX1.DANFSe.MargemEsquerda := 5;
     ACBrNFSeX1.DANFSe.MargemSuperior := 5;
     ACBrNFSeX1.DANFSe.MargemInferior := 5;
+    ACBrNFSeX1.DANFSE.Cancelada := True;
   end;
 
   with ACBrNFSeX1.MAIL do

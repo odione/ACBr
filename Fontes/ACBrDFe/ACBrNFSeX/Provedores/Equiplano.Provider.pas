@@ -59,6 +59,8 @@ type
   end;
 
   TACBrNFSeProviderEquiplano = class (TACBrNFSeProviderProprio)
+  private
+    FpCodigoCidade: string;
   protected
     procedure Configuracao; override;
 
@@ -67,6 +69,8 @@ type
     function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
 
     function PrepararRpsParaLote(const aXml: string): string; override;
+
+    function GerarXmlNota(const aXmlRps, aXmlRetorno: string): string;
 
     procedure GerarMsgDadosEmitir(Response: TNFSeEmiteResponse;
       Params: TNFSeParamsResponse); override;
@@ -107,7 +111,11 @@ procedure TACBrNFSeProviderEquiplano.Configuracao;
 begin
   inherited Configuracao;
 
-  ConfigGeral.ModoEnvio := meLoteAssincrono;
+  with ConfigGeral do
+  begin
+    ModoEnvio := meLoteAssincrono;
+    FpCodigoCidade := Params.ValorParametro('CodigoCidade');
+  end;
 
   with ConfigAssinar do
   begin
@@ -259,7 +267,7 @@ begin
 
   with Params do
   begin
-    Response.XmlEnvio := '<es:enviarLoteRpsEnvio' + NameSpace + '>' +
+    Response.ArquivoEnvio := '<es:enviarLoteRpsEnvio' + NameSpace + '>' +
                            '<lote>' +
                              '<nrLote>' +
                                 Response.Lote +
@@ -281,7 +289,7 @@ begin
                                   SimNaoToStr(TACBrNFSeX(FAOwner).NotasFiscais.items[0].NFSe.OptanteSimplesNacional) +
                                '</isOptanteSimplesNacional>' +
                                '<idEntidade>' +
-                                  TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                                  FpCodigoCidade +
                                '</idEntidade>' +
                              '</prestador>' +
                              '<listaRps>' +
@@ -290,6 +298,22 @@ begin
                            '</lote>' +
                          '</es:enviarLoteRpsEnvio>';
   end;
+end;
+
+function TACBrNFSeProviderEquiplano.GerarXmlNota(const aXmlRps,
+  aXmlRetorno: string): string;
+var
+  aRPS, aNFSE: string;
+begin
+  aRPS  := SeparaDados(aXmlRps, 'rps', False);
+  aNFSE := aXmlRetorno;
+
+  Result := '<compNfse xmlns="http://www.equiplano.com.br/esnfs">' +
+              '<nfse>' +
+                aNFSE +
+                aRPS +
+              '</nfse>' +
+            '</compNfse>';
 end;
 
 procedure TACBrNFSeProviderEquiplano.TratarRetornoEmitir(Response: TNFSeEmiteResponse);
@@ -303,7 +327,7 @@ begin
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -311,7 +335,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 
@@ -377,7 +401,7 @@ begin
                    Response.Lote +
                  '</nrLoteRps>';
 
-  Response.XmlEnvio := '<es:esConsultarSituacaoLoteRpsEnvio' + NameSpace + '>' +
+  Response.ArquivoEnvio := '<es:esConsultarSituacaoLoteRpsEnvio' + NameSpace + '>' +
                          '<prestador>' +
                            '<nrInscricaoMunicipal>' +
                               OnlyNumber(Emitente.InscMun) +
@@ -386,7 +410,7 @@ begin
                               OnlyNumber(Emitente.CNPJ) +
                            '</cnpj>' +
                            '<idEntidade>' +
-                              TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                              FpCodigoCidade +
                            '</idEntidade>' +
                          '</prestador>' +
                          xConsulta +
@@ -404,7 +428,7 @@ begin
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -412,7 +436,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 
@@ -473,7 +497,7 @@ begin
                    Response.Lote +
                  '</nrLoteRps>';
 
-  Response.XmlEnvio := '<es:esConsultarLoteRpsEnvio' + NameSpace + '>' +
+  Response.ArquivoEnvio := '<es:esConsultarLoteRpsEnvio' + NameSpace + '>' +
                          '<prestador>' +
                            '<nrInscricaoMunicipal>' +
                               OnlyNumber(Emitente.InscMun) +
@@ -482,7 +506,7 @@ begin
                               OnlyNumber(Emitente.CNPJ) +
                            '</cnpj>' +
                            '<idEntidade>' +
-                              TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                              FpCodigoCidade +
                            '</idEntidade>' +
                          '</prestador>' +
                          xConsulta +
@@ -498,13 +522,13 @@ var
   ANodeArray: TACBrXmlNodeArray;
   i: Integer;
   NumRps: String;
-  ANota: NotaFiscal;
+  ANota: TNotaFiscal;
 begin
   Document := TACBrXmlDocument.Create;
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -512,7 +536,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 
@@ -594,7 +618,7 @@ begin
 
   NameSpace := ' xmlns:es="' + ConfigMsgDados.ConsultarNFSeRps.xmlns + '"';
 
-  Response.XmlEnvio := '<es:esConsultarNfsePorRpsEnvio' + NameSpace + '>' +
+  Response.ArquivoEnvio := '<es:esConsultarNfsePorRpsEnvio' + NameSpace + '>' +
                          '<rps>' +
                            '<nrRps>' +
                               Response.NumRPS +
@@ -611,7 +635,7 @@ begin
                               OnlyNumber(Emitente.CNPJ) +
                            '</cnpj>' +
                            '<idEntidade>' +
-                              TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                              FpCodigoCidade +
                            '</idEntidade>' +
                          '</prestador>' +
                        '</es:esConsultarNfsePorRpsEnvio>';
@@ -623,12 +647,15 @@ var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
   ANode, AuxNode: TACBrXmlNode;
+  ANota: TNotaFiscal;
+  aXmlNota: string;
+  i: Integer;
 begin
   Document := TACBrXmlDocument.Create;
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -636,7 +663,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 
@@ -653,8 +680,26 @@ begin
       begin
         with Response do
         begin
-          CodVerificacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('cdAutenticacao'), tcStr);
           NumeroNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('nrNfse'), tcStr);
+          CodVerificacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('cdAutenticacao'), tcStr);
+          Data := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('dtEmissaoNfs'), tcDatHor);
+          NumeroRps := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('nrRps'), tcStr);
+        end;
+
+        i := TACBrNFSeX(FAOwner).NotasFiscais.Count;
+
+        if i > 0 then
+        begin
+          ANota := TACBrNFSeX(FAOwner).NotasFiscais.Items[i-1];
+
+          if ANota.NFSe.IdentificacaoRps.Numero = Response.NumeroRps  then
+          begin
+            aXmlNota := GerarXmlNota(ANota.XMLAssinado, Response.ArquivoRetorno);
+
+            ANota.XML := aXmlNota;
+
+            SalvarXmlNfse(ANota);
+          end;
         end;
       end;
     except
@@ -691,7 +736,7 @@ begin
 
   NameSpace := ' xmlns:es="' + ConfigMsgDados.ConsultarNFSe.xmlns + '"';
 
-  Response.XmlEnvio := '<es:esConsultarNfseEnvio' + NameSpace + '>' +
+  Response.ArquivoEnvio := '<es:esConsultarNfseEnvio' + NameSpace + '>' +
                          '<prestador>' +
                            '<nrInscricaoMunicipal>' +
                               OnlyNumber(Emitente.InscMun) +
@@ -700,7 +745,7 @@ begin
                               OnlyNumber(Emitente.CNPJ) +
                            '</cnpj>' +
                            '<idEntidade>' +
-                              TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                              FpCodigoCidade +
                            '</idEntidade>' +
                          '</prestador>' +
                          '<nrNfse>' +
@@ -718,13 +763,13 @@ var
   ANodeArray: TACBrXmlNodeArray;
   i: Integer;
   NumRps: String;
-  ANota: NotaFiscal;
+  ANota: TNotaFiscal;
 begin
   Document := TACBrXmlDocument.Create;
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -732,7 +777,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 
@@ -820,7 +865,7 @@ begin
 
   NameSpace := ' xmlns:es="' + ConfigMsgDados.ConsultarNFSe.xmlns + '"';
 
-  Response.XmlEnvio := '<es:esCancelarNfseEnvio' + NameSpace + '>' +
+  Response.ArquivoEnvio := '<es:esCancelarNfseEnvio' + NameSpace + '>' +
                          '<prestador>' +
                            '<nrInscricaoMunicipal>' +
                               OnlyNumber(Emitente.InscMun) +
@@ -829,7 +874,7 @@ begin
                               OnlyNumber(Emitente.CNPJ) +
                            '</cnpj>' +
                            '<idEntidade>' +
-                              TACBrNFSeX(FAOwner).Provider.ConfigGeral.Params1 +
+                              FpCodigoCidade +
                            '</idEntidade>' +
                          '</prestador>' +
                          '<nrNfse>' +
@@ -852,7 +897,7 @@ begin
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -860,7 +905,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root;
 

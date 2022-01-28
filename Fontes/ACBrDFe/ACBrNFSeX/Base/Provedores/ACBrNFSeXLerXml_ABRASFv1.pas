@@ -278,15 +278,12 @@ begin
       begin
         AuxNodeCpfCnpj := AuxNode.Childrens.FindAnyNs('CpfCnpj');
 
-        with NFSe.Tomador.IdentificacaoTomador do
+        if AuxNodeCpfCnpj <> nil then
         begin
-          if AuxNodeCpfCnpj <> nil then
-          begin
-            CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cpf'), tcStr);
+          CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cpf'), tcStr);
 
-            if CpfCnpj = '' then
-              CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cnpj'), tcStr);
-          end;
+          if CpfCnpj = '' then
+            CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cnpj'), tcStr);
         end;
       end;
 
@@ -303,15 +300,12 @@ begin
       begin
         AuxNodeCpfCnpj := ANode.Childrens.FindAnyNs('CpfCnpj');
 
-        with NFSe.Tomador.IdentificacaoTomador do
+        if AuxNodeCpfCnpj <> nil then
         begin
-          if AuxNodeCpfCnpj <> nil then
-          begin
-            CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cpf'), tcStr);
+          CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cpf'), tcStr);
 
-            if CpfCnpj = '' then
-              CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cnpj'), tcStr);
-          end;
+          if CpfCnpj = '' then
+            CpfCnpj := ObterConteudo(AuxNodeCpfCnpj.Childrens.FindAnyNs('Cnpj'), tcStr);
         end;
       end;
 
@@ -411,9 +405,9 @@ begin
 
     NFSe.DataEmissaoRps           := ObterConteudo(AuxNode.Childrens.FindAnyNs('DataEmissaoRps'), tcDat);
     NFSe.NaturezaOperacao         := StrToNaturezaOperacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('NaturezaOperacao'), tcStr));
-    NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr));
-    NFSe.OptanteSimplesNacional   := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
-    NFSe.IncentivadorCultural     := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivadorCultural'), tcStr));
+    NFSe.RegimeEspecialTributacao := FpAOwner.StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr));
+    NFSe.OptanteSimplesNacional   := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
+    NFSe.IncentivadorCultural     := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivadorCultural'), tcStr));
     NFSe.Competencia              := ObterConteudo(AuxNode.Childrens.FindAnyNs('Competencia'), tcDat);
     NFSe.NfseSubstituida          := ObterConteudo(AuxNode.Childrens.FindAnyNs('NfseSubstituida'), tcStr);
     NFSe.OutrasInformacoes        := ObterConteudo(AuxNode.Childrens.FindAnyNs('OutrasInformacoes'), tcStr);
@@ -612,6 +606,9 @@ begin
       CodigoTributacaoMunicipio := ObterConteudo(AuxNode.Childrens.FindAnyNs('CodigoTributacaoMunicipio'), tcStr);
       Discriminacao             := ObterConteudo(AuxNode.Childrens.FindAnyNs('Discriminacao'), tcStr);
       CodigoMunicipio           := ObterConteudo(AuxNode.Childrens.FindAnyNs('CodigoMunicipio'), tcStr);
+
+      if CodigoMunicipio = '' then
+        CodigoMunicipio := ObterConteudo(AuxNode.Childrens.FindAnyNs('MunicipioPrestacaoServico'), tcStr);
     end;
   end;
 end;
@@ -657,7 +654,7 @@ procedure TNFSeR_ABRASFv1.LerValores(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
   Ok: Boolean;
-  Valor: Currency;
+  ValorLiq: Double;
 begin
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -667,27 +664,29 @@ begin
   begin
     with NFSe.Servico.Valores do
     begin
-      ValorServicos   := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorServicos'), tcDe2);
-      ValorDeducoes   := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorDeducoes'), tcDe2);
-      ValorPis        := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorPis'), tcDe2);
-      ValorCofins     := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCofins'), tcDe2);
-      ValorInss       := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorInss'), tcDe2);
-      ValorIr         := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIr'), tcDe2);
-      ValorCsll       := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCsll'), tcDe2);
-      IssRetido       := StrToSituacaoTributaria(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IssRetido'), tcStr));
-      ValorIss        := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIss'), tcDe2);
+      ValorServicos := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorServicos'), tcDe2);
+      ValorDeducoes := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorDeducoes'), tcDe2);
+      ValorPis := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorPis'), tcDe2);
+      ValorCofins := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCofins'), tcDe2);
+      ValorInss := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorInss'), tcDe2);
+      ValorIr := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIr'), tcDe2);
+      ValorCsll := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCsll'), tcDe2);
+      IssRetido := FpAOwner.StrToSituacaoTributaria(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IssRetido'), tcStr));
+      ValorIss := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIss'), tcDe2);
       OutrasRetencoes := ObterConteudo(AuxNode.Childrens.FindAnyNs('OutrasRetencoes'), tcDe2);
-      BaseCalculo     := ObterConteudo(AuxNode.Childrens.FindAnyNs('BaseCalculo'), tcDe2);
-      Aliquota        := ObterConteudo(AuxNode.Childrens.FindAnyNs('Aliquota'), tcDe4);
-      Valor           := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorLiquidoNfse'), tcDe2);
-
-      if Valor <> 0 then
-        ValorLiquidoNfse := Valor;
-
+      BaseCalculo := ObterConteudo(AuxNode.Childrens.FindAnyNs('BaseCalculo'), tcDe2);
+      Aliquota := ObterConteudo(AuxNode.Childrens.FindAnyNs('Aliquota'), tcDe4);
+      ValorLiquidoNfse := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorLiquidoNfse'), tcDe2);
       ValorIssRetido := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIssRetido'), tcDe2);
-
-      DescontoCondicionado   := ObterConteudo(AuxNode.Childrens.FindAnyNs('DescontoCondicionado'), tcDe2);
+      DescontoCondicionado := ObterConteudo(AuxNode.Childrens.FindAnyNs('DescontoCondicionado'), tcDe2);
       DescontoIncondicionado := ObterConteudo(AuxNode.Childrens.FindAnyNs('DescontoIncondicionado'), tcDe2);
+
+      ValorLiq := ValorServicos - ValorPis - ValorCofins - ValorInss -
+                  ValorIr - ValorCsll - OutrasRetencoes - ValorIssRetido -
+                  DescontoIncondicionado - DescontoCondicionado;
+
+      if (ValorLiquidoNfse = 0) or (ValorLiquidoNfse <> ValorLiq) then
+        ValorLiquidoNfse := ValorLiq;
     end;
   end;
 end;
@@ -781,10 +780,10 @@ begin
     begin
       DataEmissao := ObterConteudo(AuxNode.Childrens.FindAnyNs('DataEmissao'), tcDat);
       NaturezaOperacao := StrToNaturezaOperacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('NaturezaOperacao'), tcStr));
-      RegimeEspecialTributacao := StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr));
-      OptanteSimplesNacional := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
-      IncentivadorCultural := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivadorCultural'), tcStr));
-      Status := StrToStatusRPS(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('Status'), tcStr));
+      RegimeEspecialTributacao := FpAOwner.StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr));
+      OptanteSimplesNacional := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
+      IncentivadorCultural := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivadorCultural'), tcStr));
+      StatusRps := StrToStatusRPS(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('Status'), tcStr));
     end;
 
     LerRpsSubstituido(AuxNode);

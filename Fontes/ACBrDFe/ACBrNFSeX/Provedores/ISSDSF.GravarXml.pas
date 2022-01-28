@@ -58,8 +58,6 @@ type
   public
     function GerarXml: Boolean; override;
 
-//    property Situacao: String         read FSituacao;
-//    property TipoRecolhimento: String read FTipoRecolhimento;
   end;
 
 implementation
@@ -208,7 +206,7 @@ begin
 
   Opcoes.SuprimirDecimais := True;
   Opcoes.DecimalChar := '.';
-  Opcoes.QuebraLinha := FAOwner.ConfigGeral.QuebradeLinha;
+  Opcoes.QuebraLinha := FpAOwner.ConfigGeral.QuebradeLinha;
 
   ListaDeAlertas.Clear;
 
@@ -217,11 +215,11 @@ begin
   NFSe.InfID.ID := 'Rps_' + NFSe.IdentificacaoRps.Numero;
 
   NFSeNode := CreateElement('RPS');
-  NFSeNode.SetAttribute(FAOwner.ConfigGeral.Identificador, NFSe.infID.ID);
+  NFSeNode.SetAttribute(FpAOwner.ConfigGeral.Identificador, NFSe.infID.ID);
 
   FDocument.Root := NFSeNode;
 
-  FPSituacao := EnumeradoToStr( NFSe.Status, ['N','C'], [srNormal, srCancelado]);
+  FPSituacao := EnumeradoToStr( NFSe.StatusRps, ['N','C'], [srNormal, srCancelado]);
 
   sIEEmit           := Poem_Zeros(NFSe.Prestador.IdentificacaoPrestador.InscricaoMunicipal, 11);
   SerieRPS          := PadRight( NFSe.IdentificacaoRps.Serie, 5 , ' ');
@@ -429,7 +427,7 @@ begin
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'TelefoneTomador', 0, 8, 1,
            RightStr(OnlyNumber(NFSe.Tomador.Contato.Telefone),8), ''));
 
-  if (NFSe.Status = srCancelado) then
+  if (NFSe.StatusRps = srCancelado) then
     NFSeNode.AppendChild(AddNode(tcStr, '#1', 'MotCancelamento', 1, 80, 1,
                                                    NFSE.MotivoCancelamento, ''))
   else

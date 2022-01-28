@@ -237,7 +237,7 @@ procedure TACBrNFSeProviderNFSeBrasil.PrepararEmitir(Response: TNFSeEmiteRespons
 var
   AErro: TNFSeEventoCollectionItem;
   aParams: TNFSeParamsResponse;
-  Nota: NotaFiscal;
+  Nota: TNotaFiscal;
   Versao, IdAttr, NameSpace, NameSpaceLote, ListaRps, xRps,
   TagEnvio, Prefixo, PrefixoTS: string;
   I: Integer;
@@ -407,7 +407,7 @@ begin
   with Params do
   begin
     if Response.ModoEnvio in [meLoteAssincrono] then
-      Response.XmlEnvio := '<' + TagEnvio + NameSpace + '>' +
+      Response.ArquivoEnvio := '<' + TagEnvio + NameSpace + '>' +
                              '<' + 'LoteRps codMunicipio="' + CodMun + '"' + Versao + NameSpace2 + IdAttr + '>' +
                                '<' + Prefixo2 + 'NumeroLote>' + Response.Lote + '</' + Prefixo2 + 'NumeroLote>' +
                                '<' + Prefixo2 + 'Cnpj>' + OnlyNumber(Emitente.CNPJ) + '</' + Prefixo2 + 'Cnpj>' +
@@ -421,7 +421,7 @@ begin
                              '</' + 'LoteRps>' +
                            '</' + TagEnvio + '>'
     else
-      Response.XmlEnvio := '<' + Prefixo + TagEnvio + NameSpace + '>' +
+      Response.ArquivoEnvio := '<' + Prefixo + TagEnvio + NameSpace + '>' +
                               Xml +
                            '</' + Prefixo + TagEnvio + '>';
   end;
@@ -436,7 +436,7 @@ begin
   Document := TACBrXmlDocument.Create;
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -444,7 +444,7 @@ begin
         Exit
       end;
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ProcessarMensagemErros(Document.Root, Response);
 
@@ -469,7 +469,7 @@ end;
 procedure TACBrNFSeProviderNFSeBrasil.PrepararConsultaLoteRps(
   Response: TNFSeConsultaLoteRpsResponse);
 begin
-  Response.XmlEnvio := Response.Protocolo;
+  Response.ArquivoEnvio := Response.Protocolo;
 end;
 
 procedure TACBrNFSeProviderNFSeBrasil.TratarRetornoConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse);
@@ -478,7 +478,7 @@ var
   ANode, AuxNode, NotaNode: TACBrXmlNode;
   ANodeArray: TACBrXmlNodeArray;
   AErro: TNFSeEventoCollectionItem;
-  ANota: NotaFiscal;
+  ANota: TNotaFiscal;
   NumRps: String;
   I: Integer;
 begin
@@ -486,7 +486,7 @@ begin
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -496,7 +496,7 @@ begin
 
       Response.Situacao := '3'; // Processado com Falhas
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ANode := Document.Root.Childrens.FindAnyNs('RespostaLoteRps');
       if not Assigned(ANode) then
@@ -540,11 +540,12 @@ begin
         begin
           DocumentoNota := TACBrXmlDocument.Create;
           try
-            NumRps := ParseText(TratarXmlRetorno(AuxNode.Content), True, True);
+            NumRps := ParseText(AnsiString(TratarXmlRetorno(AuxNode.Content)), True, True);
             NumRps := StringReplace(NumRps, 'R$', '', [rfReplaceAll]);
             DocumentoNota.LoadFromXml(ConverteXMLtoUTF8(NumRps));
+
             NotaNode := DocumentoNota.Root;
-            AuxNode := DocumentoNota.Root.Childrens.FindAnyNs('Nfse');
+            AuxNode := NotaNode.Childrens.FindAnyNs('Nfse');
             AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
             NumRps := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('Numero'), tcStr);
             ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumRps);
@@ -588,7 +589,7 @@ end;
 procedure TACBrNFSeProviderNFSeBrasil.PrepararConsultaNFSeporRps(
   Response: TNFSeConsultaNFSeporRpsResponse);
 begin
-  Response.XmlEnvio := Response.NumRPS;
+  Response.ArquivoEnvio := Response.NumRPS;
 end;
 
 procedure TACBrNFSeProviderNFSeBrasil.TratarRetornoConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse);
@@ -597,7 +598,7 @@ var
   ANode, AuxNode, NotaNode: TACBrXmlNode;
   ANodeArray: TACBrXmlNodeArray;
   AErro: TNFSeEventoCollectionItem;
-  ANota: NotaFiscal;
+  ANota: TNotaFiscal;
   NumRps: String;
   I: Integer;
 begin
@@ -605,7 +606,7 @@ begin
 
   try
     try
-      if Response.XmlRetorno = '' then
+      if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
@@ -615,7 +616,7 @@ begin
 
       Response.Situacao := '3'; // Processado com Falhas
 
-      Document.LoadFromXml(Response.XmlRetorno);
+      Document.LoadFromXml(Response.ArquivoRetorno);
 
       ProcessarMensagemErros(Document.Root, Response);
 
@@ -661,11 +662,12 @@ begin
         begin
           DocumentoNota := TACBrXmlDocument.Create;
           try
-            NumRps := ParseText(TratarXmlRetorno(AuxNode.Content), True, True);
+            NumRps := ParseText(AnsiString(TratarXmlRetorno(AuxNode.Content)), True, True);
             NumRps := StringReplace(NumRps, 'R$', '', [rfReplaceAll]);
             DocumentoNota.LoadFromXml(ConverteXMLtoUTF8(NumRps));
+
             NotaNode := DocumentoNota.Root;
-            AuxNode := DocumentoNota.Root.Childrens.FindAnyNs('Nfse');
+            AuxNode := NotaNode.Childrens.FindAnyNs('Nfse');
             AuxNode := AuxNode.Childrens.FindAnyNs('InfNfse');
             NumRps := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('Numero'), tcStr);
             ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByNFSe(NumRps);
@@ -710,13 +712,13 @@ procedure TACBrNFSeProviderNFSeBrasil.PrepararConsultaNFSe(
   Response: TNFSeConsultaNFSeResponse);
 begin
   Response.Metodo := tmConsultarNFSe;
-  Response.XmlEnvio := Response.InfConsultaNFSe.NumeroIniNFSe;
+  Response.ArquivoEnvio := Response.InfConsultaNFSe.NumeroIniNFSe;
 end;
 
 procedure TACBrNFSeProviderNFSeBrasil.PrepararCancelaNFSe(
   Response: TNFSeCancelaNFSeResponse);
 begin
-  Response.XmlEnvio := Response.InfCancelamento.NumeroNFSe;
+  Response.ArquivoEnvio := Response.InfCancelamento.NumeroNFSe;
 end;
 
 procedure TACBrNFSeProviderNFSeBrasil.ProcessarMensagemErros(

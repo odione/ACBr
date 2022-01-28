@@ -60,6 +60,7 @@ resourcestring
 
 function DetectarTipoChave(const AChave: String): TACBrPIXTipoChave;
 function ValidarChave(const AChave: String): String;
+function ValidarChaveAleatoria(const AChave: String): Boolean;
 function ValidarTxId(const ATxId: String; MaiorTamanho: Integer; MenorTamanho: Integer = 0): String;
 function ValidarPSS(const AValue: Integer): String;
 function ValidarEndToEndId(const AValue: String): String;
@@ -81,35 +82,35 @@ begin
   l := Length(s);
   Result := tchNenhuma;
 
-  if (l = 11) then
+  if StrIsNumber(s) then
   begin
-    e := ACBrValidador.ValidarCPF(s);
-    if (e = '') then
-      Result := tchCPF;
-  end
-  else if (l = 14) then
-  begin
-    if copy(s,1,3) = '+55' then  // Fone BR
+    if (l = 11) then
     begin
-      if StrIsNumber(copy(s,4,l)) then
-        Result := tchCelular;
+      e := ACBrValidador.ValidarCPF(s);
+      if (e = '') then
+        Result := tchCPF;
     end
-    else
+
+    else if (l = 14) then
     begin
       e := ACBrValidador.ValidarCNPJ(s);
       if (e = '') then
         Result := tchCNPJ;
-    end;
+    end
   end
-  else if (l = 36) then
+
+  else if (copy(s,1,3) = '+55') and (l=14) and StrIsNumber(copy(s,4,l)) then
+    Result := tchCelular
+
+  else if (pos('@', s) > 0) then
   begin
-    if (copy(s,09,1) = '-') and
-       (copy(s,14,1) = '-') and
-       (copy(s,19,1) = '-') and
-       (copy(s,24,1) = '-') and
-       StrIsAlphaNum(StringReplace(s,'-','',[rfReplaceAll])) then
-      Result := tchAleatoria;
-  end;
+    e := ACBrValidador.ValidarEmail(s);
+    if (e = '') then
+      Result := tchEmail;
+  end
+
+  else if ValidarChaveAleatoria(s) then
+    Result := tchAleatoria;
 end;
 
 function ValidarChave(const AChave: String): String;
@@ -121,6 +122,21 @@ begin
     Result := Format(sErroChaveInvalida, [AChave])
   else
     Result := '';
+end;
+
+function ValidarChaveAleatoria(const AChave: String): Boolean;
+var
+  s: String;
+  l: Integer;
+begin
+  s := Trim(AChave);
+  l := Length(s);
+  Result := (l = 36) and
+            (copy(s,09,1) = '-') and
+            (copy(s,14,1) = '-') and
+            (copy(s,19,1) = '-') and
+            (copy(s,24,1) = '-') and
+            StrIsAlphaNum(StringReplace(s,'-','',[rfReplaceAll]));
 end;
 
 function ValidarTxId(const ATxId: String; MaiorTamanho: Integer;

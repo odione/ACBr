@@ -437,6 +437,9 @@ begin
 
   AuxNode := ANode.Childrens.FindAnyNs('InfDeclaracaoPrestacaoServico');
 
+  if AuxNode = nil then
+    AuxNode := ANode;
+
   if AuxNode <> nil then
   begin
     LerRps(AuxNode);
@@ -449,9 +452,15 @@ begin
     LerIntermediarioServico(AuxNode);
     LerConstrucaoCivil(AuxNode);
 
-    NFSe.RegimeEspecialTributacao := StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr), Provedor);
-    NFSe.OptanteSimplesNacional   := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
-    NFSe.IncentivadorCultural     := StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivoFiscal'), tcStr));
+    NFSe.RegimeEspecialTributacao := FpAOwner.StrToRegimeEspecialTributacao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RegimeEspecialTributacao'), tcStr));
+    NFSe.OptanteSimplesNacional   := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('OptanteSimplesNacional'), tcStr));
+    NFSe.IncentivadorCultural     := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IncentivoFiscal'), tcStr));
+
+    if NFSe.InformacoesComplementares = '' then
+    begin
+      NFSe.InformacoesComplementares := ObterConteudo(AuxNode.Childrens.FindAnyNs('InformacoesComplementares'), tcStr);
+      NFSe.InformacoesComplementares := StringReplace(NFSe.InformacoesComplementares, '&lt;br&gt;', ';', [rfReplaceAll]);
+    end;
   end;
 end;
 
@@ -643,6 +652,9 @@ begin
 
   AuxNode := ANode.Childrens.FindAnyNs('Rps');
 
+  if AuxNode = nil then
+    AuxNode := ANode;
+
   if AuxNode <> nil then
   begin
     LerIdentificacaoRps(AuxNode);
@@ -650,7 +662,7 @@ begin
     if NFSe.DataEmissao = 0 then
       NFSe.DataEmissao := ObterConteudo(AuxNode.Childrens.FindAnyNs('DataEmissao'), tcDat);
 
-    NFSe.Status := StrToStatusRPS(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('Status'), tcStr));
+    NFSe.StatusRps := StrToStatusRPS(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('Status'), tcStr));
 
     LerRpsSubstituido(AuxNode);
   end;
@@ -681,6 +693,7 @@ var
   AuxNode, AuxNode2: TACBrXmlNode;
   Ok: Boolean;
   CodigoItemServico, Responsavel: string;
+  ValorLiq: Double;
 begin
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -708,7 +721,7 @@ begin
       if Responsavel = '' then
         ResponsavelRetencao := rtNenhum
       else
-        ResponsavelRetencao := StrToResponsavelRetencao(Ok, Responsavel);
+        ResponsavelRetencao := FpAOwner.StrToResponsavelRetencao(Ok, Responsavel);
 
       ItemListaServico          := NormatizaItemListaServico(CodigoItemServico);
       xItemListaServico         := ItemListaServicoDescricao(ItemListaServico);
@@ -724,18 +737,19 @@ begin
 
       with Valores do
       begin
-        IssRetido := StrToSituacaoTributaria(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IssRetido'), tcStr));
+        IssRetido := FpAOwner.StrToSituacaoTributaria(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('IssRetido'), tcStr));
 
         if IssRetido = stRetencao then
           ValorIssRetido := ValorIss
         else
           ValorIssRetido := 0;
 
-        if ValorLiquidoNfse = 0 then
-          ValorLiquidoNfse := ValorServicos - ValorPis - ValorCofins - ValorInss -
-                              ValorIr - ValorCsll - OutrasRetencoes -
-                              ValorIssRetido - DescontoIncondicionado -
-                              DescontoCondicionado;
+        ValorLiq := ValorServicos - ValorPis - ValorCofins - ValorInss -
+                    ValorIr - ValorCsll - OutrasRetencoes - ValorIssRetido -
+                    DescontoIncondicionado - DescontoCondicionado;
+
+        if (ValorLiquidoNfse = 0) or (ValorLiquidoNfse <> ValorLiq) then
+          ValorLiquidoNfse := ValorLiq;
       end;
     end;
   end;
@@ -781,6 +795,7 @@ end;
 procedure TNFSeR_ABRASFv2.LerValores(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
+  Ok: Boolean;
 begin
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -792,11 +807,27 @@ begin
     begin
       ValorServicos   := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorServicos'), tcDe2);
       ValorDeducoes   := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorDeducoes'), tcDe2);
-      ValorPis        := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorPis'), tcDe2);
-      ValorCofins     := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCofins'), tcDe2);
-      ValorInss       := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorInss'), tcDe2);
-      ValorIr         := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIr'), tcDe2);
-      ValorCsll       := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCsll'), tcDe2);
+
+      AliquotaPis := ObterConteudo(AuxNode.Childrens.FindAnyNs('AliquotaPis'), tcDe2);
+      RetidoPis := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RetidoPis'), tcStr));
+      ValorPis := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorPis'), tcDe2);
+
+      AliquotaCofins := ObterConteudo(AuxNode.Childrens.FindAnyNs('AliquotaCofins'), tcDe2);
+      RetidoCofins := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RetidoCofins'), tcStr));
+      ValorCofins := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCofins'), tcDe2);
+
+      AliquotaInss := ObterConteudo(AuxNode.Childrens.FindAnyNs('AliquotaInss'), tcDe2);
+      RetidoInss := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RetidoInss'), tcStr));
+      ValorInss := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorInss'), tcDe2);
+
+      AliquotaIr := ObterConteudo(AuxNode.Childrens.FindAnyNs('AliquotaIr'), tcDe2);
+      RetidoIr := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RetidoIr'), tcStr));
+      ValorIr := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIr'), tcDe2);
+
+      AliquotaCsll := ObterConteudo(AuxNode.Childrens.FindAnyNs('AliquotaCsll'), tcDe2);
+      RetidoCsll := FpAOwner.StrToSimNao(Ok, ObterConteudo(AuxNode.Childrens.FindAnyNs('RetidoCsll'), tcStr));
+      ValorCsll := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorCsll'), tcDe2);
+
       ValorIss        := ObterConteudo(AuxNode.Childrens.FindAnyNs('ValorIss'), tcDe2);
       OutrasRetencoes := ObterConteudo(AuxNode.Childrens.FindAnyNs('OutrasRetencoes'), tcDe2);
 

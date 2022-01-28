@@ -116,7 +116,7 @@ var
 begin
   Configuracao;
 
-  Opcoes.QuebraLinha := FAOwner.ConfigGeral.QuebradeLinha;
+  Opcoes.QuebraLinha := FpAOwner.ConfigGeral.QuebradeLinha;
 
   ListaDeAlertas.Clear;
 
@@ -560,13 +560,15 @@ begin
   if FPVersao = ve101 then
   begin
     Result.AppendChild(AddNode(tcStr, '#1', 'cancelada', 1, 1, 1,
-                                        SimNaoToStr(NFSe.Cancelada, proInfisc), ''));
+                                       StatusRPSToStr(NFSe.StatusRps), ''));
 
     Result.AppendChild(AddNode(tcStr, '#1', 'canhoto', 1, 1, 1,
                                                CanhotoToStr(NFSe.Canhoto), ''));
 
-    Result.AppendChild(AddNode(tcStr, '#1', 'ambienteEmi', 1, 1, 1,
-                                               SimNaoToStr(NFSe.Producao), ''));
+    if NFSe.Producao = snSim then
+      Result.AppendChild(AddNode(tcStr, '#1', 'ambienteEmi', 1, 1, 1, '1', ''))
+    else
+      Result.AppendChild(AddNode(tcStr, '#1', 'ambienteEmi', 1, 1, 1, '2', ''));
 
     Result.AppendChild(AddNode(tcStr, '#1', 'formaEmi', 1, 1, 1, '2', ''));
 
@@ -586,7 +588,7 @@ begin
   Result := CreateElement('infNFSe');
 
 //  if FPVersao = ve101 then
-    Result.SetAttribute('versao', FAOwner.ConfigWebServices.VersaoDados);
+    Result.SetAttribute('versao', FpAOwner.ConfigWebServices.VersaoDados);
 
   xmlNode := GerarID;
   Result.AppendChild(xmlNode);

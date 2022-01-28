@@ -74,6 +74,17 @@ begin
   NrOcorrCodTribMun_1 := -1;
   NrOcorrCodigoMunic_1 := -1;
 
+  NrOcorrAliquotaPis := 0;
+  NrOcorrRetidoPis := 0;
+  NrOcorrAliquotaCofins := 0;
+  NrOcorrRetidoCofins := 0;
+  NrOcorrAliquotaInss := 0;
+  NrOcorrRetidoInss := 0;
+  NrOcorrAliquotaIr := 0;
+  NrOcorrRetidoIr := 0;
+  NrOcorrAliquotaCsll := 0;
+  NrOcorrRetidoCsll := 0;
+
   GerarIDDeclaracao := False;
 end;
 
@@ -98,7 +109,7 @@ begin
                                         NFSe.Servico.ItemServico[i].Descricao));
 
     Result[i].AppendChild(AddNode(tcStr, '#', 'Tributavel', 1, 1, 0,
-                          SimNaoToStr(NFSe.Servico.ItemServico[i].Tributavel)));
+      FpAOwner.SimNaoToStr(NFSe.Servico.ItemServico[i].Tributavel)));
 
     Result[i].AppendChild(AddNode(tcDe2, '#', 'Quantidade', 1, 17, 1,
                                        NFSe.Servico.ItemServico[i].Quantidade));

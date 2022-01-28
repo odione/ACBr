@@ -73,7 +73,6 @@ type
     FCodMunEmit: Integer;
     FUsuario: string;
     FSenha: string;
-    FMunicipio: string;
     FChaveAcesso: string;
     FChaveAutoriz: string;
     FFraseSecreta: string;
@@ -93,12 +92,14 @@ type
 
     // Gera ou não o atributo ID no grupo <Rps> da versão 2 do layout da ABRASF.
     FGerarIDRps: Boolean;
+    // Gera ou não o NameSpace no grupo <Rps> da versão 2 do layout da ABRASF.
+    FGerarNSRps: Boolean;
 
     function GetOpcoes: TACBrXmlWriterOptions;
     procedure SetOpcoes(AValue: TACBrXmlWriterOptions);
 
   protected
-    FAOwner: IACBrNFSeXProvider;
+    FpAOwner: IACBrNFSeXProvider;
 
     function CreateOptions: TACBrXmlWriterOptions; override;
 
@@ -127,7 +128,6 @@ type
     property CodMunEmit: Integer         read FCodMunEmit     write FCodMunEmit;
     property Usuario: string             read FUsuario        write FUsuario;
     property Senha: string               read FSenha          write FSenha;
-    property Municipio: string           read FMunicipio      write FMunicipio;
     property ChaveAcesso: string         read FChaveAcesso    write FChaveAcesso;
     property ChaveAutoriz: string        read FChaveAutoriz   write FChaveAutoriz;
     property FraseSecreta: string        read FFraseSecreta   write FFraseSecreta;
@@ -147,6 +147,7 @@ type
     property NrOcorrItemListaServico: Integer read FNrOcorrItemListaServico write FNrOcorrItemListaServico;
 
     property GerarIDRps: Boolean read FGerarIDRps write FGerarIDRps;
+    property GerarNSRps: Boolean read FGerarNSRps write FGerarNSRps;
   end;
 
 implementation
@@ -157,7 +158,7 @@ constructor TNFSeWClass.Create(AOwner: IACBrNFSeXProvider);
 begin
   inherited Create;
 
-  FAOwner := AOwner;
+  FpAOwner := AOwner;
 
   TXmlWriterOptions(Opcoes).AjustarTagNro := True;
   TXmlWriterOptions(Opcoes).NormatizarMunicipios := False;
@@ -185,6 +186,8 @@ begin
 
   // Gera ou não o atributo ID no grupo <Rps> da versão 2 do layout da ABRASF.
   FGerarIDRps := False;
+  // Gera ou não o NameSpace no grupo <Rps> da versão 2 do layout da ABRASF.
+  FGerarNSRps := True;
 end;
 
 procedure TNFSeWClass.DefinirIDRps;
