@@ -37,8 +37,9 @@ unit ACBrNFSeXProviderManager;
 interface
 
 uses
-  SysUtils, Classes, ACBrUtil,
-  ACBrNFSeXInterface, ACBrNFSeXConversao, ACBrDFe;
+  SysUtils, Classes,
+  ACBrDFe,
+  ACBrNFSeXInterface;
 
 type
 
@@ -50,7 +51,7 @@ type
 implementation
 
 uses
-  ACBrNFSeX,
+  ACBrNFSeX, ACBrNFSeXConversao,
 
   // Provedores que seguem a versão 1 do layout da ABRASF
   BHISS.Provider,
@@ -87,6 +88,7 @@ uses
   Centi.Provider,
   Citta.Provider,
   Coplan.Provider,
+  CTA.Provider,
   DataSmart.Provider,
   DeISS.Provider,
   Desenvolve.Provider,
@@ -94,6 +96,7 @@ uses
   DSF.Provider,
   EloTech.Provider,
   eReceita.Provider,
+  Etherium.Provider,
   fintelISS.Provider,
   Fiorilli.Provider,
   Fisco.Provider,
@@ -126,6 +129,7 @@ uses
   Sintese.Provider,
   SisPMJP.Provider,
   Sistemas4R.Provider,
+  SSInformatica.Provider,
   Sudoeste.Provider,
   SystemPro.Provider,
   TcheInfo.Provider,
@@ -160,12 +164,15 @@ uses
   Giap.Provider,
   Governa.Provider,
   IPM.Provider,
+  ISSBarueri.Provider,
+  ISSCambe.Provider,
   ISSDSF.Provider,
   ISSLencois.Provider,
   ISSSaoPaulo.Provider,
   Siat.Provider,
   SigISS.Provider,
   Simple.Provider,
+  SoftPlan.Provider,
   WebFisco.Provider;
 
   { TACBrNFSeXProviderManager }
@@ -225,6 +232,7 @@ begin
       proCitta:     Result := TACBrNFSeProviderCitta203.Create(ACBrNFSe);
       proConam:     Result := TACBrNFSeProviderConam.Create(ACBrNFSe);
       proCoplan:    Result := TACBrNFSeProviderCoplan201.Create(ACBrNFSe);
+      proCTA:       Result := TACBrNFSeProviderCTA203.Create(ACBrNFSe);
       proDataSmart: Result := TACBrNFSeProviderDataSmart202.Create(ACBrNFSe);
       proDBSeller:  Result := TACBrNFSeProviderDBSeller.Create(ACBrNFSe);
       proDeISS:     Result := TACBrNFSeProviderDeISS203.Create(ACBrNFSe);
@@ -266,6 +274,7 @@ begin
         Result := TACBrNFSeProviderEquiplano.Create(ACBrNFSe);
 
       proeReceita: Result := TACBrNFSeProvidereReceita202.Create(ACBrNFSe);
+      proEtherium: Result := TACBrNFSeProviderEtherium203.Create(ACBrNFSe);
       proFGMaiss:  Result :=TACBrNFSeProviderFGMaiss.Create(ACBrNFSe);
 
       profintelISS:
@@ -315,6 +324,11 @@ begin
             Result := nil;
           end;
         end;
+
+      proISSBarueri: Result := TACBrNFSeProviderISSBarueri.Create(ACBrNFSe);
+
+      proISSCambe:
+        Result := TACBrNFSeProviderISSCambe.Create(ACBrNFSe);
 
       proISSCuritiba:
         Result := TACBrNFSeProviderISSCuritiba.Create(ACBrNFSe);
@@ -452,7 +466,12 @@ begin
           end;
         end;
 
-      proSpeedGov:  Result := TACBrNFSeProviderSpeedGov.Create(ACBrNFSe);
+      proSoftPlan: Result := TACBrNFSeProviderSoftPlan.Create(ACBrNFSe);
+      proSpeedGov: Result := TACBrNFSeProviderSpeedGov.Create(ACBrNFSe);
+
+      proSSInformatica:
+        Result := TACBrNFSeProviderSSInformatica203.Create(ACBrNFSe);
+
       proSudoeste:  Result := TACBrNFSeProviderSudoeste202.Create(ACBrNFSe);
       proSystemPro: Result := TACBrNFSeProviderSystemPro201.Create(ACBrNFSe);
       proTcheInfo:  Result := TACBrNFSeProviderTcheInfo204.Create(ACBrNFSe);

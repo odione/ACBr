@@ -38,7 +38,6 @@ interface
 
 uses
   SysUtils, Classes, StrUtils,
-  ACBrUtil,
   ACBrXmlBase, ACBrXmlDocument,
   ACBrNFSeXConversao, ACBrNFSeXLerXml;
 
@@ -68,6 +67,10 @@ type
   end;
 
 implementation
+
+uses
+  ACBrUtil.Base,
+  ACBrUtil.Strings;
 
 //==============================================================================
 // Essa unit tem por finalidade exclusiva ler o XML do provedor:
@@ -206,7 +209,7 @@ begin
 
       with Prestador.IdentificacaoPrestador do
       begin
-        CpfCnpj := ObterConteudo(AuxNode.Childrens.FindAnyNs('cpfcnpj'), tcStr);
+        CpfCnpj := OnlyNumber(ObterConteudo(AuxNode.Childrens.FindAnyNs('cpfcnpj'), tcStr));
         CpfCnpj := PadLeft(CpfCnpj, 14, '0');
       end;
 
@@ -258,10 +261,10 @@ begin
 
       with IdentificacaoTomador do
       begin
-        CpfCnpj := ObterConteudo(AuxNode.Childrens.FindAnyNs('cpfcnpj'), tcStr);
+        CpfCnpj := OnlyNumber(ObterConteudo(AuxNode.Childrens.FindAnyNs('cpfcnpj'), tcStr));
         aValor  := ObterConteudo(AuxNode.Childrens.FindAnyNs('tipo'), tcStr);
 
-        if aValor = 'J' then
+        if ((aValor = 'J') or (aValor = '2')) then
           CpfCnpj := PadLeft(CpfCnpj, 14, '0')
         else
           CpfCnpj := PadLeft(CpfCnpj, 11, '0');
@@ -295,21 +298,19 @@ end;
 function TNFSeR_IPM.LerXml: Boolean;
 var
   XmlNode: TACBrXmlNode;
-  xRetorno: string;
 begin
-  xRetorno := TratarXmlRetorno(Arquivo);
-  xRetorno := TiraAcentos(xRetorno);
-
-  if EstaVazio(xRetorno) then
+  if EstaVazio(Arquivo) then
     raise Exception.Create('Arquivo xml não carregado.');
+
+  Arquivo := NormatizarXml(Arquivo);
 
   if FDocument = nil then
     FDocument := TACBrXmlDocument.Create();
 
   Document.Clear();
-  Document.LoadFromXml(xRetorno);
+  Document.LoadFromXml(Arquivo);
 
-  if (Pos('nfse', xRetorno) > 0) then
+  if (Pos('nfse', Arquivo) > 0) then
     tpXML := txmlNFSe
   else
     tpXML := txmlRPS;

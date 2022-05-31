@@ -55,6 +55,7 @@ type
     function Cancelar(ACabecalho, AMSG: String): string; override;
 
     function AlterarNameSpace(aMsg: string): string;
+    function TratarXmlRetornado(const aXML: string): string; override;
   end;
 
   TACBrNFSeProviderDSF = class (TACBrNFSeProviderABRASFv1)
@@ -102,6 +103,8 @@ type
 implementation
 
 uses
+  ACBrUtil.Strings,
+  ACBrUtil.XMLHTML,
   ACBrDFeException,
   DSF.GravarXml, DSF.LerXml;
 
@@ -207,6 +210,14 @@ begin
   Result := Executar('', Request,
                      ['return', 'CancelarNfseResposta'],
                      ['xmlns:nfse="http://www.abrasf.org.br/nfse.xsd"']);
+end;
+
+function TACBrNFSeXWebserviceDSF.TratarXmlRetornado(const aXML: string): string;
+begin
+  Result := inherited TratarXmlRetornado(aXML);
+
+  Result := ParseText(AnsiString(Result), True, False);
+  Result := string(NativeStringToUTF8(RemoverDeclaracaoXML(Result)));
 end;
 
 { TACBrNFSeProviderDSF }
@@ -426,6 +437,8 @@ procedure TACBrNFSeProviderDSF200.Configuracao;
 begin
   inherited Configuracao;
 
+  ConfigGeral.QuebradeLinha := '&#xD;&#xA;';
+
   with ConfigAssinar do
   begin
     Rps := True;
@@ -483,6 +496,11 @@ begin
   with ConfigAssinar do
   begin
     Rps := False;
+    ConsultarLote := True;
+    ConsultarNFSeRps := True;
+    ConsultarNFSePorFaixa := True;
+    ConsultarNFSeServicoPrestado := True;
+    ConsultarNFSeServicoTomado := True;
     CancelarNFSe := True;
     RpsGerarNFSe := True;
     RpsSubstituirNFSe := True;

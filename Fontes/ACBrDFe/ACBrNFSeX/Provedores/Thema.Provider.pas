@@ -38,9 +38,10 @@ interface
 
 uses
   SysUtils, Classes,
-  ACBrXmlBase, ACBrXmlDocument, ACBrNFSeXClass, ACBrNFSeXConversao,
-  ACBrNFSeXGravarXml, ACBrNFSeXLerXml, ACBrNFSeXWebservicesResponse,
-  ACBrNFSeXProviderABRASFv1, ACBrNFSeXWebserviceBase;
+  ACBrXmlBase, ACBrXmlDocument,
+  ACBrNFSeXClass, ACBrNFSeXConversao,
+  ACBrNFSeXProviderABRASFv1, ACBrNFSeXGravarXml, ACBrNFSeXLerXml,
+  ACBrNFSeXWebserviceBase, ACBrNFSeXWebservicesResponse;
 
 type
   TACBrNFSeXWebserviceThema = class(TACBrNFSeXWebserviceSoap11)
@@ -53,6 +54,7 @@ type
     function ConsultarNFSe(ACabecalho, AMSG: String): string; override;
     function Cancelar(ACabecalho, AMSG: String): string; override;
 
+    function TratarXmlRetornado(const aXML: string): string; override;
   end;
 
   TACBrNFSeProviderThema = class (TACBrNFSeProviderABRASFv1)
@@ -73,9 +75,12 @@ type
 implementation
 
 uses
-  ACBrUtil, ACBrDFeException,
-  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
-  ACBrNFSeXNotasFiscais, Thema.GravarXml, Thema.LerXml;
+  ACBrUtil.Base,
+  ACBrUtil.Strings,
+  ACBrUtil.XMLHTML,
+  ACBrDFeException,
+  ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts, ACBrNFSeXNotasFiscais,
+  Thema.GravarXml, Thema.LerXml;
 
 { TACBrNFSeXWebserviceThema }
 
@@ -92,8 +97,7 @@ begin
   Request := Request + '</recepcionarLoteRps>';
 
   Result := Executar('urn:recepcionarLoteRps', Request,
-                     ['return', 'EnviarLoteRpsResposta'],
-                     []);
+                     ['return', 'EnviarLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.RecepcionarSincrono(ACabecalho,
@@ -110,8 +114,7 @@ begin
   Request := Request + '</recepcionarLoteRpsLimitado>';
 
   Result := Executar('urn:recepcionarLoteRpsLimitado', Request,
-                     ['return', 'EnviarLoteRpsResposta'],
-                     []);
+                     ['return', 'EnviarLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.ConsultarLote(ACabecalho, AMSG: String): string;
@@ -124,7 +127,8 @@ begin
   Request := Request + '<xml>' + XmlToStr(AMSG) + '</xml>';
   Request := Request + '</consultarLoteRps>';
 
-  Result := Executar('urn:consultarLoteRps', Request, ['return'], []);
+  Result := Executar('urn:consultarLoteRps', Request,
+                     ['return', 'ConsultarLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.ConsultarSituacao(ACabecalho, AMSG: String): string;
@@ -138,8 +142,7 @@ begin
   Request := Request + '</consultarSituacaoLoteRps>';
 
   Result := Executar('urn:consultarSituacaoLoteRps', Request,
-                     ['return', 'ConsultarSituacaoLoteRpsResposta'],
-                     []);
+                     ['return', 'ConsultarSituacaoLoteRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.ConsultarNFSePorRps(ACabecalho, AMSG: String): string;
@@ -153,8 +156,7 @@ begin
   Request := Request + '</consultarNfsePorRps>';
 
   Result := Executar('urn:consultarNfsePorRps', Request,
-                     ['return', 'ConsultarNfseRpsResposta'],
-                     []);
+                     ['return', 'ConsultarNfseRpsResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.ConsultarNFSe(ACabecalho, AMSG: String): string;
@@ -168,8 +170,7 @@ begin
   Request := Request + '</consultarNfse>';
 
   Result := Executar('urn:consultarNfse', Request,
-                     ['return', 'ConsultarNfseResposta'],
-                     []);
+                     ['return', 'ConsultarNfseResposta'], []);
 end;
 
 function TACBrNFSeXWebserviceThema.Cancelar(ACabecalho, AMSG: String): string;
@@ -183,8 +184,18 @@ begin
   Request := Request + '</cancelarNfse>';
 
   Result := Executar('urn:cancelarNfse', Request,
-                     ['return', 'CancelarNfseResposta'],
-                     []);
+                     ['return', 'CancelarNfseResposta'], []);
+end;
+
+function TACBrNFSeXWebserviceThema.TratarXmlRetornado(
+  const aXML: string): string;
+begin
+  Result := inherited TratarXmlRetornado(aXML);
+
+  Result := ParseText(AnsiString(Result), True, False);
+  Result := RemoverDeclaracaoXML(Result);
+  Result := RemoverIdentacao(Result);
+  Result := RemoverPrefixosDesnecessarios(Result);
 end;
 
 { TACBrNFSeProviderThema }
@@ -328,24 +339,21 @@ begin
   begin
     Nota := TACBrNFSeX(FAOwner).NotasFiscais.Items[I];
 
-    if EstaVazio(Nota.XMLAssinado) then
+    Nota.GerarXML;
+
+    Nota.XmlRps := ConverteXMLtoUTF8(Nota.XmlRps);
+    Nota.XmlRps := ChangeLineBreak(Nota.XmlRps, '');
+
+    if ConfigAssinar.Rps then
     begin
-      Nota.GerarXML;
-
-      Nota.XMLOriginal := ConverteXMLtoUTF8(Nota.XMLOriginal);
-      Nota.XMLOriginal := ChangeLineBreak(Nota.XMLOriginal, '');
-
-      if ConfigAssinar.Rps then
-      begin
-        Nota.XMLOriginal := FAOwner.SSL.Assinar(Nota.XMLOriginal,
-                                                PrefixoTS + ConfigMsgDados.XmlRps.DocElemento,
-                                                ConfigMsgDados.XmlRps.InfElemento, '', '', '', IdAttr);
-      end;
+      Nota.XmlRps := FAOwner.SSL.Assinar(Nota.XmlRps,
+                                         PrefixoTS + ConfigMsgDados.XmlRps.DocElemento,
+                                         ConfigMsgDados.XmlRps.InfElemento, '', '', '', IdAttr);
     end;
 
     SalvarXmlRps(Nota);
 
-    xRps := RemoverDeclaracaoXML(Nota.XMLOriginal);
+    xRps := RemoverDeclaracaoXML(Nota.XmlRps);
     xRps := PrepararRpsParaLote(xRps);
 
     ListaRps := ListaRps + xRps;
@@ -442,10 +450,16 @@ begin
         NumRps := AuxNode.AsString;
 
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+
         if Assigned(ANota) then
-          ANota.XML := ANode.AsString
+          ANota.XmlNfse := ANode.OuterXml
         else
-          TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(ANode.AsString);
+        begin
+          TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(ANode.OuterXml, False);
+          ANota := TACBrNFSeX(FAOwner).NotasFiscais.Items[TACBrNFSeX(FAOwner).NotasFiscais.Count-1];
+        end;
+
+        SalvarXmlNfse(ANota);
       end;
 
       Response.Sucesso := (Response.Erros.Count > 0);

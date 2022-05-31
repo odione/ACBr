@@ -52,6 +52,7 @@ type
     function ConsultarNFSePorRps(ACabecalho, AMSG: String): string; override;
     function Cancelar(ACabecalho, AMSG: String): string; override;
 
+    function TratarXmlRetornado(const aXML: string): string; override;
   end;
 
   TACBrNFSeProviderGoverna = class (TACBrNFSeProviderProprio)
@@ -76,17 +77,20 @@ type
     procedure PrepararCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
     procedure TratarRetornoCancelaNFSe(Response: TNFSeCancelaNFSeResponse); override;
 
-    procedure ProcessarMensagemErros(const RootNode: TACBrXmlNode;
-                                     const Response: TNFSeWebserviceResponse;
-                                     AListTag: string = '';
-                                     AMessageTag: string = 'Erro'); override;
+    procedure ProcessarMensagemErros(RootNode: TACBrXmlNode;
+                                     Response: TNFSeWebserviceResponse;
+                                     const AListTag: string = '';
+                                     const AMessageTag: string = 'Erro'); override;
 
   end;
 
 implementation
 
 uses
-  ACBrUtil, ACBrDFeException,
+  ACBrUtil.Base,
+  ACBrUtil.Strings,
+  ACBrUtil.XMLHTML,
+  ACBrDFeException,
   ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   Governa.GravarXml, Governa.LerXml;
 
@@ -103,6 +107,7 @@ begin
     ModoEnvio := meLoteAssincrono;
     ConsultaLote := False;
     ConsultaNFSe := False;
+    DetalharServico := True;
 
     FpVersaoArquivo := Params.ValorParametro('VersaoArquivo');
   end;
@@ -145,8 +150,8 @@ begin
 end;
 
 procedure TACBrNFSeProviderGoverna.ProcessarMensagemErros(
-  const RootNode: TACBrXmlNode; const Response: TNFSeWebserviceResponse;
-  AListTag, AMessageTag: string);
+  RootNode: TACBrXmlNode; Response: TNFSeWebserviceResponse;
+  const AListTag, AMessageTag: string);
 var
   I: Integer;
   ANode: TACBrXmlNode;
@@ -400,7 +405,7 @@ begin
         ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
 
         if Assigned(ANota) then
-          ANota.XML := ANode.OuterXml
+          ANota.XmlNfse := ANode.OuterXml
         else
         begin
           TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(ANode.OuterXml, False);
@@ -457,29 +462,29 @@ begin
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
   Response.ArquivoEnvio := '<tcLoteCancelamento>' +
-                          '<tsCodCadBic>' +
-                             OnlyNumber(Emitente.InscMun) +
-                          '</tsCodCadBic>' +
-                          '<tsVrsArq>' +
-                             FpVersaoArquivo +
-                          '</tsVrsArq>' +
-                          '<tsChvAcs>' +
-                             OnlyNumber(Emitente.WSChaveAcesso) +
-                          '</tsChvAcs>' +
-                          '<tcNotCan>' +
-                            '<tcInfNotCan>' +
-                              '<tsNumNot>' +
-                                Response.InfCancelamento.NumeroNFSe +
-                              '</tsNumNot>' +
-                              '<tsCodVer>' +
-                                 Response.InfCancelamento.CodVerificacao +
-                              '</tsCodVer>' +
-                              '<tsDesMotCan>' +
-                                 Response.InfCancelamento.MotCancelamento +
-                              '</tsDesMotCan>' +
-                            '</tcInfNotCan>' +
-                          '</tcNotCan>' +
-                       '</tcLoteCancelamento>';
+                             '<tsCodCadBic>' +
+                               OnlyNumber(Emitente.InscMun) +
+                             '</tsCodCadBic>' +
+                             '<tsVrsArq>' +
+                               FpVersaoArquivo +
+                             '</tsVrsArq>' +
+                             '<tsChvAcs>' +
+                               OnlyNumber(Emitente.WSChaveAcesso) +
+                             '</tsChvAcs>' +
+                             '<tcNotCan>' +
+                               '<tcInfNotCan>' +
+                                 '<tsNumNot>' +
+                                   Response.InfCancelamento.NumeroNFSe +
+                                 '</tsNumNot>' +
+                                 '<tsCodVer>' +
+                                   Response.InfCancelamento.CodVerificacao +
+                                 '</tsCodVer>' +
+                                 '<tsDesMotCan>' +
+                                   Response.InfCancelamento.MotCancelamento +
+                                 '</tsDesMotCan>' +
+                               '</tcInfNotCan>' +
+                             '</tcNotCan>' +
+                           '</tcLoteCancelamento>';
 end;
 
 procedure TACBrNFSeProviderGoverna.TratarRetornoCancelaNFSe(
@@ -579,6 +584,14 @@ begin
   Result := Executar('http://tempuri.org/RecepcionarLoteNotasCanceladas', Request,
                      ['RecepcionarLoteNotasCanceladasResult', 'tcRetornoLoteCancelamento'],
                      ['xmlns:tem="http://tempuri.org/"']);
+end;
+
+function TACBrNFSeXWebserviceGoverna.TratarXmlRetornado(
+  const aXML: string): string;
+begin
+  Result := inherited TratarXmlRetornado(aXML);
+
+  Result := ParseText(AnsiString(Result), True, False);
 end;
 
 end.

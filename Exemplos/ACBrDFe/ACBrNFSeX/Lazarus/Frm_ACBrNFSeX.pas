@@ -401,6 +401,24 @@ begin
         frmStatus.Show;
         frmStatus.BringToFront;
       end;
+
+    stNFSeAguardaProcesso:
+      begin
+        if (frmStatus = nil) then
+          frmStatus := TfrmStatus.Create(Application);
+        frmStatus.lblStatus.Caption := 'Aguardando o Processo...';
+        frmStatus.Show;
+        frmStatus.BringToFront;
+      end;
+
+    stNFSeEnvioWebService:
+      begin
+        if (frmStatus = nil) then
+          frmStatus := TfrmStatus.Create(Application);
+        frmStatus.lblStatus.Caption := 'Enviando para o WebService...';
+        frmStatus.Show;
+        frmStatus.BringToFront;
+      end;
   end;
 
   Application.ProcessMessages;
@@ -612,17 +630,23 @@ begin
       //                              '1',       '',          '2',             ''
       Servico.ResponsavelRetencao := rtTomador;
 
-      Servico.ItemListaServico := '09.01';
-
-      if ACBrNFSeX1.Configuracoes.Geral.Provedor in [proISSDSF, proSiat,
-          proAgili] then
-        Servico.CodigoCnae := '452000200'
+      case ACBrNFSeX1.Configuracoes.Geral.Provedor of
+        proSiapSistemas:
+          // código padrão ABRASF acrescido de um sub-item
+          Servico.ItemListaServico := '01.05.00';
       else
-        Servico.CodigoCnae := '852010';
+        // código padrão da ABRASF
+        Servico.ItemListaServico := '09.01';
+      end;
 
-      if (ACBrNFSeX1.Configuracoes.Geral.Provedor = proISSNet) and
-         (ACBrNFSeX1.Configuracoes.WebServices.Ambiente = taHomologacao)  then
-        Servico.CodigoCnae := '6511102';
+      case ACBrNFSeX1.Configuracoes.Geral.Provedor of
+        proISSDSF, proSiat, proAgili:
+          // código com 9 digitos
+          Servico.CodigoCnae := '452000200'
+      else
+        // código com 7 digitos
+        Servico.CodigoCnae := '6203100';
+      end;
 
       case ACBrNFSeX1.Configuracoes.Geral.Provedor of
         proISSSJP:
@@ -884,7 +908,16 @@ begin
   if (ACBrNFSeX1.Configuracoes.Geral.Provedor = proInfisc) and
      (ACBrNFSeX1.Configuracoes.Geral.Versao <> ve201) then
   begin
-    ChNFSe := '12345678';
+    {
+      A Chave é composta por:
+       2 | N |Código IBGE para UF do prestador
+      14 | N |CNPJ do prestador
+       2 | N |Modelo da nota (valor 98 por padrão)
+       3 | C |Série da nota (em maiúsculas, com zeros à direita)
+       9 | N |Número da nota (com zeros à esquerda)
+       9 | N |Código numérico aleatório
+    }
+    ChNFSe := '434945460000011998000000976482769641000';
     if not (InputQuery(Titulo, 'Chave da NFSe', ChNFSe)) then
       exit;
 
@@ -3071,7 +3104,7 @@ begin
       memoLog.Lines.Add('==> Xml da nota não salvo em disco.');
 
     // Na propriedade XML temos o XML da NFS-e
-    LoadXML(ACBrNFSeX1.NotasFiscais.Items[i].XML, WBXmlNotas);
+    LoadXML(ACBrNFSeX1.NotasFiscais.Items[i].XmlNfse, WBXmlNotas);
   end;
 
   pgRespostas.ActivePageIndex := 0;

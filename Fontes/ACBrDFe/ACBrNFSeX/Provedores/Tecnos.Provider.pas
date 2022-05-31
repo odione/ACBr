@@ -55,6 +55,7 @@ type
     function ConsultarNFSeServicoTomado(ACabecalho, AMSG: String): string; override;
     function Cancelar(ACabecalho, AMSG: String): string; override;
 
+    function TratarXmlRetornado(const aXML: string): string; override;
   end;
 
   TACBrNFSeProviderTecnos201 = class (TACBrNFSeProviderABRASFv2)
@@ -75,10 +76,10 @@ type
     procedure AssinarConsultaLoteRps(Response: TNFSeConsultaLoteRpsResponse); override;
     procedure AssinarConsultaNFSeporRps(Response: TNFSeConsultaNFSeporRpsResponse); override;
 
-    procedure ProcessarMensagemErros(const RootNode: TACBrXmlNode;
-                                     const Response: TNFSeWebserviceResponse;
-                                     AListTag: string = 'ListaMensagemRetorno';
-                                     AMessageTag: string = 'MensagemRetorno'); override;
+    procedure ProcessarMensagemErros(RootNode: TACBrXmlNode;
+                                     Response: TNFSeWebserviceResponse;
+                                     const AListTag: string = 'ListaMensagemRetorno';
+                                     const AMessageTag: string = 'MensagemRetorno'); override;
 
   public
     function RegimeEspecialTributacaoToStr(const t: TnfseRegimeEspecialTributacao): string; override;
@@ -94,7 +95,9 @@ implementation
 
 uses
   DateUtils,
-  ACBrUtil, ACBrDFeException, ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrUtil.Strings,
+  ACBrUtil.XMLHTML,
+  ACBrDFeException, ACBrNFSeX, ACBrNFSeXConfiguracoes,
   ACBrNFSeXNotasFiscais, Tecnos.GravarXml, Tecnos.LerXml;
 
 { TACBrNFSeProviderTecnos201 }
@@ -230,7 +233,7 @@ function TACBrNFSeProviderTecnos201.DefinirIDCancelamento(const CNPJ: string;
   const InscMunic: string; const NumNfse: string): string;
 begin
   Result := ' ' + ConfigGeral.Identificador + '="' + CNPJ +
-            Poem_Zeros(OnlyNumber(NumNfse), 9) + '"';
+            ACBrUtil.Strings.Poem_Zeros(OnlyNumber(NumNfse), 9) + '"';
 end;
 
 function TACBrNFSeProviderTecnos201.DefinirIDLote(const ID: string): string;
@@ -242,7 +245,7 @@ begin
   Result := ' ' + ConfigGeral.Identificador + '="1' + // Tipo de operação, no caso envio
             IntToStr(YearOf(Date)) + // ano do lote enviado no formato AAAA
             OnlyNumber(Cnpj) +
-            Poem_Zeros(OnlyNumber(ID), 16) + '"';
+            ACBrUtil.Strings.Poem_Zeros(OnlyNumber(ID), 16) + '"';
 end;
 
 procedure TACBrNFSeProviderTecnos201.GerarMsgDadosCancelaNFSe(
@@ -284,8 +287,8 @@ begin
 end;
 
 procedure TACBrNFSeProviderTecnos201.ProcessarMensagemErros(
-  const RootNode: TACBrXmlNode; const Response: TNFSeWebserviceResponse;
-  AListTag, AMessageTag: string);
+  RootNode: TACBrXmlNode; Response: TNFSeWebserviceResponse;
+  const AListTag, AMessageTag: string);
 var
   I: Integer;
   ANode: TACBrXmlNode;
@@ -584,6 +587,15 @@ begin
   Result := Executar('http://tempuri.org/mCancelamentoNFSe', Request,
                      ['mCancelamentoNFSeResult', 'CancelarNfseResposta'],
                      []);
+end;
+
+function TACBrNFSeXWebserviceTecnos201.TratarXmlRetornado(
+  const aXML: string): string;
+begin
+  Result := inherited TratarXmlRetornado(aXML);
+
+  Result := ParseText(AnsiString(Result), True, False);
+  Result := RemoverDeclaracaoXML(Result);
 end;
 
 end.
