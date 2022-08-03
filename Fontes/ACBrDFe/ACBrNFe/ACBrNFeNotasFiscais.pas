@@ -1332,10 +1332,11 @@ begin
 
     if not UFCons then
     begin
-      GravaLog('Validar: 772-Op.Interstadual e UF igual');
+      GravaLog('Validar: 772-Op.Interestadual e UF igual');
       if (nfe.Ide.idDest = doInterestadual) and
          (NFe.Dest.EnderDest.UF = NFe.Emit.EnderEmit.UF) and
-         (NFe.Dest.CNPJCPF <> NFe.Emit.CNPJCPF) then
+         (NFe.Dest.CNPJCPF <> NFe.Emit.CNPJCPF) and
+         (NFe.Entrega.UF = NFe.Emit.EnderEmit.UF) then
         AdicionaErro('772-Rejeição: Operação Interestadual e UF de destino igual à UF do emitente');
     end;
 
@@ -1608,6 +1609,7 @@ begin
       Ide.verProc  := INIRec.ReadString(  sSecao, 'verProc' ,'ACBrNFe');
       Ide.dhCont   := StringToDateTime(INIRec.ReadString( sSecao,'dhCont'  ,'0'));
       Ide.xJust    := INIRec.ReadString(  sSecao,'xJust' ,'' );
+      Ide.cMunFG   := INIRec.ReadInteger( sSecao,'cMunFG', 0);
 
       I := 1;
       while true do
@@ -1699,7 +1701,8 @@ begin
       Emit.EnderEmit.fone    := INIRec.ReadString(  sSecao,'Fone'    ,'');
 
       Ide.cUF    := INIRec.ReadInteger( sSecao,'cUF'       ,UFparaCodigo(Emit.EnderEmit.UF));
-      Ide.cMunFG := INIRec.ReadInteger( sSecao,'cMunFG' ,INIRec.ReadInteger( sSecao,'CidadeCod' ,Emit.EnderEmit.cMun));
+      if (Ide.cMunFG = 0) then
+        Ide.cMunFG := INIRec.ReadInteger( sSecao,'cMunFG' ,INIRec.ReadInteger( sSecao,'CidadeCod' ,Emit.EnderEmit.cMun));
 
       if INIRec.ReadString( 'Avulsa', 'CNPJ', '') <> '' then
       begin

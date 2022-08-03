@@ -3,7 +3,7 @@
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
+{ Direitos Autorais Reservados (c) 2022 Daniel Simoes de Almeida               }
 {                                                                              }
 {                                                                              }
 {  Você pode obter a última versão desse arquivo na pagina do  Projeto ACBr    }
@@ -92,19 +92,24 @@ function DTtoS( ADateTime : TDateTime) : String;
 function Iso8601ToDateTime(const AISODate: string): TDateTime;
 function DateTimeToIso8601(ADate: TDateTime; const ATimeZone: string = ''): string;
 
+{ Bias = Diferença em minutos do horário atual com o UTC }
+function BiasToTimeZone(const aBias: Integer): String;
+function TimeZoneToBias(const aTimeZone: String): Integer;
+
 function IsWorkingDay(ADate: TDateTime): Boolean;
 function WorkingDaysBetween(StartDate, EndDate: TDateTime): Integer;
 function IncWorkingDay(ADate: TDateTime; WorkingDays: Integer): TDatetime;
 
 function EncodeDataHora(const DataStr: string;
   const FormatoData: string = 'YYYY/MM/DD'): TDateTime;
+function ParseDataHora(const DataStr: string): string;
+function AjustarData(const DataStr: string): string;
 
 implementation
 
 uses
   MaskUtils,
-  ACBrUtil.Compatibilidade,
-  ACBrUtil.Base;
+  ACBrUtil.Compatibilidade, ACBrUtil.Strings, ACBrUtil.Base;
 
 {-----------------------------------------------------------------------------
   Converte uma <ADateTime> para String, semelhante ao FormatDateTime,
@@ -318,7 +323,7 @@ begin
   h := StrToInt(Copy(AISODate, 12, 2));
   n := StrToInt(Copy(AISODate, 15, 2));
   s := StrToInt(Copy(AISODate, 18, 2));
-  z := StrToIntDef(Copy(AISODate, 21, 3), 0);
+  z := StrToIntDef(OnlyNumber(Copy(AISODate, 21, 3)), 0);
 
   Result := EncodeDateTime(y,m,d, h,n,s,z);
 end;
@@ -334,6 +339,55 @@ begin
     SetLength(Result, Length(Result) - 1);
     Result := Result + ATimeZone;
   end;
+end;
+
+function BiasToTimeZone(const aBias: Integer): String;
+const
+  cFmt: String = '%.2d:%.2d';
+var
+  wOp: Char;
+begin
+  if (aBias = 0) then
+  begin
+    Result := 'Z';
+    Exit;
+  end;
+
+  if (aBias > 0) then
+    wOp := '-'
+  else
+    wOp := '+';
+
+  Result := wOp + Format(cFmt, [Abs(aBias) div 60, Abs(aBias) mod 60]);
+end;
+
+function TimeZoneToBias(const aTimeZone: String): Integer;
+var
+  TMZ: String;
+  M, H, Tam: Integer;
+begin
+  Result := 0;
+  TMZ := UpperCase(Trim(aTimeZone));
+  Tam := Length(TMZ);
+
+  if (Tam > 0) and (TMZ[Tam] = 'Z') then
+    Exit;
+
+  if (Tam > 6) then
+    TMZ := RightStr(TMZ, 6);
+
+  if EstaVazio(TMZ) or (not (CharInSet(TMZ[1], ['-', '+']))) then
+  begin
+    Result := -1;
+    Exit;
+  end;
+
+  H  := StrToIntDef(Copy(TMZ, 2, 2), 0);
+  M  := StrToIntDef(Copy(TMZ, 5, 2), 0);
+  Result := ((H*60) + M);
+
+  if (TMZ[1] = '+') then
+    Result := Result*(-1);
 end;
 
 {-----------------------------------------------------------------------------
@@ -398,13 +452,110 @@ begin
   end;
 end;
 
+function AjustarData(const DataStr: string): string;
+var
+  Ano, Mes, Dia, i: Integer;
+  xData: string;
+begin
+  xData := DataStr;
+
+  i := Pos('/', xData);
+
+  if i = 0 then
+  begin
+    Result := xData;
+  end
+  else
+  begin
+    if i = 5 then
+    begin
+      Ano := StrToInt(Copy(xData, 1, 4));
+      xData := Copy(xData, 6, Length(xData));
+      i := Pos('/', xData);
+      Mes := StrToInt(Copy(xData, 1, i-1));
+      Dia := StrToInt(Copy(xData, i+1, Length(xData)));
+
+      Result := FormatFloat('0000', Ano) + '/' +
+                FormatFloat('00', Mes) + '/' +
+                FormatFloat('00', Dia);
+    end
+    else
+    begin
+      if i = 3 then
+      begin
+        Dia := StrToInt(Copy(xData, 1, 2));
+        xData := Copy(xData, 4, Length(xData));
+        i := Pos('/', xData);
+        Mes := StrToInt(Copy(xData, 1, i-1));
+        Ano := StrToInt(Copy(xData, i+1, Length(xData)));
+      end
+      else
+      begin
+        Dia := StrToInt(Copy(xData, 1, 1));
+        xData := Copy(xData, 3, Length(xData));
+        i := Pos('/', xData);
+        Mes := StrToInt(Copy(xData, 1, i-1));
+        Ano := StrToInt(Copy(xData, i+1, Length(xData)));
+      end;
+
+      Result := FormatFloat('00', Dia) + '/' +
+                FormatFloat('00', Mes) + '/' +
+                FormatFloat('0000', Ano);
+    end;
+  end;
+end;
+
+function ParseDataHora(const DataStr: string): string;
+var
+  xDataHora, xData, xHora, xTZD: string;
+  p: Integer;
+begin
+  xDataHora := Trim(UpperCase(StringReplace(DataStr, 'Z', '', [rfReplaceAll])));
+
+  p := Pos('T', xDataHora);
+
+  if p = 0 then
+    p := Pos(' ', xDataHora);
+
+  if p > 0 then
+    xData := Copy(xDataHora, 1, p-1)
+  else
+    xData := xDataHora;
+
+  if Length(xData) > 10 then
+    xData := copy(xData, 1, 10);
+
+  xData := AjustarData(StringReplace(xData, '-', '/', [rfReplaceAll]));
+  xHora := '';
+  xTZD := '';
+
+  if p > 0 then
+  begin
+    xDataHora := Copy(xDataHora, p+1, Length(xDataHora) - p);
+
+    p := Pos('-', xDataHora);
+
+    if p = 0 then
+      p := Pos(' ', xDataHora);
+
+    if p > 0 then
+    begin
+      xHora := Copy(xDataHora, 1, p-1);
+      xTZD := Copy(xDataHora, p, Length(xDataHora));
+    end
+    else
+      xHora := xDataHora;
+  end;
+
+  Result := Trim(xData + ' ' + xHora + xTZD);
+end;
+
 function EncodeDataHora(const DataStr: string;
   const FormatoData: string = 'YYYY/MM/DD'): TDateTime;
 var
   xData, xFormatoData: string;
 begin
-  xData := Trim(StringReplace(DataStr, '-', '/', [rfReplaceAll]));
-  xData := Trim(UpperCase(StringReplace(xData, 'Z', '', [rfReplaceAll])));
+  xData := ParseDataHora(DataStr);
 
   if xData = '' then
     Result := 0
@@ -423,10 +574,6 @@ begin
            xData := xData + '/01';
       8: xData := FormatMaskText('!0000\/00\/00;0;_', xData);
     end;
-
-    if (Copy(xData, 5, 1) = '/') and (Copy(xData, 11, 1) = 'T') and
-       (Copy(xData, 14, 1) = ':') then
-      xData := Copy(xData, 1, 10) + ' ' + Copy(xData, 12, Length(xData) - 11);
 
     Result := StringToDateTime(xData, xFormatoData);
   end;

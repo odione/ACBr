@@ -48,10 +48,11 @@ uses
   ACBrPIXCD, ACBrOpenSSLUtils;
 
 const
-  cItauURLSandbox = 'https://api.itau.com.br/sandbox';
+  cItauURLSandbox = 'https://devportal.itau.com.br/sandboxapi';
   cItauURLProducao = 'https://secure.api.itau';
   cItauPathAPIPix = '/pix_recebimentos/v2';
-  cItauURLAuthTeste = cItauURLSandbox+'/api/oauth/token';
+  cItauPathAPIPixSandbox = '/pix_recebimentos_ext_v2/v2';
+  cItauURLAuthTeste = 'https://devportal.itau.com.br/api/jwt';
   cItauURLAuthProducao = 'https://sts.itau.com.br';
   cItauPathAuthToken = '/as/token.oauth2';
   cItauPathCertificado = '/seguranca/v1/certificado';
@@ -83,6 +84,7 @@ type
     procedure Autenticar; override;
 
     function SolicitarCertificado(const TokenTemporario: String): String;
+    function RenovarCertificado: String;
     function GerarCertificadoCSR: String;
   published
     property APIVersion;
@@ -103,7 +105,7 @@ implementation
 
 uses
   synautil,
-  ACBrUtil,
+  ACBrUtil.Strings, ACBrUtil.Base,
   {$IfDef USE_JSONDATAOBJECTS_UNIT}
    JsonDataObjects_ACBr
   {$Else}
@@ -224,6 +226,40 @@ begin
       [Http.ResultCode, ChttpMethodPOST, AURL]));
 end;
 
+function TACBrPSPItau.RenovarCertificado: String;
+var
+  Body, AURL: String;
+  RespostaHttp: AnsiString;
+  ResultCode: Integer;
+begin
+  Result := EmptyStr;
+  VerificarPIXCDAtribuido;
+
+  if (ACBrPixCD.Ambiente = ambProducao) then
+    AURL := cItauURLAuthProducao + cItauPathCertificado + cItauPathCertificadoRenovacao
+  else
+  begin
+    VerificarAutenticacao;
+    AURL := cItauURLSandbox + cItauPathCertificado + cItauPathCertificadoRenovacao;
+  end;
+
+  Body := GerarCertificadoCSR;
+
+  LimparHTTP;
+  PrepararHTTP;
+  ConfigurarAutenticacao(ChttpMethodPOST, cItauPathCertificadoRenovacao);
+
+  WriteStrToStream(Http.Document, Body);
+  Http.MimeType := CContentTypeTextPlain;
+
+  TransmitirHttp(ChttpMethodPOST, AURL, ResultCode, RespostaHttp);
+
+  if (ResultCode = HTTP_OK) then
+    Result := StreamToAnsiString(Http.OutputStream)
+  else
+    DispararExcecao(EACBrPixHttpException.CreateFmt(sErroHttp, [Http.ResultCode, ChttpMethodPOST, AURL]));
+end;
+
 function TACBrPSPItau.GerarCertificadoCSR: String;
 begin
   VerificarPIXCDAtribuido;
@@ -287,11 +323,9 @@ end;
 function TACBrPSPItau.ObterURLAmbiente(const Ambiente: TACBrPixCDAmbiente): String;
 begin
   if (Ambiente = ambProducao) then
-    Result := cItauURLProducao
+    Result := cItauURLProducao + cItauPathAPIPix
   else
-    Result := cItauURLSandbox;
-
-  Result := Result + cItauPathAPIPix;
+    Result := cItauURLSandbox + cItauPathAPIPixSandbox;
 end;
 
 procedure TACBrPSPItau.ConfigurarQueryParameters(const Method, EndPoint: String);
@@ -300,7 +334,7 @@ begin
 
   with URLQueryParams do
   begin
-    if (fSandboxStatusCode <> '') then
+    if NaoEstaVazio(fSandboxStatusCode) then
       Values['status_code'] := fSandboxStatusCode;
   end;
 end;
@@ -312,15 +346,26 @@ var
 begin
   inherited ConfigurarHeaders(Method, AURL);
 
+  if (ACBrPixCD.Ambiente = ambProducao) then
+  begin
+    if NaoEstaVazio(fArquivoCertificado) then
+      Http.Sock.SSL.CertificateFile := fArquivoCertificado;
+    if NaoEstaVazio(fArquivoChavePrivada) then
+      Http.Sock.SSL.PrivateKeyFile  := fArquivoChavePrivada;
+  end;
+
   s := Trim(fxCorrelationID);
-  if (s = '') then
+  if EstaVazio(s) then
   begin
     if (CreateGUID(guid) = 0) then
       s := GUIDToString(guid);
   end;
 
-  if (s <> '') then
+  if NaoEstaVazio(s) then
     Http.Headers.Add('x-correlationID: ' + s);
+
+  if (ACBrPixCD.Ambiente = ambTeste) and (fpToken <> '') then
+    Http.Headers.Add('x-sandbox-token: ' + fpToken);
 end;
 
 end.

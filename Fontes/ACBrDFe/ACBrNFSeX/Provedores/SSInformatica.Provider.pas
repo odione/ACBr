@@ -3,7 +3,7 @@
 {  Biblioteca multiplataforma de componentes Delphi para interação com equipa- }
 { mentos de Automação Comercial utilizados no Brasil                           }
 {                                                                              }
-{ Direitos Autorais Reservados (c) 2020 Daniel Simoes de Almeida               }
+{ Direitos Autorais Reservados (c) 2022 Daniel Simoes de Almeida               }
 {                                                                              }
 { Colaboradores nesse arquivo: Italo Giurizzato Junior                         }
 {                                                                              }
@@ -45,6 +45,8 @@ uses
 
 type
   TACBrNFSeXWebserviceSSInformatica203 = class(TACBrNFSeXWebserviceSoap11)
+  private
+    function GetDadosUsuario: string;
   public
     function Recepcionar(ACabecalho, AMSG: String): string; override;
     function RecepcionarSincrono(ACabecalho, AMSG: String): string; override;
@@ -57,7 +59,9 @@ type
     function Cancelar(ACabecalho, AMSG: String): string; override;
     function SubstituirNFSe(ACabecalho, AMSG: String): string; override;
 
-//    function TratarXmlRetornado(const aXML: string): string; override;
+    function TratarXmlRetornado(const aXML: string): string; override;
+
+    property DadosUsuario: string read GetDadosUsuario;
   end;
 
   TACBrNFSeProviderSSInformatica203 = class (TACBrNFSeProviderABRASFv2)
@@ -67,13 +71,14 @@ type
     function CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass; override;
     function CriarLeitorXml(const ANFSe: TNFSe): TNFSeRClass; override;
     function CriarServiceClient(const AMetodo: TMetodo): TACBrNFSeXWebservice; override;
-
   end;
 
 implementation
 
 uses
-  ACBrDFeException,
+  synacode, DateUtils, pcnAuxiliar,
+  ACBrDFeException, ACBrUtil.Math, ACBrUtil.XMLHTML,
+  ACBrNFSeX,
   SSInformatica.GravarXml, SSInformatica.LerXml;
 
 { TACBrNFSeProviderSSInformatica203 }
@@ -81,34 +86,7 @@ uses
 procedure TACBrNFSeProviderSSInformatica203.Configuracao;
 begin
   inherited Configuracao;
-  (*
-  // Inicializa os parâmetros de configuração: Geral
-  with ConfigGeral do
-  begin
-    UseCertificateHTTP := True;
-    UseAuthorizationHeader := False;
-    NumMaxRpsGerar  := 1;
-    NumMaxRpsEnviar := 50;
 
-    TabServicosExt := False;
-    Identificador := 'Id';
-    QuebradeLinha := ';';
-
-    // meLoteAssincrono, meLoteSincrono ou meUnitario
-    ModoEnvio := meLoteSincrono;
-
-    ConsultaSitLote := False;
-    ConsultaLote := True;
-    ConsultaNFSe := True;
-
-    ConsultaPorFaixa := True;
-    ConsultaPorFaixaPreencherNumNfseFinal := False;
-
-    CancPreencherMotivo := False;
-    CancPreencherSerieNfse := False;
-    CancPreencherCodVerificacao := False;
-  end;
-  *)
   with ConfigAssinar do
   begin
     Rps               := True;
@@ -122,10 +100,6 @@ begin
     LoteGerarNFSe     := False;
     RpsSubstituirNFSe := False;
     SubstituirNFSe    := False;
-    AbrirSessao       := False;
-    FecharSessao      := False;
-
-//    IncluirURI := True;
   end;
 
   with ConfigWebServices do
@@ -136,21 +110,6 @@ begin
   end;
 
   ConfigMsgDados.DadosCabecalho := GetCabecalho('');
-  (*
-  // Define o NameSpace utilizado por todos os serviços disponibilizados pelo
-  // provedor
-  SetXmlNameSpace('http://www.abrasf.org.br/nfse.xsd');
-
-  // Inicializa os parâmetros de configuração: Mensagem de Dados
-  with ConfigMsgDados do
-  begin
-    // Usado na tag raiz dos XML de envio do Lote, Consultas, etc.
-    Prefixo := '';
-
-    UsarNumLoteConsLote := False;
-  end;
-
-  *)
 end;
 
 function TACBrNFSeProviderSSInformatica203.CriarGeradorXml(
@@ -187,6 +146,48 @@ end;
 
 { TACBrNFSeXWebserviceSSInformatica203 }
 
+function TACBrNFSeXWebserviceSSInformatica203.GetDadosUsuario: string;
+var
+  UserNameToken, Nonce, Created, PassWord: string;
+  wAno, wMes, wDia, wHor, wMin, wSeg, wMse: Word;
+  dhEnvio: TDateTime;
+begin
+  with TACBrNFSeX(FPDFeOwner).Configuracoes do
+  begin
+    Nonce := IntToStr(Random(99999999));
+    Nonce := EncodeBase64(Nonce);
+
+    dhEnvio := Now;
+    DecodeDateTime(dhEnvio, wAno, wMes, wDia, wHor, wMin, wSeg, wMse);
+    Created := FormatFloat('0000', wAno) + '-' + FormatFloat('00', wMes) + '-' +
+               FormatFloat('00', wDia) + 'T' + FormatFloat('00', wHor) + ':' +
+               FormatFloat('00', wMin) + ':' + FormatFloat('00', wSeg) +
+               GetUTC(WebServices.UF, dhEnvio);
+
+    PassWord := EncodeBase64(Geral.Emitente.CNPJ);
+
+    UserNameToken := EncodeBase64(SHA1(Nonce + Created + PassWord));
+
+    Result := '<wsse:Security soapenv:mustUnderstand="1" ' +
+                     'xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" ' +
+                     'xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">' +
+               '<wsse:UsernameToken wsu:Id="UsernameToken-' + UserNameToken + '">' +
+                '<wsse:Username>' + Geral.Emitente.WSUser + '</wsse:Username>' +
+                '<wsse:Password ' +
+                       'Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">' +
+                  PassWord +
+                '</wsse:Password>' +
+                '<wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">' +
+                   Nonce +
+                '</wsse:Nonce>' +
+                '<wsu:Created>' +
+                   Created +
+                '</wsu:Created>' +
+               '</wsse:UsernameToken>' +
+              '</wsse:Security>';
+  end;
+end;
+
 function TACBrNFSeXWebserviceSSInformatica203.Recepcionar(ACabecalho,
   AMSG: String): string;
 var
@@ -200,6 +201,7 @@ begin
   Request := Request + '</nfse:RecepcionarLoteRpsRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/RecepcionarLoteRps', Request,
+                     DadosUsuario,
                      ['outputXML', 'EnviarLoteRpsResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -217,6 +219,7 @@ begin
   Request := Request + '</nfse:RecepcionarLoteRpsSincronoRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/RecepcionarLoteRpsSincrono', Request,
+                     DadosUsuario,
                      ['outputXML', 'EnviarLoteRpsSincronoResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -234,7 +237,8 @@ begin
   Request := Request + '</nfse:GerarNfseRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/GerarNfse', Request,
-                     ['outputXML', 'GerarNfseResposta'],
+                     DadosUsuario,
+                     ['outputXML', 'nfseDadosMsg', 'GerarNfseResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
 
@@ -251,6 +255,7 @@ begin
   Request := Request + '</nfse:ConsultarLoteRpsRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/ConsultarLoteRps', Request,
+                     DadosUsuario,
                      ['outputXML', 'ConsultarLoteRpsResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -268,6 +273,7 @@ begin
   Request := Request + '</nfse:ConsultarNfsePorFaixaRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/ConsultarNfsePorFaixa', Request,
+                     DadosUsuario,
                      ['outputXML', 'ConsultarNfseFaixaResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -285,6 +291,7 @@ begin
   Request := Request + '</nfse:ConsultarNfsePorRpsRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/ConsultarNfsePorRps', Request,
+                     DadosUsuario,
                      ['outputXML', 'ConsultarNfseRpsResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -302,6 +309,7 @@ begin
   Request := Request + '</nfse:ConsultarNfseServicoPrestadoRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/ConsultarNfseServicoPrestado', Request,
+                     DadosUsuario,
                      ['outputXML', 'ConsultarNfseServicoPrestadoResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -319,6 +327,7 @@ begin
   Request := Request + '</nfse:ConsultarNfseServicoTomadoRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/ConsultarNfseServicoTomado', Request,
+                     DadosUsuario,
                      ['outputXML', 'ConsultarNfseServicoTomadoResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -335,6 +344,7 @@ begin
   Request := Request + '</nfse:CancelarNfseRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/CancelarNfse', Request,
+                     DadosUsuario,
                      ['outputXML', 'CancelarNfseResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
@@ -352,17 +362,18 @@ begin
   Request := Request + '</nfse:SubstituirNfseRequest>';
 
   Result := Executar('http://nfse.abrasf.org.br/SubstituirNfse', Request,
+                     DadosUsuario,
                      ['outputXML', 'SubstituirNfseResposta'],
                      ['xmlns:nfse="http://nfse.abrasf.org.br"']);
 end;
 
-{
 function TACBrNFSeXWebserviceSSInformatica203.TratarXmlRetornado(
   const aXML: string): string;
 begin
   Result := inherited TratarXmlRetornado(aXML);
 
-  // Reescrever se necessário;
+  Result := ParseText(AnsiString(Result), True, False);
+  Result := RemoverPrefixosDesnecessarios(Result);
 end;
-}
+
 end.

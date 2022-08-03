@@ -1,23 +1,24 @@
 object frmDemo: TfrmDemo
   Left = 288
   Top = 133
+  Width = 994
+  Height = 557
   Caption = 'Demo ACBrBoleto '
-  ClientHeight = 523
-  ClientWidth = 986
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
+  OldCreateOrder = True
   OnCreate = FormCreate
+  PixelsPerInch = 96
   TextHeight = 13
   object PageControl1: TPageControl
-    AlignWithMargins = True
-    Left = 3
-    Top = 3
-    Width = 980
-    Height = 517
+    Left = 0
+    Top = 0
+    Width = 986
+    Height = 523
     ActivePage = TabSheet1
     Align = alClient
     TabOrder = 0
@@ -320,6 +321,7 @@ object frmDemo: TfrmDemo
         Width = 161
         Height = 21
         Style = csDropDownList
+        ItemHeight = 13
         TabOrder = 3
         OnChange = cbxLayOutChange
       end
@@ -854,6 +856,7 @@ object frmDemo: TfrmDemo
           Top = 32
           Width = 63
           Height = 21
+          ItemHeight = 13
           TabOrder = 5
           Text = 'Sim'
           Items.Strings = (
@@ -874,6 +877,7 @@ object frmDemo: TfrmDemo
           Width = 241
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 6
         end
         object cbxTipoDistribuicao: TComboBox
@@ -882,6 +886,7 @@ object frmDemo: TfrmDemo
           Width = 122
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 7
         end
         object cbxResponsavelEmissao: TComboBox
@@ -890,6 +895,7 @@ object frmDemo: TfrmDemo
           Width = 122
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 9
         end
         object cbxTipoCarteira: TComboBox
@@ -898,6 +904,7 @@ object frmDemo: TfrmDemo
           Width = 122
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 10
         end
         object cbxTipoDocumento: TComboBox
@@ -906,6 +913,7 @@ object frmDemo: TfrmDemo
           Width = 101
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 1
         end
         object cbxCaracteristicaTitulo: TComboBox
@@ -914,6 +922,7 @@ object frmDemo: TfrmDemo
           Width = 122
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 8
         end
       end
@@ -972,6 +981,7 @@ object frmDemo: TfrmDemo
           Width = 84
           Height = 21
           Style = csDropDownList
+          ItemHeight = 13
           TabOrder = 0
           Items.Strings = (
             'CNAB400'
@@ -1279,6 +1289,7 @@ object frmDemo: TfrmDemo
           Width = 135
           Height = 21
           Style = csDropDownList
+          ItemHeight = 0
           TabOrder = 4
         end
       end

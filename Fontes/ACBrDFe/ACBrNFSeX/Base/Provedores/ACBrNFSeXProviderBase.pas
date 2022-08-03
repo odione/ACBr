@@ -66,6 +66,7 @@ type
     function GetConsultaNFSeResponse: TNFSeConsultaNFSeResponse;
     function GetCancelaNFSeResponse: TNFSeCancelaNFSeResponse;
     function GetSubstituiNFSeResponse: TNFSeSubstituiNFSeResponse;
+    function GetGerarTokenResponse: TNFSeGerarTokenResponse;
 
   protected
     FAOwner: TACBrDFe;
@@ -77,6 +78,8 @@ type
     procedure SetXmlNameSpace(const aNameSpace: string);
     procedure SalvarXmlRps(aNota: TNotaFiscal);
     procedure SalvarXmlNfse(aNota: TNotaFiscal);
+
+    function CarregarXmlNfse(aNota: TNotaFiscal; aXml: string): TNotaFiscal;
 
     function GetWebServiceURL(const AMetodo: TMetodo): string;
     function GetSchemaPath: string; virtual;
@@ -136,12 +139,19 @@ type
     procedure AssinarCancelaNFSe(Response: TNFSeCancelaNFSeResponse); virtual;
     procedure TratarRetornoCancelaNFSe(Response: TNFSeCancelaNFSeResponse); virtual; abstract;
 
-    //metodos para geração e tratamento dos dados do metodo CancelaNFSe
+    //metodos para geração e tratamento dos dados do metodo SubstituirNFSe
     procedure PrepararSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual; abstract;
     procedure GerarMsgDadosSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse;
       Params: TNFSeParamsResponse); virtual; abstract;
     procedure AssinarSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual;
     procedure TratarRetornoSubstituiNFSe(Response: TNFSeSubstituiNFSeResponse); virtual; abstract;
+
+    //metodos para geração e tratamento dos dados do metodo GerarToken
+    procedure PrepararGerarToken(Response: TNFSeGerarTokenResponse); virtual; abstract;
+    procedure GerarMsgDadosGerarToken(Response: TNFSeGerarTokenResponse;
+      Params: TNFSeParamsResponse); virtual; abstract;
+    procedure AssinarGerarToken(Response: TNFSeGerarTokenResponse); virtual;
+    procedure TratarRetornoGerarToken(Response: TNFSeGerarTokenResponse); virtual; abstract;
 
   public
     constructor Create(AOwner: TACBrDFe);
@@ -159,6 +169,7 @@ type
     procedure ConsultaNFSe; virtual;
     procedure CancelaNFSe; virtual;
     procedure SubstituiNFSe; virtual;
+    procedure GerarToken; virtual;
 
     property ConfigGeral: TConfigGeral read GetConfigGeral;
     property ConfigWebServices: TConfigWebServices read GetConfigWebServices;
@@ -174,6 +185,7 @@ type
     property ConsultaNFSeResponse: TNFSeConsultaNFSeResponse read GetConsultaNFSeResponse;
     property CancelaNFSeResponse: TNFSeCancelaNFSeResponse read GetCancelaNFSeResponse;
     property SubstituiNFSeResponse: TNFSeSubstituiNFSeResponse read GetSubstituiNFSeResponse;
+    property GerarTokenResponse: TNFSeGerarTokenResponse read GetGerarTokenResponse;
 
     function SimNaoToStr(const t: TnfseSimNao): string; virtual;
     function StrToSimNao(out ok: boolean; const s: string): TnfseSimNao; virtual;
@@ -323,6 +335,11 @@ begin
   Result := TACBrNFSeX(FAOwner).Webservice.SubstituiNFSe;
 end;
 
+function TACBrNFSeXProvider.GetGerarTokenResponse: TNFSeGerarTokenResponse;
+begin
+  Result := TACBrNFSeX(FAOwner).Webservice.GerarToken;
+end;
+
 function TACBrNFSeXProvider.GetCpfCnpj(const CpfCnpj: string; const Prefixo: string): string;
 var
   xCpfCnpj: string;
@@ -373,6 +390,7 @@ begin
         tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
 
         // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
+        tmGerarToken: Result := GerarToken;
         tmAbrirSessao: Result := AbrirSessao;
         tmFecharSessao: Result := FecharSessao;
         tmTeste: Result := TesteEnvio;
@@ -403,6 +421,7 @@ begin
         tmConsultarNFSeServicoTomado: Result := ConsultarNFSeServicoTomado;
 
         // Métodos que por padrão não existem na versão 1 e 2 do layout da ABRASF
+        tmGerarToken: Result := GerarToken;
         tmAbrirSessao: Result := AbrirSessao;
         tmFecharSessao: Result := FecharSessao;
         tmTeste: Result := TesteEnvio;
@@ -753,6 +772,19 @@ begin
   end;
 end;
 
+function TACBrNFSeXProvider.CarregarXmlNfse(aNota: TNotaFiscal; aXml: string): TNotaFiscal;
+begin
+  if Assigned(ANota) then
+    ANota.XmlNfse := aXml
+  else
+  begin
+    TACBrNFSeX(FAOwner).NotasFiscais.LoadFromString(aXml, False);
+    ANota := TACBrNFSeX(FAOwner).NotasFiscais.Items[TACBrNFSeX(FAOwner).NotasFiscais.Count-1];
+  end;
+
+  Result := aNota;
+end;
+
 procedure TACBrNFSeXProvider.SalvarXmlRps(aNota: TNotaFiscal);
 begin
   if FAOwner.Configuracoes.Arquivos.Salvar then
@@ -826,6 +858,8 @@ begin
     AbrirSessao.xmlns := aNameSpace;
     FecharSessao.xmlns := aNameSpace;
   end;
+
+  TACBrNFSeX(FAOwner).SSL.NameSpaceURI := aNameSpace;
 end;
 
 function TACBrNFSeXProvider.SimNaoToStr(const t: TnfseSimNao): string;
@@ -1861,6 +1895,70 @@ begin
   TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
 end;
 
+procedure TACBrNFSeXProvider.GerarToken;
+var
+  AService: TACBrNFSeXWebservice;
+  AErro: TNFSeEventoCollectionItem;
+begin
+  TACBrNFSeX(FAOwner).SetStatus(stNFSeGerarToken);
+
+  PrepararGerarToken(GerarTokenResponse);
+  if (GerarTokenResponse.Erros.Count > 0) then
+  begin
+    TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+    Exit;
+  end;
+
+  AssinarGerarToken(GerarTokenResponse);
+  if (GerarTokenResponse.Erros.Count > 0) then
+  begin
+    TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+    Exit;
+  end;
+
+  ValidarSchema(GerarTokenResponse, tmGerarToken);
+  if (GerarTokenResponse.Erros.Count > 0) then
+  begin
+    TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+    Exit;
+  end;
+
+  AService := nil;
+
+  try
+    try
+      TACBrNFSeX(FAOwner).SetStatus(stNFSeEnvioWebService);
+      AService := CriarServiceClient(tmGerarToken);
+
+      GerarTokenResponse.ArquivoRetorno := AService.GerarToken(ConfigMsgDados.DadosCabecalho,
+                                                           GerarTokenResponse.ArquivoEnvio);
+
+      GerarTokenResponse.Sucesso := True;
+      GerarTokenResponse.EnvelopeEnvio := AService.Envio;
+      GerarTokenResponse.EnvelopeRetorno := AService.Retorno;
+    except
+      on E:Exception do
+      begin
+        AErro := GerarTokenResponse.Erros.New;
+        AErro.Codigo := Cod999;
+        AErro.Descricao := Desc999 + E.Message;
+      end;
+    end;
+  finally
+    FreeAndNil(AService);
+  end;
+
+  if not GerarTokenResponse.Sucesso then
+  begin
+    TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+    Exit;
+  end;
+
+  TACBrNFSeX(FAOwner).SetStatus(stNFSeAguardaProcesso);
+  TratarRetornoGerarToken(GerarTokenResponse);
+  TACBrNFSeX(FAOwner).SetStatus(stNFSeIdle);
+end;
+
 procedure TACBrNFSeXProvider.AssinarCancelaNFSe(
   Response: TNFSeCancelaNFSeResponse);
 var
@@ -2097,6 +2195,38 @@ begin
     Response.ArquivoEnvio := FAOwner.SSL.Assinar(Response.ArquivoEnvio,
       Prefixo + ConfigMsgDados.SubstituirNFSe.DocElemento,
       ConfigMsgDados.SubstituirNFSe.InfElemento, '', '', '', IdAttr);
+  except
+    on E:Exception do
+    begin
+      AErro := Response.Erros.New;
+      AErro.Codigo := Cod801;
+      AErro.Descricao := Desc801 + E.Message;
+    end;
+  end;
+end;
+
+procedure TACBrNFSeXProvider.AssinarGerarToken(
+  Response: TNFSeGerarTokenResponse);
+var
+  IdAttr, Prefixo: string;
+  AErro: TNFSeEventoCollectionItem;
+begin
+  if not ConfigAssinar.GerarToken then Exit;
+
+  if ConfigAssinar.IncluirURI then
+    IdAttr := ConfigGeral.Identificador
+  else
+    IdAttr := 'ID';
+
+  if ConfigMsgDados.Prefixo = '' then
+    Prefixo := ''
+  else
+    Prefixo := ConfigMsgDados.Prefixo + ':';
+
+  try
+    Response.ArquivoEnvio := FAOwner.SSL.Assinar(Response.ArquivoEnvio,
+      Prefixo + ConfigMsgDados.GerarToken.DocElemento,
+      ConfigMsgDados.GerarToken.InfElemento, '', '', '', IdAttr);
   except
     on E:Exception do
     begin
