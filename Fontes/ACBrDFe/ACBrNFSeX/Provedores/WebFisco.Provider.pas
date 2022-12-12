@@ -93,7 +93,7 @@ implementation
 
 uses
   ACBrDFeException,
-  ACBrUtil.Base,
+  ACBrUtil.Base, ACBrUtil.Strings,
   ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   WebFisco.GravarXml, WebFisco.LerXml;
 
@@ -170,11 +170,11 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Codigo'), tcStr);
-    AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Descricao'), tcStr);
+    AErro.Descricao := ACBrStr(ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Descricao'), tcStr));
     AErro.Correcao := '';
 
     if AErro.Descricao = '' then
-      AErro.Descricao := ANodeArray[I].AsString;
+      AErro.Descricao := ACBrStr(ANodeArray[I].AsString);
   end;
 end;
 
@@ -206,7 +206,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -214,9 +214,19 @@ begin
 
       ANode := Document.Root;
 
-      ProcessarMensagemErros(ANode, Response, '', 'okk');
+      //ProcessarMensagemErros(ANode, Response, '', 'okk');
 
-      Response.Sucesso := (Response.Erros.Count = 0);
+      //Response.Sucesso := (Response.Erros.Count = 0);
+
+      with Response do
+      begin
+        Situacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('okk'), tcStr);
+      end;
+
+      Response.Sucesso := (Response.Situacao = 'OK');
+
+      if not Response.Sucesso then
+        ProcessarMensagemErros(ANode, Response, '', 'okk');
 
       AuxNode := ANode.Childrens.FindAnyNs('okk');
 
@@ -241,7 +251,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -259,42 +269,50 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
-    Exit;
-  end;
-
-  if EstaVazio(Response.InfConsultaNFSe.Tipo) then
-  begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := Cod114;
-    AErro.Descricao := Desc114;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := ACBrStr(Desc119);
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := ACBrStr(Desc120);
+    Exit;
+  end;
+
   Response.Metodo := tmConsultarNFSe;
 
   Response.ArquivoEnvio := '<ConsultaNfe>' +
-                         '<usuario xsi:type="xsd:string">' +
-                           Trim(Emitente.WSUser) +
-                         '</usuario>' +
-                         '<pass xsi:type="xsd:string">' +
-                           Trim(Emitente.WSSenha) +
-                         '</pass>' +
-                         '<prf xsi:type="xsd:string">' +
-                           TACBrNFSeX(FAOwner).Configuracoes.Geral.CNPJPrefeitura +
-                         '</prf>' +
-                         '<usr xsi:type="xsd:string">' +
-                           Trim(Emitente.CNPJ) +
-                         '</usr>' +
-                         '<ctr xsi:type="xsd:string">' +
-                           Response.InfConsultaNFSe.NumeroIniNFSe +
-                         '</ctr>' +
-                         '<tipo xsi:type="xsd:string">' +
-                           Response.InfConsultaNFSe.Tipo +
-                         '</tipo>' +
-                       '</ConsultaNfe>';
+                             '<usuario xsi:type="xsd:string">' +
+                               Trim(Emitente.WSUser) +
+                             '</usuario>' +
+                             '<pass xsi:type="xsd:string">' +
+                               Trim(Emitente.WSSenha) +
+                             '</pass>' +
+                             '<prf xsi:type="xsd:string">' +
+                               TACBrNFSeX(FAOwner).Configuracoes.Geral.CNPJPrefeitura +
+                             '</prf>' +
+                             '<usr xsi:type="xsd:string">' +
+                               Trim(Emitente.CNPJ) +
+                             '</usr>' +
+                             '<ctr xsi:type="xsd:string">' +
+                               Response.InfConsultaNFSe.NumeroIniNFSe +
+                             '</ctr>' +
+                             '<tipo xsi:type="xsd:string">' +
+                               tpDocumentoToStr(Response.InfConsultaNFSe.tpDocumento) +
+                             '</tipo>' +
+                           '</ConsultaNfe>';
 end;
 
 procedure TACBrNFSeProviderWebFisco.TratarRetornoConsultaNFSe(
@@ -302,11 +320,9 @@ procedure TACBrNFSeProviderWebFisco.TratarRetornoConsultaNFSe(
 var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
-  ANode{, AuxNode}: TACBrXmlNode;
-//  ANodeArray: TACBrXmlNodeArray;
-//  i: Integer;
-//  NumRps: String;
-//  ANota: NotaFiscal;
+  ANode: TACBrXmlNode;
+  ANota: TNotaFiscal;
+  xStatus: string;
 begin
   Document := TACBrXmlDocument.Create;
 
@@ -316,7 +332,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -324,48 +340,42 @@ begin
 
       ANode := Document.Root;
 
-      ProcessarMensagemErros(ANode, Response, '', 'okk');
+//      ProcessarMensagemErros(ANode, Response, '', 'okk');
 
-      Response.Sucesso := (Response.Erros.Count = 0);
-
-      {
-      AuxNode := ANode.Childrens.FindAnyNs('okk');
-
-      if AuxNode <> nil then
+      with Response do
       begin
-        with Response do
-        begin
-          Sucesso := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('Sucesso'), tcStr);
-        end;
+        Situacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('okk'), tcStr);
+        NumeroRps := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfenumerorps'), tcStr);
+        NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfenumero'), tcStr);
+        Data := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfedata'), tcDat);
+        Data := Data + ObterConteudoTag(ANode.Childrens.FindAnyNs('nfehora'), tcHor);
+        CodVerif := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfeautenticacao'), tcStr);
+        Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfelink'), tcStr);
+        Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
+        xStatus := ObterConteudoTag(ANode.Childrens.FindAnyNs('nfestatus'), tcStr);
+
+        if UpperCase(xStatus) = 'SIM' then
+          DescSituacao := 'NFSe Cancelada';
       end;
 
-      ANodeArray := ANode.Childrens.FindAllAnyNs('NFe');
-      if not Assigned(ANodeArray) then
-      begin
-        AErro := Response.Erros.New;
-        AErro.Codigo := Cod203;
-        AErro.Descricao := Desc203;
-        Exit;
-      end;
+      Response.Sucesso := (Response.Situacao = 'OK');
 
-      for i := Low(ANodeArray) to High(ANodeArray) do
-      begin
-        ANode := ANodeArray[i];
-        AuxNode := ANode.Childrens.FindAnyNs('ChaveNFe');
-        NumRps := AuxNode.AsString;
+      if not Response.Sucesso then
+        ProcessarMensagemErros(ANode, Response, '', 'okk');
 
-        ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps);
+      ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(Response.NumeroRps);
 
-        ANota := CarregarXmlNfse(ANota, ANode.OuterXml);
-        SalvarXmlNfse(ANota);
-      end;
-      }
+      if ANota = nil then
+        ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(Response.NumeroNota);
+
+      ANota := CarregarXmlNfse(ANota, ANode.OuterXml);
+      SalvarXmlNfse(ANota);
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -383,15 +393,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
-    Exit;
-  end;
-
-  if EstaVazio(Response.InfCancelamento.SerieNFSe) then
-  begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := Cod112;
-    AErro.Descricao := Desc112;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
@@ -399,35 +401,35 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod110;
-    AErro.Descricao := Desc110;
+    AErro.Descricao := ACBrStr(Desc110);
     Exit;
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
   Response.ArquivoEnvio := '<CancelaNfe>' +
-                         '<usuario xsi:type="xsd:string">' +
-                           Trim(Emitente.WSUser) +
-                         '</usuario>' +
-                         '<pass xsi:type="xsd:string">' +
-                           Trim(Emitente.WSSenha) +
-                         '</pass>' +
-                         '<prf xsi:type="xsd:string">' +
-                           TACBrNFSeX(FAOwner).Configuracoes.Geral.CNPJPrefeitura +
-                         '</prf>' +
-                         '<usr xsi:type="xsd:string">' +
-                           Trim(Emitente.CNPJ) +
-                         '</usr>' +
-                         '<ctr xsi:type="xsd:string">' +
-                           Response.InfCancelamento.NumeroNFSe +
-                         '</ctr>' +
-                         '<tipo xsi:type="xsd:string">' +
-                           Response.InfCancelamento.SerieNFSe +
-                         '</tipo>' +
-                         '<obs xsi:type="xsd:string">' +
-                           Response.InfCancelamento.MotCancelamento +
-                         '</obs>' +
-                       '</CancelaNfe>';
+                             '<usuario xsi:type="xsd:string">' +
+                               Trim(Emitente.WSUser) +
+                             '</usuario>' +
+                             '<pass xsi:type="xsd:string">' +
+                               Trim(Emitente.WSSenha) +
+                             '</pass>' +
+                             '<prf xsi:type="xsd:string">' +
+                               TACBrNFSeX(FAOwner).Configuracoes.Geral.CNPJPrefeitura +
+                             '</prf>' +
+                             '<usr xsi:type="xsd:string">' +
+                               Trim(Emitente.CNPJ) +
+                             '</usr>' +
+                             '<ctr xsi:type="xsd:string">' +
+                               Response.InfCancelamento.NumeroNFSe +
+                             '</ctr>' +
+                             '<tipo xsi:type="xsd:string">' +
+                               tpDocumentoToStr(Response.InfCancelamento.tpDocumento) +
+                             '</tipo>' +
+                             '<obs xsi:type="xsd:string">' +
+                               Response.InfCancelamento.MotCancelamento +
+                             '</obs>' +
+                           '</CancelaNfe>';
 end;
 
 procedure TACBrNFSeProviderWebFisco.TratarRetornoCancelaNFSe(
@@ -445,7 +447,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -453,9 +455,27 @@ begin
 
       ANode := Document.Root;
 
-      ProcessarMensagemErros(ANode, Response, '', 'okk');
+      //ProcessarMensagemErros(ANode, Response, '', 'okk');
 
-      Response.Sucesso := (Response.Erros.Count = 0);
+      //Response.Sucesso := (Response.Erros.Count = 0);
+
+      Response.RetCancelamento.MsgCanc := ObterConteudoTag(ANode.Childrens.FindAnyNs('okk'), tcStr);
+      Response.RetCancelamento.Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('okk'), tcStr);
+      Response.RetCancelamento.Link := StringReplace(Response.RetCancelamento.Link, '&amp;', '&', [rfReplaceAll]);
+
+      if (Copy(Response.RetCancelamento.Link, 1, 5) = 'https') or
+         (Copy(Response.RetCancelamento.Link, 1, 5) = 'http:') or
+         (Copy(Response.RetCancelamento.Link, 1, 4) = 'www.') then
+      begin
+        Response.Sucesso := True;
+        Response.RetCancelamento.Sucesso := 'SIM';
+      end
+      else
+      begin
+        Response.Sucesso := False;
+        Response.RetCancelamento.Sucesso := 'NÃO';
+        Response.RetCancelamento.Link := '';
+      end;
 
       {
       AuxNode := ANode.Childrens.FindAnyNs('okk');
@@ -473,7 +493,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally

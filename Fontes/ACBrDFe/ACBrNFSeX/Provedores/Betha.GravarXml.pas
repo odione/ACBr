@@ -130,7 +130,7 @@ begin
   begin
     Result[i] := CreateElement('Parcelas');
 
-    Result[i].AppendChild(AddNode(tcInt, '#55', 'Parcela', 1, 03, 1,
+    Result[i].AppendChild(AddNode(tcStr, '#55', 'Parcela', 1, 03, 1,
                   NFSe.CondicaoPagamento.Parcelas.Items[i].Parcela, DSC_NPARC));
 
     Result[i].AppendChild(AddNode(tcDatVcto, '#56', 'DataVencimento', 10, 10, 1,
@@ -166,6 +166,11 @@ begin
     NrOcorrRespRetencao := 0   // se tem a retenção a tag deve ser gerada
   else
     NrOcorrRespRetencao := -1; // se não tem a retenção a tag não deve ser gerada
+
+  if NFSe.Tomador.Endereco.CodigoMunicipio = '9999999' then
+    NrOcorrCodigoPaisTomador := 1
+  else
+    NrOcorrCodigoPaisTomador := -1;
 
   Result := inherited GerarXml;
 end;

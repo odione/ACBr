@@ -127,6 +127,7 @@ type
     FConsultaAposCancelar: Boolean;
     FEmitente: TEmitenteConfNFSe;
     FMontarPathSchema: Boolean;
+    FLayout: TLayout;
 
     procedure SetCodigoMunicipio(const Value: Integer);
   public
@@ -152,6 +153,7 @@ type
     property Emitente: TEmitenteConfNFSe read FEmitente write FEmitente;
     property MontarPathSchema: Boolean read FMontarPathSchema
       write FMontarPathSchema default True;
+    property Layout: TLayout read FLayout;
   end;
 
   { TArquivosConfNFSe }
@@ -178,6 +180,9 @@ type
       const IE: String = ''): String;
 
     function GetPathRPS(Data: TDateTime = 0; const CNPJ: String = '';
+      const IE: String = ''): String;
+
+    function GetPathEvento(Data: TDateTime = 0; const CNPJ: String = '';
       const IE: String = ''): String;
 
     function GetPathNFSe(Data: TDateTime = 0; const CNPJ: String = '';
@@ -222,7 +227,7 @@ type
 implementation
 
 uses
-  ACBrUtil.FilesIO,
+  ACBrUtil.FilesIO, ACBrUtil.Strings,
   ACBrNFSeX;
 
 { TEmitenteConfNFSe }
@@ -416,6 +421,11 @@ var
   Ok: Boolean;
   CodIBGE: string;
 begin
+  // Carrega automaticamente o arquivo ACBrNFSeXServicos se necessário.
+  if Assigned(fpConfiguracoes.Owner) then
+    if not (csDesigning in fpConfiguracoes.Owner.ComponentState) then
+      TACBrNFSeX(fpConfiguracoes.Owner).LerCidades;
+
   // ===========================================================================
   // Verifica se o código IBGE consta no arquivo: ACBrNFSeXServicos
   // se encontrar carrega os parâmetros definidos.
@@ -433,10 +443,13 @@ begin
     TACBrNFSeX(fpConfiguracoes.Owner).SetProvider;
 
   if FProvedor = proNenhum then
-    raise Exception.Create('Código do Municipio [' + CodIBGE + '] não Encontrado.');
+    raise Exception.Create(ACBrStr('Código do Municipio [' + CodIBGE +
+            '] não Encontrado.'));
 
   FxMunicipio := FPIniParams.ReadString(CodIBGE, 'Nome', '');
   FxUF := FPIniParams.ReadString(CodIBGE, 'UF'  , '');
+
+  FLayout := TACBrNFSeX(TConfiguracoesNFSe(Owner).Owner).Provider.ConfigGeral.Layout;
 end;
 
 procedure TGeralConfNFSe.Assign(DeGeralConfNFSe: TGeralConfNFSe);
@@ -580,6 +593,26 @@ begin
     Dir := GetPath(FPathGer, 'NFSe', CNPJ, IE, Data);
 
     Dir := PathWithDelim(Dir) + 'Can';
+
+    if not DirectoryExists(Dir) then
+      ForceDirectories(Dir);
+
+    Result := Dir;
+  end;
+end;
+
+function TArquivosConfNFSe.GetPathEvento(Data: TDateTime; const CNPJ,
+  IE: String): String;
+var
+  Dir: String;
+begin
+  if FPathCan <> '' then
+    Result := GetPath(FPathCan, 'Eventos', CNPJ, IE, Data)
+  else
+  begin
+    Dir := GetPath(FPathGer, 'NFSe', CNPJ, IE, Data);
+
+    Dir := PathWithDelim(Dir) + 'Eventos';
 
     if not DirectoryExists(Dir) then
       ForceDirectories(Dir);

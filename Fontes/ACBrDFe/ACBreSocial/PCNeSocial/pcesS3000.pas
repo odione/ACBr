@@ -102,7 +102,7 @@ type
     property InfoExclusao: TInfoExclusao read FInfoExclusao write FInfoExclusao;
   end;
 
-  TInfoExclusao = class
+  TInfoExclusao = class(TObject)
   private
     FtpEvento: TTipoEvento;
     FnrRecEvt: string;
@@ -207,7 +207,7 @@ function TEvtExclusao.GerarXML: boolean;
 begin
   try
     Self.VersaoDF := TACBreSocial(FACBreSocial).Configuracoes.Geral.VersaoDF;
-     
+
     Self.Id := GerarChaveEsocial(now, self.ideEmpregador.NrInsc, self.Sequencial);
 
     GerarCabecalho('evtExclusao');
@@ -238,14 +238,15 @@ begin
        GerarIdeFolhaPagto(self.InfoExclusao.IdeFolhaPagto)
     else
       begin
-        if ( self.InfoExclusao.IdeFolhaPagto.perApur = '' ) then
-           GerarIdeTrabalhador2(self.InfoExclusao.IdeTrabalhador, True)
-        else if VersaoDF <= ve02_05_00 then
-           GerarIdeFolhaPagto(self.InfoExclusao.IdeFolhaPagto)
+        if VersaoDF <= ve02_05_00 then
+          begin
+            if ( self.InfoExclusao.IdeFolhaPagto.perApur = '' ) then
+            GerarIdeTrabalhador2(self.InfoExclusao.IdeTrabalhador, True);
+          end
         else
-           GerarIdeFolhaPagto2(self.InfoExclusao.IdeFolhaPagto)
+        GerarIdeTrabalhador2(self.InfoExclusao.IdeTrabalhador, True);
+        GerarIdeFolhaPagto(self.InfoExclusao.IdeFolhaPagto);
       end;
-    
 
     Gerador.wGrupo('/infoExclusao');
     Gerador.wGrupo('/evtExclusao');

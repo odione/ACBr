@@ -30,7 +30,7 @@
 {       Rua Coronel Aureliano de Camargo, 963 - Tatuí - SP - 18270-170         }
 {******************************************************************************}
 
-//{$I ACBr.inc}
+{$I ACBr.inc}
 
 unit FrPrincipal;
 
@@ -40,8 +40,9 @@ uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComCtrls, StdCtrls,
   ExtCtrls, Buttons, Spin, Grids, ACBrCEP, ACBrPIXCD, ACBrPIXPSPItau,
   ACBrPIXPSPBancoDoBrasil, ACBrPIXPSPSantander, ACBrPIXBase, ACBrPIXSchemasPix,
-  ACBrPIXSchemasDevolucao, ACBrPIXSchemasCob, ACBrPIXPSPShipay, ACBrOpenSSLUtils,
-  ACBrSocket, ACBrBase, ImgList
+  ACBrPIXSchemasDevolucao, ACBrPIXSchemasCob, ACBrPIXPSPShipay,
+  ACBrOpenSSLUtils, ACBrPIXPSPSicredi, ACBrPIXBRCode, ACBrSocket, ACBrBase,
+  ImgList, ACBrPIXPSPSicoob, ACBrPIXPSPPagSeguro
   {$IfDef FPC}
   , DateTimePicker
   {$EndIf};
@@ -72,8 +73,14 @@ type
     ACBrPixCD1: TACBrPixCD;
     ACBrPSPBancoDoBrasil1: TACBrPSPBancoDoBrasil;
     ACBrPSPItau1: TACBrPSPItau;
+    ACBrPSPPagSeguro1: TACBrPSPPagSeguro;
     ACBrPSPSantander1: TACBrPSPSantander;
     ACBrPSPShipay1: TACBrPSPShipay;
+    ACBrPSPSicoob1: TACBrPSPSicoob;
+    ACBrPSPSicredi1: TACBrPSPSicredi;
+    btPagSeguroPagar: TBitBtn;
+    btPagSeguroLimpar: TBitBtn;
+    btSantanderExtrairPEM: TBitBtn;
     btCobVCancelar: TBitBtn;
     btCobVCancelarLimpar: TBitBtn;
     btCobVConsultar: TBitBtn;
@@ -115,6 +122,13 @@ type
     btQREColar: TBitBtn;
     btQRDColar: TBitBtn;
     btQREGerar: TBitBtn;
+    btSicoobExtrairChaveCertificado: TBitBtn;
+    btSicoobExtrairChaveCertificadoArqPFX: TSpeedButton;
+    btSicoobExtrairChaveCertificadoVerSenhaPFX: TSpeedButton;
+    btSicrediGerarCSR: TBitBtn;
+    btSicrediGerarCSRInfo: TSpeedButton;
+    btSicrediGerarChaveInfo: TSpeedButton;
+    btSicrediGerarChavePrivada: TBitBtn;
     btSolicitarDevolucaoPix: TBitBtn;
     btConsultarPix: TBitBtn;
     btConsultarPixRecebidos: TBitBtn;
@@ -128,17 +142,21 @@ type
     cbCobVDescModalidade: TComboBox;
     cbCobVJurosModalidade: TComboBox;
     cbCobVMultaModalidade: TComboBox;
+    cbSicoobTipoChave: TComboBox;
+    cbSicrediTipoChave: TComboBox;
+    cbPagSeguroTipoChave: TComboBox;
     cbxAmbiente: TComboBox;
     cbxItauTipoChave: TComboBox;
     cbxNivelLog: TComboBox;
     cbxPSPAtual: TComboBox;
     cbxRecebedorUF: TComboBox;
+    cbSantanderTipoChave: TComboBox;
     cbxSolicitarDevolucaoPix_Natureza: TComboBox;
-    cbxSantanderTipoChave: TComboBox;
     cbxBBTipoChave: TComboBox;
     cbxConsultarCobrancas_Status: TComboBox;
     chCriarCobrancaImediata_PermiterAlterarValor: TCheckBox;
     chConsultarCobrancas_ComLocation: TCheckBox;
+    cbAutenticacaoManual: TCheckBox;
     CobVConsultarRodapeLista: TPanel;
     dtConsultarCobrancas_Fim: TDateTimePicker;
     dtConsultarPixRecebidosInicio: TDateTimePicker;
@@ -168,13 +186,45 @@ type
     edFluxoItemEAN: TEdit;
     edFluxoItemValor: TEdit;
     edItauRenovarCertificadoArq: TEdit;
+    edPagSeguroTokenPay: TEdit;
+    edSantanderArqCertificadoPFX: TEdit;
+    edSantanderExtrairCertificadoPFX: TEdit;
+    edSantanderExtrairCertificadoPEM: TEdit;
+    edSantanderSenhaCertificadoPFX: TEdit;
+    edSantanderExtrairCertificadoSenhaPFX: TEdit;
+    edSicoobArqCertificado: TEdit;
+    edSicoobArqChavePrivada: TEdit;
+    edSicoobChavePIX: TEdit;
+    edSicoobClientID: TEdit;
+    edSicoobExtrairCertificado: TEdit;
+    edSicoobExtrairChaveCertificadoArqPFX: TEdit;
+    edSicoobExtrairChaveCertificadoSenhaPFX: TEdit;
+    edSicoobExtrairChavePrivada: TEdit;
+    edSicrediArqCertificado: TEdit;
+    edPagSeguroArqCertificado: TEdit;
+    edSicrediArqChavePrivada: TEdit;
+    edPagSeguroArqChavePrivada: TEdit;
+    edSicrediChavePIX: TEdit;
+    edPagSeguroChavePIX: TEdit;
+    edSicrediClientID: TEdit;
+    edPagSeguroClientID: TEdit;
+    edSicrediClientSecret: TEdit;
+    edPagSeguroClientSecret: TEdit;
+    edSicrediGerarCSR: TEdit;
+    edSicrediGerarChavePrivada: TEdit;
+    edSicrediGerarCSREmail: TEdit;
     edtArqLog: TEdit;
+    edPagSeguroTxID: TEdit;
     edtProxyHost: TEdit;
     edtProxySenha: TEdit;
     edtProxyUser: TEdit;
+    edQRDTxID: TEdit;
     edtRecebedorCEP: TEdit;
     edtRecebedorCidade: TEdit;
     edtRecebedorNome: TEdit;
+    edSantanderChavePIX: TEdit;
+    edSantanderConsumerKey: TEdit;
+    edSantanderConsumerSecret: TEdit;
     fleQREValor: TEdit;
     feSolicitarDevolucaoPix_Valor: TEdit;
     edtBBSimulaPagamento_pixCopiaECola: TEdit;
@@ -195,7 +245,7 @@ type
     edtItauClientID: TEdit;
     edtItauClientSecret: TEdit;
     edtQREInfoAdicional: TEdit;
-    edtQRDLocation: TEdit;
+    edQRDLocation: TEdit;
     edtQRETxId: TEdit;
     edtCriarCobrancaImediata_NomeDevedor: TEdit;
     edtSolicitarDevolucaoPix_e2eid: TEdit;
@@ -216,12 +266,12 @@ type
     gbFluxoStatus: TGroupBox;
     gbFluxoTotal: TGroupBox;
     gdFluxoItens: TStringGrid;
+    gbAutenticacaoManual: TGroupBox;
     imCobVQRCode: TImage;
     imFluxoQRCode: TImage;
     imgErrCEP: TImage;
     imgErrNome: TImage;
     imgErrPSP: TImage;
-    imgInfoMCC: TImage;
     imgItauErroCertificado: TImage;
     imgItauErroChavePIX: TImage;
     imgItauErroChavePrivada: TImage;
@@ -230,6 +280,17 @@ type
     imgQRCriarCobrancaImediata: TImage;
     imgQRE: TImage;
     imgQRD: TImage;
+    imSantanderErroChavePIX: TImage;
+    imSantanderErroCertificadoPFX: TImage;
+    imSicoobErroCertificado: TImage;
+    imSicoobErroChavePIX: TImage;
+    imSicoobErroChavePrivada: TImage;
+    imSicrediErroCertificado: TImage;
+    imPagSeguroErroCertificado: TImage;
+    imSicrediErroChavePix: TImage;
+    imPagSeguroErroChavePix: TImage;
+    imSicrediErroChavePrivada: TImage;
+    imPagSeguroErroChavePrivada: TImage;
     Label1: TLabel;
     Label10: TLabel;
     Label11: TLabel;
@@ -240,12 +301,16 @@ type
     Label16: TLabel;
     Label17: TLabel;
     Label18: TLabel;
-    Label19: TLabel;
     Label25: TLabel;
     Label26: TLabel;
     Label27: TLabel;
     Label28: TLabel;
     Label3: TLabel;
+    lbPagSeguroTokenPay: TLabel;
+    lbSantanderChavePIX: TLabel;
+    lbSantanderTipoChave: TLabel;
+    lbSantanderConsumerKey: TLabel;
+    lbSantanderConsumerSecret: TLabel;
     Label34: TLabel;
     Label35: TLabel;
     Label36: TLabel;
@@ -253,6 +318,13 @@ type
     Label38: TLabel;
     Label39: TLabel;
     Label42: TLabel;
+    lbSantanderArqCertificadoPFX: TLabel;
+    lbSantanderExtrairCertificadoPFX: TLabel;
+    lbSantanderExtrairCertificadoPEM: TLabel;
+    lbSantanderErroCertificadoPFX: TLabel;
+    lbSantanderSenhaCertificado: TLabel;
+    lbSantanderExtrairCertificadoSenhaPFX: TLabel;
+    lbQRDTxID: TLabel;
     Label47: TLabel;
     Label48: TLabel;
     Label49: TLabel;
@@ -288,9 +360,39 @@ type
     lbFluxoItemValor: TLabel;
     lbItauRenovarCertificadoArq: TLabel;
     lbItauRenovarCertificadoPEM: TLabel;
+    lbSicoobArquivoCertificado: TLabel;
+    lbSicoobArquivoChavePrivada: TLabel;
+    lbSicoobChavePix: TLabel;
+    lbSicoobClientID: TLabel;
+    lbSicoobErroCertificado: TLabel;
+    lbSicoobErroChavePrivada: TLabel;
+    lbSicoobExtrairCertificado: TLabel;
+    lbSicoobExtrairChaveCertificadoArqPFX: TLabel;
+    lbSicoobExtrairChaveCertificadoSenhaPFX: TLabel;
+    lbSicoobTipoChave: TLabel;
+    lbSicrediArqCertificado: TLabel;
+    lbPagSeguroArqCertificado: TLabel;
+    lbSicrediArqChavePrivada: TLabel;
+    lbPagSeguroArqChavePrivada: TLabel;
+    lbSicrediChavePIX: TLabel;
+    lbPagSeguroChavePIX: TLabel;
+    lbSicrediClientID: TLabel;
+    lbPagSeguroClientID: TLabel;
+    lbSicrediClientSecret: TLabel;
+    lbPagSeguroClientSecret: TLabel;
+    lbSicrediErroCertificado: TLabel;
+    lbPagSeguroErroCertificado: TLabel;
+    lbSicrediErroChavePrivada: TLabel;
+    lbPagSeguroErroChavePrivada: TLabel;
+    lbSicrediGerarCSR: TLabel;
+    lbSicrediGerarChavePrivada: TLabel;
+    lbSicrediGerarCSREmail: TLabel;
+    lbSicrediTipoChave: TLabel;
+    lbPagSeguroTipoChave: TLabel;
     lConsultarPixE2eid1: TLabel;
     lConsultarPixE2eid2: TLabel;
     lbCancelarCobrancaTxID: TLabel;
+    lbPagSeguroTxID: TLabel;
     lCPFCPNJ2: TLabel;
     lFim1: TLabel;
     lInicio1: TLabel;
@@ -298,7 +400,7 @@ type
     Label43: TLabel;
     Label40: TLabel;
     Label41: TLabel;
-    Label44: TLabel;
+    lbQRDLocation: TLabel;
     Label6: TLabel;
     lConsultarDevolucaoPixE2eid2: TLabel;
     lConsultarDevolucaoPixE2eid3: TLabel;
@@ -308,14 +410,10 @@ type
     lConsultarPixE2eid: TLabel;
     edtBBClientID: TEdit;
     edtConsultarPixE2eid: TEdit;
-    edtSantanderChavePIX: TEdit;
     edtBBClientSecret: TEdit;
-    edtSantanderConsumerKey: TEdit;
     edtBBDevAppKey: TEdit;
-    edtSantanderConsumerSecret: TEdit;
     edtBBChavePIX: TEdit;
     imgBBErroChavePIX: TImage;
-    imgSantanderErroChavePIX: TImage;
     lCPFCPNJ1: TLabel;
     lE2eid: TLabel;
     lConsultarDevolucaoPixE2eid1: TLabel;
@@ -332,6 +430,7 @@ type
     lPagina3: TLabel;
     lPagina4: TLabel;
     lTokenTemporario: TLabel;
+    mmPagSeguroResp: TMemo;
     mConsultarCobrancaImediata: TMemo;
     mmCancelarCobranca: TMemo;
     mConsultarCobrancas: TMemo;
@@ -343,6 +442,8 @@ type
     mmCobVConsultar: TMemo;
     mmCobVConsultarLista: TMemo;
     mmItauRenovarCertificadoPEM: TMemo;
+    mmSicrediGerarCSR: TMemo;
+    mmSicrediGerarChavePrivada: TMemo;
     mQRE: TMemo;
     mQRD: TMemo;
     mSolicitarDevolucaoPix: TMemo;
@@ -351,10 +452,20 @@ type
     mConsultarDevolucaoPix: TMemo;
     mCriarCobrancaImediata: TMemo;
     OpenDialog1: TOpenDialog;
-    PageControl1: TPageControl;
+    pnAutenticacaoManual: TPanel;
+    pnPagSeguroLimpar: TPanel;
+    pnPagSeguroCabecalho: TPanel;
+    pcSimularPagamento: TPageControl;
+    pnSicoobCredenciais: TPanel;
+    pgSantander: TPageControl;
     Panel10: TPanel;
     Panel11: TPanel;
     Panel12: TPanel;
+    pgSicoob: TPageControl;
+    pgSicredi: TPageControl;
+    pnConfPSPSicoob: TPanel;
+    pnSantanderExtrairCertificado: TPanel;
+    pConfPSPSantander: TPanel;
     pgTestesEndPointCobV: TPageControl;
     pItauEditCertificado1: TPanel;
     pnCobVCancelarParams: TPanel;
@@ -414,6 +525,10 @@ type
     pnFluxoStatus: TPanel;
     pnFluxoTotal: TPanel;
     pnFluxoTotalStr: TPanel;
+    pnSicoobExtrairChaveCertificado: TPanel;
+    pnSicrediCredenciais: TPanel;
+    pnPagSeguroCredenciais: TPanel;
+    pnSicrediGerarChaveCSR: TPanel;
     pQREDados: TPanel;
     pQRDDados: TPanel;
     pQREGerado: TPanel;
@@ -430,19 +545,25 @@ type
     Label22: TLabel;
     Label23: TLabel;
     Label24: TLabel;
-    Label30: TLabel;
-    Label31: TLabel;
-    Label32: TLabel;
-    Label33: TLabel;
     pConfPSPBB: TPanel;
     pBotoesConfiguracao: TPanel;
-    pConfPSPBB2: TPanel;
     pCriarCobrancaImediata: TPanel;
     sbArqLog: TSpeedButton;
     sbConsultaCEP: TSpeedButton;
     sbCriarCobrancaImediata_GerarTxId: TSpeedButton;
     sbItauAcharArqCertificado: TSpeedButton;
     sbItauAcharArqChavePrivada: TSpeedButton;
+    sbSantanderAcharCertificadoPFX: TSpeedButton;
+    sbSantanderExtrairCertificadoPFX: TSpeedButton;
+    sbSantanderExtrairCertificadoInfo: TSpeedButton;
+    sbSantanderVerSenhaPFX: TSpeedButton;
+    sbSantanderExtrairCertificadoVerSenhaPFX: TSpeedButton;
+    sbSicoobAcharArqCertificado: TSpeedButton;
+    sbSicoobAcharChavePrivada: TSpeedButton;
+    sbSicrediAcharArqCertificado: TSpeedButton;
+    sbPagSeguroAcharArqCertificado: TSpeedButton;
+    sbSicrediAcharChavePrivada: TSpeedButton;
+    sbPagSeguroAcharChavePrivada: TSpeedButton;
     sbVerSenhaProxy: TSpeedButton;
     seCobrancaExpiracao: TSpinEdit;
     seConsultarCobrancaImediata_Revisao: TSpinEdit;
@@ -464,12 +585,21 @@ type
     pgPrincipal: TPageControl;
     pLogs: TPanel;
     seProxyPorta: TSpinEdit;
-    seRecebedorMCC: TSpinEdit;
     seConsultarPixRecebidosPagina: TSpinEdit;
     seConsultarPixRecebidosItensPagina: TSpinEdit;
     seTimeout: TSpinEdit;
+    lbSicoobExtrairChavePrivada: TLabel;
+    btSicoobExtrairChaveCertificadoInfo: TSpeedButton;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
+    tsPagSeguro: TTabSheet;
+    tsPagSeguroSimularPagamento: TTabSheet;
+    tsSicoobCredenciais: TTabSheet;
+    tsSantanderCredenciais: TTabSheet;
+    tsSantanderExtrairCertificado: TTabSheet;
+    tsSicoob: TTabSheet;
+    tsSicoobExtrairChaveCertificado: TTabSheet;
+    tsSicredi: TTabSheet;
     tsItauRenovarChaveCertificado: TTabSheet;
     tmConsultarDevolucao: TTimer;
     tsCancelarCobranca: TTabSheet;
@@ -480,7 +610,7 @@ type
     tsCobVCriarCobranca: TTabSheet;
     tsFluxoPagto: TTabSheet;
     tsBBSimularPagamento: TTabSheet;
-    tsBBTestes: TTabSheet;
+    tsSimularPagamento: TTabSheet;
     tsConsultarCobrancas: TTabSheet;
     tsQRCodeEstatico: TTabSheet;
     tsQRCodeDinamico: TTabSheet;
@@ -492,6 +622,8 @@ type
     tsItauCertificado: TTabSheet;
     tsCriarCobrancaImediata: TTabSheet;
     tsConsultarCobrancaImediata: TTabSheet;
+    tsSicrediCredenciais: TTabSheet;
+    tsSicrediGerarChaveCSR: TTabSheet;
     tsSolicitarDevolucaoPix: TTabSheet;
     tsConsultarDevolucaoPix: TTabSheet;
     tsConsultarPix: TTabSheet;
@@ -511,6 +643,12 @@ type
     tsConfiguracao: TTabSheet;
     Valor: TLabel;
     procedure ACBrPixCD1QuandoGravarLog(const ALogLine: String; var Tratado: Boolean);
+    procedure ACBrPSPBancoDoBrasil1QuandoReceberRespostaHttp(const AURL: String;
+      const AMethod: String; RespHeaders: TStrings; var AResultCode: Integer;
+      var RespostaHttp: AnsiString);
+    procedure btPagSeguroLimparClick(Sender: TObject);
+    procedure btPagSeguroPagarClick(Sender: TObject);
+    procedure btSantanderExtrairPEMClick(Sender: TObject);
     procedure btBBSimulaPagamento_ExecutarClick(Sender: TObject);
     procedure btBBSimulaPagamento_LimparClick(Sender: TObject);
     procedure btCancelarCobrancaClick(Sender: TObject);
@@ -547,6 +685,8 @@ type
     procedure btLimparConsultarPixRecebidosClick(Sender: TObject);
     procedure btLimparCriarCobrancaImediataClick(Sender: TObject);
     procedure btLimparSolicitarDevolucaoPixClick(Sender: TObject);
+    procedure btQRDAnalisarClick(Sender: TObject);
+    procedure btQRDColarClick(Sender: TObject);
     procedure btQRDGerarClick(Sender: TObject);
     procedure btLogLimparClick(Sender: TObject);
     procedure btQREAnalisarClick(Sender: TObject);
@@ -554,9 +694,29 @@ type
     procedure btLerParametrosClick(Sender: TObject);
     procedure btQREColarClick(Sender: TObject);
     procedure btSalvarParametrosClick(Sender: TObject);
+    procedure btSicoobExtrairChaveCertificadoArqPFXClick(Sender: TObject);
+    procedure btSicoobExtrairChaveCertificadoClick(Sender: TObject);
+    procedure btSicoobExtrairChaveCertificadoInfoClick(Sender: TObject);
+    procedure btSicoobExtrairChaveCertificadoVerSenhaPFXClick(Sender: TObject);
+    procedure btSicrediGerarChaveCertificadoInfoClick(Sender: TObject);
+    procedure btSicrediGerarChavePrivadaClick(Sender: TObject);
+    procedure btSicrediGerarCSRClick(Sender: TObject);
     procedure btSolicitarDevolucaoPixClick(Sender: TObject);
     procedure cbxAmbienteChange(Sender: TObject);
     procedure cbxPSPAtualChange(Sender: TObject);
+    procedure edPagSeguroArqCertificadoExit(Sender: TObject);
+    procedure edPagSeguroArqsChange(Sender: TObject);
+    procedure edPagSeguroArqChavePrivadaExit(Sender: TObject);
+    procedure edPagSeguroChavePIXChange(Sender: TObject);
+    procedure edSantanderArqCertificadoPFXChange(Sender: TObject);
+    procedure edSicoobArqCertificadoExit(Sender: TObject);
+    procedure edSicoobArqChavePrivadaExit(Sender: TObject);
+    procedure edSicoobArqsChange(Sender: TObject);
+    procedure edSicoobChavePIXChange(Sender: TObject);
+    procedure edSicrediArqCertificadoExit(Sender: TObject);
+    procedure edSicrediArqChavePrivadaExit(Sender: TObject);
+    procedure edSicrediArqsChange(Sender: TObject);
+    procedure edSicrediChavePIXChange(Sender: TObject);
     procedure edtBBChavePIXChange(Sender: TObject);
     procedure edtCriarCobrancaImediata_CPF_CNPJChange(Sender: TObject);
     procedure edtCriarCobrancaImediata_NomeDevedorChange(Sender: TObject);
@@ -569,12 +729,11 @@ type
     procedure edtItauClientIDChange(Sender: TObject);
     procedure edtItauClientSecretChange(Sender: TObject);
     procedure edtRecebedorNomeChange(Sender: TObject);
-    procedure edtSantanderChavePIXChange(Sender: TObject);
+    procedure edSantanderChavePIXChange(Sender: TObject);
     procedure mQREChange(Sender: TObject);
     procedure pgPrincipalChange(Sender: TObject);
     procedure pgPSPItauChaveCertificadoChange(Sender: TObject);
     procedure QuandoMudarDadosQRCode(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
     procedure imgInfoMCCClick(Sender: TObject);
     procedure lURLTEFClick(Sender: TObject);
     procedure sbArqLogClick(Sender: TObject);
@@ -582,9 +741,22 @@ type
     procedure sbCriarCobrancaImediata_GerarTxIdClick(Sender: TObject);
     procedure sbItauAcharArqCertificadoClick(Sender: TObject);
     procedure sbItauAcharArqChavePrivadaClick(Sender: TObject);
+    procedure sbPagSeguroAcharArqCertificadoClick(Sender: TObject);
+    procedure sbPagSeguroAcharChavePrivadaClick(Sender: TObject);
+    procedure sbSantanderExtrairCertificadoPFXClick(Sender: TObject);
+    procedure sbSantanderAcharCertificadoPFXClick(Sender: TObject);
+    procedure sbSantanderExtrairCertificadoInfoClick(Sender: TObject);
+    procedure sbSantanderExtrairCertificadoVerSenhaPFXClick(Sender: TObject);
+    procedure sbSantanderVerSenhaPFXClick(Sender: TObject);
+    procedure sbSicoobAcharArqCertificadoClick(Sender: TObject);
+    procedure sbSicoobAcharChavePrivadaClick(Sender: TObject);
+    procedure sbSicrediAcharChavePrivadaClick(Sender: TObject);
+    procedure sbSicrediAcharArqCertificadoClick(Sender: TObject);
     procedure sbVerSenhaProxyClick(Sender: TObject);
     procedure tmConsultarDevolucaoTimer(Sender: TObject);
     procedure tmConsultarPagtoTimer(Sender: TObject);
+    procedure tsSicrediGerarChaveCSRShow(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     fFluxoDados: TFluxoPagtoDados;
 
@@ -603,6 +775,9 @@ type
     procedure LigarAlertasdeErrosDeConfiguracao;
     procedure LigarAlertasdeErrosDeConfiguracaoPIXCD;
     procedure LigarAlertasdeErrosDeConfiguracaoPSPItau;
+    procedure LigarAlertasdeErrosDeConfiguracaoPSPSicoob;
+    procedure LigarAlertasdeErrosDeConfiguracaoPSPSicredi;
+    procedure LigarAlertasdeErrosDeConfiguracaoPSPSantander;
 
     procedure VerificarConfiguracao;
     procedure VerificarConfiguracaoPIXCD;
@@ -610,6 +785,13 @@ type
     procedure ValidarChaveCertificadoPSPItau;
     procedure ValidarChavePSPItau;
     procedure ValidarCertificadoPSPItau;
+    procedure ValidarChavePSPSicredi;
+    procedure ValidarChavePSPSicoob;
+    procedure ValidarChavePSPPagSeguro;
+    procedure ValidarCertificadoPSPSicoob;
+    procedure ValidarCertificadoPSPSicredi;
+    procedure ValidarCertificadoPSPSantander;
+    procedure ValidarCertificadoPSPPagSeguro;
 
     procedure ConfigurarACBrPIXCD;
     procedure ConfigurarACBrPSPs;
@@ -617,6 +799,7 @@ type
     procedure LimparQRCodeEstatico;
     procedure PintarQRCodeEstatico;
     procedure PintarQRCodeDinamico;
+    procedure AnalisarBRCode(aBRCode: TACBrBRCode);
 
     procedure MostrarPixEmLinhas(const NomePix: String; APix: TACBrPIX; SL: TStrings);
     procedure MostrarDevolucaoEmLinhas(const NomeDev: String;
@@ -646,10 +829,12 @@ type
     procedure ExcluirItemGrid(aGrid: TStringGrid; aIndex: Integer);
     procedure AdicionarItemGridFluxo(aEan, aDescricao: String; aValor: Double);
 
+    procedure DoAntesAutenticar(var aToken: String; var aValidadeToken: TDateTime);
+    procedure DoDepoisAutenticar(const aToken: String; const aValidadeToken: TDateTime);
+
   public
     property FluxoDados: TFluxoPagtoDados read fFluxoDados;
     property NomeArquivoConfiguracao: String read GetNomeArquivoConfiguracao;
-
   end;
 
 var
@@ -662,9 +847,9 @@ uses
    fpjson, jsonparser, jsonscanner, Jsons,
   {$EndIf}
   TypInfo, Clipbrd, IniFiles, DateUtils, synacode, synautil, pcnConversao,
-  ACBrDelphiZXingQRCode, ACBrImage, ACBrValidador, ACBrPIXUtil, ACBrPIXBRCode,
+  ACBrDelphiZXingQRCode, ACBrImage, ACBrValidador, ACBrPIXUtil,
   ACBrPIXSchemasCobV, ACBrUtil.FilesIO, ACBrUtil.Base, ACBrUtil.Strings,
-  ACBrUtil.DateTime;
+  ACBrUtil.DateTime, ACBrJSON;
 
 {$R *.dfm}
 
@@ -675,11 +860,8 @@ begin
   InicializarBitmaps;
   InicializarActivePages;
   InicializarComponentesDefault;
-  {$IfDef FPC}
-  Application.OnException := @TratarException;
-  {$Else}
   Application.OnException := TratarException;
-  {$EndIf};
+  ACBrPSPBancoDoBrasil1.QuandoReceberRespostaHttp := ACBrPSPBancoDoBrasil1QuandoReceberRespostaHttp;
 
   LerConfiguracao;
   VerificarConfiguracao;
@@ -702,7 +884,7 @@ var
 begin
   if (Trim(edtArqLog.Text) = '') then
   begin
-    MessageDlg('Arquivo de Log não informado', mtError, [mbOK], 0);
+    MessageDlg(ACBrStr('Arquivo de Log não informado'), mtError, [mbOK], 0);
     Exit;
   end;
 
@@ -712,7 +894,7 @@ begin
     AFileLog := edtArqLog.Text;
 
   if not FileExists(AFileLog) then
-    MessageDlg('Arquivo '+AFileLog+' não encontrado', mtError, [mbOK], 0)
+    MessageDlg(ACBrStr('Arquivo '+AFileLog+' não encontrado'), mtError, [mbOK], 0)
   else
     OpenURL(AFileLog);
 end;
@@ -755,6 +937,105 @@ begin
   ValidarChavePSPItau;
 end;
 
+procedure TForm1.sbPagSeguroAcharArqCertificadoClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edPagSeguroArqCertificado.Text;
+  if OpenDialog1.Execute then
+    edPagSeguroArqCertificado.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarCertificadoPSPPagSeguro;
+end;
+
+procedure TForm1.sbPagSeguroAcharChavePrivadaClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edPagSeguroArqChavePrivada.Text;
+  if OpenDialog1.Execute then
+    edPagSeguroArqChavePrivada.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarChavePSPPagSeguro;
+end;
+
+procedure TForm1.sbSantanderExtrairCertificadoPFXClick(Sender: TObject);
+begin
+  if OpenDialog1.Execute then
+    edSantanderExtrairCertificadoPFX.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+end;
+
+procedure TForm1.sbSantanderAcharCertificadoPFXClick(Sender: TObject);
+begin
+  if OpenDialog1.Execute then
+    edSantanderArqCertificadoPFX.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarCertificadoPSPSantander;
+end;
+
+procedure TForm1.sbSantanderExtrairCertificadoInfoClick(Sender: TObject);
+begin
+  MessageDlg(ACBrStr('PSP Santander solicita um arquivo em formato PEM para ' +
+    'disponibilizar as credenciais Consumer Key e Consumer Secret.' + sLineBreak +
+    'Após a geração do certificado PEM a liberação das credenciais deve ser ' +
+    'feita no Internet Banking Santander!'), mtInformation, [mbOK], 0);
+end;
+
+procedure TForm1.sbSantanderExtrairCertificadoVerSenhaPFXClick(Sender: TObject);
+begin
+  {$IfDef FPC}
+  if sbSantanderExtrairCertificadoVerSenhaPFX.Down then
+    edSantanderExtrairCertificadoSenhaPFX.EchoMode := emNormal
+  else
+    edSantanderExtrairCertificadoSenhaPFX.EchoMode := emPassword;
+  {$Else}
+  if sbSantanderExtrairCertificadoVerSenhaPFX.Down then
+    edSantanderExtrairCertificadoSenhaPFX.PasswordChar := #0
+  else
+    edSantanderExtrairCertificadoSenhaPFX.PasswordChar := '*';
+  {$EndIf}
+end;
+
+procedure TForm1.sbSantanderVerSenhaPFXClick(Sender: TObject);
+begin
+  {$IfDef FPC}
+  if sbSantanderVerSenhaPFX.Down then
+    edSantanderSenhaCertificadoPFX.EchoMode := emNormal
+  else
+    edSantanderSenhaCertificadoPFX.EchoMode := emPassword;
+  {$Else}
+  if sbSantanderVerSenhaPFX.Down then
+    edSantanderSenhaCertificadoPFX.PasswordChar := #0
+  else
+    edSantanderSenhaCertificadoPFX.PasswordChar := '*';
+  {$EndIf}
+end;
+
+procedure TForm1.sbSicoobAcharArqCertificadoClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edSicoobArqCertificado.Text;
+  if OpenDialog1.Execute then
+    edSicoobArqCertificado.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarCertificadoPSPSicoob;
+end;
+
+procedure TForm1.sbSicoobAcharChavePrivadaClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edSicoobArqChavePrivada.Text;
+  if OpenDialog1.Execute then
+    edSicoobArqChavePrivada.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarChavePSPSicoob;
+end;
+
+procedure TForm1.sbSicrediAcharArqCertificadoClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edSicrediArqCertificado.Text;
+  if OpenDialog1.Execute then
+    edSicrediArqCertificado.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarCertificadoPSPSicredi;
+end;
+
+procedure TForm1.sbSicrediAcharChavePrivadaClick(Sender: TObject);
+begin
+  OpenDialog1.FileName := edSicrediArqChavePrivada.Text;
+  if OpenDialog1.Execute then
+    edSicrediArqChavePrivada.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+  ValidarChavePSPSicredi;
+end;
+
 procedure TForm1.sbVerSenhaProxyClick(Sender: TObject);
 begin
   {$IfDef FPC}
@@ -762,6 +1043,11 @@ begin
     edtProxySenha.EchoMode := emNormal
   else
     edtProxySenha.EchoMode := emPassword;
+  {$Else}
+  if sbVerSenhaProxy.Down then
+    edtProxySenha.PasswordChar := #0
+  else
+    edtProxySenha.PasswordChar := '*';
   {$EndIf}
 end;
 
@@ -802,6 +1088,28 @@ begin
   end;
 end;
 
+procedure TForm1.tsSicrediGerarChaveCSRShow(Sender: TObject);
+var
+  wSL: TStringList;
+begin
+  wSL := TStringList.Create;
+  try
+    if FileExists(edSicrediGerarChavePrivada.Text) then
+    begin
+      wSL.LoadFromFile(edSicrediGerarChavePrivada.Text);
+      mmSicrediGerarChavePrivada.Text := wSL.Text;
+    end;
+
+    if FileExists(edSicrediGerarCSR.Text) then
+    begin
+      wSL.LoadFromFile(edSicrediGerarCSR.Text);
+      mmSicrediGerarCSR.Text := wSL.Text;
+    end;
+  finally
+    wSL.Free;
+  end;
+end;
+
 function TForm1.GetNomeArquivoConfiguracao: String;
 begin
   Result := ChangeFileExt(Application.ExeName,'.ini');
@@ -825,29 +1133,151 @@ begin
   Tratado := False;
 end;
 
+procedure TForm1.ACBrPSPBancoDoBrasil1QuandoReceberRespostaHttp(
+  const AURL: String; const AMethod: String; RespHeaders: TStrings;
+  var AResultCode: Integer; var RespostaHttp: AnsiString);
+var
+  jsRet, js: TACBrJSONObject;
+  ja, jsArr: TACBrJSONArray;
+  I: Integer;
+
+  function GetDetalhesPagador(aJson: TACBrJSONObject): String;
+  var
+    jPag: TACBrJSONObject;
+  begin
+    jPag := aJson.AsJSONObject['pagador'];
+    if Assigned(jPag) then
+      Result := aJson.AsString['infoPagador'] + ' ' + jPag.AsString['cpf'] +
+        jPag.AsString['cnpj'] + ' - ' + jPag.AsString['nome'];
+  end;
+
+begin
+  if (AMethod = ChttpMethodGET) and (AResultCode = HTTP_OK) and (Pos(cEndPointPix, AURL) > 0) then
+  begin
+    jsRet := TACBrJSONObject.Parse(String(RespostaHttp));
+    jsArr :=  jsRet.AsJSONArray['pix'];
+    try
+      if Assigned(jsArr) and (jsArr.Count > 0) then
+      begin
+        ja := TACBrJSONArray.Create;
+
+        for i := 0 to jsArr.Count - 1 do
+        begin
+          js := jsArr.ItemAsJSONObject[i];
+          js.AddPair('infoPagador', GetDetalhesPagador(js));
+          ja.AddElementJSONString(js.ToJSON);
+        end;
+        jsRet.AddPair('pix', ja);
+      end
+      else
+        jsRet.AddPair('infoPagador', GetDetalhesPagador(jsRet));
+
+      RespostaHttp := jsRet.ToJSON;
+    finally
+      jsRet.Free;
+    end;
+  end;
+end;
+
+procedure TForm1.btPagSeguroLimparClick(Sender: TObject);
+begin
+  mmPagSeguroResp.Lines.Clear;
+end;
+
+procedure TForm1.btPagSeguroPagarClick(Sender: TObject);
+var
+  wTimerPagtoEnabled: Boolean;
+begin
+  VerificarConfiguracao;
+  mmPagSeguroResp.Lines.Clear;
+  if not (ACBrPixCD1.PSP is TACBrPSPPagSeguro) then
+    raise Exception.Create(ACBrStr('PSP Configurado não é PagSeguro'));
+
+  if (ACBrPixCD1.Ambiente <> ambTeste) then
+    raise Exception.Create(ACBrStr('Função só disponível em ambiente de Testes'));
+
+  if EstaVazio(edPagSeguroTokenPay.Text) then
+    raise Exception.Create(ACBrStr('Token Pay para simulação de pagamento não foi informado'));
+
+  wTimerPagtoEnabled := tmConsultarPagto.Enabled;
+  tmConsultarPagto.Enabled := False;
+  try
+    try
+      ACBrPSPPagSeguro1.TokenPay := edPagSeguroTokenPay.Text;
+      ACBrPSPPagSeguro1.SimularPagamentoPIX(edPagSeguroTxID.Text);
+      mmPagSeguroResp.Lines.Add('Result Code: '+IntToStr(ACBrPSPPagSeguro1.Http.ResultCode));
+    except
+      On E: Exception do
+        mmPagSeguroResp.Lines.Add(E.Message);
+    end;
+  finally
+    tmConsultarPagto.Enabled := wTimerPagtoEnabled;
+  end;
+end;
+
+procedure TForm1.btSantanderExtrairPEMClick(Sender: TObject);
+var                
+  wArqPEM: String;
+  wSL: TStringList;
+begin
+  if EstaVazio(edSantanderExtrairCertificadoPFX.Text) or
+     (not FileExists(edSantanderExtrairCertificadoPFX.Text)) then
+  begin
+    MessageDlg(ACBrStr('Arquivo PFX não informado/existe'), mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  if EstaVazio(edSantanderExtrairCertificadoPEM.Text) then
+  begin
+    MessageDlg(ACBrStr('Arquivo de destino PEM não informado'), mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  wSL := TStringList.Create;
+  try
+    wArqPEM := edSantanderExtrairCertificadoPEM.Text;
+    ACBrOpenSSLUtils1.LoadPFXFromFile(
+      edSantanderExtrairCertificadoPFX.Text,
+      edSantanderExtrairCertificadoSenhaPFX.Text);
+    wSL.Text := ACBrOpenSSLUtils1.CertificateAsString;
+    wSL.SaveToFile(wArqPEM);
+
+    MessageDlg('Arquivo PEM gerado em: ' + wArqPEM, mtInformation, [mbOK], 0);
+  finally
+    wSL.Free;
+  end;
+end;
+
 procedure TForm1.btBBSimulaPagamento_ExecutarClick(Sender: TObject);
 var
   code: Integer;
   texto: String;
+  wTimerPagtoEnabled: Boolean;
 begin
   VerificarConfiguracao;
   mBBSimulaPagamento.Lines.Clear;
   if not (ACBrPixCD1.PSP is TACBrPSPBancoDoBrasil) then
-    raise Exception.Create('PSP Configurado, não é Banco do Brasil');
+    raise Exception.Create(ACBrStr('PSP Configurado, não é Banco do Brasil'));
 
   if (ACBrPixCD1.Ambiente <> ambTeste) then
-    raise Exception.Create('Função só disponível em ambiente de Testes');
+    raise Exception.Create(ACBrStr('Função só disponível em ambiente de Testes'));
 
+  wTimerPagtoEnabled := tmConsultarPagto.Enabled;
+  tmConsultarPagto.Enabled := False;
   try
-    code := 0;
-    texto := '';
-    ACBrPSPBancoDoBrasil1.SimularPagamentoPIX(edtBBSimulaPagamento_pixCopiaECola.Text, code, texto);
-    mBBSimulaPagamento.Lines.Add('Result Code: '+IntToStr(ACBrPSPBancoDoBrasil1.Http.ResultCode));
-    mBBSimulaPagamento.Lines.Add('');
-    mBBSimulaPagamento.Lines.Add(texto);
-  except
-    On E: Exception do
-      mBBSimulaPagamento.Lines.Add(E.Message);
+    try
+      code := 0;
+      texto := '';
+      ACBrPSPBancoDoBrasil1.SimularPagamentoPIX(edtBBSimulaPagamento_pixCopiaECola.Text, code, texto);
+      mBBSimulaPagamento.Lines.Add('Result Code: '+IntToStr(ACBrPSPBancoDoBrasil1.Http.ResultCode));
+      mBBSimulaPagamento.Lines.Add('');
+      mBBSimulaPagamento.Lines.Add(texto);
+    except
+      On E: Exception do
+        mBBSimulaPagamento.Lines.Add(E.Message);
+    end;
+  finally
+    tmConsultarPagto.Enabled := wTimerPagtoEnabled;
   end;
 end;
 
@@ -927,8 +1357,8 @@ begin
   mmCobVConsultarLista.Lines.Clear;
 
   Ok := ACBrPixCD1.PSP.epCobV.ConsultarCobrancas(
-          edCobVConsultarInicio.DateTime,
-          edCobVConsultarFim.DateTime,
+          StartOfTheDay(edCobVConsultarInicio.DateTime),
+          EndOfTheDay(edCobVConsultarFim.DateTime),
           OnlyNumber(edCobVConsultarCPFCNPJ.Text),
           cbCobVConsultarLocation.Checked,
           TACBrPIXStatusCobranca(cbCobVConsultarStatus.ItemIndex),
@@ -1054,13 +1484,16 @@ var
 begin
   VerificarConfiguracao;
   mConsultarCobrancas.Lines.Clear;
-  Ok := ACBrPixCD1.PSP.epCob.ConsultarCobrancas( dtConsultarCobrancas_Inicio.DateTime,
-                                                 dtConsultarCobrancas_Fim.DateTime,
-                                                 OnlyNumber(edtConsultarCobrancas_CPFCNPJ.Text),
-                                                 chConsultarCobrancas_ComLocation.Checked,
-                                                 TACBrPIXStatusCobranca(cbxConsultarCobrancas_Status.ItemIndex),
-                                                 seConsultarCobrancas_Pagina.Value,
-                                                 seConsultarCobrancas_ItensPagina.Value);
+
+  Ok := ACBrPixCD1.PSP.epCob.ConsultarCobrancas(
+          StartOfTheDay(dtConsultarCobrancas_Inicio.DateTime),
+          EndOfTheDay(dtConsultarCobrancas_Fim.DateTime),
+          OnlyNumber(edtConsultarCobrancas_CPFCNPJ.Text),
+          chConsultarCobrancas_ComLocation.Checked,
+          TACBrPIXStatusCobranca(cbxConsultarCobrancas_Status.ItemIndex),
+          seConsultarCobrancas_Pagina.Value,
+          seConsultarCobrancas_ItensPagina.Value);
+
   if Ok then
   begin
     mConsultarCobrancas.Lines.Text := FormatarJSON(ACBrPixCD1.PSP.epCob.CobsConsultadas.AsJSON);
@@ -1085,12 +1518,15 @@ var
 begin
   VerificarConfiguracao;
   mConsultarPixRecebidos.Lines.Clear;
-  Ok := ACBrPixCD1.PSP.epPix.ConsultarPixRecebidos( dtConsultarPixRecebidosInicio.DateTime,
-                                                    dtConsultarPixRecebidosFim.DateTime,
-                                                    edtConsultarPixRecebidosTxId.Text,
-                                                    OnlyNumber(edtConsultarPixRecebidosCPFCNPJ.Text),
-                                                    seConsultarPixRecebidosPagina.Value,
-                                                    seConsultarPixRecebidosItensPagina.Value);
+
+  Ok := ACBrPixCD1.PSP.epPix.ConsultarPixRecebidos(
+          StartOfTheDay(dtConsultarPixRecebidosInicio.DateTime),
+          EndOfTheDay(dtConsultarPixRecebidosFim.DateTime),
+          edtConsultarPixRecebidosTxId.Text,
+          OnlyNumber(edtConsultarPixRecebidosCPFCNPJ.Text),
+          seConsultarPixRecebidosPagina.Value,
+          seConsultarPixRecebidosItensPagina.Value);
+
   if Ok then
   begin
     mConsultarPixRecebidos.Lines.Text := FormatarJSON(ACBrPixCD1.PSP.epPix.PixConsultados.AsJSON);
@@ -1232,6 +1668,7 @@ begin
     ACBrPixCD1.PSP.epCob.CobRevisada.status := stcREMOVIDA_PELO_USUARIO_RECEBEDOR;
     if ACBrPixCD1.PSP.epCob.RevisarCobrancaImediata(FluxoDados.TxID) then
     begin
+      Sleep(1000);
       ConsultarCobranca;
       ShowMessage('Cobrança cancelada com sucesso');
     end
@@ -1497,6 +1934,25 @@ begin
   mSolicitarDevolucaoPix.Lines.Clear;
 end;
 
+procedure TForm1.btQRDAnalisarClick(Sender: TObject);
+var
+  qrd: TACBrPIXQRCodeDinamico;
+begin
+  qrd := TACBrPIXQRCodeDinamico.Create;
+  try
+    qrd.IgnoreErrors := True;
+    qrd.AsString := Trim(mQRD.Lines.Text);
+    AnalisarBRCode(qrd);
+  finally
+    qrd.Free;
+  end;
+end;
+
+procedure TForm1.btQRDColarClick(Sender: TObject);
+begin
+  mQRD.CopyToClipboard;
+end;
+
 procedure TForm1.btQRDGerarClick(Sender: TObject);
 begin
   VerificarConfiguracao;
@@ -1514,20 +1970,9 @@ var
 begin
   qre := TACBrPIXQRCodeEstatico.Create;
   try
-    AdicionarLinhaLog('----- Analise do QRCode Estático -----');
     qre.IgnoreErrors := True;
     qre.AsString := mQRE.Lines.Text;
-    AdicionarLinhaLog('');
-    AdicionarLinhaLog('NomeRecebedor: '+qre.MerchantName);
-    AdicionarLinhaLog('CidadeRecebedor: '+qre.MerchantCity);
-    AdicionarLinhaLog('CEPRecebedor: '+qre.PostalCode);
-    AdicionarLinhaLog('ChavePix: '+qre.PixKey);
-    AdicionarLinhaLog('TipoChavePix: '+GetEnumName(TypeInfo(TACBrPIXTipoChave), integer(qre.PixKeyType)));
-    AdicionarLinhaLog('Valor: '+FormatFloat('0.00', qre.TransactionAmount));
-    AdicionarLinhaLog('infoAdicional: '+qre.AdditionalInfo);
-    AdicionarLinhaLog('TxId: '+qre.TxId);
-    AdicionarLinhaLog('pss: '+IntToStr(qre.pss));
-    //AdicionarLinhaLog('mcc: '+IntToStr(qre.MerchantCategoryCode));
+    AnalisarBRCode(qre);
   finally
     qre.Free;
   end;
@@ -1553,6 +1998,151 @@ procedure TForm1.btSalvarParametrosClick(Sender: TObject);
 begin
   GravarConfiguracao;
   AplicarConfiguracao;
+end;
+
+procedure TForm1.btSicoobExtrairChaveCertificadoArqPFXClick(Sender: TObject);
+begin
+  if OpenDialog1.Execute then
+    edSicoobExtrairChaveCertificadoArqPFX.Text := RemoverPathAplicacao(OpenDialog1.FileName);
+end;
+
+procedure TForm1.btSicoobExtrairChaveCertificadoClick(Sender: TObject);
+var
+  wArqPEM, wChave: String;
+  wSL: TStringList;
+begin
+  if EstaVazio(edSicoobExtrairChaveCertificadoArqPFX.Text) or
+     (not FileExists(edSicoobExtrairChaveCertificadoArqPFX.Text)) then
+  begin
+    MessageDlg(ACBrStr('Arquivo PFX não informado/existe'), mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  if EstaVazio(edSicoobExtrairChavePrivada.Text) then
+  begin
+    MessageDlg(ACBrStr('Arquivo de destino da Chave Privada não informado'), mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  if EstaVazio(edSicoobExtrairCertificado.Text) then
+  begin
+    MessageDlg(ACBrStr('Arquivo de destino do Certificado PEM não informado'), mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  wSL := TStringList.Create;
+  try
+    wChave := edSicoobExtrairChavePrivada.Text;
+    wArqPEM := edSicoobExtrairCertificado.Text;
+
+    ACBrOpenSSLUtils1.LoadPFXFromFile(
+      edSicoobExtrairChaveCertificadoArqPFX.Text,
+      edSicoobExtrairChaveCertificadoSenhaPFX.Text);
+
+    // Salvando arquivo Chave Privada
+    wSL.Text := ACBrOpenSSLUtils1.PrivateKeyAsString;
+    wSL.SaveToFile(wChave);
+    edSicoobArqChavePrivada.Text := wChave;
+
+    // Salvando arquivo Certificado
+    wSL.Text := ACBrOpenSSLUtils1.CertificateAsString;
+    wSL.SaveToFile(wArqPEM);
+    edSicoobArqCertificado.Text := wArqPEM;
+
+    MessageDlg(
+      '- Chave Privada gerada em: ' + wChave + sLineBreak +
+      '- Certificado PEM gerado em: ' + wArqPEM, mtInformation, [mbOK], 0);
+  finally
+    wSL.Free;
+  end;
+end;
+
+procedure TForm1.btSicoobExtrairChaveCertificadoInfoClick(Sender: TObject);
+begin 
+  MessageDlg(ACBrStr('Para utilizar o PSP Sicoob em ambiente de Produção é ' +
+    'necessário extrair a Chave Privada e o Certificado PEM do Certificado PFX ' +
+    sLineBreak + 'Após esse procedimento envie o arquivo PEM para o Sicoob pelo ' +
+    'Internet Banking e receba seu Client ID para utilizar nas requisições'),
+    mtInformation, [mbOk], 0);
+end;
+
+procedure TForm1.btSicoobExtrairChaveCertificadoVerSenhaPFXClick(Sender: TObject);
+begin
+  {$IfDef FPC}
+  if btSicoobExtrairChaveCertificadoVerSenhaPFX.Down then
+    edSicoobExtrairChaveCertificadoSenhaPFX.EchoMode := emNormal
+  else
+    edSicoobExtrairChaveCertificadoSenhaPFX.EchoMode := emPassword;
+  {$Else}
+  if btSicoobExtrairChaveCertificadoVerSenhaPFX.Down then
+    edSicoobExtrairChaveCertificadoSenhaPFX.PasswordChar := #0
+  else
+    edSicoobExtrairChaveCertificadoSenhaPFX.PasswordChar := '*';
+  {$EndIf}
+end;
+
+procedure TForm1.btSicrediGerarChaveCertificadoInfoClick(Sender: TObject);
+begin
+  MessageDlg(ACBrStr('Para utilizar o PSP Sicredi em ambiente de Produção é ' +
+    'necessário gerar uma Chave Privada e um CSR. ' + sLineBreak +
+    'Após esse procedimento envie esses arquivos para o Sicredi pelo Internet ' +
+    'Banking e receba um novo arquivo certificado .CER para utilizar nas requisições'),
+    mtInformation, [mbOk], 0);
+end;
+
+procedure TForm1.btSicrediGerarChavePrivadaClick(Sender: TObject);
+var
+  wPrivateKey, wPublicKey: String;
+begin
+  if FileExists(edSicrediGerarChavePrivada.Text) and
+     (MessageDlg(ACBrStr('Chave Privada já existe, deseja realmente sobreescrecer ?'),
+       mtConfirmation, [mbYes, mbNo], 0) <> mrYes) then
+    Exit;
+
+  ACBrOpenSSLUtils.GenerateKeyPair(wPrivateKey, wPublicKey, EmptyStr, bit2048);
+  mmSicrediGerarChavePrivada.Lines.Text := ChangeLineBreak(wPrivateKey, sLineBreak);
+  mmSicrediGerarChavePrivada.Lines.SaveToFile(edSicrediGerarChavePrivada.Text);
+  edSicrediArqChavePrivada.Text := edSicrediGerarChavePrivada.Text;
+end;
+
+procedure TForm1.btSicrediGerarCSRClick(Sender: TObject);
+var
+  wErros, wCertificado: String;
+begin
+  if FileExists(edSicrediGerarCSR.Text) and
+     (MessageDlg(ACBrStr('Certificado CSR já existe, deseja realmente sobreescrecer ?'),
+       mtConfirmation, [mbYes, mbNo], 0) <> mrYes) then
+    Exit;
+
+  if EstaVazio(mmSicrediGerarChavePrivada.Text) then
+  begin
+    MessageDlg(ACBrStr('Antes de gerar o CSR é necessário gerar a Chave Privada'), mtInformation, [mbOK], 0);
+    Exit;
+  end;
+
+  wErros := EmptyStr;
+  if (Trim(edtRecebedorNome.Text) = EmptyStr) then
+    wErros := sLineBreak + ACBrStr('- Campo Nome do Recebedor não informado');
+
+  if EstaVazio(Trim(edSicrediGerarCSREmail.Text)) then
+    wErros := wErros + sLineBreak + ACBrStr('- Campo E-mail não informado');
+
+  if NaoEstaVazio(wErros) then
+  begin
+    MessageDlg('Erro ao gerar CSR:' + wErros, mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  ACBrOpenSSLUtils1.LoadPrivateKeyFromString(mmSicrediGerarChavePrivada.Text);
+  wCertificado := ACBrOpenSSLUtils1.CreateCertificateSignRequest(
+                    'api-pix-' + OnlyAlphaNum(TiraAcentos(edtRecebedorNome.Text)),
+                    edtRecebedorNome.Text,
+                    'API PIX Sicredi',
+                    'Porto Alegre',
+                    'Rio Grande do Sul', 'BR',
+                    edSicrediGerarCSREmail.Text);
+  mmSicrediGerarCSR.Text := ChangeLineBreak(wCertificado, sLineBreak);
+  mmSicrediGerarCSR.Lines.SaveToFile(edSicrediGerarCSR.Text);
 end;
 
 procedure TForm1.btSolicitarDevolucaoPixClick(Sender: TObject);
@@ -1589,6 +2179,65 @@ end;
 procedure TForm1.cbxPSPAtualChange(Sender: TObject);
 begin
   imgErrPSP.Visible := (cbxPSPAtual.ItemIndex < 0);
+end;
+
+procedure TForm1.edPagSeguroArqCertificadoExit(Sender: TObject);
+begin
+  ValidarCertificadoPSPPagSeguro;
+end;
+
+procedure TForm1.edPagSeguroArqsChange(Sender: TObject);
+begin
+  lbPagSeguroErroChavePrivada.Caption := '';
+  lbPagSeguroErroCertificado.Caption := '';
+end;
+
+procedure TForm1.edPagSeguroArqChavePrivadaExit(Sender: TObject);
+begin
+  ValidarChavePSPPagSeguro;
+end;
+
+procedure TForm1.edPagSeguroChavePIXChange(Sender: TObject);
+begin
+  cbPagSeguroTipoChave.ItemIndex := Integer(DetectarTipoChave(edPagSeguroChavePIX.Text));
+  imPagSeguroErroChavePIX.Visible := NaoEstaVazio(edPagSeguroChavePIX.Text) and (cbPagSeguroTipoChave.ItemIndex = 0);
+end;
+
+procedure TForm1.edSantanderArqCertificadoPFXChange(Sender: TObject);
+begin
+  lbSantanderErroCertificadoPFX.Caption := EmptyStr;
+end;
+
+procedure TForm1.edSicoobArqCertificadoExit(Sender: TObject);
+begin
+  ValidarCertificadoPSPSicoob;
+end;
+
+procedure TForm1.edSicoobArqChavePrivadaExit(Sender: TObject);
+begin
+  ValidarChavePSPSicoob;
+end;
+
+procedure TForm1.edSicoobArqsChange(Sender: TObject);
+begin
+  lbSicoobErroChavePrivada.Caption := '';
+  lbSicoobErroCertificado.Caption := '';
+end;
+
+procedure TForm1.edSicoobChavePIXChange(Sender: TObject);
+begin
+  cbSicoobTipoChave.ItemIndex := Integer(DetectarTipoChave(edSicoobChavePIX.Text));
+  imSicoobErroChavePIX.Visible := (edSicoobChavePIX.Text <> '') and (cbSicoobTipoChave.ItemIndex = 0);
+end;
+
+procedure TForm1.edSicrediArqCertificadoExit(Sender: TObject);
+begin
+  ValidarCertificadoPSPSicredi;
+end;
+
+procedure TForm1.edSicrediArqChavePrivadaExit(Sender: TObject);
+begin
+  ValidarChavePSPSicredi;
 end;
 
 procedure TForm1.edtRecebedorCEPExit(Sender: TObject);
@@ -1679,10 +2328,22 @@ begin
   imgErrNome.Visible := (Length(Trim(edtRecebedorNome.Text)) < 5);
 end;
 
-procedure TForm1.edtSantanderChavePIXChange(Sender: TObject);
+procedure TForm1.edSantanderChavePIXChange(Sender: TObject);
 begin
-  cbxSantanderTipoChave.ItemIndex := Integer(DetectarTipoChave(edtSantanderChavePIX.Text));
-  imgSantanderErroChavePIX.Visible := (edtSantanderChavePIX.Text <> '') and (cbxSantanderTipoChave.ItemIndex = 0);
+  cbSantanderTipoChave.ItemIndex := Integer(DetectarTipoChave(edSantanderChavePIX.Text));
+  imSantanderErroChavePIX.Visible := (edSantanderChavePIX.Text <> '') and (cbSantanderTipoChave.ItemIndex = 0);
+end;
+
+procedure TForm1.edSicrediArqsChange(Sender: TObject);
+begin
+  lbSicrediErroChavePrivada.Caption := '';
+  lbSicrediErroCertificado.Caption := '';
+end;
+
+procedure TForm1.edSicrediChavePIXChange(Sender: TObject);
+begin
+  cbSicrediTipoChave.ItemIndex := Integer(DetectarTipoChave(edSicrediChavePIX.Text));
+  imSicrediErroChavePIX.Visible := (edSicrediChavePIX.Text <> '') and (cbSicrediTipoChave.ItemIndex = 0);
 end;
 
 procedure TForm1.mQREChange(Sender: TObject);
@@ -1718,7 +2379,7 @@ begin
       mItauChavePrivadaPEM.Lines.Text := ChangeLineBreak(ACBrOpenSSLUtils1.PrivateKeyAsString, sLineBreak);
     end
     else
-      mItauChavePrivadaPEM.Lines.Text := 'Arquivo: '+a+'  não encontrado';
+      mItauChavePrivadaPEM.Lines.Text := ACBrStr('Arquivo: '+a+'  não encontrado');
 
     a := AdicionarPathAplicacao(edtItauArqCertificado.Text);
     if (a = '') then
@@ -1734,7 +2395,8 @@ end;
 
 procedure TForm1.AdicionarLinhaLog(AMensagem: String);
 begin
-  mLog.Lines.Add(AMensagem);
+  if Assigned(mLog) then
+    mLog.Lines.Add(AMensagem);
 end;
 
 procedure TForm1.TratarException(Sender: TObject; E: Exception);
@@ -1752,6 +2414,9 @@ procedure TForm1.LigarAlertasdeErrosDeConfiguracao;
 begin
   LigarAlertasdeErrosDeConfiguracaoPIXCD;
   LigarAlertasdeErrosDeConfiguracaoPSPItau;
+  LigarAlertasdeErrosDeConfiguracaoPSPSicoob;
+  LigarAlertasdeErrosDeConfiguracaoPSPSicredi;
+  LigarAlertasdeErrosDeConfiguracaoPSPSantander;
 end;
 
 procedure TForm1.LigarAlertasdeErrosDeConfiguracaoPIXCD;
@@ -1770,6 +2435,28 @@ begin
   edtItauClientSecretChange(Nil);
   tsItauCertificado.Enabled := (ACBrPixCD1.Ambiente > ambTeste);
   ValidarChaveCertificadoPSPItau;
+end;
+
+procedure TForm1.LigarAlertasdeErrosDeConfiguracaoPSPSicoob;
+begin
+  edSicoobChavePIXChange(Nil);
+  edSicoobArqsChange(Nil);
+  ValidarChavePSPSicoob;
+  ValidarCertificadoPSPSicoob;
+end;
+
+procedure TForm1.LigarAlertasdeErrosDeConfiguracaoPSPSicredi;
+begin
+  edSicrediChavePIXChange(Nil);
+  edSicrediArqsChange(Nil);
+  ValidarChavePSPSicredi;
+  ValidarCertificadoPSPSicredi;
+end;
+
+procedure TForm1.LigarAlertasdeErrosDeConfiguracaoPSPSantander;
+begin
+  edSantanderChavePIXChange(Nil);
+  ValidarCertificadoPSPSantander;
 end;
 
 procedure TForm1.VerificarConfiguracao;
@@ -1826,6 +2513,179 @@ begin
   ValidarCertificadoPSPItau;
 end;
 
+procedure TForm1.ValidarChavePSPSicredi;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edSicrediArqChavePrivada.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadPrivateKeyFromFile(a);
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbSicrediErroChavePrivada.Caption := e;
+  imSicrediErroChavePrivada.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarChavePSPSicoob;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edSicoobArqChavePrivada.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadPrivateKeyFromFile(a);
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbSicoobErroChavePrivada.Caption := e;
+  lbSicoobErroChavePrivada.Visible := True;
+  imSicoobErroChavePrivada.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarChavePSPPagSeguro;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edPagSeguroArqChavePrivada.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadPrivateKeyFromFile(a);
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbPagSeguroErroChavePrivada.Caption := e;
+  imPagSeguroErroChavePrivada.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarCertificadoPSPSicoob;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edSicoobArqCertificado.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadCertificateFromFile(a);  // Verifica se o arquivo de Chave é válido
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbSicoobErroCertificado.Caption := e;
+  lbSicoobErroCertificado.Visible := True;
+  imSicoobErroCertificado.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarCertificadoPSPSicredi;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edSicrediArqCertificado.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadCertificateFromFile(a);  // Verifica se o arquivo de Chave é válido
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbSicrediErroCertificado.Caption := e;
+  imSicrediErroCertificado.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarCertificadoPSPSantander;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edSantanderArqCertificadoPFX.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não informado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else if EstaVazio(edSantanderSenhaCertificadoPFX.Text) then
+    e := ACBrStr('Senha do Certificado PFX não informada')
+  else
+  begin
+    try
+      // Verifica se o arquivo PFX é válido
+      ACBrOpenSSLUtils1.LoadPFXFromFile(a, edSantanderSenhaCertificadoPFX.Text);
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbSantanderErroCertificadoPFX.Caption := e;
+  imSantanderErroCertificadoPFX.Visible := (e <> 'OK');
+end;
+
+procedure TForm1.ValidarCertificadoPSPPagSeguro;
+var
+  a, e: String;
+begin
+  a := AdicionarPathAplicacao(edPagSeguroArqCertificado.Text);
+  e := 'OK';
+  if (a = '') then
+    e := ACBrStr('Arquivo não especificado')
+  else if (not FileExists(a)) then
+    e := ACBrStr('Arquivo não encontrado')
+  else
+  begin
+    try
+      ACBrOpenSSLUtils1.LoadCertificateFromFile(a);  // Verifica se o arquivo de Chave é válido
+    except
+      On Ex: Exception do
+        e := Ex.Message;
+    end;
+  end;
+
+  lbPagSeguroErroCertificado.Caption := e;
+  imPagSeguroErroCertificado.Visible := (e <> 'OK');
+end;
+
 procedure TForm1.ValidarChavePSPItau;
 var
   a, e: String;
@@ -1833,9 +2693,9 @@ begin
   a := AdicionarPathAplicacao(edtItauArqChavePrivada.Text);
   e := 'OK';
   if (a = '') then
-    e := 'Arquivo não especificado'
+    e := ACBrStr('Arquivo não especificado')
   else if (not FileExists(a)) then
-    e := 'Arquivo não encontrado'
+    e := ACBrStr('Arquivo não encontrado')
   else
   begin
     try
@@ -1858,9 +2718,9 @@ begin
   a := AdicionarPathAplicacao(edtItauArqCertificado.Text);
   e := 'OK';
   if (a = '') then
-    e := 'Arquivo não especificado'
+    e := ACBrStr('Arquivo não especificado')
   else if (not FileExists(a)) then
-    e := 'Arquivo não encontrado'
+    e := ACBrStr('Arquivo não encontrado')
   else
   begin
     try
@@ -1888,7 +2748,7 @@ begin
     edtRecebedorCidade.Text := Ini.ReadString('Recebedor', 'Cidade', '');
     cbxRecebedorUF.ItemIndex := cbxRecebedorUF.Items.IndexOf(Ini.ReadString('Recebedor', 'UF', ''));
 
-    //seRecebedorMCC.Value := Ini.ReadInteger('Recebedor', 'MCC', 0);
+    cbAutenticacaoManual.Checked := Ini.ReadBool('Autenticar', 'Manual', False);
 
     cbxPSPAtual.ItemIndex := Ini.ReadInteger('PIX','PSP', 0);
     cbxAmbiente.ItemIndex := Ini.ReadInteger('PIX','Ambiente', 0);
@@ -1919,10 +2779,30 @@ begin
     edtItauArqChavePrivada.Text := Ini.ReadString('Itau', 'ArqChavePrivada', edtItauArqChavePrivada.Text);
     edtItauArqCertificado.Text := Ini.ReadString('Itau', 'ArqCertificado', edtItauArqCertificado.Text);
 
-    edtSantanderChavePIX.Text := Ini.ReadString('Santander', 'ChavePIX', '');
-    edtSantanderConsumerKey.Text := Ini.ReadString('Santander', 'ConsumerKey', '');
-    edtSantanderConsumerSecret.Text := Ini.ReadString('Santander', 'ConsumerSecret', '');
+    edSantanderChavePIX.Text := Ini.ReadString('Santander', 'ChavePIX', '');
+    edSantanderConsumerKey.Text := Ini.ReadString('Santander', 'ConsumerKey', '');
+    edSantanderConsumerSecret.Text := Ini.ReadString('Santander', 'ConsumerSecret', '');
+    edSantanderArqCertificadoPFX.Text := Ini.ReadString('Santander', 'ArqCertificadoPFX', '');
+    edSantanderSenhaCertificadoPFX.Text := Ini.ReadString('Santander', 'SenhaCertificadoPFX', '');
 
+    edSicrediChavePIX.Text := Ini.ReadString('Sicredi', 'ChavePIX', '');
+    edSicrediClientID.Text := Ini.ReadString('Sicredi', 'ClientID', '');
+    edSicrediClientSecret.Text := Ini.ReadString('Sicredi', 'ClientSecret', '');
+    edSicrediArqChavePrivada.Text := Ini.ReadString('Sicredi', 'ArqChavePrivada', edSicrediArqChavePrivada.Text);
+    edSicrediArqCertificado.Text := Ini.ReadString('Sicredi', 'ArqCertificado', edSicrediArqCertificado.Text);
+    edSicrediGerarCSR.Text := Ini.ReadString('Sicredi', 'CertificadoCSR', edSicrediGerarCSR.Text);
+    edSicrediGerarChavePrivada.Text := edSicrediArqChavePrivada.Text;
+
+    edSicoobChavePIX.Text := Ini.ReadString('Sicoob', 'ChavePIX', '');
+    edSicoobClientID.Text := Ini.ReadString('Sicoob', 'ClientID', '');
+    edSicoobArqChavePrivada.Text := Ini.ReadString('Sicoob', 'ArqChavePrivada', edSicoobArqChavePrivada.Text);
+    edSicoobArqCertificado.Text := Ini.ReadString('Sicoob', 'ArqCertificado', edSicoobArqCertificado.Text);
+
+    edPagSeguroChavePIX.Text := Ini.ReadString('PagSeguro', 'ChavePIX', '');
+    edPagSeguroClientID.Text := Ini.ReadString('PagSeguro', 'ClientID', '');
+    edPagSeguroClientSecret.Text := Ini.ReadString('PagSeguro', 'ClientSecret', '');
+    edPagSeguroArqChavePrivada.Text := Ini.ReadString('PagSeguro', 'ArqChavePrivada', edPagSeguroArqChavePrivada.Text);
+    edPagSeguroArqCertificado.Text := Ini.ReadString('PagSeguro', 'ArqCertificado', edPagSeguroArqCertificado.Text);
   finally
     Ini.Free;
   end;
@@ -1942,7 +2822,13 @@ begin
     Ini.WriteString('Recebedor', 'CEP', edtRecebedorCEP.Text);
     Ini.WriteString('Recebedor', 'Cidade', edtRecebedorCidade.Text);
     Ini.WriteString('Recebedor', 'UF', cbxRecebedorUF.Text);
-    //Ini.WriteInteger('Recebedor', 'MCC', seRecebedorMCC.Value);
+
+    Ini.WriteBool('Autenticar', 'Manual', cbAutenticacaoManual.Checked);
+    if (not cbAutenticacaoManual.Checked) then
+    begin
+      Ini.DeleteKey('Autenticar', 'Token');
+      Ini.DeleteKey('Autenticar', 'Validade');
+    end;
 
     Ini.WriteInteger('PIX','PSP', cbxPSPAtual.ItemIndex);
     Ini.WriteInteger('PIX','Ambiente', cbxAmbiente.ItemIndex);
@@ -1973,9 +2859,30 @@ begin
     Ini.WriteString('Itau', 'ArqChavePrivada', edtItauArqChavePrivada.Text);
     Ini.WriteString('Itau', 'ArqCertificado', edtItauArqCertificado.Text);
 
-    Ini.WriteString('Santander', 'ChavePIX', edtSantanderChavePIX.Text);
-    Ini.WriteString('Santander', 'ConsumerKey', edtSantanderConsumerKey.Text);
-    Ini.WriteString('Santander', 'ConsumerSecret', edtSantanderConsumerSecret.Text);
+    Ini.WriteString('Santander', 'ChavePIX', edSantanderChavePIX.Text);
+    Ini.WriteString('Santander', 'ConsumerKey', edSantanderConsumerKey.Text);
+    Ini.WriteString('Santander', 'ConsumerSecret', edSantanderConsumerSecret.Text);
+    Ini.WriteString('Santander', 'ArqCertificadoPFX', edSantanderArqCertificadoPFX.Text);
+    Ini.WriteString('Santander', 'SenhaCertificadoPFX', edSantanderSenhaCertificadoPFX.Text);
+
+    Ini.WriteString('Sicredi', 'ChavePIX', edSicrediChavePIX.Text);
+    Ini.WriteString('Sicredi', 'ClientID', edSicrediClientID.Text);
+    Ini.WriteString('Sicredi', 'ClientSecret', edSicrediClientSecret.Text);
+    Ini.WriteString('Sicredi', 'ArqChavePrivada', edSicrediArqChavePrivada.Text);
+    Ini.WriteString('Sicredi', 'ArqCertificado', edSicrediArqCertificado.Text);
+    if FileExists(edSicrediGerarCSR.Text) then
+      Ini.WriteString('Sicredi', 'CertificadoCSR', edSicrediGerarCSR.Text);
+
+    Ini.WriteString('Sicoob', 'ChavePIX', edSicoobChavePIX.Text);
+    Ini.WriteString('Sicoob', 'ClientID', edSicoobClientID.Text);
+    Ini.WriteString('Sicoob', 'ArqChavePrivada', edSicoobArqChavePrivada.Text);
+    Ini.WriteString('Sicoob', 'ArqCertificado', edSicoobArqCertificado.Text);
+
+    Ini.WriteString('PagSeguro', 'ChavePIX', edPagSeguroChavePIX.Text);
+    Ini.WriteString('PagSeguro', 'ClientID', edPagSeguroClientID.Text);
+    Ini.WriteString('PagSeguro', 'ClientSecret', edPagSeguroClientSecret.Text);
+    Ini.WriteString('PagSeguro', 'ArqChavePrivada', edPagSeguroArqChavePrivada.Text);
+    Ini.WriteString('PagSeguro', 'ArqCertificado', edPagSeguroArqCertificado.Text);
   finally
      Ini.Free ;
   end ;
@@ -2004,7 +2911,16 @@ begin
   ImageList1.GetBitmap(6, imgItauErroChavePrivada.Picture.Bitmap);
   ImageList1.GetBitmap(6, imgItauErroCertificado.Picture.Bitmap);
 
-  ImageList1.GetBitmap(6, imgSantanderErroChavePIX.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSicrediErroChavePix.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSicrediErroCertificado.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSicrediErroChavePrivada.Picture.Bitmap);
+
+  ImageList1.GetBitmap(6, imSicoobErroChavePix.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSicoobErroCertificado.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSicoobErroChavePrivada.Picture.Bitmap);
+
+  ImageList1.GetBitmap(6, imSantanderErroChavePIX.Picture.Bitmap);
+  ImageList1.GetBitmap(6, imSantanderErroCertificadoPFX.Picture.Bitmap);
 
   ImageList1.GetBitmap(31, btFluxoItemIncluir.Glyph);
   ImageList1.GetBitmap(32, btFluxoItemExcluir.Glyph);
@@ -2049,11 +2965,18 @@ begin
   ImageList1.GetBitmap(1, btQRDGerar.Glyph);
   ImageList1.GetBitmap(5, btQREAnalisar.Glyph);
   ImageList1.GetBitmap(5, btQRDAnalisar.Glyph);
+  ImageList1.GetBitmap(5, btSicrediGerarChaveInfo.Glyph);
+  ImageList1.GetBitmap(5, btSicrediGerarCSRInfo.Glyph);
+  ImageList1.GetBitmap(5, btSicoobExtrairChaveCertificadoInfo.Glyph);
   ImageList1.GetBitmap(13, btQREColar.Glyph);
   ImageList1.GetBitmap(13, btQRDColar.Glyph);
 
   ImageList1.GetBitmap(8, sbConsultaCEP.Glyph);
   ImageList1.GetBitmap(9, sbArqLog.Glyph);
+  ImageList1.GetBitmap(7, sbVerSenhaProxy.Glyph);
+  ImageList1.GetBitmap(7, sbSantanderVerSenhaPFX.Glyph);
+  ImageList1.GetBitmap(7, sbSantanderExtrairCertificadoVerSenhaPFX.Glyph);
+  ImageList1.GetBitmap(7, btSicoobExtrairChaveCertificadoVerSenhaPFX.Glyph);
 
   ImageList1.GetBitmap(16, btItauValidarChaveCertificado.Glyph);
   ImageList1.GetBitmap(9, sbItauAcharArqChavePrivada.Glyph);
@@ -2065,6 +2988,15 @@ begin
   ImageList1.GetBitmap(18, btLogLimpar.Glyph);
   ImageList1.GetBitmap(10, btSalvarParametros.Glyph);
   ImageList1.GetBitmap(11, btLerParametros.Glyph);
+
+  ImageList1.GetBitmap(9, sbSicrediAcharChavePrivada.Glyph);
+  ImageList1.GetBitmap(9, sbSicrediAcharArqCertificado.Glyph);
+  ImageList1.GetBitmap(9, sbSicoobAcharChavePrivada.Glyph);
+  ImageList1.GetBitmap(9, sbSicoobAcharArqCertificado.Glyph);
+  ImageList1.GetBitmap(9, sbSantanderAcharCertificadoPFX.Glyph);
+  ImageList1.GetBitmap(9, sbSantanderExtrairCertificadoPFX.Glyph);
+  ImageList1.GetBitmap(9, btSicoobExtrairChaveCertificadoArqPFX.Glyph);
+  ImageList1.GetBitmap(27, sbSantanderExtrairCertificadoInfo.Glyph);
 end;
 
 procedure TForm1.InicializarActivePages;
@@ -2110,7 +3042,10 @@ begin
   for k := Low(TACBrPIXTipoChave) to High(TACBrPIXTipoChave) do
      cbxBBTipoChave.Items.Add( GetEnumName(TypeInfo(TACBrPIXTipoChave), integer(k) ));
   cbxItauTipoChave.Items.Assign(cbxBBTipoChave.Items);
-  cbxSantanderTipoChave.Items.Assign(cbxBBTipoChave.Items);
+  cbSantanderTipoChave.Items.Assign(cbxBBTipoChave.Items);
+  cbSicrediTipoChave.Items.Assign(cbxBBTipoChave.Items);
+  cbSicoobTipoChave.Items.Assign(cbxBBTipoChave.Items);
+  cbPagSeguroTipoChave.Items.Assign(cbxBBTipoChave.Items);
 
   cbxSolicitarDevolucaoPix_Natureza.Items.Clear;
   for l := 1 to Integer(High(TACBrPIXNaturezaDevolucao)) do
@@ -2158,7 +3093,6 @@ begin
   ACBrPixCD1.Recebedor.CEP := edtRecebedorCEP.Text;
   ACBrPixCD1.Recebedor.Cidade := edtRecebedorCidade.Text;
   ACBrPixCD1.Recebedor.UF := cbxRecebedorUF.Text;
-  //ACBrPixCD1.Recebedor.CodCategoriaComerciante := seRecebedorMCC.Value;
 
   ACBrPixCD1.Ambiente := TACBrPixCDAmbiente(cbxAmbiente.ItemIndex);
   ACBrPixCD1.TimeOut := seTimeout.Value;
@@ -2176,8 +3110,17 @@ begin
     1: ACBrPixCD1.PSP := ACBrPSPBancoDoBrasil1;
     2: ACBrPixCD1.PSP := ACBrPSPItau1;
     3: ACBrPixCD1.PSP := ACBrPSPSantander1;
+    4: ACBrPixCD1.PSP := ACBrPSPSicredi1;
+    5: ACBrPixCD1.PSP := ACBrPSPSicoob1;
+    6: ACBrPixCD1.PSP := ACBrPSPPagSeguro1;
   else
     raise Exception.Create('PSP configurado é inválido');
+  end;
+
+  if cbAutenticacaoManual.Checked then
+  begin
+    ACBrPixCD1.PSP.OnAntesAutenticar := DoAntesAutenticar;
+    ACBrPixCD1.PSP.OnDepoisAutenticar := DoDepoisAutenticar;
   end;
 end;
 
@@ -2200,9 +3143,28 @@ begin
   ACBrPSPItau1.ArquivoChavePrivada := edtItauArqChavePrivada.Text;
   ACBrPSPItau1.ArquivoCertificado := edtItauArqCertificado.Text;
 
-  ACBrPSPSantander1.ChavePIX := edtItauChavePIX.Text;
-  ACBrPSPSantander1.ConsumerKey := edtSantanderConsumerKey.Text;
-  ACBrPSPSantander1.ConsumerSecret := edtSantanderConsumerSecret.Text;
+  ACBrPSPSantander1.ChavePIX := edSantanderChavePIX.Text;
+  ACBrPSPSantander1.ConsumerKey := edSantanderConsumerKey.Text;
+  ACBrPSPSantander1.ConsumerSecret := edSantanderConsumerSecret.Text;
+  ACBrPSPSantander1.SenhaPFX := edSantanderSenhaCertificadoPFX.Text;
+  ACBrPSPSantander1.ArquivoPFX := edSantanderArqCertificadoPFX.Text;
+
+  ACBrPSPSicredi1.ChavePIX := edSicrediChavePIX.Text;
+  ACBrPSPSicredi1.ClientID := edSicrediClientID.Text;
+  ACBrPSPSicredi1.ClientSecret := edSicrediClientSecret.Text;
+  ACBrPSPSicredi1.ArquivoChavePrivada := edSicrediArqChavePrivada.Text;
+  ACBrPSPSicredi1.ArquivoCertificado := edSicrediArqCertificado.Text;
+
+  ACBrPSPSicoob1.ChavePIX := edSicoobChavePIX.Text;
+  ACBrPSPSicoob1.ClientID := edSicoobClientID.Text;
+  ACBrPSPSicoob1.ArquivoChavePrivada := edSicoobArqChavePrivada.Text;
+  ACBrPSPSicoob1.ArquivoCertificado := edSicoobArqCertificado.Text;
+
+  ACBrPSPPagSeguro1.ChavePIX := edPagSeguroChavePIX.Text;
+  ACBrPSPPagSeguro1.ClientID := edPagSeguroClientID.Text;
+  ACBrPSPPagSeguro1.ClientSecret := edPagSeguroClientSecret.Text;
+  ACBrPSPPagSeguro1.ArquivoChavePrivada := edPagSeguroArqChavePrivada.Text;
+  ACBrPSPPagSeguro1.ArquivoCertificado := edPagSeguroArqCertificado.Text;
 end;
 
 procedure TForm1.LimparQRCodeEstatico;
@@ -2222,8 +3184,35 @@ end;
 
 procedure TForm1.PintarQRCodeDinamico;
 begin
-  mQRD.Lines.Text := ACBrPixCD1.GerarQRCodeDinamico( edtQRDLocation.Text );
+  mQRD.Lines.Text := ACBrPixCD1.GerarQRCodeDinamico(
+                       edQRDLocation.Text,
+                       edQRDTxID.Text);
   PintarQRCode(mQRD.Lines.Text, imgQRD.Picture.Bitmap, qrUTF8BOM);
+end;
+
+procedure TForm1.AnalisarBRCode(aBRCode: TACBrBRCode);
+begin
+  AdicionarLinhaLog('');
+  if (aBRCode is TACBrPIXQRCodeEstatico) then
+  with TACBrPIXQRCodeEstatico(aBRCode) do
+  begin
+    AdicionarLinhaLog('----- Analise do QRCode Estático -----');
+    AdicionarLinhaLog('ChavePix: ' + PixKey);
+    AdicionarLinhaLog('TipoChavePix: ' + GetEnumName(TypeInfo(TACBrPIXTipoChave), Integer(PixKeyType)));
+    AdicionarLinhaLog('infoAdicional: ' + AdditionalInfo);
+    AdicionarLinhaLog('pss: ' + IntToStr(pss));
+  end
+  else if (aBRCode is TACBrPIXQRCodeDinamico) then
+  begin
+    AdicionarLinhaLog('----- Analise do QRCode Dinâmico -----');
+    AdicionarLinhaLog('URL: ' + TACBrPIXQRCodeDinamico(aBRCode).URL);
+  end;
+
+  AdicionarLinhaLog('NomeRecebedor: ' + aBRCode.MerchantName);
+  AdicionarLinhaLog('CidadeRecebedor: ' + aBRCode.MerchantCity);
+  AdicionarLinhaLog('CEPRecebedor: ' + aBRCode.PostalCode);
+  AdicionarLinhaLog('Valor: ' + FormatFloat('0.00', aBRCode.TransactionAmount));
+  AdicionarLinhaLog('TxId: ' + aBRCode.TxId);
 end;
 
 procedure TForm1.MostrarPixEmLinhas(const NomePix: String;
@@ -2341,7 +3330,7 @@ begin
     finally
       j.Free;
     end;
-    jpar :=TJSONParser.Create(Result, [joUTF8]);
+    jpar := TJSONParser.Create(Result, [joUTF8]);
     try
       Result := jpar.Parse.FormatJSON([], 2);
     finally
@@ -2464,8 +3453,9 @@ begin
       DevolucaoSolicitada.natureza := ndORIGINAL;
       DevolucaoSolicitada.descricao := 'Devolucao da Venda';
 
-      if SolicitarDevolucaoPix(fFluxoDados.E2E, '1234') then
+      if SolicitarDevolucaoPix(fFluxoDados.E2E, StringReplace(fFluxoDados.E2E, 'E', 'D', [rfReplaceAll])) then
       begin
+        Sleep(1000);
         ConsultarDevolucao;
 
         if (fFluxoDados.StatusDevolucao = stdDEVOLVIDO) then
@@ -2504,7 +3494,7 @@ begin
     pnFluxoCopiaECola.Visible := wAguardandoPagto;
     btFluxoCancelarCobranca.Visible := wAguardandoPagto;
     btFluxoEstornarPagto.Visible := (StatusCobranca = stcCONCLUIDA) and wSemEstorno;
-    btFluxoNovaVenda.Visible := (StatusCobranca <> stcNENHUM);
+    btFluxoNovaVenda.Visible := (StatusCobranca <> stcNENHUM) or (StatusDevolucao = stdDEVOLVIDO);
   end;
 
   if gbFluxoItens.Enabled then
@@ -2624,6 +3614,34 @@ begin
     Cells[0, RowCount-1] := aEAN;
     Cells[1, RowCount-1] := aDescricao;
     Cells[2, RowCount-1] := FormatFloatBr(aValor);
+  end;
+end;
+
+procedure TForm1.DoAntesAutenticar(var aToken: String;
+  var aValidadeToken: TDateTime);
+var
+  Ini: TIniFile;
+begin
+  Ini := TIniFile.Create(NomeArquivoConfiguracao);
+  try
+    aToken := Ini.ReadString('Autenticar', 'Token', EmptyStr);
+    aValidadeToken := Ini.ReadDateTime('Autenticar', 'Validade', 0);
+  finally
+    Ini.Free;
+  end;
+end;
+
+procedure TForm1.DoDepoisAutenticar(const aToken: String;
+  const aValidadeToken: TDateTime);
+var
+  Ini: TIniFile;
+begin
+  Ini := TIniFile.Create(NomeArquivoConfiguracao);
+  try
+    Ini.WriteString('Autenticar', 'Token', aToken);
+    Ini.WriteDateTime('Autenticar', 'Validade', aValidadeToken);
+  finally
+    Ini.Free;
   end;
 end;
 

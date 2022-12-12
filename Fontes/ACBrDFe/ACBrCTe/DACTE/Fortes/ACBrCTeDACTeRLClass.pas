@@ -41,8 +41,13 @@ interface
 {$H+}
 
 uses
-  Forms, SysUtils, Classes, ACBrBase,
-  pcnConversao, pcteCTe, ACBrCTeDACTEClass, RLTypes;
+  SysUtils, 
+  Classes, 
+  ACBrBase,
+  pcnConversao, 
+  pcteCTe, 
+  ACBrCTeDACTEClass, 
+  RLTypes;
 
 type
 
@@ -68,12 +73,19 @@ type
 implementation
 
 uses
-  StrUtils, Dialogs,
-  ACBrUtil.Base, ACBrUtil.Strings, ACBrUtil.FilesIO,
-  ACBrCTe, pcteEnvEventoCTe,
-  ACBrCTeDAInutRL, ACBrCTeDAInutRLRetrato,
-  ACBrCTeDACTeRL, ACBrCTeDACTeRLRetrato, ACBrCTeDACTeRLRetratoA5,
-  ACBrCTeDAEventoRL, ACBrCTeDAEventoRLRetrato;
+  StrUtils,   
+  ACBrUtil.Base, 
+  ACBrUtil.Strings, 
+  ACBrUtil.FilesIO,
+  ACBrCTe, 
+  pcteEnvEventoCTe,
+  ACBrCTeDAInutRL, 
+  ACBrCTeDAInutRLRetrato,
+  ACBrCTeDACTeRL, 
+  ACBrCTeDACTeRLRetrato, 
+  ACBrCTeDACTeRLRetratoA5,
+  ACBrCTeDAEventoRL, 
+  ACBrCTeDAEventoRLRetrato;
 
 constructor TACBrCTeDACTeRL.Create(AOwner: TComponent);
 begin
@@ -115,10 +127,9 @@ var
 
   function ImprimirDACTEPDFTipo(ACTe: TCTe): String;
   begin
-    Result := DefinirNomeArqPDF(Self.PathPDF,
-                                OnlyNumber(ACTe.infCTe.ID),
-                                '-cte.pdf',
-                                Self.NomeDocumento);
+    Result := DefinirNomeArquivo(Self.PathPDF,
+                                 OnlyNumber(ACTe.infCTe.ID) + '-cte.pdf',
+                                 Self.NomeDocumento);
 
     case TamanhoPapel of
       tpA5:
@@ -192,10 +203,9 @@ var
 
   function ImprimirEVENTOPDFTipo(EventoNFeItem: TInfEventoCollectionItem; ACTe: TCTe): String;
   begin
-    Result := DefinirNomeArqPDF(Self.PathPDF,
-                                OnlyNumber(EventoNFeItem.InfEvento.id),
-                                '-procEventoCTe.pdf',
-                                Self.NomeDocumento);
+    Result := DefinirNomeArquivo(Self.PathPDF,
+                                 OnlyNumber(EventoNFeItem.InfEvento.id) + '-procEventoCTe.pdf',
+                                 Self.NomeDocumento);
 
     // TipoDANFE ainda não está sendo utilizado no momento
     TfrmCTeDAEventoRLRetrato.SalvarPDF(Self, EventoNFeItem, Result, ACTe);
@@ -251,10 +261,9 @@ end;
 
 procedure TACBrCTeDACTeRL.ImprimirINUTILIZACAOPDF(ACTe: TCTe);
 begin
-  FPArquivoPDF := DefinirNomeArqPDF(Self.PathPDF,
-                              OnlyNumber(TACBrCTe(ACBrCTe).InutCTe.ID),
-                              '-procInutCTe.pdf',
-                              Self.NomeDocumento);
+  FPArquivoPDF := DefinirNomeArquivo(Self.PathPDF,
+                                     OnlyNumber(TACBrCTe(ACBrCTe).InutCTe.ID) + '-procInutCTe.pdf',
+                                     Self.NomeDocumento);
 
   TfrmCTeDAInutRLRetrato.SalvarPDF(Self, TACBrCTe(ACBrCTe).InutCTe, FPArquivoPDF, ACTe);
 end;

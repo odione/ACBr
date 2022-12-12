@@ -177,33 +177,33 @@ begin
                                                          '', '', True, xAtrib));
   end;
 
-  for i := 1 to 3 do
+  for i := 0 to 2 do
   begin
     if i <= NFSe.Servico.ItemServico.Count -1 then
-      NFSeNode.AppendChild(AddNode(tcStr, '#', 'item' + IntToStr(i), 1, 5, 1,
-        NFSe.Servico.ItemServico.Items[i-1].ItemListaServico, '', True, xAtrib))
+      NFSeNode.AppendChild(AddNode(tcStr, '#', 'item' + IntToStr(i+1), 1, 5, 1,
+        NFSe.Servico.ItemServico.Items[i].ItemListaServico, '', True, xAtrib))
     else
-      NFSeNode.AppendChild(AddNode(tcStr, '#', 'item' + IntToStr(i), 1, 5, 1,
+      NFSeNode.AppendChild(AddNode(tcStr, '#', 'item' + IntToStr(i+1), 1, 5, 1,
                                                          '', '', True, xAtrib));
   end;
 
-  for i := 1 to 3 do
+  for i := 0 to 2 do
   begin
     if i <= NFSe.Servico.ItemServico.Count -1 then
-      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'aliq' + IntToStr(i), 1, 5, 1,
-                NFSe.Servico.ItemServico.Items[i-1].Aliquota, '', True, xAtrib))
+      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'aliq' + IntToStr(i+1), 1, 5, 1,
+                NFSe.Servico.ItemServico.Items[i].Aliquota, '', True, xAtrib))
     else
-      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'aliq' + IntToStr(i), 1, 5, 1,
+      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'aliq' + IntToStr(i+1), 1, 5, 1,
                                                           0, '', True, xAtrib));
   end;
 
-  for i := 1 to 3 do
+  for i := 0 to 2 do
   begin
     if i <= NFSe.Servico.ItemServico.Count -1 then
-      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'val' + IntToStr(i), 1, 12, 1,
-           NFSe.Servico.ItemServico.Items[i-1].ValorUnitario, '', True, xAtrib))
+      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'val' + IntToStr(i+1), 1, 12, 1,
+           NFSe.Servico.ItemServico.Items[i].ValorUnitario, '', True, xAtrib))
     else
-      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'val' + IntToStr(i), 1, 12, 1,
+      NFSeNode.AppendChild(AddNode(tcDe2, '#', 'val' + IntToStr(i+1), 1, 12, 1,
                                                           0, '', True, xAtrib));
   end;
 
@@ -283,7 +283,7 @@ begin
 
   for i := 1 to 8 do
   begin
-    if i = 1 then
+    if (i = 1) and cSimples then
       NFSeNode.AppendChild(AddNode(tcStr, '#', 'iteser' + IntToStr(i), 1, 5, 1,
                                NFSe.Servico.ItemListaServico, '', True, xAtrib))
     else
@@ -293,7 +293,7 @@ begin
 
   for i := 1 to 8 do
   begin
-    if i = 1 then
+    if (i = 1) and cSimples then
       NFSeNode.AppendChild(AddNode(tcDe2, '#', 'alqser' + IntToStr(i), 1, 5, 1,
                                NFSe.Servico.Valores.Aliquota, '', True, xAtrib))
     else
@@ -303,14 +303,13 @@ begin
 
   for i := 1 to 8 do
   begin
-    if i = 1 then
+    if (i = 1) and cSimples then
       NFSeNode.AppendChild(AddNode(tcDe2, '#', 'valser' + IntToStr(i), 1, 12, 1,
                           NFSe.Servico.Valores.ValorServicos, '', True, xAtrib))
     else
       NFSeNode.AppendChild(AddNode(tcDe2, '#', 'valser' + IntToStr(i), 1, 12, 1,
                                                           0, '', True, xAtrib));
   end;
-
 
   NFSeNode.AppendChild(AddNode(tcStr, '#', 'paisest', 1, 60, 1,
                                                          '', '', True, xAtrib));

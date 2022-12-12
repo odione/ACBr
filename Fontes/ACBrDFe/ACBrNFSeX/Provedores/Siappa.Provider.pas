@@ -189,7 +189,7 @@ begin
     begin
       AErro := Response.Erros.New;
       AErro.Codigo := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs(AMessageTag + '_out_codigo_retorno'), tcStr);
-      AErro.Descricao := vDescricao;
+      AErro.Descricao := ACBrStr(vDescricao);
       AErro.Correcao := '';
     end;
   end;
@@ -223,7 +223,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -256,7 +256,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -274,7 +274,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod115;
-    AErro.Descricao := Desc115;
+    AErro.Descricao := ACBrStr(Desc115);
     Exit;
   end;
 
@@ -282,7 +282,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
@@ -290,7 +290,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod123;
-    AErro.Descricao := Desc123;
+    AErro.Descricao := ACBrStr(Desc123);
     Exit;
   end;
 
@@ -298,11 +298,27 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod117;
-    AErro.Descricao := Desc117;
+    AErro.Descricao := ACBrStr(Desc117);
     Exit;
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
+
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := ACBrStr(Desc119);
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := ACBrStr(Desc120);
+    Exit;
+  end;
 
   Response.Metodo := tmConsultarNFSe;
 
@@ -366,7 +382,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -387,7 +403,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + 'Webservice não retornou informações';
+        AErro.Descricao := ACBrStr(Desc999 + 'Webservice não retornou informações');
         Exit;
       end;
 
@@ -406,6 +422,7 @@ begin
           Data := EncodeDataHora( ObterConteudoTag(ANode.Childrens.FindAnyNs('ws_003_out_nfse_data_hora'), tcStr),
                                   'DD/MM/YYYY HH:NN:SS' );
           Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('ws_003_out_nfse_url_emissao'), tcStr);
+          Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
         end;
 
         if Assigned(ANota) then
@@ -434,7 +451,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -452,7 +469,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod122;
-    AErro.Descricao := Desc122;
+    AErro.Descricao := ACBrStr(Desc122);
     Exit;
   end;
 
@@ -460,7 +477,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
@@ -468,7 +485,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod123;
-    AErro.Descricao := Desc123;
+    AErro.Descricao := ACBrStr(Desc123);
     Exit;
   end;
 
@@ -476,11 +493,27 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod117;
-    AErro.Descricao := Desc117;
+    AErro.Descricao := ACBrStr(Desc117);
     Exit;
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
+
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := ACBrStr(Desc119);
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := ACBrStr(Desc120);
+    Exit;
+  end;
 
   // Atenção: Neste xml apenas o "Sdt_" da tag raiz deve ter o primeiro "S" em maiúsculo
   Response.ArquivoEnvio := '<Sdt_ws_002_in_canc_nfse_token>' +
@@ -537,7 +570,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -555,7 +588,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + 'Webservice não retornou informações';
+        AErro.Descricao := ACBrStr(Desc999 + 'Webservice não retornou informações');
         Exit;
       end;
 
@@ -577,7 +610,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -588,11 +621,28 @@ end;
 procedure TACBrNFSeProviderSiappa.PrepararGerarToken(
   Response: TNFSeGerarTokenResponse);
 var
+  AErro: TNFSeEventoCollectionItem;
   Emitente: TEmitenteConfNFSe;
 begin
   Response.Clear;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
+
+  if EstaVazio(Emitente.WSUser) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod119;
+    AErro.Descricao := ACBrStr(Desc119);
+    Exit;
+  end;
+
+  if EstaVazio(Emitente.WSSenha) then
+  begin
+    AErro := Response.Erros.New;
+    AErro.Codigo := Cod120;
+    AErro.Descricao := ACBrStr(Desc120);
+    Exit;
+  end;
 
   // Atenção: Neste xml todos os "Ws_" do início das tags devem ter o primeiro "W" em maiúsculo
   Response.ArquivoEnvio := '<Ws_000_in_prest_insc_seq>' +
@@ -624,7 +674,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -644,7 +694,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
-        AErro.Descricao := Desc203;
+        AErro.Descricao := ACBrStr(Desc203);
         Exit;
       end;
 
@@ -665,7 +715,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally

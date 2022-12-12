@@ -49,6 +49,8 @@ type
   public
     function GerarNFSe(ACabecalho, AMSG: String): string; override;
     function ConsultarNFSe(ACabecalho, AMSG: String): string; override;
+
+    function TratarXmlRetornado(const aXML: string): string; override;
   end;
 
   TACBrNFSeProviderRLZ = class (TACBrNFSeProviderProprio)
@@ -402,7 +404,7 @@ begin
     begin
       AErro := Response.Erros.New;
       AErro.Codigo := Codigo;
-      AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('mensagem'), tcStr);
+      AErro.Descricao := ACBrStr(ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('mensagem'), tcStr));
       AErro.Correcao := '';
     end;
   end;
@@ -419,17 +421,17 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod002;
-    AErro.Descricao := Desc002;
+    AErro.Descricao := ACBrStr(Desc002);
   end;
 
   if TACBrNFSeX(FAOwner).NotasFiscais.Count > Response.MaxRps then
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod003;
-    AErro.Descricao := 'Conjunto de RPS transmitidos (máximo de ' +
+    AErro.Descricao := ACBrStr('Conjunto de RPS transmitidos (máximo de ' +
                        IntToStr(Response.MaxRps) + ' RPS)' +
                        ' excedido. Quantidade atual: ' +
-                       IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count);
+                       IntToStr(TACBrNFSeX(FAOwner).NotasFiscais.Count));
   end;
 
   if Response.Erros.Count > 0 then Exit;
@@ -474,7 +476,7 @@ procedure TACBrNFSeProviderRLZ.TratarRetornoEmitir(
 var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
-  ANode: TACBrXmlNode;
+  ANode, AuxNode: TACBrXmlNode;
   NumNfse: String;
   ANota: TNotaFiscal;
 begin
@@ -486,7 +488,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -498,36 +500,40 @@ begin
 
       Response.Sucesso := (Response.Erros.Count = 0);
 
-      ANode := ANode.Childrens.FindAnyNs('nota');
+      AuxNode := ANode.Childrens.FindAnyNs('nota');
+
+      if AuxNode = nil then
+        AuxNode := ANode;
 
       with Response do
       begin
-        NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('numero'), tcStr);
+        NumeroNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('numero'), tcStr);
         NumNfse := NumeroNota;
-        Protocolo := ObterConteudoTag(ANode.Childrens.FindAnyNs('guia'), tcStr);
-        CodVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('codigoverificacao'), tcStr);
-        Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('url'), tcStr);
-        Situacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('situacao'), tcStr);
+        Protocolo := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('guia'), tcStr);
+        CodVerificacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('codigoverificacao'), tcStr);
+        Link := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('url'), tcStr);
+        Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
+        Situacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('situacao'), tcStr);
       end;
 
       if Response.NumeroNota = '' then
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
-        AErro.Descricao := Desc203;
+        AErro.Descricao := ACBrStr(Desc203);
         Exit;
       end;
 
       ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumNfse);
 
-      ANota := CarregarXmlNfse(ANota, ANode.OuterXml);
+      ANota := CarregarXmlNfse(ANota, AuxNode.OuterXml);
       SalvarXmlNfse(ANota);
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -546,7 +552,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
@@ -587,7 +593,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -604,7 +610,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod203;
-        AErro.Descricao := Desc203;
+        AErro.Descricao := ACBrStr(Desc203);
         Exit;
       end;
 
@@ -626,7 +632,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -665,6 +671,14 @@ begin
   Result := Executar('urn:server.issqn#listarNotasXML', Request,
                      ['return'],
                      ['xmlns:urn="urn:server.issqn"']);
+end;
+
+function TACBrNFSeXWebserviceRLZ.TratarXmlRetornado(const aXML: string): string;
+begin
+  Result := inherited TratarXmlRetornado(aXML);
+
+  Result := ParseText(AnsiString(Result), True, False);
+  Result := RemoverDeclaracaoXML(Result);
 end;
 
 end.

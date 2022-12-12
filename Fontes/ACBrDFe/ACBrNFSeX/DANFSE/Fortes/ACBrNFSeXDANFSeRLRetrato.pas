@@ -37,10 +37,19 @@ unit ACBrNFSeXDANFSeRLRetrato;
 interface
 
 uses
-  SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls,
-  RLFilters, RLPDFFilter, RLReport,
+  SysUtils, 
+  Variants, 
+  Classes, 
+  Graphics, 
+  Controls, 
+  Forms, 
+  ExtCtrls,
+  RLFilters, 
+  RLPDFFilter, 
+  RLReport,
   ACBrDelphiZXingQRCode,
-  ACBrNFSeXConversao, ACBrNFSeXDANFSeRL;
+  ACBrNFSeXConversao, 
+  ACBrNFSeXDANFSeRL;
 
 type
 
@@ -186,8 +195,6 @@ type
     rllMsgTeste: TRLLabel;
     rbOutrasInformacoes: TRLBand;
     rlmDadosAdicionais: TRLMemo;
-    rllDataHoraImpressao: TRLLabel;
-    rllSistema: TRLLabel;
     RLLabel6: TRLLabel;
     rlbCanhoto: TRLBand;
     RLLabel26: TRLLabel;
@@ -228,6 +235,9 @@ type
     rlmDescCodTributacaoMunicipio: TRLMemo;
     RLLabel69: TRLLabel;
     rllPrestInscEstadual: TRLLabel;
+    RLBand1: TRLBand;
+    rllDataHoraImpressao: TRLLabel;
+    rllSistema: TRLLabel;
 
     procedure rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbItensServicoBeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -246,7 +256,7 @@ type
     function ManterAliquota(dAliquota: Double): String;
   public
     { Public declarations }
-    class procedure QuebradeLinha(const sQuebradeLinha: String);
+    class procedure QuebradeLinha(const sQuebradeLinha: String); override;
   end;
 
 var
@@ -256,8 +266,8 @@ implementation
 
 uses
   StrUtils, DateUtils,
-  ACBrUtil.Base,
-  ACBrUtil.Strings,
+  ACBrUtil.Base, ACBrUtil.Strings,
+  ACBrDFeUtil,
   ACBrNFSeX, ACBrNFSeXClass, ACBrNFSeXInterface,
   ACBrValidador, ACBrDFeReportFortes;
 
@@ -303,6 +313,7 @@ begin
   if ((pos('http://', LowerCase(fpNFSe.OutrasInformacoes)) > 0) or (pos('http://', LowerCase(fpNFSe.Link)) > 0) or (pos('https://', LowerCase(fpNFSe.Link)) > 0)) then
   begin
     rlmDadosAdicionais.Width := 643;
+    rbOutrasInformacoes.AutoSize := True;
 
     rlImgQrCode          := TRLImage.Create(rbOutrasInformacoes);
     rlImgQrCode.Parent   := rbOutrasInformacoes;
@@ -364,6 +375,9 @@ begin
 end;
 
 procedure TfrlXDANFSeRLRetrato.rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
+var
+  CodigoIBGE: Integer;
+  xUF: string;
 begin
   inherited;
 
@@ -381,11 +395,18 @@ begin
     rllCompetencia.Caption := IfThen(Competencia > 0, FormatDateTime('mm/yyyy', Competencia), '');
 
     rllNumeroRPS.Caption := IdentificacaoRps.Numero;
+
+    if IdentificacaoRps.Serie <> '' then
+      rllNumeroRPS.Caption := rllNumeroRPS.Caption + '/' + IdentificacaoRps.Serie;
+
     rllNumNFSeSubstituida.Caption := NfseSubstituida;
 
-	// Será necessário uma analise melhor para saber em que condições devemos usar o código do municipio
-	// do tomador em vez do que foi informado em Serviço.
-    rllMunicipioPrestacaoServico.Caption := CodIBGEToCidade(StrToIntDef(Servico.CodigoMunicipio, 0));
+    // Será necessário uma analise melhor para saber em que condições devemos usar o código do municipio
+    // do tomador em vez do que foi informado em Serviço.
+    CodigoIBGE := StrToIntDef(Servico.CodigoMunicipio, 0);
+    xUF := '';
+
+    rllMunicipioPrestacaoServico.Caption := ObterNomeMunicipio(CodigoIBGE, xUF, '', False);
   end;
 end;
 
@@ -537,22 +558,10 @@ begin
 
       rllPrestComplemento.Caption := IfThen(Complemento <> '', Complemento , fpDANFSe.Prestador.Complemento);
 
-      if (xMunicipio <> '') or (CodigoMunicipio <> '') then
-      begin
-        if (xMunicipio <> '') and (CodigoMunicipio <> '') then
-          rllPrestMunicipio.Caption := CodigoMunicipio + ' - ' + xMunicipio
-        else
-        begin
-          if xMunicipio <> '' then
-            rllPrestMunicipio.Caption := xMunicipio
-          else
-            rllPrestMunicipio.Caption := CodigoMunicipio;
-        end;
-      end
+      if xMunicipio <> '' then
+        rllPrestMunicipio.Caption := xMunicipio
       else
-      begin
         rllPrestMunicipio.Caption := fpDANFSe.Prestador.Municipio;
-      end;
 
       rllPrestUF.Caption := IfThen(UF <> '', UF, fpDANFSe.Prestador.UF);
     end;
@@ -610,18 +619,7 @@ begin
 
       rllTomaComplemento.Caption := IfThen(Complemento <> '' , Complemento , fpDANFSe.Tomador.Complemento);
 
-      if (xMunicipio <> '') or (CodigoMunicipio <> '') then
-      begin
-        if (xMunicipio <> '') and (CodigoMunicipio <> '') then
-          rllTomaMunicipio.Caption := CodigoMunicipio + ' - ' + xMunicipio
-        else
-        begin
-          if xMunicipio <> '' then
-            rllTomaMunicipio.Caption := xMunicipio
-          else
-            rllTomaMunicipio.Caption := CodigoMunicipio;
-        end;
-      end;
+      rllTomaMunicipio.Caption := xMunicipio;
 
       rllTomaUF.Caption := UF;
     end;

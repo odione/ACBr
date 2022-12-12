@@ -106,6 +106,9 @@ begin
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'tpTributacao', 1, 1, 1,
                              NaturezaOperacaoToStr(NFSe.NaturezaOperacao), ''));
 
+  NFSeNode.AppendChild(AddNode(tcStr, '#1', 'nrCidadeIbgeServico', 0, 7, 0,
+                                             NFSe.Servico.CodigoMunicipio, ''));
+
   NFSeNode.AppendChild(AddNode(tcStr, '#1', 'isIssRetido', 1, 1, 1,
     FpAOwner.SituacaoTributariaToStr(NFSe.Servico.Valores.IssRetido), ''));
 
@@ -132,7 +135,7 @@ function TNFSeW_Equiplano.GerarDocumento: TACBrXmlNode;
 var
   sTpDoc: String;
 begin
-  if (Trim(NFSe.Tomador.IdentificacaoTomador.DocTomadorEstrangeiro) <> '') then
+  if (Trim(NFSe.Tomador.IdentificacaoTomador.DocEstrangeiro) <> '') then
     sTpDoc := '3'  // Estrangeiro
   else
   begin
@@ -150,7 +153,7 @@ begin
   Result.AppendChild(AddNode(tcStr, '#1', 'tpDocumento', 1, 1, 1, sTpDoc, ''));
 
   Result.AppendChild(AddNode(tcStr, '#1', 'dsDocumentoEstrangeiro', 0, 20, 1,
-                  NFSe.Tomador.IdentificacaoTomador.DocTomadorEstrangeiro, ''));
+                         NFSe.Tomador.IdentificacaoTomador.DocEstrangeiro, ''));
 end;
 
 function TNFSeW_Equiplano.GerarListaServicos: TACBrXmlNode;

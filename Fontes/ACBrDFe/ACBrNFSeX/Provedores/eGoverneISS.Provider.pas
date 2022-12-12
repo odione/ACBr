@@ -87,8 +87,7 @@ type
 implementation
 
 uses
-  ACBrUtil.Base,
-  ACBrUtil.XMLHTML,
+  ACBrUtil.Base, ACBrUtil.XMLHTML, ACBrUtil.Strings,
   ACBrDFeException,
   ACBrNFSeX, ACBrNFSeXConfiguracoes, ACBrNFSeXConsts,
   eGoverneISS.GravarXml, eGoverneISS.LerXml;
@@ -101,6 +100,7 @@ begin
 
   with ConfigGeral do
   begin
+    UseCertificateHTTP := False;
     Identificador := '';
     ModoEnvio := meLoteAssincrono;
     ConsultaNFSe := False;
@@ -165,6 +165,7 @@ var
   ANode: TACBrXmlNode;
   ANodeArray: TACBrXmlNodeArray;
   AErro: TNFSeEventoCollectionItem;
+  Mensagem: string;
 begin
   ANode := RootNode.Childrens.FindAnyNs(AListTag);
 
@@ -177,14 +178,23 @@ begin
 
   for I := Low(ANodeArray) to High(ANodeArray) do
   begin
-    AErro := Response.Erros.New;
-    AErro.Codigo := '';
-    AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('MensagemErro'), tcStr);
+    Mensagem := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('MensagemErro'), tcStr);
 
-    if AErro.Descricao = '' then
-      AErro.Descricao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
+    if Mensagem = '' then
+    begin
+      Mensagem := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Mensagem'), tcStr);
 
-    AErro.Correcao := '';
+      if ( Mensagem = '' ) and ( ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Erro'), tcStr) = 'true' ) then
+        Mensagem := 'Ocorreu um erro, sem retorno do provedor';
+    end;
+
+    if Mensagem <> '' then
+    begin
+      AErro := Response.Erros.New;
+      AErro.Codigo := '';
+      AErro.Descricao := ACBrStr(Mensagem);
+      AErro.Correcao := '';
+    end;
   end;
 end;
 
@@ -202,16 +212,16 @@ begin
       Xml := StringReplace(Xml, 'eis:NotaFiscal', 'eis1:NotaFiscalLoteDTO', [rfReplaceAll]);
 
       Response.ArquivoEnvio := '<eis:Notas>' +
-                             '<eis1:ChaveAutenticacao>' +
-                                Emitente.WSChaveAcesso +
-                             '</eis1:ChaveAutenticacao>' +
-                             '<eis1:EmailContato>' +
-                                Emitente.DadosEmitente.Email +
-                             '</eis1:EmailContato>' +
-                             '<eis1:Notas>' +
-                                Xml +
-                             '</eis1:Notas>' +
-                           '</eis:Notas>';
+                                 '<eis1:ChaveAutenticacao>' +
+                                    Emitente.WSChaveAcesso +
+                                 '</eis1:ChaveAutenticacao>' +
+                                 '<eis1:EmailContato>' +
+                                    Emitente.DadosEmitente.Email +
+                                 '</eis1:EmailContato>' +
+                                 '<eis1:Notas>' +
+                                    Xml +
+                                 '</eis1:Notas>' +
+                               '</eis:Notas>';
     end
     else
       Response.ArquivoEnvio := Xml;
@@ -222,6 +232,11 @@ procedure TACBrNFSeProvidereGoverneISS.TratarRetornoEmitir(Response: TNFSeEmiteR
 var
   Document: TACBrXmlDocument;
   AErro: TNFSeEventoCollectionItem;
+  AResumo: TNFSeResumoCollectionItem;
+  ANode: TACBrXmlNode;
+  I: Integer;
+  AMessageTag: string;
+  ANodeArray: TACBrXmlNodeArray;
 begin
   Document := TACBrXmlDocument.Create;
 
@@ -230,25 +245,55 @@ begin
       if Response.ArquivoRetorno = '' then
       begin
         AErro := Response.Erros.New;
-        AErro.Codigo := '201';
-        AErro.Descricao := 'WebService retornou um XML vazio.';
+        AErro.Codigo := Cod201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
       Document.LoadFromXml(Response.ArquivoRetorno);
 
       if Response.ModoEnvio = meLoteAssincrono then
-        ProcessarMensagemErros(Document.Root, Response, '', 'EmitirEmLoteResult')
+        AMessageTag := 'EmitirEmLoteResult'
       else
-        ProcessarMensagemErros(Document.Root, Response, '', 'EmitirResult');
+        AMessageTag := 'EmitirResult';
+
+      ProcessarMensagemErros(Document.Root, Response, '', AMessageTag);
 
       Response.Sucesso := (Response.Erros.Count = 0);
+
+      ANode := Document.Root.Childrens.FindAnyNs(AMessageTag);
+
+      if ANode <> nil then
+      begin
+        ANodeArray := ANode.Childrens.FindAllAnyNs('NotaFiscalGerada');
+
+        if Assigned(ANodeArray) then
+        begin
+          for I := Low(ANodeArray) to High(ANodeArray) do
+          begin
+            with Response do
+            begin
+              NumeroNota := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Numero'), tcStr);
+
+              CodVerificacao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Autenticador'), tcStr);
+
+              Link := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Link'), tcStr);
+              Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
+            end;
+
+            AResumo := Response.Resumos.New;
+            AResumo.NumeroNota := Response.NumeroNota;
+            AResumo.CodigoVerificacao := Response.CodVerificacao;
+            AResumo.Link := Response.Link;
+          end;
+        end;
+      end;  
     except
       on E:Exception do
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -266,18 +311,18 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod111;
-    AErro.Descricao := Desc111;
+    AErro.Descricao := ACBrStr(Desc111);
     Exit;
   end;
 
   Emitente := TACBrNFSeX(FAOwner).Configuracoes.Geral.Emitente;
 
   Response.ArquivoEnvio := '<eis:ChaveAutenticacao>' +
-                          Emitente.WSChaveAcesso +
-                       '</eis:ChaveAutenticacao>' +
-                       '<eis:CodigoLote>' +
-                          Response.Lote +
-                       '</eis:CodigoLote>';
+                              Emitente.WSChaveAcesso +
+                           '</eis:ChaveAutenticacao>' +
+                           '<eis:CodigoLote>' +
+                              Response.Lote +
+                           '</eis:CodigoLote>';
 end;
 
 procedure TACBrNFSeProvidereGoverneISS.TratarRetornoConsultaLoteRps(
@@ -294,7 +339,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -308,7 +353,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally
@@ -327,7 +372,7 @@ begin
   begin
     AErro := Response.Erros.New;
     AErro.Codigo := Cod108;
-    AErro.Descricao := Desc108;
+    AErro.Descricao := ACBrStr(Desc108);
     Exit;
   end;
 
@@ -337,14 +382,14 @@ begin
   Transacao := (TACBrNFSeX(FAOwner).Configuracoes.WebServices.AmbienteCodigo = 2);
 
   Response.ArquivoEnvio := '<eis:ChaveAutenticacao>' +
-                          Emitente.WSChaveAcesso +
-                       '</eis:ChaveAutenticacao>' +
-                       '<eis:Homologacao>' +
-                         LowerCase(BoolToStr(Transacao, True)) +
-                       '</eis:Homologacao>' +
-                       '<eis:NumeroNota>' +
-                          Response.InfCancelamento.NumeroNFSe +
-                       '</eis:NumeroNota>';
+                              Emitente.WSChaveAcesso +
+                           '</eis:ChaveAutenticacao>' +
+                           '<eis:Homologacao>' +
+                             LowerCase(BoolToStr(Transacao, True)) +
+                           '</eis:Homologacao>' +
+                           '<eis:NumeroNota>' +
+                              Response.InfCancelamento.NumeroNFSe +
+                           '</eis:NumeroNota>';
 end;
 
 procedure TACBrNFSeProvidereGoverneISS.TratarRetornoCancelaNFSe(
@@ -362,7 +407,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod201;
-        AErro.Descricao := Desc201;
+        AErro.Descricao := ACBrStr(Desc201);
         Exit
       end;
 
@@ -376,7 +421,7 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Cod999;
-        AErro.Descricao := Desc999 + E.Message;
+        AErro.Descricao := ACBrStr(Desc999 + E.Message);
       end;
     end;
   finally

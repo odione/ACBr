@@ -115,6 +115,7 @@ begin
     AuxNode := ANode;
 
   NFSe.Link       := ObterConteudo(AuxNode.Childrens.FindAnyNs('LINK'), tcStr);
+  NFSe.Link       := StringReplace(NFSe.Link, '&amp;', '&', [rfReplaceAll]);
   NFSe.NumeroLote := ObterConteudo(AuxNode.Childrens.FindAnyNs('LOTE'), tcStr);
   NFSe.Numero     := ObterConteudo(AuxNode.Childrens.FindAnyNs('COD'), tcStr);
 
@@ -151,7 +152,6 @@ begin
     ItemListaServico  := ObterConteudo(AuxNode.Childrens.FindAnyNs('ATIVCOD'), tcStr);
     xItemListaServico := ObterConteudo(AuxNode.Childrens.FindAnyNs('ATIVDESC'), tcStr);
     CodigoMunicipio   := ObterConteudo(AuxNode.Childrens.FindAnyNs('TOMMUNICIPIOCOD'), tcStr);
-
     MunicipioIncidencia := ObterConteudo(AuxNode.Childrens.FindAnyNs('TOMMUNICIPIOCOD'), tcInt);
   end;
 
@@ -238,6 +238,8 @@ begin
   if AuxNode <> nil then
   begin
     ANodes := AuxNode.Childrens.FindAllAnyNs('SERVICO');
+
+    NFSe.Servico.ItemServico.Clear;
 
     for i := 0 to Length(ANodes) - 1 do
     begin
@@ -366,6 +368,8 @@ begin
     if AuxNode <> nil then
     begin
       ANodes := AuxNode.Childrens.FindAllAnyNs('SERVICO');
+
+      Servico.ItemServico.Clear;
 
       for i := 0 to Length(ANodes) - 1 do
       begin

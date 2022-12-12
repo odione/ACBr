@@ -56,7 +56,7 @@ type
 implementation
 
 uses
-  ACBrUtil.Base;
+  ACBrUtil.Base, ACBrUtil.DateTime;
 
 //==============================================================================
 // Essa unit tem por finalidade exclusiva ler o XML do provedor:
@@ -102,7 +102,6 @@ function TNFSeR_WebFisco.LerXmlNfse(const ANode: TACBrXmlNode): Boolean;
 var
   i: Integer;
   aValor: string;
-  Ok: Boolean;
 begin
   Result := True;
 
@@ -112,11 +111,17 @@ begin
 
     aValor := ObterConteudo(ANode.Childrens.FindAnyNs('nfedata'), tcStr);
 
-    aValor := aValor + ' ' + ObterConteudo(ANode.Childrens.FindAnyNs('nfehora'), tcStr);
-    DataEmissao := StrToDateTime(aValor);
+    aValor:=StringReplace(aValor, '-', '/', [rfReplaceAll]);
+
+    aValor := aValor + 'T' + ObterConteudo(ANode.Childrens.FindAnyNs('nfehora'), tcStr);
+    DataEmissao := EncodeDataHora(aValor);
 
     CodigoVerificacao := ObterConteudo(ANode.Childrens.FindAnyNs('nfeautenticacao'), tcStr);
-    SituacaoNfse := StrToStatusNFSe(Ok, ObterConteudo(ANode.Childrens.FindAnyNs('nfestatus'), tcStr));
+
+    SituacaoNfse := snNormal;
+
+    if UpperCase(ObterConteudo(ANode.Childrens.FindAnyNs('nfestatus'), tcStr)) = 'SIM' then
+      SituacaoNfse := snCancelado;
 
 //      <xsd:element name="nfecontrole" type="xsd:string"/>
 
@@ -136,7 +141,9 @@ begin
 
     Link := ObterConteudo(ANode.Childrens.FindAnyNs('nfelink'), tcStr);
 
-    OutrasInformacoes := ObterConteudo(ANode.Childrens.FindAnyNs('nfeobservacoes'), tcStr);
+    Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
+
+    MotivoCancelamento := ObterConteudo(ANode.Childrens.FindAnyNs('nfeobservacoes'), tcStr);
 
     with Tomador do
     begin
@@ -167,6 +174,24 @@ begin
       end;
       }
     end;
+
+    i := 0;
+
+    repeat
+      Inc(i);
+      aValor := ObterConteudo(ANode.Childrens.FindAnyNs('nfenumfatura' + IntToStr(i)), tcStr);
+
+      if aValor <> '' then
+      begin
+        CondicaoPagamento.Parcelas.New;
+        with CondicaoPagamento.Parcelas[i-1] do
+        begin
+          Parcela := aValor;
+          DataVencimento := ObterConteudo(ANode.Childrens.FindAnyNs('nfedatfatura' + IntToStr(i)), tcDat);
+          Valor := ObterConteudo(ANode.Childrens.FindAnyNs('nfevalfatura' + IntToStr(i)), tcDe2);
+        end;
+      end;
+    until aValor = '';
 
     with Servico do
     begin
@@ -200,50 +225,32 @@ begin
         ValorIr := ObterConteudo(ANode.Childrens.FindAnyNs('nfevalirrf'), tcDe2);
 
 //      <xsd:element name="nfevaltributavel" type="xsd:string"/>
-
-        i := 0;
-        repeat
-          Inc(i);
-          aValor := ObterConteudo(ANode.Childrens.FindAnyNs('nfeitemserv' + IntToStr(i)), tcStr);
-
-          if aValor <> '' then
-          begin
-            ItemServico.New;
-            with ItemServico[i-1] do
-            begin
-              ItemListaServico := aValor;
-              Aliquota := ObterConteudo(ANode.Childrens.FindAnyNs('nfealiqserv' + IntToStr(i)), tcDe2);
-              ValorUnitario := ObterConteudo(ANode.Childrens.FindAnyNs('nfevalserv' + IntToStr(i)), tcDe2);
-
-              if i = 1 then
-                Descricao := ObterConteudo(ANode.Childrens.FindAnyNs('nfedescricaoservicos'), tcStr);
-
-            end;
-          end;
-        until aValor = '';
       end;
+
+      i := 0;
+
+      repeat
+        Inc(i);
+        aValor := ObterConteudo(ANode.Childrens.FindAnyNs('nfeitemserv' + IntToStr(i)), tcStr);
+
+        if aValor <> '' then
+        begin
+          ItemServico.New;
+          with ItemServico[i-1] do
+          begin
+            ItemListaServico := aValor;
+            Aliquota := ObterConteudo(ANode.Childrens.FindAnyNs('nfealiqserv' + IntToStr(i)), tcDe2);
+            ValorUnitario := ObterConteudo(ANode.Childrens.FindAnyNs('nfevalserv' + IntToStr(i)), tcDe2);
+
+            if i = 1 then
+              Descricao := ObterConteudo(ANode.Childrens.FindAnyNs('nfedescricaoservicos'), tcStr);
+
+            Quantidade := 1;
+            ValorTotal := ValorUnitario;
+          end;
+        end;
+      until aValor = '';
     end;
-    {
-      // Campos que constam no retorno da consulta
-      <xsd:element name="nfenumfatura1" type="xsd:string"/>
-      <xsd:element name="nfedatfatura1" type="xsd:string"/>
-      <xsd:element name="nfevalfatura1" type="xsd:string"/>
-      <xsd:element name="nfenumfatura2" type="xsd:string"/>
-      <xsd:element name="nfedatfatura2" type="xsd:string"/>
-      <xsd:element name="nfevalfatura2" type="xsd:string"/>
-      <xsd:element name="nfenumfatura3" type="xsd:string"/>
-      <xsd:element name="nfedatfatura3" type="xsd:string"/>
-      <xsd:element name="nfevalfatura3" type="xsd:string"/>
-      <xsd:element name="nfenumfatura4" type="xsd:string"/>
-      <xsd:element name="nfedatfatura4" type="xsd:string"/>
-      <xsd:element name="nfevalfatura4" type="xsd:string"/>
-      <xsd:element name="nfenumfatura5" type="xsd:string"/>
-      <xsd:element name="nfedatfatura5" type="xsd:string"/>
-      <xsd:element name="nfevalfatura5" type="xsd:string"/>
-      <xsd:element name="nfenumfatura6" type="xsd:string"/>
-      <xsd:element name="nfedatfatura6" type="xsd:string"/>
-      <xsd:element name="nfevalfatura6" type="xsd:string"/>
-     }
   end;
 end;
 

@@ -45,7 +45,7 @@ interface
 
 uses
   Classes, SysUtils,
-  ACBrPIXCD;
+  ACBrPIXCD, ACBrBase;
 
 const
   cSantanderPathApiPIX = '/api/v1';
@@ -63,16 +63,29 @@ resourcestring
 type
 
   { TACBrPSPSantander }
-
+  
+  {$IFDEF RTL230_UP}
+  [ComponentPlatformsAttribute(piacbrAllPlatforms)]
+  {$ENDIF RTL230_UP}
   TACBrPSPSantander = class(TACBrPSP)
   private
+    fK: String;
     fRefreshURL: String;
+    fArquivoPFX: String;
+    fSenhaPFX: String;
     function GetConsumerKey: String;
     function GetConsumerSecret: String;
+    function GetSenhaPFX: String;
     procedure SetConsumerKey(AValue: String);
     procedure SetConsumerSecret(AValue: String);
+    procedure SetArquivoPFX(const AValue: String);
+    procedure SetSenhaPFX(const AValue: String);
+    procedure QuandoReceberRespostaEndPoint(const aEndPoint, aURL, aMethod: String;
+      var aResultCode: Integer; var aRespostaHttp: AnsiString);
+    procedure QuandoAcessarEndPoint(const aEndPoint: String; var aURL: String; var aMethod: String);
   protected
     function ObterURLAmbiente(const aAmbiente: TACBrPixCDAmbiente): String; override;
+    procedure ConfigurarHeaders(const Method, AURL: String); override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Autenticar; override;
@@ -81,26 +94,38 @@ type
     property APIVersion;
     property ConsumerKey: String read GetConsumerKey write SetConsumerKey;
     property ConsumerSecret: String read GetConsumerSecret write SetConsumerSecret;
+    property ArquivoPFX: String read fArquivoPFX write SetArquivoPFX;
+    property SenhaPFX: String read GetSenhaPFX write SetSenhaPFX;
   end;
 
 implementation
 
 uses
-  synautil,
-  ACBrUtil.Strings,
-  {$IfDef USE_JSONDATAOBJECTS_UNIT}
-   JsonDataObjects_ACBr
-  {$Else}
-   Jsons
-  {$EndIf},
-  DateUtils;
+  synautil, DateUtils,
+  ACBrJSON, ACBrPIXUtil,
+  ACBrUtil.FilesIO,
+  ACBrUtil.Strings;
 
 { TACBrPSPSantander }
+
+procedure TACBrPSPSantander.ConfigurarHeaders(const Method, AURL: String);
+begin
+ inherited ConfigurarHeaders(Method, AURL);
+
+ if (ACBrPixCD.Ambiente = ambProducao) then
+ begin
+   http.Sock.SSL.PFXfile     := ArquivoPFX;
+   http.Sock.SSL.KeyPassword := SenhaPFX;
+ end;
+end;
 
 constructor TACBrPSPSantander.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  fRefreshURL := '';
+  fpQuandoReceberRespostaEndPoint := QuandoReceberRespostaEndPoint;
+  fpQuandoAcessarEndPoint := QuandoAcessarEndPoint;
+  fRefreshURL := EmptyStr;
+  fK := EmptyStr;
 end;
 
 procedure TACBrPSPSantander.Autenticar;
@@ -108,7 +133,7 @@ var
   AURL, Body, client_id: String;
   RespostaHttp: AnsiString;
   ResultCode, sec: Integer;
-  js: TJsonObject;
+  js: TACBrJSONObject;
   qp: TACBrQueryParams;
 begin
   LimparHTTP;
@@ -137,32 +162,17 @@ begin
 
   if (ResultCode = HTTP_OK) then
   begin
-   {$IfDef USE_JSONDATAOBJECTS_UNIT}
-    js := TJsonObject.Parse(RespostaHttp) as TJsonObject;
+    js := TACBrJSONObject.Parse(RespostaHttp);
     try
-      client_id := Trim(js.S['client_id']);
+      client_id := Trim(js.AsString['client_id']);
       if (client_id <> ClientID) then
         raise EACBrPixHttpException.Create(ACBrStr(sErroClienteIdDiferente));
-      fpToken := js.S['access_token'];
-      sec := js.I['expires_in'];
-      fRefreshURL := js.S['refresh_token'];
+      fpToken := js.AsString['access_token'];
+      sec := js.AsInteger['expires_in'];
+      fRefreshURL := js.AsString['refresh_token'];
     finally
       js.Free;
     end;
-   {$Else}
-    js := TJsonObject.Create;
-    try
-      js.Parse(RespostaHttp);
-      client_id := Trim(js['client_id'].AsString);
-      if (client_id <> ClientID) then
-        raise EACBrPixHttpException.Create(ACBrStr(sErroClienteIdDiferente));
-      fpToken := js['access_token'].AsString;
-      sec := js['expires_in'].AsInteger;
-      fRefreshURL := js['refresh_token'].AsString;
-    finally
-      js.Free;
-    end;
-   {$EndIf}
 
     if (Trim(fpToken) = '') then
       DispararExcecao(EACBrPixHttpException.Create(ACBrStr(sErroAutenticacao)));
@@ -191,6 +201,19 @@ begin
   Result := ClientSecret;
 end;
 
+function TACBrPSPSantander.GetSenhaPFX: String;
+begin
+  Result := StrCrypt(fSenhaPFX, fK)  // Descritografa a Senha
+end;
+
+procedure TACBrPSPSantander.SetArquivoPFX(const AValue: String);
+begin
+  if (fArquivoPFX = AValue) then
+    Exit;
+
+  fArquivoPFX := Trim(AValue);
+end;
+
 procedure TACBrPSPSantander.SetConsumerKey(AValue: String);
 begin
   ClientID := AValue;
@@ -199,6 +222,34 @@ end;
 procedure TACBrPSPSantander.SetConsumerSecret(AValue: String);
 begin
   ClientSecret := AValue;
+end;
+
+procedure TACBrPSPSantander.SetSenhaPFX(const AValue: String);
+begin
+  if (fK <> '') and (fSenhaPFX = StrCrypt(AValue, fK)) then
+    Exit;
+
+  fK := FormatDateTime('hhnnsszzz', Now);
+  fSenhaPFX := StrCrypt(AValue, fK);  // Salva Senha de forma Criptografada, para evitar "Inspect"
+end;
+
+procedure TACBrPSPSantander.QuandoReceberRespostaEndPoint(const aEndPoint,
+  aURL, aMethod: String; var aResultCode: Integer; var aRespostaHttp: AnsiString);
+begin
+  // Santander responde OK a esse EndPoint, de forma diferente da especificada
+  if (UpperCase(AMethod) = ChttpMethodPOST) and (AEndPoint = cEndPointCob) and (AResultCode = HTTP_OK) then
+    AResultCode := HTTP_CREATED;
+end;
+
+procedure TACBrPSPSantander.QuandoAcessarEndPoint(const aEndPoint: String;
+  var aURL: String; var aMethod: String);
+begin
+  // Santander não possui POST para endpoint /cob
+   if (LowerCase(aEndPoint) = cEndPointCob) and (UpperCase(aMethod) = ChttpMethodPOST) then
+  begin
+    aMethod := ChttpMethodPUT;
+    aURL := URLComDelimitador(aURL) + CriarTxId;
+  end;
 end;
 
 function TACBrPSPSantander.ObterURLAmbiente(const aAmbiente: TACBrPixCDAmbiente): String;

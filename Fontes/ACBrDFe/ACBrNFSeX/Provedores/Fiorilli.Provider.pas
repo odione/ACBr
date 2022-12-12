@@ -77,7 +77,7 @@ type
 implementation
 
 uses
-  ACBrDFeException, ACBrNFSeX, ACBrNFSeXConfiguracoes,
+  ACBrDFeException, ACBrUtil.Strings, ACBrNFSeX, ACBrNFSeXConfiguracoes,
   ACBrNFSeXNotasFiscais, Fiorilli.GravarXml, Fiorilli.LerXml;
 
 { TACBrNFSeProviderFiorilli200 }
@@ -87,7 +87,8 @@ begin
   inherited Configuracao;
 
   ConfigGeral.QuebradeLinha := '\s\n';
-
+  ConfigGeral.ConsultaPorFaixaPreencherNumNfseFinal := true;
+  
   with ConfigAssinar do
   begin
     Rps := True;
@@ -134,7 +135,7 @@ end;
 procedure TACBrNFSeProviderFiorilli200.PrepararEmitir(
   Response: TNFSeEmiteResponse);
 begin
-  // O provedor Fiorilli existe que o numero do lote seja numerico e que não
+  // O provedor Fiorilli exige que o numero do lote seja numerico e que não
   // não tenha zeros a esquerda.
   Response.Lote := IntToStr(StrToIntDef(Trim(Response.Lote), 0));
 
@@ -327,6 +328,7 @@ begin
   Result := inherited TratarXmlRetornado(aXML);
 
   Result := RemoverPrefixosDesnecessarios(Result);
+  Result := NativeStringToUTF8(Result);
 end;
 
 end.

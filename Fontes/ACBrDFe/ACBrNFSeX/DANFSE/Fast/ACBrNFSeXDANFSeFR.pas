@@ -94,6 +94,8 @@ type
     frxServicos: TfrxDBDataset;
     frxParametros: TfrxDBDataset;
     frxItensServico: TfrxDBDataset;
+		FIncorporarFontesPdf: Boolean;
+		FIncorporarBackgroundPdf:Boolean;
 
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -104,6 +106,8 @@ type
   published
     property FastFile: String read FFastFile write FFastFile;
     property EspessuraBorda: Integer read FEspessuraBorda write FEspessuraBorda;
+		property IncorporarFontesPdf : boolean read FIncorporarFontesPdf write FIncorporarFontesPdf;
+		property IncorporarBackgroundPdf : boolean read FIncorporarBackgroundPdf write FIncorporarBackgroundPdf;
   end;
 
 implementation
@@ -121,6 +125,8 @@ begin
   FFastFile := '';
   FEspessuraBorda := 1;
   CriarDataSetsFrx;
+	FIncorporarFontesPdf := false;
+	FIncorporarBackgroundPdf := false;
 end;
 
 destructor TACBrNFSeXDANFSeFR.Destroy;
@@ -190,7 +196,8 @@ begin
     frxPDFExport.Creator := Sistema;
     frxPDFExport.Subject := TITULO_PDF;
     frxPDFExport.EmbeddedFonts := False;
-    frxPDFExport.Background := False;
+    frxPDFExport.Background := IncorporarBackgroundPdf;
+		frxPDFExport.EmbeddedFonts := IncorporarFontesPdf;
 
     OldShowDialog := frxPDFExport.ShowDialog;
     try
@@ -880,6 +887,8 @@ end;
 procedure TACBrNFSeXDANFSeFR.CarregaParametros(ANFSe: TNFSe);
 var
   FProvider: IACBrNFSeXProvider;
+  CodigoIBGE: Integer;
+  xMunicipio, xUF: string;
 begin
   FProvider := TACBrNFSeX(FACBrNFSe).Provider;
 
@@ -909,7 +918,19 @@ begin
 
         with Servico do
         begin
-          FieldByName('CodigoMunicipio').AsString := CodIBGEToCidade(StrToIntDef(IfThen(CodigoMunicipio <> '', CodigoMunicipio, ''), 0));
+          CodigoIBGE := StrToIntDef(CodigoMunicipio, 0);
+
+          try
+            xMunicipio := ObterNomeMunicipio(CodigoIBGE, xUF);
+          except
+            on E:Exception do
+            begin
+              xMunicipio := '';
+              xUF := '';
+            end;
+          end;
+
+          FieldByName('CodigoMunicipio').AsString := xMunicipio;
           FieldByName('ExigibilidadeISS').AsString := FProvider.ExigibilidadeISSDescricao(ExigibilidadeISS);
 
           if NaturezaOperacao = no2 then
@@ -947,12 +968,34 @@ begin
           if Provedor = proAdm then
           begin
             FieldByName('CodigoMunicipio').AsString := CodigoMunicipio;
-            FieldByName('MunicipioIncidencia').AsString := CodIBGEToCidade(MunicipioIncidencia);
+
+            try
+              xMunicipio := ObterNomeMunicipio(MunicipioIncidencia, xUF);
+            except
+              on E:Exception do
+              begin
+                xMunicipio := '';
+                xUF := '';
+              end;
+            end;
+
+            FieldByName('MunicipioIncidencia').AsString := xMunicipio;
           end
           else
           begin
-            FieldByName('CodigoMunicipio').AsString := CodIBGEToCidade(StrToIntDef(IfThen(CodigoMunicipio <> '', CodigoMunicipio, ''), 0));
-            FieldByName('MunicipioIncidencia').AsString := CodIBGEToCidade(StrToIntDef(CodigoMunicipio, 0)); // Antes:
+            FieldByName('CodigoMunicipio').AsString := CodigoMunicipio;
+
+            try
+              xMunicipio := ObterNomeMunicipio(StrToIntDef(CodigoMunicipio, 0), xUF);
+            except
+              on E:Exception do
+              begin
+                xMunicipio := '';
+                xUF := '';
+              end;
+            end;
+
+            FieldByName('MunicipioIncidencia').AsString := xMunicipio;
           end;
         end;
       end;
@@ -1086,7 +1129,7 @@ begin
       FieldByName('NumeroProcesso').AsString := NumeroProcesso;
       FieldByName('Descricao').AsString := Descricao;
       FieldByName('ResponsavelRetencao').AsString := FProvider.ResponsavelRetencaoToStr(ResponsavelRetencao);
-      FieldByName('Tributacao').AsString := TributacaoToStr(Tributacao);
+      FieldByName('Tributacao').AsString := FProvider.TributacaoToStr(Tributacao);
 
       with Valores do
       begin

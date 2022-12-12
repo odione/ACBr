@@ -53,10 +53,12 @@ implementation
 uses
   ACBrNFSeX, ACBrNFSeXConversao,
 
+  // Provedor utilizado pelas cidades que aderiram o Padão Nacional
+  PadraoNacional.Provider,
+
   // Provedores que seguem a versão 1 do layout da ABRASF
   BHISS.Provider,
   CIGA.Provider,
-  DBSeller.Provider,
   FISSLex.Provider,
   geNFe.Provider,
   Ginfes.Provider,
@@ -66,7 +68,6 @@ uses
   ISSFortaleza.Provider,
   ISSIntel.Provider,
   ISSNatal.Provider,
-  ISSNet.Provider,
   ISSRecife.Provider,
   ISSRio.Provider,
   ISSSalvador.Provider,
@@ -141,6 +142,8 @@ uses
   // Provedores que seguem a versão 1 e 2 do layout da ABRASF
   Abaco.Provider,
   Betha.Provider,
+  DBSeller.Provider,
+  ISSNet.Provider,
   Pronim.Provider,
   SilTecnologia.Provider,
   SimplISS.Provider,
@@ -156,10 +159,13 @@ uses
   // Provedores que tem layout próprio
   Agili.Provider,
   AssessorPublico.Provider,
+  Bauhaus.Provider,
   Conam.Provider,
   CTA.Provider,
+  CTAConsult.Provider,
   eGoverneISS.Provider,
   Equiplano.Provider,
+  Facundo.Provider,
   FGMaiss.Provider,
   GeisWeb.Provider,
   Giap.Provider,
@@ -173,6 +179,7 @@ uses
   Siappa.Provider,
   Siat.Provider,
   SigISS.Provider,
+  SigISSWeb.Provider,
   Simple.Provider,
   SoftPlan.Provider,
   WebFisco.Provider;
@@ -216,7 +223,8 @@ begin
       proAssessorPublico:
         Result := TACBrNFSeProviderAssessorPublico.Create(ACBrNFSe);
 
-      proAsten: Result := TACBrNFSeProviderAsten202.Create(ACBrNFSe);
+      proAsten:   Result := TACBrNFSeProviderAsten202.Create(ACBrNFSe);
+      proBauhaus: Result := TACBrNFSeProviderBauhaus.Create(ACBrNFSe);
 
       proBetha:
         begin
@@ -235,8 +243,22 @@ begin
       proConam:     Result := TACBrNFSeProviderConam.Create(ACBrNFSe);
       proCoplan:    Result := TACBrNFSeProviderCoplan201.Create(ACBrNFSe);
       proCTA:       Result := TACBrNFSeProviderCTA200.Create(ACBrNFSe);
+
+      proCTAConsult:
+        Result := TACBrNFSeProviderCTAConsult.Create(ACBrNFSe);
+
       proDataSmart: Result := TACBrNFSeProviderDataSmart202.Create(ACBrNFSe);
-      proDBSeller:  Result := TACBrNFSeProviderDBSeller.Create(ACBrNFSe);
+
+      proDBSeller:
+        begin
+          case Versao of
+            ve100: Result := TACBrNFSeProviderDBSeller.Create(ACBrNFSe);
+            ve204: Result := TACBrNFSeProviderDBSeller204.Create(ACBrNFSe);
+          else
+            Result := nil;
+          end;
+        end;
+
       proDeISS:     Result := TACBrNFSeProviderDeISS203.Create(ACBrNFSe);
 
       proDesenvolve:
@@ -277,6 +299,7 @@ begin
 
       proeReceita: Result := TACBrNFSeProvidereReceita202.Create(ACBrNFSe);
       proEtherium: Result := TACBrNFSeProviderEtherium203.Create(ACBrNFSe);
+      proFacundo:  Result :=TACBrNFSeProviderFacundo.Create(ACBrNFSe);
       proFGMaiss:  Result :=TACBrNFSeProviderFGMaiss.Create(ACBrNFSe);
 
       profintelISS:
@@ -339,7 +362,7 @@ begin
 
       proISSDigital: Result := TACBrNFSeProviderISSDigital200.Create(ACBrNFSe);
       proISSDSF:     Result := TACBrNFSeProviderISSDSF.Create(ACBrNFSe);
-      proISSe:       Result := TACBrNFSeProviderISSe200.Create(ACBrNFSe);
+      proISSe:       Result := TACBrNFSeProviderISSe201.Create(ACBrNFSe);
 
       proISSFortaleza:
         Result := TACBrNFSeProviderISSFortaleza.Create(ACBrNFSe);
@@ -354,7 +377,16 @@ begin
         Result := TACBrNFSeProviderISSLencois.Create(ACBrNFSe);
 
       proISSNatal: Result := TACBrNFSeProviderISSNatal.Create(ACBrNFSe);
-      proISSNet:   Result := TACBrNFSeProviderISSNet.Create(ACBrNFSe);
+
+      proISSNet:
+        begin
+          case Versao of
+            ve100: Result := TACBrNFSeProviderISSNet.Create(ACBrNFSe);
+            ve204: Result := TACBrNFSeProviderISSNet204.Create(ACBrNFSe);
+          else
+            Result := nil;
+          end;
+        end;
 
       proISSPortoVelho:
         Result := TACBrNFSeProviderISSPortoVelho200.Create(ACBrNFSe);
@@ -384,6 +416,9 @@ begin
 
       proNotaInteligente:
         Result := TACBrNFSeProviderNotaInteligente200.Create(ACBrNFSe);
+
+      proPadraoNacional:
+        Result := TACBrNFSeProviderPadraoNacional.Create(ACBrNFSe);
 
       proProdata: Result := TACBrNFSeProviderProdata201.Create(ACBrNFSe);
 
@@ -433,6 +468,9 @@ begin
             Result := nil;
           end;
         end;
+
+      proSigISSWeb:
+        Result := TACBrNFSeProviderSigISSWeb.Create(ACBrNFSe);
 
       proSilTecnologia:
         begin

@@ -184,6 +184,8 @@ begin
     DadosCabecalho := GetCabecalho('http://www.nfse-tecnos.com.br');
   end;
 
+  SetNomeXSD('***');
+
   with ConfigSchemas do
   begin
     ConsultarLote := 'ConsultarLoteRpsEnvio.xsd';
@@ -233,7 +235,7 @@ function TACBrNFSeProviderTecnos201.DefinirIDCancelamento(const CNPJ: string;
   const InscMunic: string; const NumNfse: string): string;
 begin
   Result := ' ' + ConfigGeral.Identificador + '="' + CNPJ +
-            ACBrUtil.Strings.Poem_Zeros(OnlyNumber(NumNfse), 9) + '"';
+            Poem_Zeros(OnlyNumber(NumNfse), 9) + '"';
 end;
 
 function TACBrNFSeProviderTecnos201.DefinirIDLote(const ID: string): string;
@@ -245,7 +247,7 @@ begin
   Result := ' ' + ConfigGeral.Identificador + '="1' + // Tipo de operação, no caso envio
             IntToStr(YearOf(Date)) + // ano do lote enviado no formato AAAA
             OnlyNumber(Cnpj) +
-            ACBrUtil.Strings.Poem_Zeros(OnlyNumber(ID), 16) + '"';
+            Poem_Zeros(OnlyNumber(ID), 16) + '"';
 end;
 
 procedure TACBrNFSeProviderTecnos201.GerarMsgDadosCancelaNFSe(
@@ -320,16 +322,16 @@ begin
         begin
           AErro := Response.Erros.New;
           AErro.Codigo := Codigo;
-          AErro.Descricao := Mensagem;
-          AErro.Correcao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
+          AErro.Descricao := ACBrStr(Mensagem);
+          AErro.Correcao := ACBrStr(ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr));
         end;
 
         if (Codigo = 'A0000') and (Mensagem <> '') then
         begin
           AAlerta := Response.Alertas.New;
           AAlerta.Codigo := Codigo;
-          AAlerta.Descricao := Mensagem;
-          AAlerta.Correcao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
+          AAlerta.Descricao := ACBrStr(Mensagem);
+          AAlerta.Correcao := ACBrStr(ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr));
         end;
       end;
     end
@@ -342,16 +344,16 @@ begin
       begin
         AErro := Response.Erros.New;
         AErro.Codigo := Codigo;
-        AErro.Descricao := Mensagem;
-        AErro.Correcao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr);
+        AErro.Descricao := ACBrStr(Mensagem);
+        AErro.Correcao := ACBrStr(ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr));
       end;
 
       if (Codigo = 'A0000') and (Mensagem <> '') then
       begin
         AAlerta := Response.Alertas.New;
         AAlerta.Codigo := Codigo;
-        AAlerta.Descricao := Mensagem;
-        AAlerta.Correcao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr);
+        AAlerta.Descricao := ACBrStr(Mensagem);
+        AAlerta.Correcao := ACBrStr(ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr));
       end;
     end;
   end;
@@ -372,8 +374,8 @@ begin
         begin
           AAlerta := Response.Alertas.New;
           AAlerta.Codigo := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Codigo'), tcStr);
-          AAlerta.Descricao := Mensagem;
-          AAlerta.Correcao := ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr);
+          AAlerta.Descricao := ACBrStr(Mensagem);
+          AAlerta.Correcao := ACBrStr(ObterConteudoTag(ANodeArray[I].Childrens.FindAnyNs('Correcao'), tcStr));
         end;
       end;
     end
@@ -385,8 +387,8 @@ begin
       begin
         AAlerta := Response.Alertas.New;
         AAlerta.Codigo := ObterConteudoTag(ANode.Childrens.FindAnyNs('Codigo'), tcStr);
-        AAlerta.Descricao := Mensagem;
-        AAlerta.Correcao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr);
+        AAlerta.Descricao := ACBrStr(Mensagem);
+        AAlerta.Correcao := ACBrStr(ObterConteudoTag(ANode.Childrens.FindAnyNs('Correcao'), tcStr));
       end;
     end;
   end;
