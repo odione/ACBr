@@ -1663,6 +1663,14 @@ begin
            QTD_REG_BLC := Bloco_C.RegistroC370Count;
          end;
        end;
+       if Bloco_C.RegistroC380Count > 0 then
+       begin
+         with New do
+         begin
+           REG_BLC := 'C380';
+           QTD_REG_BLC := Bloco_C.RegistroC380Count;
+         end;
+       end;
        if Bloco_C.RegistroC390Count > 0 then
        begin
          with New do
