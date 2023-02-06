@@ -192,7 +192,7 @@ function TACBrNFSeXWebserviceISSRio.TratarXmlRetornado(
 begin
   Result := inherited TratarXmlRetornado(aXML);
 
-  Result := ParseText(AnsiString(Result), True, False);
+  Result := ParseText(AnsiString(Result), True, {$IfDef FPC}True{$Else}False{$EndIf});
 end;
 
 { TACBrNFSeProviderISSRio }
@@ -201,13 +201,12 @@ procedure TACBrNFSeProviderISSRio.Configuracao;
 begin
   inherited Configuracao;
 
-  ConfigGeral.QuebradeLinha := '';
+  ConfigGeral.QuebradeLinha := '&#xA;';
 
   with ConfigAssinar do
-   begin
-     CancelarNFSe := True;
-//     RpsGerarNFSe := True;
-   end;
+  begin
+    CancelarNFSe := True;
+  end;
 end;
 
 function TACBrNFSeProviderISSRio.CriarGeradorXml(const ANFSe: TNFSe): TNFSeWClass;
@@ -375,7 +374,7 @@ begin
         SalvarXmlNfse(ANota);
       end;
 
-      Response.Sucesso := (Response.Erros.Count > 0);
+      Response.Sucesso := (Response.Erros.Count = 0);
     except
       on E:Exception do
       begin

@@ -423,11 +423,12 @@ type
     cobMoneyPlus,
     cobBancoC6,
     cobBancoRendimento,
-	cobBancoInter,
+    cobBancoInter,
     cobBancoSofisaSantander,
     cobBS2,
     cobPenseBankAPI,
-    cobBTGPactual
+    cobBTGPactual,
+    cobBancoOriginal
     );
 
   TACBrTitulo = class;
@@ -812,7 +813,7 @@ type
   private
     fTipoChave: TACBrPIXTipoChave;
     fChave: String;
-    published
+  published
     property TipoChavePIX: TACBrPIXTipoChave read fTipoChave write fTipoChave;
     property Chave: String   read fChave write fChave;
   end;
@@ -881,6 +882,7 @@ type
     function DefinePosicaoCarteiraRetorno:Integer; virtual;                         //Define posição para leitura de Retorno campo: NumeroDocumento
     function DefineDataOcorrencia(const ALinha: String): String; virtual;           //Define a data da ocorrencia
     function DefineSeuNumeroRetorno(const ALinha: String): String; virtual;         //Define o Seu Numero
+    function DefinerCnpjCPFRetorno240(const ALinha: String): String; virtual;       //Define retorno rCnpjCPF
     function DefineNumeroDocumentoRetorno(const ALinha: String): String; virtual;   //Define o Numero Documento do Retorno
     procedure DefineRejeicaoComplementoRetorno(const ALinha: String; out ATitulo : TACBrTitulo); virtual;   //Define o Motivo da Rejeição ou Complemento no Retorno
 
@@ -1251,6 +1253,8 @@ type
     fOperacao: TOperacao;
     fVersaoDF: String;
     FBoletoWSConsulta: TACBrBoletoWSFiltroConsulta;
+    FArquivoCRT: string;
+    FArquivoKEY: string;
     procedure SetWSBoletoConsulta(const Value: TACBrBoletoWSFiltroConsulta);
   public
     constructor Create(AOwner: TComponent); reintroduce; virtual;
@@ -1261,6 +1265,8 @@ type
     property Ambiente: TpcnTipoAmbiente read fAmbiente write fAmbiente;
     property Operacao: TOperacao read fOperacao write fOperacao;
     property VersaoDF: string read fVersaoDF write fVersaoDF;
+    property ArquivoCRT: string read FArquivoCRT write FArquivoCRT;
+    property ArquivoKEY: string read FArquivoKEY write FArquivoKEY;
   end;
 
   { TACBrArquivos }
@@ -1900,7 +1906,7 @@ Uses {$IFNDEF NOGUI}Forms,{$ENDIF} Math, dateutils, strutils,  ACBrBoletoWS,
      ACBrBancoCresolSCRS, ACBrBancoCitiBank, ACBrBancoABCBrasil, ACBrBancoDaycoval, ACBrUniprimeNortePR,
      ACBrBancoPine, ACBrBancoPineBradesco, ACBrBancoUnicredSC, ACBrBancoAlfa, ACBrBancoCresol,
      ACBrBancoBradescoMoneyPlus, ACBrBancoC6, ACBrBancoRendimento, ACBrBancoInter, ACBrBancoSofisaSantander,
-     ACBrBancoBS2, ACBrBancoPenseBank, ACBrBancoBTGPactual;
+     ACBrBancoBS2, ACBrBancoPenseBank, ACBrBancoBTGPactual, ACBrBancoOriginal;
 
 {$IFNDEF FPC}
    {$R ACBrBoleto.dcr}
@@ -2227,9 +2233,13 @@ begin
 
   fCedenteWS := TACBrCedenteWS.Create(self);
   fCedenteWS.Name := 'CedenteWS';
-  fPIX         := TACBrBoletoChavePIX.Create(Self);
+  
+  fPIX            := TACBrBoletoChavePIX.Create(Self);
+  fPIX.Name       := 'PIX';
+
   {$IFDEF COMPILER6_UP}
-  fCedenteWS.SetSubComponent(True);
+    fCedenteWS.SetSubComponent(True);
+    fPIX.SetSubComponent(True);
   {$ENDIF}
 end;
 
@@ -3532,6 +3542,7 @@ begin
     133: Result := cobBancoCresol;
     136: Result := cobUnicredES;
     208: Result := cobBTGPactual;
+    212: Result := cobBancoOriginal;
     218: Result := cobBS2;
     237: Result := cobBradesco;
     246: Result := cobBancoABCBrasil;
@@ -3583,7 +3594,7 @@ begin
       //Cedente
       if IniBoletos.SectionExists('Cedente') then
       begin
-        wTipoInscricao := IniBoletos.ReadInteger(CCedente,'TipoPessoa',1);
+        wTipoInscricao := IniBoletos.ReadInteger(CCedente,'TipoInscricao',1);
         try
            Cedente.TipoInscricao := TACBrPessoa( wTipoInscricao ) ;
         except
@@ -3821,9 +3832,9 @@ begin
             Mensagem.Text       := MemFormatada;
             Informativo.Text    := MemInformativo;
             Detalhamento.Text   := MemDetalhamento;
-            Instrucao1          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao1',Instrucao1),2);
-            Instrucao2          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao2',Instrucao2),2);
-            Instrucao3          := PadLeft(IniBoletos.ReadString(Sessao,'Instrucao3',Instrucao3),2);
+            Instrucao1          := IniBoletos.ReadString(Sessao,'Instrucao1',Instrucao1);
+            Instrucao2          := IniBoletos.ReadString(Sessao,'Instrucao2',Instrucao2);
+            Instrucao3          := IniBoletos.ReadString(Sessao,'Instrucao3',Instrucao3);
             TotalParcelas       := IniBoletos.ReadInteger(Sessao,'TotalParcelas',TotalParcelas);
             Parcela             := IniBoletos.ReadInteger(Sessao,'Parcela',Parcela);
             ValorAbatimento     := IniBoletos.ReadFloat(Sessao,'ValorAbatimento',ValorAbatimento);
@@ -4356,6 +4367,7 @@ begin
      cobBS2                  : fBancoClass := TACBrBancoBS2.Create(Self);             {218}
      cobPenseBankAPI         : fBancoClass := TACBrBancoPenseBank.Create(Self);
      cobBTGPactual           : fBancoClass := TACBrBancoBTGPactual.create(Self);     {208}
+     cobBancoOriginal        : fBancoClass := TACBrBancoOriginal.Create(Self);        {212}
    else
      fBancoClass := TACBrBancoClass.create(Self);
    end;
@@ -4971,7 +4983,9 @@ begin
   ACBrBanco.ACBrBoleto.NumeroArquivo := StrToIntDef(Copy(ARetorno[0],158,6),0);
 
   rCedente         := trim(copy(ARetorno[0], 73, 30));
-  rCNPJCPF         := OnlyNumber( copy(ARetorno[0], 19, 14) );
+
+  rCNPJCPF         := DefinerCnpjCPFRetorno240(ARetorno[0]);
+
   rConvenioCedente := Trim(Copy(ARetorno[0], 33, 20));
 
   ValidarDadosRetorno('', '', rCNPJCPF);
@@ -5460,6 +5474,8 @@ begin
          Result:= '11'
       else if AnsiSameText(EspecieDoc, 'DS') then
          Result:= '12'
+      else if AnsiSameText(EspecieDoc, 'BDP') then
+         Result:= '32'
       else if AnsiSameText(EspecieDoc, 'OU') then
          Result:= '99'
       else
@@ -5595,10 +5611,10 @@ begin
   with ACBrTitulo do
   begin
     case TipoDiasProtesto of
-       diCorridos       : Result := '1';
-       diUteis          : Result := '2';
+      diCorridos       : Result := '1';
+      diUteis          : Result := '2';
     else
-       Result := '3';
+      Result := '3';
     end;
   end;
 end;
@@ -5759,6 +5775,11 @@ begin
   Result := Space(20)                                        + // 172 a 191 - Uso reservado do banco
             PadRight('REMESSA-PRODUCAO', 20, ' ')            + // 192 a 211 - Uso reservado da empresa
             PadRight('', 29, ' ');                            // 212 a 240 - Uso Exclusivo FEBRABAN / CNAB
+end;
+
+function TACBrBancoClass.DefinerCnpjCPFRetorno240(const ALinha: String): String;
+begin
+  Result := OnlyNumber( copy(ALinha, 19, 14) );
 end;
 
 function TACBrBancoClass.DefineCodBeneficiarioHeader: String;

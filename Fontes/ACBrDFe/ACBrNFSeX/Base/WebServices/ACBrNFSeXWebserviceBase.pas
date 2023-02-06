@@ -92,6 +92,9 @@ type
 
     function GerarPrefixoArquivo: string; virtual;
 
+    function GravarJSON(NomeArquivo: String; ConteudoXML: String;
+      const aPath: String = ''): Boolean;
+
     procedure SalvarEnvio(ADadosSoap, ADadosMsg: string); virtual;
     procedure SalvarRetornoWebService(ADadosSoap: string); virtual;
     procedure SalvarRetornoDadosMsg(ADadosMsg: string); virtual;
@@ -584,13 +587,56 @@ begin
     Result := TiraPontos(FPrefixo);
 end;
 
+function TACBrNFSeXWebservice.GravarJSON(NomeArquivo, ConteudoXML: String;
+  const aPath: String): Boolean;
+var
+  SoNome, SoPath: String;
+begin
+  Result := False;
+  try
+    SoNome := ExtractFileName(NomeArquivo);
+    if EstaVazio(SoNome) then
+      raise EACBrDFeException.Create('Nome de arquivo não informado');
+
+    SoPath := ExtractFilePath(NomeArquivo);
+    if EstaVazio(SoPath) then
+      SoPath := aPath;
+    if EstaVazio(SoPath) then
+      SoPath := FPConfiguracoes.Arquivos.PathSalvar;
+
+    SoPath := PathWithDelim(SoPath);
+
+    ConteudoXML := StringReplace(ConteudoXML, '<-><->', '', [rfReplaceAll]);
+
+    if not DirectoryExists(SoPath) then
+      ForceDirectories(SoPath);
+
+    NomeArquivo := SoPath + SoNome;
+
+    WriteToTXT(NomeArquivo, ConteudoXML, False, False);
+    Result := True;
+  except
+    on E: Exception do
+      GerarException('Erro ao salvar.', E);
+  end;
+end;
+
 procedure TACBrNFSeXWebservice.SalvarEnvio(ADadosSoap, ADadosMsg: string);
 var
   Prefixo, ArqEnv: string;
+  ConteudoEhXml: Boolean;
 begin
   { Sobrescrever apenas se necessário }
 
   if FPArqEnv = '' then Exit;
+
+  {
+    Tem provedor que é gerando um JSON em vez de XML e o método Gravar acaba
+    incluindo na primeira linha do arquivo o encoding do XML.
+    Para contornar isso a variável ConteudoEhXml recebe o valor false quando é
+    um JSON e o método Gravar não inclui o encoding.
+  }
+  ConteudoEhXml := StringIsXML(ADadosMsg);
 
   Prefixo := GerarPrefixoArquivo;
 
@@ -598,24 +644,49 @@ begin
   begin
     ArqEnv := Prefixo + '-' + FPArqEnv + '.xml';
 
-    FPDFeOwner.Gravar(ArqEnv, ADadosMsg, Path);
+    if ConteudoEhXml then
+    begin
+      if not XmlEhUTF8(ADadosMsg) then
+        ADadosMsg := RemoverDeclaracaoXML(ADadosMsg);
+
+      FPDFeOwner.Gravar(ArqEnv, ADadosMsg, Path);
+    end
+    else
+      GravarJSON(ArqEnv, ADadosMsg, Path);
   end;
 
   if FPConfiguracoes.WebServices.Salvar then
   begin
     ArqEnv := Prefixo + '-' + FPArqEnv + '-soap.xml';
 
-    FPDFeOwner.Gravar(ArqEnv, ADadosSoap, Path);
+    if ConteudoEhXml then
+    begin
+      if not XmlEhUTF8(ADadosSoap) then
+        ADadosSoap := RemoverDeclaracaoXML(ADadosSoap);
+
+      FPDFeOwner.Gravar(ArqEnv, ADadosSoap, Path);
+    end
+    else
+      GravarJSON(ArqEnv, ADadosSoap, Path);
   end;
 end;
 
 procedure TACBrNFSeXWebservice.SalvarRetornoDadosMsg(ADadosMsg: string);
 var
   Prefixo, ArqEnv: string;
+  ConteudoEhXml: Boolean;
 begin
   { Sobrescrever apenas se necessário }
 
   if FPArqResp = '' then Exit;
+
+  {
+    Tem provedor que é gerando um JSON em vez de XML e o método Gravar acaba
+    incluindo na primeira linha do arquivo o encoding do XML.
+    Para contornar isso a variável ConteudoEhXml recebe o valor false quando é
+    um JSON e o método Gravar não inclui o encoding.
+  }
+  ConteudoEhXml := StringIsXML(ADadosMsg);
 
   Prefixo := GerarPrefixoArquivo;
 
@@ -623,17 +694,34 @@ begin
   begin
     ArqEnv := Prefixo + '-' + FPArqResp + '.xml';
 
-    FPDFeOwner.Gravar(ArqEnv, ADadosMsg, Path);
+    if ConteudoEhXml then
+    begin
+      if not XmlEhUTF8(ADadosMsg) then
+        ADadosMsg := RemoverDeclaracaoXML(ADadosMsg);
+
+      FPDFeOwner.Gravar(ArqEnv, ADadosMsg, Path);
+    end
+    else
+      GravarJSON(ArqEnv, ADadosMsg, Path);
   end;
 end;
 
 procedure TACBrNFSeXWebservice.SalvarRetornoWebService(ADadosSoap: string);
 var
   Prefixo, ArqEnv: string;
+  ConteudoEhXml: Boolean;
 begin
   { Sobrescrever apenas se necessário }
 
   if FPArqResp = '' then Exit;
+
+  {
+    Tem provedor que é gerando um JSON em vez de XML e o método Gravar acaba
+    incluindo na primeira linha do arquivo o encoding do XML.
+    Para contornar isso a variável ConteudoEhXml recebe o valor false quando é
+    um JSON e o método Gravar não inclui o encoding.
+  }
+  ConteudoEhXml := StringIsXML(ADadosSoap);
 
   Prefixo := GerarPrefixoArquivo;
 
@@ -641,10 +729,15 @@ begin
   begin
     ArqEnv := Prefixo + '-' + FPArqResp + '-soap.xml';
 
-    if not XmlEhUTF8(ADadosSoap) then
-      ADadosSoap := RemoverDeclaracaoXML(ADadosSoap);
+    if ConteudoEhXml then
+    begin
+      if not XmlEhUTF8(ADadosSoap) then
+        ADadosSoap := RemoverDeclaracaoXML(ADadosSoap);
 
-    FPDFeOwner.Gravar(ArqEnv, ADadosSoap, Path);
+      FPDFeOwner.Gravar(ArqEnv, ADadosSoap, Path);
+    end
+    else
+      GravarJSON(ArqEnv, ADadosSoap, Path);
   end;
 end;
 
@@ -668,6 +761,9 @@ begin
 
 //  if not (HttpClient.HTTPResultCode in [200..202]) then
 //    raise EACBrDFeException.Create('Erro de Conexão.');
+
+  if not XmlEhUTF8(FPRetorno) then
+    Exit;
 
   if not (HttpClient.HTTPResultCode in [200..202]) then
   begin

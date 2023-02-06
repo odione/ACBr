@@ -368,9 +368,11 @@ uses
   ACBrUtil.Base,
   ACBrUtil.DateTime,
   ACBrUtil.FilesIO,
-  pcnAuxiliar, pcesS5001, pcesS5002, pcesS5011, pcesS5012, pcesS2500,
   ACBrDFeConfiguracoes, ACBrDFeSSL, ACBrDFeOpenSSL, ACBrDFeUtil,
-  ACBreSocialEventos, ACBreSocialConfiguracoes, Frm_Status, Frm_SelecionarCertificado;
+  ACBreSocialEventos, ACBreSocialConfiguracoes, Frm_Status, Frm_SelecionarCertificado,
+  pcnAuxiliar, pcesS5001, pcesS5002, pcesS5011, pcesS5012,
+  pcesS5501, pcesS2500,
+  pcesRetConsultaLote, pcesRetornoClass;
 
 const
   SELDIRHELP = 1000;
@@ -440,7 +442,7 @@ begin
           dtTrans11096 := Date;
 
           if VersaoDFx > veS01_00_00 then
-            indTribFolhaPisCofins := tpSim;
+            indTribFolhaPisCofins := snfSim;
 
           if VersaoDFx <= ve02_05_00 then
           begin
@@ -501,14 +503,7 @@ begin
               email := 'teste@teste.com';
             end;
 
-            with infoComplementares do
-            begin
-              with situacaoPJ do
-                indSitPJ := tpIndSitPJ(0);
 
-              with situacaoPF do
-                indSitPF := tpIndSitPF(0);
-            end;
           end;
         end;
 
@@ -593,13 +588,11 @@ begin
 
           with infoTrab do
           begin
-            if VersaoDFx <= ve02_05_00 then
-              regPt := tpRegPt(3);
+
 
             with infoApr do
             begin
-              if VersaoDFx <= ve02_05_00 then
-                contApr := tpContApr(2);
+
 {
               nrProcJud := '20150612';
 }
@@ -676,8 +669,7 @@ begin
           if VersaoDFx >= veS01_00_00 then
             codIncCPRP := cicpSuspensaodeIncidenciaemDecorrenciadeDecisaoJudicialDecimo;
 
-          if VersaoDFx <= ve02_05_00 then
-            codIncSIND := tpCodIncSIND(1);
+
 
           observacao := 'Rubrica Teste';
  {
@@ -858,7 +850,7 @@ begin
 
             leiCargo.nrLei := '11111';
             leiCargo.dtLei := Now;
-            leiCargo.sitCargo := tpSitCargo(0);
+
           end;
         end;
 
@@ -910,7 +902,6 @@ begin
           dscCarreira := 'Juiz';
           leiCarr := 'lei89489/77';
           dtLeiCarr := Now;
-          sitCarr := tpSitCarr(0);
         end;
 
         with novaValidade do
@@ -1016,7 +1007,6 @@ begin
 
           with horarioIntervalo.New do
           begin
-            tpInterv := tptpIntervalo(0);
             durInterv := 90;
             iniInterv := '1200';
             termInterv := '1330';
@@ -1024,7 +1014,6 @@ begin
 
           with horarioIntervalo.New do
           begin
-            tpInterv := tptpIntervalo(1);
             durInterv := 15;
             iniInterv := '1645';
             termInterv := '1700';
@@ -2076,7 +2065,6 @@ begin
 
           with infoComplemDed.New do
           begin
-            indTpDeducao := itdPensaoAlimenticia;
 
             with penAlim.New do
             begin
@@ -2728,7 +2716,7 @@ begin
 
       with infoSubstPatr do
       begin
-        indSubstPatr := tpIndSubstPatrOpPort(0);
+        indSubstPatr := tpIndSubstPatr(0);
         percRedContrib := 500.20;
 
         infoSubstPatrOpPort.Clear;
@@ -2921,7 +2909,6 @@ begin
       with contribSind.New do
       begin
         cnpjSindic := '01234567891111';
-        tpContribSind := tpTpContribSind(0);
         vlrContribSind := 1500.50;
       end;
     end;
@@ -3215,8 +3202,6 @@ begin
             begin
               hipLeg := 1;
               justContr := 'teste';
-              if VersaoDFx <= ve02_05_00 then
-                tpinclContr := icLocaisSemFiliais;
 
               if VersaoDFx <= ve02_05_00 then
               begin
@@ -4472,7 +4457,6 @@ begin
           begin
             dtAvPrv := Now;
             dtPrevDeslig := Now + 30;
-            tpAvPrevio := tpTpAvPrevio(0);
             observacao := 'Observacao aviso previo';
           end;
         end
@@ -4481,7 +4465,6 @@ begin
           with cancAvPrevio do
           begin
             dtCancAvPrv := Now;
-            mtvCancAvPrevio := tpMtvCancAvPrevio(0);
             observacao := 'Observacao cancelamento aviso previo';
           end;
         end;
@@ -7015,6 +6998,10 @@ var
   evtS5011: TS5011;
   evtS5012: TS5012;
   evtS5501: TS5501;
+  memoLinhas: TStrings;
+  vRetornoConsultaLote: TRetConsultaLote;
+  vRetEventos : TRetEventosCollectionItem;
+  vOcorrenciasItem : TOcorrenciasCollectionItem;
 begin
   Protocolo := '';
   if not(InputQuery('WebServices: Consulta Protocolo', 'Protocolo', Protocolo))
@@ -7023,123 +7010,118 @@ begin
 
   if ACBreSocial1.Consultar(Protocolo) then
   begin
-
     MemoResp.Lines.Text := ACBreSocial1.WebServices.ConsultaLote.RetWS;
 
-    with MemoDados.Lines do
+    memoLinhas := MemoDados.Lines;
+    vRetornoConsultaLote := ACBreSocial1.WebServices.ConsultaLote.RetConsultaLote;
+
+    memoLinhas.Add('');
+    memoLinhas.Add('Código Retorno: ' + IntToStr(vRetornoConsultaLote.Status.cdResposta));
+    memoLinhas.Add('Mensagem: ' + vRetornoConsultaLote.Status.descResposta);
+
+    if vRetornoConsultaLote.Status.cdResposta in [201, 202] then
     begin
-      with ACBreSocial1.WebServices.ConsultaLote.RetConsultaLote do
+      memoLinhas.Add('ideEmpregador');
+      memoLinhas.Add(' - TpInsc: ' + eSTpInscricaoToStr(vRetornoConsultaLote.IdeEmpregador.TpInsc));
+      memoLinhas.Add(' - NrInsc: ' + vRetornoConsultaLote.IdeEmpregador.NrInsc);
+      memoLinhas.Add('ideTransmissor');
+      memoLinhas.Add(' - TpInsc: ' + eSTpInscricaoToStr(vRetornoConsultaLote.IdeTransmissor.TpInsc));
+      memoLinhas.Add(' - NrInsc: ' + vRetornoConsultaLote.IdeTransmissor.NrInsc);
+      memoLinhas.Add('dadosRecepcaoLote');
+      memoLinhas.Add(' - dhRecepcao..............: ' +
+        DateTimeToStr(vRetornoConsultaLote.dadosRecLote.dhRecepcao));
+      memoLinhas.Add(' - versaoAplicativoRecepcao: ' +
+        vRetornoConsultaLote.dadosRecLote.versaoAplicRecepcao);
+      memoLinhas.Add(' - protocoloEnvio..........: ' + vRetornoConsultaLote.dadosRecLote.Protocolo);
+
+      for i := 0 to vRetornoConsultaLote.retEventos.Count - 1 do
       begin
-        Add('');
-        Add('Código Retorno: ' + IntToStr(Status.cdResposta));
-        Add('Mensagem: ' + Status.descResposta);
+        vRetEventos := vRetornoConsultaLote.retEventos.Items[i];
+        memoLinhas.Add('Processamento');
+        memoLinhas.Add(' - ID Evento..........: ' + vRetEventos.Id);
+        memoLinhas.Add(' - cdResposta.........: ' +
+          IntToStr(vRetEventos.Processamento.cdResposta));
+        memoLinhas.Add(' - descResposta.......: ' + vRetEventos
+          .Processamento.descResposta);
+        memoLinhas.Add(' - versaoAplicProcLote: ' + vRetEventos
+          .Processamento.versaoAplicProcLote);
+        memoLinhas.Add(' - dhProcessamento....: ' + DateTimeToStr(vRetEventos
+          .Processamento.dhProcessamento));
 
-        if Status.cdResposta in [201, 202] then
+        if vRetEventos.Processamento.Ocorrencias.Count > 0 then
         begin
-          Add('ideEmpregador');
-          Add(' - TpInsc: ' + eSTpInscricaoToStr(IdeEmpregador.TpInsc));
-          Add(' - NrInsc: ' + IdeEmpregador.NrInsc);
-          Add('ideTransmissor');
-          Add(' - TpInsc: ' + eSTpInscricaoToStr(IdeTransmissor.TpInsc));
-          Add(' - NrInsc: ' + IdeTransmissor.NrInsc);
-          Add('dadosRecepcaoLote');
-          Add(' - dhRecepcao..............: ' +
-            DateTimeToStr(dadosRecLote.dhRecepcao));
-          Add(' - versaoAplicativoRecepcao: ' +
-            dadosRecLote.versaoAplicRecepcao);
-          Add(' - protocoloEnvio..........: ' + dadosRecLote.Protocolo);
-
-          for i := 0 to retEventos.Count - 1 do
+          memoLinhas.Add('Ocorrencias do Processamento');
+          for J := 0 to vRetEventos.Processamento.Ocorrencias.Count - 1 do
           begin
-            Add('Processamento');
-            Add(' - ID Evento..........: ' + retEventos.Items[i].Id);
-            Add(' - cdResposta.........: ' +
-              IntToStr(retEventos.Items[i].Processamento.cdResposta));
-            Add(' - descResposta.......: ' + retEventos.Items[i]
-              .Processamento.descResposta);
-            Add(' - versaoAplicProcLote: ' + retEventos.Items[i]
-              .Processamento.versaoAplicProcLote);
-            Add(' - dhProcessamento....: ' + DateTimeToStr(retEventos.Items[i]
-              .Processamento.dhProcessamento));
-
-            if retEventos.Items[i].Processamento.Ocorrencias.Count > 0 then
-            begin
-              Add('Ocorrencias do Processamento');
-              for J := 0 to retEventos.Items[i].Processamento.Ocorrencias.
-                Count - 1 do
-              begin
-                Add(' Ocorrencia ' + IntToStr(J));
-                Add('   Código.....: ' +
-                  IntToStr(retEventos.Items[i].Processamento.Ocorrencias.Items
-                  [J].Codigo));
-                Add('   Descrição..: ' + retEventos.Items[i]
-                  .Processamento.Ocorrencias.Items[J].Descricao);
-                Add('   Tipo.......: ' +
-                  IntToStr(retEventos.Items[i].Processamento.Ocorrencias.Items
-                  [J].Tipo));
-                Add('   Localização: ' + retEventos.Items[i]
-                  .Processamento.Ocorrencias.Items[J].Localizacao);
-              end;
-            end;
-
-            for J := 0 to retEventos.Items[i].tot.Count - 1 do
-            begin
-              Add(' Tot ' + IntToStr(J));
-              Add('   Tipo.........: ' + retEventos.Items[i].tot[J].Tipo);
-              case retEventos.Items[i].tot[J].Evento.TipoEvento of
-                teS5001:
-                  begin
-                    evtS5001 := TS5001(retEventos.Items[i].tot[J].Evento.GetEvento);
-                    Add('   Id...........: ' + evtS5001.EvtBasesTrab.Id);
-                    Add('   nrRecArqBase.: ' + evtS5001.EvtBasesTrab.IdeEvento.nrRecArqBase);
-                  end;
-                teS5002:
-                  begin
-                    evtS5002 := TS5002(retEventos.Items[i].tot[J].Evento.GetEvento);
-                    Add('   Id...........: ' + evtS5002.EvtirrfBenef.Id);
-                    Add('   nrRecArqBase.: ' + evtS5002.EvtirrfBenef.IdeEvento.nrRecArqBase);
-                  end;
-                teS5011:
-                  begin
-                    evtS5011 := TS5011(retEventos.Items[i].tot[J].Evento.GetEvento);
-                    Add('   Id...........: ' + evtS5011.EvtCS.Id);
-                    Add('   nrRecArqBase.: ' + evtS5011.EvtCS.IdeEvento.nrRecArqBase);
-                  end;
-                teS5012:
-                  begin
-                    evtS5012 := TS5012(retEventos.Items[i].tot[J].Evento.GetEvento);
-                    Add('   Id...........: ' + evtS5012.EvtIrrf.Id);
-                    Add('   nrRecArqBase.: ' + evtS5012.EvtIrrf.IdeEvento.nrRecArqBase);
-                  end;
-                teS5501:
-                  begin
-                    evtS5501 := TS5501(retEventos.Items[i].tot[J].Evento.GetEvento);
-                    Add('   Id...........: ' + evtS5501.EvtTribProcTrab.Id);
-                    Add('   nrRecArqBase.: ' + evtS5501.EvtTribProcTrab.IdeEvento.nrRecArqBase);
-                  end;
-              end;
-            end;
-
-            Add('Recibo');
-            Add(' - nrRecibo: ' + retEventos.Items[i].Recibo.NrRecibo);
-            Add(' - hash....: ' + retEventos.Items[i].Recibo.hash);
-          end;
-
-        end
-        else
-        begin
-          for i := 0 to Status.Ocorrencias.Count - 1 do
-          begin
-            with Status.Ocorrencias.Items[i] do
-            begin
-              Add(' Ocorrencia ' + IntToStr(i));
-              Add('   Código.....: ' + IntToStr(Codigo));
-              Add('   Descrição..: ' + Descricao);
-              Add('   Tipo.......: ' + IntToStr(Tipo));
-              Add('   Localização: ' + Localizacao);
-            end;
+            memoLinhas.Add(' Ocorrencia ' + IntToStr(J));
+            memoLinhas.Add('   Código.....: ' +
+              IntToStr(vRetEventos.Processamento.Ocorrencias.Items
+              [J].Codigo));
+            memoLinhas.Add('   Descrição..: ' + vRetEventos
+              .Processamento.Ocorrencias.Items[J].Descricao);
+            memoLinhas.Add('   Tipo.......: ' +
+              IntToStr(vRetEventos.Processamento.Ocorrencias.Items
+              [J].Tipo));
+            memoLinhas.Add('   Localização: ' + vRetEventos
+              .Processamento.Ocorrencias.Items[J].Localizacao);
           end;
         end;
+
+        for J := 0 to vRetEventos.tot.Count - 1 do
+        begin
+          memoLinhas.Add(' Tot ' + IntToStr(J));
+          memoLinhas.Add('   Tipo.........: ' + vRetEventos.tot[J].Tipo);
+          case vRetEventos.tot[J].Evento.TipoEvento of
+            teS5001:
+              begin
+                evtS5001 := TS5001(vRetEventos.tot[J].Evento.GetEvento);
+                memoLinhas.Add('   Id...........: ' + evtS5001.EvtBasesTrab.Id);
+                memoLinhas.Add('   nrRecArqBase.: ' + evtS5001.EvtBasesTrab.IdeEvento.nrRecArqBase);
+              end;
+            teS5002:
+              begin
+                evtS5002 := TS5002(vRetEventos.tot[J].Evento.GetEvento);
+                memoLinhas.Add('   Id...........: ' + evtS5002.EvtirrfBenef.Id);
+                memoLinhas.Add('   nrRecArqBase.: ' + evtS5002.EvtirrfBenef.IdeEvento.nrRecArqBase);
+              end;
+            teS5011:
+              begin
+                evtS5011 := TS5011(vRetEventos.tot[J].Evento.GetEvento);
+                memoLinhas.Add('   Id...........: ' + evtS5011.EvtCS.Id);
+                memoLinhas.Add('   nrRecArqBase.: ' + evtS5011.EvtCS.IdeEvento.nrRecArqBase);
+              end;
+            teS5012:
+              begin
+                evtS5012 := TS5012(vRetEventos.tot[J].Evento.GetEvento);
+                memoLinhas.Add('   Id...........: ' + evtS5012.EvtIrrf.Id);
+                memoLinhas.Add('   nrRecArqBase.: ' + evtS5012.EvtIrrf.IdeEvento.nrRecArqBase);
+              end;
+            teS5501:
+              begin
+                evtS5501 := TS5501(vRetEventos.tot[J].Evento.GetEvento);
+                memoLinhas.Add('   Id...........: ' + evtS5501.EvtTribProcTrab.Id);
+                memoLinhas.Add('   nrRecArqBase.: ' + evtS5501.EvtTribProcTrab.IdeEvento.nrRecArqBase);
+              end;
+          end;
+        end;
+
+        memoLinhas.Add('Recibo');
+        memoLinhas.Add(' - nrRecibo: ' + vRetEventos.Recibo.NrRecibo);
+        memoLinhas.Add(' - hash....: ' + vRetEventos.Recibo.hash);
+      end;
+
+    end
+    else
+    begin
+      for i := 0 to vRetornoConsultaLote.Status.Ocorrencias.Count - 1 do
+      begin
+        vOcorrenciasItem := vRetornoConsultaLote.Status.Ocorrencias.Items[i];
+
+        memoLinhas.Add(' Ocorrencia ' + IntToStr(i));
+        memoLinhas.Add('   Código.....: ' + IntToStr(vOcorrenciasItem.Codigo));
+        memoLinhas.Add('   Descrição..: ' + vOcorrenciasItem.Descricao);
+        memoLinhas.Add('   Tipo.......: ' + IntToStr(vOcorrenciasItem.Tipo));
+        memoLinhas.Add('   Localização: ' + vOcorrenciasItem.Localizacao);
       end;
     end;
 
@@ -7360,8 +7342,6 @@ begin
 end;
 
 procedure TfrmACBreSocial.SelecionaEventos;
-var
-  i: integer;
 begin
 
   ACBreSocial1.Eventos.Clear;

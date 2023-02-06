@@ -197,7 +197,7 @@ begin
   Result := inherited TratarXmlRetornado(aXML);
 
   Result := RemoverCaracteresDesnecessarios(Result);
-  Result := ParseText(AnsiString(Result), True, False);
+  Result := ParseText(AnsiString(Result), True, {$IfDef FPC}True{$Else}False{$EndIf});
   Result := RemoverDeclaracaoXML(Result);
   Result := RemoverIdentacao(Result);
   Result := RemoverPrefixosDesnecessarios(Result);
@@ -424,7 +424,7 @@ begin
         SalvarXmlNfse(ANota);
       end;
 
-      Response.Sucesso := (Response.Erros.Count > 0);
+      Response.Sucesso := (Response.Erros.Count = 0);
     except
       on E:Exception do
       begin

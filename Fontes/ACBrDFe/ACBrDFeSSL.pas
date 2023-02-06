@@ -456,7 +456,7 @@ type
       default httpNone;
     property SSLXmlSignLib: TSSLXmlSignLib read FSSLXmlSignLib write SetSSLXmlSignLib
       default xsNone;
-    property SSLType: TSSLType read FSSLType write FSSLType default LT_all;
+    property SSLType: TSSLType read FSSLType write FSSLType default LT_TLSv1_2;
     property SSLDgst: TSSLDgst read FSSLDgst write FSSLDgst default dgstSHA1;
 
     property StoreLocation: TSSLStoreLocation read FStoreLocation
@@ -1058,14 +1058,7 @@ begin
 
     FDataResp.Position := 0;
     Result := ReadStrFromStream(FDataResp, FDataResp.Size);
-
-    // Verifica se o ResultCode é: 200 OK; 201 Created; 202 Accepted
-    // https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
-    if not (FpHTTPResultCode in [200..202]) then
-      raise EACBrDFeException.Create('');
   except
-//    on E:EACBrDFeException do
-//      raise;
     on E:Exception do
     begin
       raise EACBrDFeException.CreateDef( Format(ACBrStr(cACBrDFeSSLEnviarException),
@@ -1296,7 +1289,7 @@ begin
   FTimeOutPorThread := False;
   FNameSpaceURI:= '';
 
-  FSSLType       := LT_all;
+  FSSLType       := LT_TLSv1_2;
   FSSLDgst       := dgstSHA1;
   FStoreLocation := slCurrentUser;
   FStoreName     := CDEFAULT_STORE_NAME;
