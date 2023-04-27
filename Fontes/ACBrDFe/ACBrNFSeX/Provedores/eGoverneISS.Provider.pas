@@ -284,8 +284,8 @@ begin
 
       if Response.Alertas.Count > 0 then
       begin
-        Response.Lote := OnlyNumber(RightStrNativeString(Response.Alertas[0].Descricao, 20));
-        FPCodigoLote := Response.Lote;
+        Response.NumeroLote := OnlyNumber(RightStrNativeString(Response.Alertas[0].Descricao, 20));
+        FPCodigoLote := Response.NumeroLote;
       end;
 
       ANode := Document.Root.Childrens.FindAnyNs(AMessageTag);
@@ -303,16 +303,14 @@ begin
             with Response do
             begin
               NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('Numero'), tcStr);
-
-              CodVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Autenticador'), tcStr);
-
+              CodigoVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Autenticador'), tcStr);
               Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('Link'), tcStr);
               Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
             end;
 
             AResumo := Response.Resumos.New;
             AResumo.NumeroNota := Response.NumeroNota;
-            AResumo.CodigoVerificacao := Response.CodVerificacao;
+            AResumo.CodigoVerificacao := Response.CodigoVerificacao;
             AResumo.Link := Response.Link;
           end;
         end;
@@ -337,7 +335,7 @@ var
   Emitente: TEmitenteConfNFSe;
 begin
   if EstaVazio(FPCodigoLote) then
-    FPCodigoLote := Response.Lote;
+    FPCodigoLote := Response.NumeroLote;
 
   if EstaVazio(FPCodigoLote) then
   begin
@@ -416,7 +414,7 @@ begin
               begin
                 NumeroNota := ObterConteudoTag(ANode.Childrens.FindAnyNs('Numero'), tcStr);
 
-                CodVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Autenticador'), tcStr);
+                CodigoVerificacao := ObterConteudoTag(ANode.Childrens.FindAnyNs('Autenticador'), tcStr);
 
                 Link := ObterConteudoTag(ANode.Childrens.FindAnyNs('Link'), tcStr);
                 Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
@@ -424,7 +422,7 @@ begin
 
               AResumo := Response.Resumos.New;
               AResumo.NumeroNota := Response.NumeroNota;
-              AResumo.CodigoVerificacao := Response.CodVerificacao;
+              AResumo.CodigoVerificacao := Response.CodigoVerificacao;
               AResumo.Link := Response.Link;
             end;
           end;

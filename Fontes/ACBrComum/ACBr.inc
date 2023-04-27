@@ -273,22 +273,14 @@
   {$ENDIF}
 {$ENDIF}
 
-// Definições para o Quick Report
-// Descomente a linha abaixo caso o Quick Report tenha suporte a PDF
-//------------------------------------------------------------------------------
-{$DEFINE QReport_PDF}
-
-// Definições para o compomente ACBrCTe
-// Define o Pacote de Liberação / Descomente o pacote a ser utilizado 
-// Atenção: descomente apenas uma das definições
-//------------------------------------------------------------------------------
-//{$DEFINE PL_103}
-//{$DEFINE PL_104}
-{$DEFINE PL_200}
-
 // Verificando se a compilação deve sem em modo texto "NOGUI"
 // Nota: FPC no Linux sempre liga a diretiva "CONSOLE", por isso criamos a NOGUI
 {$IFDEF FRAMEWORK}
+  {$DEFINE NOGUI}
+{$ENDIF}
+
+//  lazrus Android com LAMW, não suporta Dialogs, Forms,
+{$IFDEF LAMW}
   {$DEFINE NOGUI}
 {$ENDIF}
 

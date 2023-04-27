@@ -1123,7 +1123,7 @@ begin
 
   if (pEmp.TpInsc = tiCNPJ) then
   begin
-    if (VersaoDF <= veS01_00_00) or bProcJudFap or (pTpInscEstab = tiCNO) then
+    if (pAliqRat.Fap > 0) or bProcJudFap or (pTpInscEstab = tiCNO) then
       Gerador.wCampo(tcDe4, '', 'fap',          1, 5, 0, pAliqRat.Fap);
 
     if (VersaoDF <= ve02_05_00) then
@@ -1477,8 +1477,8 @@ begin
     Gerador.wCampo(tcStr, '', 'defIntelectual', 1, 1, 1, eSSimNaoToStr(pInfoDeficiencia.DefIntelectual));
     Gerador.wCampo(tcStr, '', 'reabReadap',     1, 1, 1, eSSimNaoToStr(pInfoDeficiencia.reabReadap));
 
-    if (pTipo <> 3) then
-      Gerador.wCampo(tcStr, '', 'infoCota', 1, 1, 1, eSSimNaoToStr(pInfoDeficiencia.infoCota));
+    if (pTipo <> 3) and (pInfoDeficiencia.infoCota <> snfNada) then
+      Gerador.wCampo(tcStr, '', 'infoCota', 1, 1, 1, eSSimNaoFacultativoToStr(pInfoDeficiencia.infoCota));
 
     Gerador.wCampo(tcStr, '', 'observacao', 1, 255, 0, pInfoDeficiencia.Observacao);
 
@@ -1842,7 +1842,7 @@ begin
   Gerador.wGrupo('emitente');
 
   Gerador.wCampo(tcStr, '', 'nmEmit', 1, 70, 1, pEmitente.nmEmit);
-  Gerador.wCampo(tcStr, '', 'ideOC',  1,  1, 1, eSIdeOCToStr(pEmitente.ideOC));
+  Gerador.wCampo(tcStr, '', 'ideOC',  1,  1, 1, eSIdeOCToStrEX(pEmitente.ideOC));
 
   case ATipoEvento of
     teS2210: Gerador.wCampo(tcStr, '', 'nrOC', 1, 14, 1, pEmitente.nrOc);

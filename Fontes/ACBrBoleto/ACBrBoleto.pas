@@ -46,18 +46,19 @@ uses Classes, Graphics, Contnrs, IniFiles,
      SysUtils, typinfo,
      ACBrBase, ACBrMail, ACBrValidador,
      ACBrDFeSSL, pcnConversao, ACBrBoletoConversao, ACBrBoletoRetorno,
-     ACBrPIXBase;
+     ACBrPIXBase, ACBrPIXBRCode;
 
 const
   CInstrucaoPagamento = 'Pagar preferencialmente nas agencias do %s';
   CInstrucaoPagamentoLoterica = 'Preferencialmente nas Casas Lotéricas até o valor limite';
   CInstrucaoPagamentoRegistro = 'Pagavel em qualquer banco até o vencimento.';
+  CInstrucaoPagamentoTodaRede = 'Pagavel em toda rede bancaria';
   CCedente    = 'CEDENTE';
   CBanco      = 'BANCO';
   CConta      = 'CONTA';
   CTitulo     = 'TITULO';
   CWebService = 'WEBSERVICE';
-  cACBrTipoOcorrenciaDecricao: array[0..315] of String = (
+  cACBrTipoOcorrenciaDecricao: array[0..344] of String = (
     {Ocorrências para arquivo remessa}
     'Remessa Registrar',
     'Remessa Baixar',
@@ -138,6 +139,18 @@ const
     'Remessa Resusa Alegação do Sacado',
     'Remessa Protestar Automaticamente',
     'Remessa Alteração de Status Desconto',
+    'Remessa Protestar Urgente',
+    'Remessa Registrar Direta',
+    'Remessa Alterar Numero Dias Baixa',
+    'Remessa Alterar Valor Mínimo/Máximo',
+    'Remessa Alteração Quantidade Parcelas',
+    'Remessa Alteração Valor Nominal',
+    'Remessa Não Baixar Automaticamente',
+    'Remessa Alteração Percentual Para Mínimo',
+    'Remessa Alteração Percentual Para Máximo',
+    'Remessa Alteração Percentual Para Mínimo/Máximo',
+    'Remessa Prorrogar Vencimento',
+    'Remessa Boleto Hibrido',
 
     {Ocorrências para arquivo retorno}
     'Retorno Abatimento Cancelado',
@@ -376,7 +389,24 @@ const
     'Retorno Confirmação de alteração do valor máximo/percentual',
     'Retorno Confirmação de Pedido de Dispensa de Multa',
     'Retorno Confirmação do Pedido de Cobrança de Multa',
-    'Retorno Confirmação do Pedido de Alteração do Beneficiário do Título'
+    'Retorno Confirmação do Pedido de Alteração do Beneficiário do Título',
+    'Retorno Excluir Protesto Carta Anuencia',
+    'Retorno Confirmação Cancelamento Baixa Automatica',
+    'Retorno Confirmação Alteracao Dias Baixa Automatica',
+    'Retorno Confirmação Instrucao Protesto',
+    'Retorno Confirmação Instrucao Sustacao Protesto',
+    'Retorno Confirmação Instrucao Nao Protestar',
+    'Retorno Confirmação Instrucao Nao Baixar Automaticamente',
+    'Retorno Alteracao Percentual Minimo',
+    'Retorno Alteracao Percentual Maximo',
+    'Retorno Alteracao Percentual Minimo Maximo',
+    'Retorno Recebimento Instrucao Nao Baixar',
+    'Retorno Confirmacao Protesto',
+    'Retorno Confirmacao Sustacao',
+    'Retorno Protesto Sustado Judicialmente',
+    'Retorno Confirmação Instrucao Sustar Protesto',
+    'Retorno Confirmação Instrucao Alteracao Dias Baixa Automatica',
+    'Retorno Alteracao Quantidade Parcela'
 );
 
 type
@@ -428,7 +458,11 @@ type
     cobBS2,
     cobPenseBankAPI,
     cobBTGPactual,
-    cobBancoOriginal
+    cobBancoOriginal,
+    cobBancoVotorantim,
+    cobBancoPefisa,
+    cobBancoFibra,
+    cobBancoSofisaItau
     );
 
   TACBrTitulo = class;
@@ -537,6 +571,18 @@ type
     toRemessaRecusaAlegacaoSacado,
     toRemessaProtestoAutomatico,
     toRemessaAlterarStatusDesconto,
+    toRemessaProtestarUrgente,
+    toRemessaRegistrarDireta,
+    toRemessaAlterarNumeroDiasBaixa,
+    toRemessaAlterarValorMinimoMaximo,
+    toRemessaAlteracaoQuantidadeParcela,
+    toRemessaAlteracaoValorNominal,
+    toRemessaNaoBaixarAutomaticamente,
+    toRemessaAlteracaoPercentualParaMinimo,
+    toRemessaAlteracaoPercentualParaMaximo,
+    toRemessaAlteracaoPercentualParaMinimoMaximo,
+    toRemessaProrrogarVencimento,
+    toRemessaHibrido,
 
     {Ocorrências para arquivo retorno}
     toRetornoAbatimentoCancelado,
@@ -776,7 +822,23 @@ type
     toRetornoConfirmacaoPedidoDispensaMulta,
     toRetornoConfirmacaoPedidoCobrancaMulta,
     toRetornoConfirmacaoPedidoAlteracaoBeneficiarioTitulo,
-    toRetornoExcluirProtestoCartaAnuencia
+    toRetornoExcluirProtestoCartaAnuencia,
+    toRetornoConfirmacaoCancelamentoBaixaAutomatica,
+    toRetornoConfAlteracaoDiasBaixaAutomatica,
+    toRetornoConfInstrucaoProtesto,
+    toRetornoConfInstrucaoSustacaoProtesto,
+    toRetornoConfInstrucaoNaoProtestar,
+    toRetornoConfInstrucaoNaoBaixarAutomaticamente,
+    toRetornoAlteracaoPercentualMinimo,
+    toRetornoAlteracaoPercentualMaximo,
+    toRetornoAlteracaoPercentualMinimoMaximo,
+    toRetornoRecebimentoInstrucaoNaoBaixar,
+    toRetornoConfirmacaoProtesto,
+    toRetornoConfirmacaoSustacao,
+    toRetornoProtestoSustadoJudicialmente,
+    toRetornoConfInstrucaoSustarProtesto,
+    toRetornoConfInstrucaoAlteracaoDiasBaixaAutomatica,
+    toRetornoAlteracaoQuantidadeParcela
   );
 
   //Complemento de instrução para alterar outros dados
@@ -1439,7 +1501,7 @@ type
     property url : String read Furl write Seturl;
     property txId  : String read FtxId write SettxId;
     property emv   : String read Femv write Setemv;
-
+    procedure PIXQRCodeDinamico(const AURL, ATXID: String; ATitulo : TACBrTitulo);
   end;
 
   { TACBrTitulo }
@@ -1906,7 +1968,8 @@ Uses {$IFNDEF NOGUI}Forms,{$ENDIF} Math, dateutils, strutils,  ACBrBoletoWS,
      ACBrBancoCresolSCRS, ACBrBancoCitiBank, ACBrBancoABCBrasil, ACBrBancoDaycoval, ACBrUniprimeNortePR,
      ACBrBancoPine, ACBrBancoPineBradesco, ACBrBancoUnicredSC, ACBrBancoAlfa, ACBrBancoCresol,
      ACBrBancoBradescoMoneyPlus, ACBrBancoC6, ACBrBancoRendimento, ACBrBancoInter, ACBrBancoSofisaSantander,
-     ACBrBancoBS2, ACBrBancoPenseBank, ACBrBancoBTGPactual, ACBrBancoOriginal;
+     ACBrBancoBS2, ACBrBancoPenseBank, ACBrBancoBTGPactual, ACBrBancoOriginal, ACBrBancoVotorantim,
+     ACBrBancoPefisa, ACBrBancoFibra, ACBrBancoSofisaItau;
 
 {$IFNDEF FPC}
    {$R ACBrBoleto.dcr}
@@ -2065,6 +2128,28 @@ end;
 destructor TACBrBoletoPIXQRCode.Destroy;
 begin
   inherited;
+end;
+
+procedure TACBrBoletoPIXQRCode.PIXQRCodeDinamico(const AURL, ATXID: String; ATitulo : TACBrTitulo);
+var
+  LEMV : TACBrPIXQRCodeDinamico;
+begin
+  if (EstaVazio(AURL) or EstaVazio(ATXID)) then
+    raise Exception.Create(ACBrStr('URL e TXID é obrigatório!'));
+  LEMV := TACBrPIXQRCodeDinamico.Create;
+  try
+    LEMV.IgnoreErrors := True;
+    LEMV.MerchantName := ATitulo.ACBrBoleto.Cedente.Nome;
+    LEMV.MerchantCity := ATitulo.ACBrBoleto.Cedente.Cidade;
+    LEMV.PostalCode   := Poem_Zeros(ATitulo.ACBrBoleto.Cedente.CEP,8);
+    LEMV.URL          := AURL;
+    //LEMV.TxId         := ATXID;
+    Seturl(AURL);
+    SettxId(ATXID);
+    Setemv(LEMV.AsString);
+  finally
+    LEMV.Free;
+  end;
 end;
 
 { TACBrArquivos }
@@ -3541,9 +3626,11 @@ begin
     104: Result := cobCaixaEconomica;
     133: Result := cobBancoCresol;
     136: Result := cobUnicredES;
+    174: Result := cobBancoPefisa;
     208: Result := cobBTGPactual;
     212: Result := cobBancoOriginal;
     218: Result := cobBS2;
+    224: Result := cobBancoFibra;
     237: Result := cobBradesco;
     246: Result := cobBancoABCBrasil;
     274: Result := cobMoneyPlus;
@@ -3553,13 +3640,19 @@ begin
     399: Result := cobHSBC;
     422: Result := cobBancoSafra;
     633: Result := cobBancoRendimento;
-    637: Result := cobBancoSofisaSantander;
+    637: begin
+           if StrToInt(Carteira) = 109 then
+             Result := cobBancoSofisaItau
+           else
+             Result := cobBancoSofisaSantander;
+         end;
     643: begin
            if StrToInt(Carteira) = 9 then
              Result := cobBancoPineBradesco
            else
              Result := cobBancoPine;
          end;
+    655: Result := cobBancoVotorantim;
     707: Result := cobDaycoval;
     745: Result := cobCitiBank;
     748: Result := cobSicred;
@@ -3740,6 +3833,16 @@ begin
         CedenteWS.Scope                     := IniBoletos.ReadString(CWebService,'Scope', CedenteWS.Scope);
         Configuracoes.WebService.Ambiente   := TpcnTipoAmbiente(IniBoletos.ReadInteger(CWebService,'Ambiente', Integer(Configuracoes.WebService.Ambiente)));
         Configuracoes.WebService.SSLHttpLib := TSSLHttpLib(IniBoletos.ReadInteger(CWebService,'SSLHttpLib', Integer(Configuracoes.WebService.SSLHttpLib)));
+
+        if IniBoletos.ValueExists(CWebService,'ArquivoCRT') then
+          Configuracoes.WebService.ArquivoCRT := IniBoletos.ReadString(CWebService,'ArquivoCRT', Configuracoes.WebService.ArquivoCRT);
+
+        if IniBoletos.ValueExists(CWebService,'ArquivoKEY') then
+          Configuracoes.WebService.ArquivoKEY := IniBoletos.ReadString(CWebService,'ArquivoKEY', Configuracoes.WebService.ArquivoKEY);
+
+        if IniBoletos.ValueExists(CWebService,'ArquivoPFX') then
+          Configuracoes.WebService.ArquivoPFX := IniBoletos.ReadString(CWebService,'ArquivoPFX', Configuracoes.WebService.ArquivoPFX);
+
         Result := True;
       end;
     end;
@@ -4368,6 +4471,10 @@ begin
      cobPenseBankAPI         : fBancoClass := TACBrBancoPenseBank.Create(Self);
      cobBTGPactual           : fBancoClass := TACBrBancoBTGPactual.create(Self);     {208}
      cobBancoOriginal        : fBancoClass := TACBrBancoOriginal.Create(Self);        {212}
+     cobBancoVotorantim      : fBancoClass := TACBrBancoVotorantim.create(Self);     {655}
+     cobBancoPefisa          : fBancoClass := TACBrBancoPefisa.create(Self);         {174}
+     cobBancoFibra           : fBancoClass := TACBrBancoFibra.create(Self);          {224}
+     cobBancoSofisaItau      : fBancoClass := TACBrBancoSofisaItau.Create(Self);      {637}
    else
      fBancoClass := TACBrBancoClass.create(Self);
    end;
@@ -6019,8 +6126,14 @@ begin
 end;
 
 function TACBrBoletoFCClass.GetArquivoLogo: String;
+var LArquivo : String;
 begin
-   Result := PathWithDelim(DirLogo) + IntToStrZero( ACBrBoleto.Banco.Numero, 3)+'.bmp';
+  LArquivo := PathWithDelim(DirLogo) + IntToStrZero( ACBrBoleto.Banco.Numero, 3);
+  Result := LArquivo + '.bmp';
+  {$IFDEF COMPILER7_UP}
+    if FileExists(LArquivo + '.png') then
+      Result := LArquivo + '.png';
+  {$ENDIF}
 end;
 
 function TACBrBoletoFCClass.ComponentStateDesigning: Boolean;

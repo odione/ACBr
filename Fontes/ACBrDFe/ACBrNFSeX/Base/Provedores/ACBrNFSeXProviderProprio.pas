@@ -303,7 +303,7 @@ begin
   else
     Versao := '';
 
-  IdAttr := DefinirIDLote(Response.Lote);
+  IdAttr := DefinirIDLote(Response.NumeroLote);
 
   ListaRps := AplicarLineBreak(ListaRps, '');
 
@@ -424,7 +424,15 @@ end;
 
 procedure TACBrNFSeProviderProprio.TratarRetornoConsultaNFSe(Response: TNFSeConsultaNFSeResponse);
 begin
-  // Deve ser implementado para cada provedor que tem o seu próprio layout
+  case Response.InfConsultaNFSe.tpConsulta of
+    tcPorPeriodo,
+    tcPorFaixa:
+      TratarRetornoConsultaNFSeporFaixa(Response);
+    tcServicoPrestado:
+      TratarRetornoConsultaNFSeServicoPrestado(Response);
+    tcServicoTomado:
+      TratarRetornoConsultaNFSeServicoTomado(Response);
+  end;
 end;
 
 procedure TACBrNFSeProviderProprio.PrepararConsultaNFSeporFaixa(Response: TNFSeConsultaNFSeResponse);
@@ -629,7 +637,7 @@ begin
     aParams.Versao := '';
     aParams.Serie := '';
     aParams.Motivo := '';
-    aParams.CodVerif := '';
+    aParams.CodigoVerificacao := '';
 
     GerarMsgDadosSubstituiNFSe(Response, aParams);
   finally

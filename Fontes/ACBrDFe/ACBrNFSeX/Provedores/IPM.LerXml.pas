@@ -39,7 +39,7 @@ interface
 uses
   SysUtils, Classes, StrUtils,
   ACBrXmlBase, ACBrXmlDocument,
-  ACBrNFSeXConversao, ACBrNFSeXLerXml;
+  ACBrNFSeXConversao, ACBrNFSeXLerXml, ACBrNFSeXLerXml_ABRASFv2;
 
 type
   { Provedor com layout próprio }
@@ -64,6 +64,16 @@ type
   { TNFSeR_IPM101 }
 
   TNFSeR_IPM101 = class(TNFSeR_IPM)
+
+  end;
+
+  { TNFSeR_IPM204 }
+
+  TNFSeR_IPM204 = class(TNFSeR_ABRASFv2)
+  protected
+
+  public
+    function LerXmlNfse(const ANode: TACBrXmlNode): Boolean; override;
 
   end;
 
@@ -396,6 +406,32 @@ end;
 function TNFSeR_IPM.LerXmlRps(const ANode: TACBrXmlNode): Boolean;
 begin
   Result := LerXmlNfse(ANode);
+end;
+
+{ TNFSeR_IPM204 }
+
+function TNFSeR_IPM204.LerXmlNfse(const ANode: TACBrXmlNode): Boolean;
+var
+  AuxNode: TACBrXmlNode;
+begin
+  Result := True;
+
+  if not Assigned(ANode) or (ANode = nil) then Exit;
+
+  AuxNode := ANode.Childrens.FindAnyNs('item');
+
+  if AuxNode = nil then
+    AuxNode := ANode.Childrens.FindAnyNs('Nfse')
+  else
+    AuxNode := AuxNode.Childrens.FindAnyNs('Nfse');
+
+  if AuxNode = nil then
+    AuxNode := ANode;
+
+  LerInfNfse(AuxNode);
+
+  LerNfseCancelamento(ANode);
+  LerNfseSubstituicao(ANode);
 end;
 
 end.

@@ -137,6 +137,9 @@ end;
 
 procedure TBoletoWSREST.DefinirCertificado;
 begin
+  BoletoWS.ArquivoCRT := Boleto.Configuracoes.WebService.ArquivoCRT;
+  BoletoWS.ArquivoKEY := Boleto.Configuracoes.WebService.ArquivoKEY;
+
   // Adicionando o Certificado
   if NaoEstaVazio(BoletoWS.ArquivoCRT) then
     HTTPSend.Sock.SSL.CertificateFile := BoletoWS.ArquivoCRT;
@@ -322,7 +325,7 @@ begin
   try
     Executar;
   finally
-    Result := (BoletoWS.RetornoBanco.HTTPResultCode in [200, 201, 202]);
+    Result := (BoletoWS.RetornoBanco.HTTPResultCode in [200..207]);
 
     if Result then //Grava retorno
       BoletoWS.DoLog('Retorno Envio: ' + FRetornoWS)

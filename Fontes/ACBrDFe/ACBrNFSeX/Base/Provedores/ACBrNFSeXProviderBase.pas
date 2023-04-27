@@ -264,6 +264,9 @@ type
     function TributacaoToStr(const t: TTributacao): string; virtual;
     function StrToTributacao(out ok: boolean; const s: string): TTributacao; virtual;
     function TributacaoDescricao(const t: TTributacao): String; virtual;
+
+    function TipoDeducaoToStr(const t: TTipoDeducao): string; virtual;
+    function StrToTipoDeducao(out ok: Boolean; const s: string): TTipoDeducao; virtual;
   end;
 
 implementation
@@ -785,21 +788,14 @@ end;
 procedure TACBrNFSeXProvider.CarregarURL;
 var
   IniParams: TMemIniFile;
-  Sessao, Msg: String;
+  Sessao: String;
 begin
-  Msg := 'Arquivos:' + #13 +
-         'ACBrNFSeXServicos.ini e ou ACBrNFSeXServicos.res desatualizados' + #13 +
-         'Favor atualizar.';
-
   IniParams := TMemIniFile.Create('');
 
   with TACBrNFSeX(FAOwner) do
   begin
     IniParams.SetStrings(Configuracoes.WebServices.Params);
   end;
-
-  if IniParams.ReadString('3130309', 'Params1', '') <> '' then
-    raise EACBrDFeException.Create(Msg);
 
   try
     with TACBrNFSeX(FAOwner) do
@@ -1431,6 +1427,23 @@ begin
                             ttTributavelFixo, ttTributavelSN, ttMEI]);
 end;
 
+function TACBrNFSeXProvider.TipoDeducaoToStr(const t: TTipoDeducao): string;
+begin
+  result := EnumeradoToStr(t,
+                           ['1', '2', '3', '4', '5', '6', '7'],
+                 [tdNenhum, tdMateriais, tdPercentual, tdValor, tdPercMateriais,
+                  tdVeiculacao, tdIntermediacao]);
+end;
+
+function TACBrNFSeXProvider.StrToTipoDeducao(out ok: Boolean;
+  const s: string): TTipoDeducao;
+begin
+  result := StrToEnumerado(ok, s,
+                           ['1', '2', '3', '4', '5', '6', '7'],
+                 [tdNenhum, tdMateriais, tdPercentual, tdValor, tdPercMateriais,
+                  tdVeiculacao, tdIntermediacao]);
+end;
+
 function TACBrNFSeXProvider.PrepararRpsParaLote(const aXml: string): string;
 var
   i: Integer;
@@ -1533,9 +1546,9 @@ begin
   end;
 
   case GerarResponse.ModoEnvio of
-    meLoteAssincrono,
-    meTeste: ValidarSchema(GerarResponse, tmRecepcionar);
-    meLoteSincrono: ValidarSchema(GerarResponse, tmRecepcionarSincrono);
+    meLoteAssincrono: ValidarSchema(EmiteResponse, tmRecepcionar);
+    meLoteSincrono: ValidarSchema(EmiteResponse, tmRecepcionarSincrono);
+    meTeste: ValidarSchema(EmiteResponse, tmTeste);
   else
     // meUnitario
     ValidarSchema(GerarResponse, tmGerar);
@@ -1547,7 +1560,7 @@ begin
     Exit;
   end;
 
-  GerarResponse.NomeArq := GerarResponse.Lote + '-env-lot.xml';
+  GerarResponse.NomeArq := GerarResponse.NumeroLote + '-env-lot.xml';
 
   FAOwner.Gravar(GerarResponse.NomeArq, GerarResponse.ArquivoEnvio);
 
@@ -1611,29 +1624,30 @@ begin
         meLoteAssincrono:
           begin
             AService := CriarServiceClient(tmRecepcionar);
-            AService.Prefixo := EmiteResponse.Lote;
+            AService.Prefixo := EmiteResponse.NumeroLote;
             EmiteResponse.ArquivoRetorno := AService.Recepcionar(ConfigMsgDados.DadosCabecalho, EmiteResponse.ArquivoEnvio);
           end;
 
         meTeste:
           begin
-            AService := CriarServiceClient(tmRecepcionar);
-            AService.Prefixo := EmiteResponse.Lote;
+            AService := CriarServiceClient(tmTeste);
+            AService.Prefixo := EmiteResponse.NumeroLote;
             EmiteResponse.ArquivoRetorno := AService.TesteEnvio(ConfigMsgDados.DadosCabecalho, EmiteResponse.ArquivoEnvio);
           end;
 
         meLoteSincrono:
           begin
             AService := CriarServiceClient(tmRecepcionarSincrono);
-            AService.Prefixo := EmiteResponse.Lote;
+            AService.Prefixo := EmiteResponse.NumeroLote;
             EmiteResponse.ArquivoRetorno := AService.RecepcionarSincrono(ConfigMsgDados.DadosCabecalho, EmiteResponse.ArquivoEnvio);
           end;
       else
         // meUnitario
         begin
           AService := CriarServiceClient(tmGerar);
-          AService.Prefixo := EmiteResponse.Lote;
+          AService.Prefixo := EmiteResponse.NumeroLote;
           EmiteResponse.ArquivoRetorno := AService.GerarNFSe(ConfigMsgDados.DadosCabecalho, EmiteResponse.ArquivoEnvio);
+          EmiteResponse.HtmlRetorno    := AService.HtmlRetorno;
         end;
       end;
 
@@ -1845,7 +1859,7 @@ begin
       TACBrNFSeX(FAOwner).SetStatus(stNFSeEnvioWebService);
 
       AService := CriarServiceClient(tmConsultarNFSePorRps);
-      AService.Prefixo := ConsultaNFSeporRpsResponse.NumRPS + ConsultaNFSeporRpsResponse.Serie;
+      AService.Prefixo := ConsultaNFSeporRpsResponse.NumeroRps + ConsultaNFSeporRpsResponse.SerieRps;
       ConsultaNFSeporRpsResponse.ArquivoRetorno := AService.ConsultarNFSePorRps(ConfigMsgDados.DadosCabecalho,
                                                                             ConsultaNFSeporRpsResponse.ArquivoEnvio);
 
@@ -1986,7 +2000,7 @@ begin
     try
       TACBrNFSeX(FAOwner).SetStatus(stNFSeEnvioWebService);
       AService := CriarServiceClient(tmConsultarParam);
-      AService.Prefixo := IntToStr(ConsultarParamResponse.CodigoMunic) +
+      AService.Prefixo := IntToStr(ConsultarParamResponse.CodigoMunicipio) +
         '-' + ParamMunicToStr(ConsultarParamResponse.tpParamMunic);
 
       ConsultarParamResponse.ArquivoRetorno := AService.ConsultarParam(ConfigMsgDados.DadosCabecalho,
@@ -2143,20 +2157,30 @@ begin
 
       case ConsultaNFSeResponse.Metodo of
         tmConsultarNFSePorFaixa:
-          ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSePorFaixa(ConfigMsgDados.DadosCabecalho,
-                                                                            ConsultaNFSeResponse.ArquivoEnvio);
-
+          begin
+            ConsultaNFSeResponse.InfConsultaNFSe.tpConsulta := tcPorFaixa;
+            ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSePorFaixa(ConfigMsgDados.DadosCabecalho,
+                                                                              ConsultaNFSeResponse.ArquivoEnvio);
+          end;
         tmConsultarNFSeServicoPrestado:
-          ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSeServicoPrestado(ConfigMsgDados.DadosCabecalho,
-                                                                                   ConsultaNFSeResponse.ArquivoEnvio);
+          begin
+            ConsultaNFSeResponse.InfConsultaNFSe.tpConsulta := tcServicoPrestado;
+            ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSeServicoPrestado(ConfigMsgDados.DadosCabecalho,
+                                                                                     ConsultaNFSeResponse.ArquivoEnvio);
 
+          end;
         tmConsultarNFSeServicoTomado:
-          ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSeServicoTomado(ConfigMsgDados.DadosCabecalho,
-                                                                                 ConsultaNFSeResponse.ArquivoEnvio);
-
+          begin
+            ConsultaNFSeResponse.InfConsultaNFSe.tpConsulta := tcServicoTomado;
+            ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSeServicoTomado(ConfigMsgDados.DadosCabecalho,
+                                                                                   ConsultaNFSeResponse.ArquivoEnvio);
+          end;
       else
-        ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSe(ConfigMsgDados.DadosCabecalho,
-                                                                  ConsultaNFSeResponse.ArquivoEnvio);
+        begin
+          ConsultaNFSeResponse.InfConsultaNFSe.tpConsulta := tcPorNumero;
+          ConsultaNFSeResponse.ArquivoRetorno := AService.ConsultarNFSe(ConfigMsgDados.DadosCabecalho,
+                                                                    ConsultaNFSeResponse.ArquivoEnvio);
+        end;
       end;
 
       ConsultaNFSeResponse.Sucesso := True;

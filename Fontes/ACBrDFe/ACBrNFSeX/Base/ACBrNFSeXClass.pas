@@ -440,6 +440,23 @@ type
     property TipoDeducao: TTipoDeducao read FTipoDeducao write FTipoDeducao;
   end;
 
+  TDadosDeducao = class(TObject)
+  private
+    FvTotTribFed: TTipoDeducao;
+    FCpfCnpj: string;
+    FNumeroNotaFiscalReferencia: string;
+    FValorTotalNotaFiscal: Double;
+    FPercentualADeduzir: Double;
+    FValorADeduzir: Double;
+  public
+    property TipoDeducao: TTipoDeducao read FvTotTribFed write FvTotTribFed;
+    property CpfCnpj: string read FCpfCnpj write FCpfCnpj;
+    property NumeroNotaFiscalReferencia: string read FNumeroNotaFiscalReferencia write FNumeroNotaFiscalReferencia;
+    property ValorTotalNotaFiscal: Double read FValorTotalNotaFiscal write FValorTotalNotaFiscal;
+    property PercentualADeduzir: Double read FPercentualADeduzir write FPercentualADeduzir;
+    property ValorADeduzir: Double read FValorADeduzir write FValorADeduzir;
+  end;
+
   TItemServicoCollectionItem = class(TObject)
   private
     FCodServ: string;
@@ -499,8 +516,10 @@ type
     FTribMunPrestador: TnfseSimNao;
     FCodMunPrestacao: string;
     FSituacaoTributaria: Integer;
+    FDadosDeducao: TDadosDeducao;
   public
     constructor Create;
+    destructor Destroy; override;
 
     property CodServ: string read FCodServ write FCodServ;
     property CodLCServ: string read FCodLCServ write FCodLCServ;
@@ -556,6 +575,7 @@ type
     // Provedor EloTech
     property Tributavel: TnfseSimNao read FTributavel write FTributavel;
     property CodigoCnae: string read FCodigoCnae write FCodigoCnae;
+    property DadosDeducao: TDadosDeducao read FDadosDeducao write FDadosDeducao;
 
     // Provedor IPM
     property TribMunPrestador: TnfseSimNao read FTribMunPrestador write FTribMunPrestador;
@@ -1212,6 +1232,7 @@ type
     FConstrucaoCivil: TDadosConstrucaoCivil;
     FDeducaoMateriais: TnfseSimNao;
     FCondicaoPagamento: TCondicaoPagamento;
+    FDataPagamento: TDateTime;
     // NFSe
     FNumero: string;
     FCodigoVerificacao: string;
@@ -1279,6 +1300,8 @@ type
 
     FinfNFSe: TinfNFSe;
     FDescricaoCodigoTributacaoMunicipio: string;
+    FEqptoRecibo: string;
+    FVencimento: TDateTime;
 
     procedure Setemail(const Value: TemailCollection);
     procedure SetInformacoesComplementares(const Value: string);
@@ -1320,6 +1343,8 @@ type
     property ConstrucaoCivil: TDadosConstrucaoCivil read FConstrucaoCivil write FConstrucaoCivil;
     property DeducaoMateriais: TnfseSimNao read FDeducaoMateriais write FDeducaoMateriais;
     property CondicaoPagamento: TCondicaoPagamento read FCondicaoPagamento write FCondicaoPagamento;
+    // Provedor FintelISS
+    property DataPagamento: TDateTime read FDataPagamento write FDataPagamento;
     // NFSe
     property Numero: string read FNumero write FNumero;
     property CodigoVerificacao: string read FCodigoVerificacao write FCodigoVerificacao;
@@ -1391,6 +1416,11 @@ type
     property subst: TSubstituicao read Fsubst write Fsubst;
 
     property infNFSe: TinfNFSe read FinfNFSe write FinfNFSe;
+    // Provedor eGoverneISS
+    property EqptoRecibo: string read FEqptoRecibo write FEqptoRecibo;
+    // Provedor RLZ
+    property Vencimento: TDateTime read FVencimento write FVencimento;
+
   end;
 
   TSubstituicaoNfse = class(TObject)
@@ -1770,6 +1800,15 @@ begin
   // Provedor Infisc Versão XML 1.1
   FCodServ := '';
   FUnidade := 'UN';
+
+  FDadosDeducao := TDadosDeducao.Create;;
+end;
+
+destructor TItemServicoCollectionItem.Destroy;
+begin
+  FDadosDeducao.Free;
+
+  inherited Destroy;
 end;
 
 { TParcelasCollection }
