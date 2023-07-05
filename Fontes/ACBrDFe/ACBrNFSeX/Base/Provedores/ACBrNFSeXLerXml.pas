@@ -39,6 +39,7 @@ interface
 uses
   SysUtils, Classes,
   ACBrXmlBase, ACBrXmlReader,
+  ACBrXmlDocument,
   ACBrNFSeXInterface, ACBrNFSeXClass, ACBrNFSeXConversao;
 
 type
@@ -59,6 +60,7 @@ type
     function TipodeXMLLeitura(const aArquivo: string): TtpXML; virtual;
     function NormatizarXml(const aXml: string): string; virtual;
     function NormatizarAliquota(const Aliquota: Double): Double;
+    function LerLinkURL: string;
 
     procedure VerificarSeConteudoEhLista(const aDiscriminacao: string);
     procedure LerListaJson(const aDiscriminacao: string);
@@ -67,6 +69,7 @@ type
     constructor Create(AOwner: IACBrNFSeXProvider);
 
     function LerXml: Boolean; Override;
+    procedure LerCampoLink;
 
     property NFSe: TNFSe             read FNFSe     write FNFSe;
     property Provedor: TnfseProvedor read FProvedor write FProvedor;
@@ -172,6 +175,23 @@ begin
   end;
 end;
 
+function TNFSeRClass.LerLinkURL: string;
+var
+  LinkNFSeParam: TLinkNFSeParam;
+begin
+  LinkNFSeParam := TLinkNFSeParam.Create;
+  try
+    LinkNFSeParam.Ambiente := Integer(FpAOwner.ConfigGeral.Ambiente);
+    LinkNFSeParam.ProLinkURL := FpAOwner.ConfigWebServices.Producao.LinkURL;
+    LinkNFSeParam.HomLinkURL := FpAOwner.ConfigWebServices.Homologacao.LinkURL;
+    LinkNFSeParam.xMunicipio := FpAOwner.ConfigGeral.xMunicipio;
+
+    Result := NFSe.LinkNFSe(LinkNFSeParam);
+  finally
+    LinkNFSeParam.Free;
+  end;
+end;
+
 procedure TNFSeRClass.LerListaJson(const aDiscriminacao: string);
 var
   xDiscriminacao: string;
@@ -245,6 +265,52 @@ begin
       BaseCalculo := fValorBC;
       Aliquota := fAliquota;
     end;
+  end;
+end;
+
+procedure TNFSeRClass.LerCampoLink;
+var
+  Link: string;
+  i: Integer;
+
+function ExtrairURL(PosIni: Integer; Texto: string): string;
+var
+  j: Integer;
+  Url: string;
+begin
+  Url := '';
+  j := PosIni;
+
+  while (j < Length(Texto)) and (Texto[j] <> ' ') do
+  begin
+    Url := Url + Texto[j];
+    Inc(j);
+  end;
+
+  Result := Url;
+end;
+
+begin
+  if NFSe.Link = '' then
+  begin
+    Link := '';
+
+    i := pos('http://', LowerCase(NFSe.OutrasInformacoes));
+
+    if i > 0 then
+      Link := ExtrairURL(i, NFSe.OutrasInformacoes)
+    else
+    begin
+      i := pos('https://', LowerCase(NFSe.OutrasInformacoes));
+
+      if i > 0 then
+        Link := ExtrairURL(i, NFSe.OutrasInformacoes);
+    end;
+
+    if Link = '' then
+      Link := LerLinkURL;
+
+    NFSe.Link := Trim(Link);
   end;
 end;
 

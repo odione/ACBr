@@ -148,6 +148,7 @@ type
     function ConsultarEvento(ACabecalho, AMSG: string): string; virtual;
     function ConsultarDFe(ACabecalho, AMSG: string): string; virtual;
     function ConsultarParam(ACabecalho, AMSG: string): string; virtual;
+    function ConsultarSeqRps(ACabecalho, AMSG: string): string; virtual;
 
     property URL: string read FPURL;
     property BaseURL: string read GetBaseUrl;
@@ -533,6 +534,12 @@ begin
         FPArqEnv := 'con-param';
         FPArqResp := 'param';
       end;
+
+    tmConsultarSeqRps:
+      begin
+        FPArqEnv := 'con-seqrps';
+        FPArqResp := 'seqrps';
+      end;
   end;
 
   FPURL := AURL;
@@ -753,6 +760,9 @@ end;
 function TACBrNFSeXWebservice.GetSoapBody(const Response: string): string;
 begin
   Result := SeparaDados(Response, 'Body');
+
+  if Result = '' then
+    Result := Response;
 end;
 
 procedure TACBrNFSeXWebservice.LevantarExcecaoHttp;
@@ -1044,6 +1054,12 @@ begin
 end;
 
 function TACBrNFSeXWebservice.ConsultarLote(ACabecalho, AMSG: string): string;
+begin
+  Result := '';
+  raise EACBrDFeException.Create(ERR_NAO_IMP);
+end;
+
+function TACBrNFSeXWebservice.ConsultarSeqRps(ACabecalho, AMSG: string): string;
 begin
   Result := '';
   raise EACBrDFeException.Create(ERR_NAO_IMP);

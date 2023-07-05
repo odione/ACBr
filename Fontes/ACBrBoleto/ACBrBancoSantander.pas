@@ -113,9 +113,14 @@ end;
 function TACBrBancoSantander.DefineNossoNumeroRetorno(const Retorno: String): String;
 begin
   if ACBrBanco.ACBrBoleto.LerNossoNumeroCompleto then
+  begin
+    ACBrBanco.TamanhoMaximoNossoNum := 13;
     Result := Copy(Retorno,DefinePosicaoNossoNumeroRetorno,13)
-  else
+  end else
+  begin
+    ACBrBanco.TamanhoMaximoNossoNum := 12;
     Result := Copy(Retorno,DefinePosicaoNossoNumeroRetorno,12);
+  end;
 end;
 
 function TACBrBancoSantander.DefineNumeroDocumentoModulo(
@@ -142,7 +147,7 @@ begin
   begin
     Result := '9'
                + PadLeft(trim(Cedente.CodigoCedente),7,'0')
-               + PadLeft(ACBrTitulo.NossoNumero + CalcularDigitoVerificador(ACBrTitulo), 13,'0')
+               + PadLeft(OnlyNumber(MontarCampoNossoNumero(ACBrTitulo)), 13,'0')
                + '0'
                + PadLeft(trim(Cedente.Modalidade),3,'0');
   end;
@@ -431,6 +436,7 @@ end;
 
 function TACBrBancoSantander.MontarCampoNossoNumero (
    const ACBrTitulo: TACBrTitulo ) : String;
+var LDV : String;
 begin
    with ACBrTitulo do
    begin
@@ -441,7 +447,10 @@ begin
       end;
    end;
 
-   Result:= PadLeft(ACBrTitulo.NossoNumero,12,'0')+ ' '+ CalcularDigitoVerificador(ACBrTitulo);
+   if not (ACBrTitulo.ACBrBoleto.Configuracoes.WebService.VersaoDF = 'V1') then
+     LDV := ' ' + CalcularDigitoVerificador(ACBrTitulo);
+
+   Result:= PadLeft(ACBrTitulo.NossoNumero,12,'0') + LDV;
 end;
 
 function TACBrBancoSantander.MontarCampoCodigoCedente (
@@ -1073,52 +1082,58 @@ begin
     if copy(Linha, 14, 1) = 'T' then // se for segmento T cria um novo Titulo
        Titulo := ACBrBanco.ACBrBoleto.CriarTituloNaLista;
 
-    with Titulo do
-    begin
-      if copy(Linha, 14, 1) = 'T' then
+    try
+      with Titulo do
       begin
-        NossoNumero          := DefineNossoNumeroRetorno(Linha);
-        NumeroDocumento      := Copy(Linha, 55, 15);
-        SeuNumero            := Copy(Linha, 101, 25);
-        Carteira             := Copy(Linha, 54, 1);
-        Vencimento           := StringToDateTimeDef(Copy(Linha, 70, 2)+'/'+
-                                                    Copy(Linha, 72, 2)+'/'+
-                                                    Copy(Linha, 74,4),0, 'DD/MM/YYYY' );
-        ValorDocumento       := StrToFloatDef(copy(Linha, 78, 15), 0) / 100;
-        ValorDespesaCobranca := StrToFloatDef(copy(Linha, 194, 15), 0) / 100;
-        // Sacado
-        if Copy(Linha, 128, 1) = '1' then
+        if copy(Linha, 14, 1) = 'T' then
         begin
-          Sacado.Pessoa  := pFisica;
-          Sacado.CNPJCPF := Trim(Copy(Linha, 133, 11));
-        end
-        else
-        begin
-          Sacado.Pessoa := pJuridica;
-          Sacado.CNPJCPF    := Trim(Copy(Linha, 129, 15));
-        end;
-        Sacado.NomeSacado := Trim(Copy(Linha, 144, 40));
+          NossoNumero          := DefineNossoNumeroRetorno(Linha);
+          NumeroDocumento      := Copy(Linha, 55, 15);
+          SeuNumero            := Copy(Linha, 101, 25);
+          Carteira             := Copy(Linha, 54, 1);
+          Vencimento           := StringToDateTimeDef(Copy(Linha, 70, 2)+'/'+
+                                                      Copy(Linha, 72, 2)+'/'+
+                                                      Copy(Linha, 74,4),0, 'DD/MM/YYYY' );
+          ValorDocumento       := StrToFloatDef(copy(Linha, 78, 15), 0) / 100;
+          ValorDespesaCobranca := StrToFloatDef(copy(Linha, 194, 15), 0) / 100;
+          // Sacado
+          if Copy(Linha, 128, 1) = '1' then
+          begin
+            Sacado.Pessoa  := pFisica;
+            Sacado.CNPJCPF := Trim(Copy(Linha, 133, 11));
+          end
+          else
+          begin
+            Sacado.Pessoa := pJuridica;
+            Sacado.CNPJCPF    := Trim(Copy(Linha, 129, 15));
+          end;
+          Sacado.NomeSacado := Trim(Copy(Linha, 144, 40));
 
-        // Algumas ocorrências estão diferentes do cnab400, farei uma separada aqui
-        DoVerOcorrencia(Copy(Linha, 16, 2));
-      end
-      else if copy(Linha, 14, 1) = 'U' then
-      begin
-        ValorMoraJuros      := StrToFloatDef(copy(Linha, 18, 15), 0) / 100;
-        ValorDesconto       := StrToFloatDef(copy(Linha, 33, 15), 0) / 100;
-        ValorAbatimento     := StrToFloatDef(copy(Linha, 48, 15), 0) / 100;
-        ValorIOF            := StrToFloatDef(copy(Linha, 63, 15), 0) / 100;
-        ValorPago           := StrToFloatDef(copy(Linha, 78, 15), 0) / 100;
-        ValorRecebido       := StrToFloatDef(copy(Linha, 93, 15), 0) / 100;
-        ValorOutrasDespesas := StrToFloatDef(copy(Linha, 108, 15), 0) / 100;
-        ValorOutrosCreditos := StrToFloatDef(copy(Linha, 123, 15), 0) / 100;
-        DataOcorrencia      := StringToDateTimeDef(Copy(Linha, 138, 2)+'/'+
-                                                   Copy(Linha, 140, 2)+'/'+
-                                                   Copy(Linha, 142,4),0, 'DD/MM/YYYY' );
-        DataCredito := StringToDateTimeDef(Copy(Linha, 146, 2)+'/'+
-                                           Copy(Linha, 148, 2)+'/'+
-                                           Copy(Linha, 150,4),0, 'DD/MM/YYYY' );
+          // Algumas ocorrências estão diferentes do cnab400, farei uma separada aqui
+          DoVerOcorrencia(Copy(Linha, 16, 2));
+        end
+        else if copy(Linha, 14, 1) = 'U' then
+        begin
+          ValorMoraJuros      := StrToFloatDef(copy(Linha, 18, 15), 0) / 100;
+          ValorDesconto       := StrToFloatDef(copy(Linha, 33, 15), 0) / 100;
+          ValorAbatimento     := StrToFloatDef(copy(Linha, 48, 15), 0) / 100;
+          ValorIOF            := StrToFloatDef(copy(Linha, 63, 15), 0) / 100;
+          ValorPago           := StrToFloatDef(copy(Linha, 78, 15), 0) / 100;
+          ValorRecebido       := StrToFloatDef(copy(Linha, 93, 15), 0) / 100;
+          ValorOutrasDespesas := StrToFloatDef(copy(Linha, 108, 15), 0) / 100;
+          ValorOutrosCreditos := StrToFloatDef(copy(Linha, 123, 15), 0) / 100;
+          DataOcorrencia      := StringToDateTimeDef(Copy(Linha, 138, 2)+'/'+
+                                                     Copy(Linha, 140, 2)+'/'+
+                                                     Copy(Linha, 142,4),0, 'DD/MM/YYYY' );
+          DataCredito := StringToDateTimeDef(Copy(Linha, 146, 2)+'/'+
+                                             Copy(Linha, 148, 2)+'/'+
+                                             Copy(Linha, 150,4),0, 'DD/MM/YYYY' );
+        end
+        else if((copy(Linha, 14, 1) = 'Y') and (copy(Linha, 18, 2) = '03'))  then
+          QrCode.PIXQRCodeDinamico(Trim(Copy(Linha, 82, 77)), Trim(Copy(Linha, 159, 35)), Titulo);
       end;
+    finally
+      ACBrBanco.TamanhoMaximoNossoNum := 12;
     end;
   end;
 end;
@@ -1354,11 +1369,13 @@ begin
       35: Result := toRetornoTituloDDAReconhecidoPagador;
       36: Result := toRetornoTituloDDANaoReconhecidoPagador;
       37: Result := toRetornoTituloDDARecusadoCIP;
+      91: Result := toRetornoConfirmacaoAlteracaoValorMinimoOuPercentual;
+      92: Result := toRetornoConfirmacaoAlteracaoValorMaximoOuPercentual;
     end;
   end
   else
   begin
-    case CodOcorrencia of
+    case CodOcorrencia of // CNAB 400
       17: Result := toRetornoLiquidadoEmCartorio;
       24: Result := toRetornoCustasCartorio;
       25: Result := toRetornoRecebimentoInstrucaoProtestar;
@@ -1366,6 +1383,8 @@ begin
       51: Result := toRetornoTituloDDAReconhecidoPagador;
       52: Result := toRetornoTituloDDANaoReconhecidoPagador;
       53: Result := toRetornoTituloDDARecusadoCIP;
+      62: Result := toRetornoConfirmacaoAlteracaoValorMinimoOuPercentual;
+      63: Result := toRetornoConfirmacaoAlteracaoValorMaximoOuPercentual;
     end;
   end;
 
@@ -1400,6 +1419,8 @@ begin
     30: Result := toRetornoAlteracaoDadosRejeitados;
     32: Result := toRetornoIOFInvalido;
     38: Result := toRetornoRecebimentoInstrucaoNaoProtestar;
+    61: Result := toRetornoConfirmacaoAlteracaoValorNominal;
+
   else
     Result := toRetornoOutrasOcorrencias;
   end;
@@ -1419,7 +1440,10 @@ begin
     11 : Result:= toRemessaCancelarDesconto;                {Cancelamento de desconto}
     18 : Result:= toRemessaCancelarInstrucaoProtesto;       {Sustar protesto e manter na carteira}
     31 : Result:= toRemessaAlterarOutrosDados;              {Alteração de outros dados}
-    98 : Result:= toRemessaNaoProtestar;                    {Sustar protesto antes do início do ciclo de protesto}
+    47 : Result:= toRemessaAlteracaoValorNominal;           {Alteração do valor nominal do boleto}
+    48 : Result:= toRemessaAlterarValorMinimo;              {Alteração do valor mínimo/percentual}
+    49 : Result:= toRemessaAlterarValorMaximo;              {Alteração do valor máximo/percentual}
+    98 : Result:= toRemessaNaoProtestar;                    {Sustar protesto antes do início do ciclo de protesto *}
   else
      Result:= toRemessaRegistrar;                           {Remessa}
   end;
@@ -1442,6 +1466,9 @@ begin
          toRemessaConcederDesconto              : Result := '10'; {Concessão de Desconto}
          toRemessaCancelarDesconto              : Result := '11'; {Cancelamento de Desconto}
          toRemessaAlterarOutrosDados            : Result := '31'; {Alteração de outros dados}
+         toRemessaAlteracaoValorNominal         : Result := '47'; {Alteração do valor nominal do boleto}
+         toRemessaAlterarValorMinimo	        : Result := '48'; {Alteração do valor mínimo/percentual}
+         toRemessaAlterarValorMaximo	        : Result := '49'; {Alteração do valor máximo/percentual}
          toRemessaNaoProtestar                  : Result := '98'; {Não Protestar (Antes de iniciar o ciclo de protesto )}
       else
          Result := '01';                                          {Remessa}
@@ -1450,7 +1477,7 @@ begin
   end
   else
   begin
-    case TipoOcorrencia of
+    case TipoOcorrencia of  // 400
          toRemessaBaixar                        : Result := '02'; {Pedido de Baixa}
          toRemessaConcederAbatimento            : Result := '04'; {Concessão de Abatimento}
          toRemessaCancelarAbatimento            : Result := '05'; {Cancelamento de Abatimento concedido}
@@ -1459,6 +1486,9 @@ begin
          toRemessaAlterarNumeroControle         : Result := '08'; {Alteração de seu número}
          toRemessaProtestar                     : Result := '09'; {Pedido de protesto}
          toRemessaCancelarInstrucaoProtesto     : Result := '18'; {Sustar protesto e manter na carteira}
+         toRemessaAlteracaoValorNominal         : Result := '47'; {Alteração do valor nominal do boleto}
+         toRemessaAlterarValorMinimo	        : Result := '48'; {Alteração do valor mínimo/percentual}
+         toRemessaAlterarValorMaximo	        : Result := '49'; { Alteração do valor máximo/percentual}
          toRemessaNaoProtestar                  : Result := '98'; {Sustar protesto antes do início do ciclo de protesto}
       else
          Result := '01';                                          {Remessa}
@@ -1498,6 +1528,9 @@ begin
       toRetornoTituloDDAReconhecidoPagador                   : Result := '35';
       toRetornoTituloDDANaoReconhecidoPagador                : Result := '36';
       toRetornoTituloDDARecusadoCIP                          : Result := '37';
+      toRetornoConfirmacaoAlteracaoValorNominal              : Result := '61';
+      toRetornoConfirmacaoAlteracaoValorMinimoOuPercentual	 : Result := '91';
+      toRetornoConfirmacaoAlteracaoValorMaximoOuPercentual   : Result := '92';
     end;
   end
   else
@@ -1510,6 +1543,9 @@ begin
       toRetornoTituloDDAReconhecidoPagador                   : Result := '51';
       toRetornoTituloDDANaoReconhecidoPagador                : Result := '52';
       toRetornoTituloDDARecusadoCIP                          : Result := '53';
+      toRetornoConfirmacaoAlteracaoValorNominal              : Result := '61';
+      toRetornoConfirmacaoAlteracaoValorMinimoOuPercentual	 : Result := '62';
+      toRetornoConfirmacaoAlteracaoValorMaximoOuPercentual   : Result := '63';
     end;
   end;
 

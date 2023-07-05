@@ -705,8 +705,11 @@ type
     function Canhoto(Value: TRLBand): TfrmDACTeRLRetrato;
     procedure rlb_DivisaoReciboBeforePrint(Sender: TObject;
       var PrintIt: Boolean);
+    procedure rlb_06_ValorPrestacaoAfterPrint(Sender: TObject);
   private
     Linhas: integer;
+    rlb_07_HeaderItensPrinted: Boolean;
+    rlb_06_ValorPrestacaoPrinted: Boolean;
 
     procedure Itens;
     procedure DefinirAltura;
@@ -744,6 +747,8 @@ begin
   RLCTe.PageSetup.PaperSize := fpA4;
   RLCTe.PageSetup.PaperHeight := 297.0;
   RLCTe.PageSetup.PaperWidth := 210.0;
+  rlb_07_HeaderItensPrinted := False;
+  rlb_06_ValorPrestacaoPrinted := False;
 end;
 
 procedure TfrmDACTeRLRetrato.Itens;
@@ -1616,6 +1621,8 @@ end;
 
 procedure TfrmDACTeRLRetrato.rlb_05_ComplementoBeforePrint(Sender: TObject;
   var PrintIt: boolean);
+var
+  i: Integer;
 begin
   // Imprime a lista dos CT-e Complementados se o Tipo de CTe for Complemento
 
@@ -1631,14 +1638,34 @@ begin
   rlmComplChave2.Lines.Clear;
   rlmComplValor2.Lines.Clear;
 
-  rlmComplChave1.Lines.Add(fpCTe.InfCTeComp.Chave);
-  rlmComplValor1.Lines.Add(FormatFloatBr(msk10x2, fpCTe.vPrest.vTPrest));
+  if fpCTe.infCTe.versao <= 3 then
+  begin
+    rlmComplChave1.Lines.Add(fpCTe.InfCTeComp.Chave);
+
+    rlmComplValor1.Lines.Add(FormatFloatBr(msk10x2, fpCTe.vPrest.vTPrest));
+  end
+  else
+  begin
+    for i := 0 to fpCTe.infCteComp10.Count -1 do
+    begin
+      if (i mod 2) = 0 then
+        rlmComplChave1.Lines.Add(fpCTe.infCteComp10[i].chCTe)
+      else
+        rlmComplChave2.Lines.Add(fpCTe.infCteComp10[i].chCTe);
+    end;
+  end;
+end;
+
+procedure TfrmDACTeRLRetrato.rlb_06_ValorPrestacaoAfterPrint(Sender: TObject);
+begin
+  inherited;
+  rlb_06_ValorPrestacaoPrinted := True;
 end;
 
 procedure TfrmDACTeRLRetrato.rlb_06_ValorPrestacaoBeforePrint(Sender: TObject;
   var PrintIt: boolean);
 begin
-  PrintIt := RLCTe.PageNumber = 1;
+  PrintIt := not rlb_06_ValorPrestacaoPrinted;
 
   if fpCTe.infCTe.versao >= 3 then
   begin
@@ -1670,6 +1697,7 @@ begin
     rld_07_headerItens.Height := 81;
     RLCTe.newpage;
   end;
+  rlb_07_HeaderItensPrinted := True;
 end;
 
 procedure TfrmDACTeRLRetrato.rlb_07_HeaderItensBeforePrint(Sender: TObject;
@@ -1687,7 +1715,11 @@ begin
     if (RLCTe.PageNumber <= 1) then
       cdsDocumentos.First
     else
+    begin
+      if not rlb_07_HeaderItensPrinted then
+        cdsDocumentos.First;
       PrintIt := (not cdsDocumentos.EOF);
+    end;
 
     while not cdsDocumentos.EOF do
     begin

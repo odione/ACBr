@@ -51,9 +51,9 @@ type
                      stNFSeFecharSessao, stNFSeAguardaProcesso,
                      stNFSeEnvioWebService, stNFSeGerarToken,
                      stNFSeConsultarEvento, stNFSeConsultarDFe,
-                     stNFSeConsultarParam);
+                     stNFSeConsultarParam, stNFSeConsultarSeqRps);
 
-  TVersaoNFSe = (ve100, ve101, ve103,
+  TVersaoNFSe = (ve100, ve101, ve102, ve103,
                  ve200, ve201, ve202, ve203, ve204);
 
   TLayout =(loABRASF, loProprio);
@@ -123,25 +123,26 @@ type
                    proDeISS, proDesenvolve, proDigifred, proDSF, proeGoverneISS,
                    proEL, proEloTech, proEquiplano, proeReceita, proEtherium,
                    proFacundo, proFGMaiss, profintelISS, proFiorilli, proFisco,
-                   proFISSLex, proFuturize, proGeisWeb, progeNFe, proGiap,
-                   proGinfes, proGiss, proGovBR, proGovDigital, proGoverna,
-                   proHorus, proiiBrasil, proInfisc, proIPM, proISSBarueri,
-                   proISSCambe, proISSCuritiba, proISSDigital, proISSDSF,
-                   proISSe, proISSFortaleza, proISSGoiania, proISSIntel,
-                   proISSJoinville, proISSLencois, proISSNatal, proISSNet,
-                   proISSPortoVelho, proISSRecife, proISSRio, proISSSalvador,
-                   proISSSaoPaulo, proISSSJP, proISSVitoria, proLexsom, proLink3,
-                   proMegaSoft, proMetropolisWeb, proMitra, proModernizacaoPublica,
-                   proNEAInformatica, proNFSeBrasil, proNotaInteligente, proPrescon, 
-                   proPriMax, proProdata, proPronim, proPublica, proPublicSoft, proRLZ,
-                   proSaatri, proSafeWeb, proSH3, proSiam, proSiapNet, proSiappa,
-                   proSiapSistemas, proSiat, proSigCorp, proSigep, proSigISS,
-                   proSigISSWeb, proSilTecnologia, proSimple, proSimplISS,
-                   proSintese, proSisPMJP, proSistemas4R, proSmarAPD,
+                   proFISSLex, proFuturize, proGeisWeb, progeNFe, proGestaoISS,
+                   proGiap, proGinfes, proGiss, proGovBR, proGovDigital, proGoverna,
+                   proHorus, proiiBrasil, proInfisc, proIntertec, proIPM,
+                   proISSBarueri, proISSCamacari, proISSCambe, proISSCuritiba,
+                   proISSDigital, proISSDSF, proISSe, proISSFortaleza,
+                   proISSGoiania, proISSIntel, proISSJoinville, proISSLencois,
+                   proISSNatal, proISSNet, proISSPortoVelho, proISSRecife,
+                   proISSRio, proISSSalvador, proISSSaoPaulo, proISSSJP,
+                   proISSVitoria, proLexsom, proLibre, proLink3, proMegaSoft,
+                   proMetropolisWeb, proMitra, proModernizacaoPublica,
+                   proNEAInformatica, proNFSeBrasil, proNotaInteligente,
+                   proPrescon, proPriMax, proProdata, proPronim, proPublica,
+                   proPublicSoft, proRLZ, proSaatri, proSafeWeb, proSH3, proSiam,
+                   proSiapNet, proSiappa, proSiapSistemas, proSiat, proSigCorp,
+                   proSigep, proSigISS, proSigISSWeb, proSilTecnologia, proSimple,
+                   proSimplISS, proSintese, proSisPMJP, proSistemas4R, proSmarAPD,
                    proSoftPlan, proSpeedGov, proSSInformatica, proSudoeste,
-                   proSystemPro, proTcheInfo, proTecnos, proThema, proTinus,
-                   proTiplan, proTributus, proVersaTecnologia, proVirtual,
-                   proWebFisco, proWebISS, proGestaoISS, proLibre);
+                   proSysISS, proSystemPro, proTcheInfo, proTecnos, proThema,
+                   proTinus, proTiplan, proTributus, proVersaTecnologia,
+                   proVirtual, proWebFisco, proWebISS);
 
   TnfseSituacaoTributaria = (stRetencao, stNormal, stSubstituicao, stNenhum);
 
@@ -188,7 +189,7 @@ type
              tmGerar, tmGerarLote, tmRecepcionarSincrono, tmSubstituirNFSe,
              tmAbrirSessao, tmFecharSessao, tmTeste, tmTodos,
              tmGerarToken, tmEnviarEvento, tmConsultarEvento, tmConsultarDFe,
-             tmConsultarParam);
+             tmConsultarParam, tmConsultarSeqRps);
 
   TFormatoItemListaServico = (filsComFormatacao, filsSemFormatacao,
                               filsComFormatacaoSemZeroEsquerda,
@@ -298,6 +299,8 @@ type
 
   TParamMunic = (pmAliquota, pmHistoricoAliquota, pmConvenio,
                  pmRegimesEspeciais, pmRetencoes, pmBeneficios);
+
+  TAssinaturas = (taConfigProvedor, taAssinar, taNaoAssinar);
 
 function StatusRPSToStr(const t: TStatusRPS): string;
 function StrToStatusRPS(out ok: boolean; const s: string): TStatusRPS;
@@ -12432,17 +12435,17 @@ end;
 
 function StrToVersaoNFSe(out ok: Boolean; const s: string): TVersaoNFSe;
 begin
-  Result := StrToEnumerado(ok, s, ['1.00', '1.01', '1.03',
+  Result := StrToEnumerado(ok, s, ['1.00', '1.01', '1.02', '1.03',
                                    '2.00', '2.01', '2.02', '2.03', '2.04'],
-                                  [ve100, ve101, ve103,
+                                  [ve100, ve101, ve102, ve103,
                                    ve200, ve201, ve202, ve203, ve204]);
 end;
 
 function VersaoNFSeToStr(const t: TVersaoNFSe): string;
 begin
-  Result := EnumeradoToStr(t, ['1.00', '1.01', '1.03',
+  Result := EnumeradoToStr(t, ['1.00', '1.01', '1.02', '1.03',
                                '2.00', '2.01', '2.02', '2.03', '2.04'],
-                              [ve100, ve101, ve103,
+                              [ve100, ve101, ve102, ve103,
                                ve200, ve201, ve202, ve203, ve204]);
 end;
 
@@ -12683,7 +12686,7 @@ begin
                         'Gerar', 'GerarLote', 'RecepcionarSincrono', 'SubstituirNFSe',
                         'AbrirSessao', 'FecharSessao', 'Teste', 'Todos',
                         'GerarToken', 'EnviarEvento', 'ConsultarEvento',
-                        'ConsultarDFe', 'ConsultarParam'],
+                        'ConsultarDFe', 'ConsultarParam', 'ConsultarSeqRps'],
                        [tmRecepcionar, tmConsultarSituacao, tmConsultarLote,
                         tmConsultarNFSePorRps, tmConsultarNFSe,
                         tmConsultarNFSePorFaixa, tmConsultarNFSeServicoPrestado,
@@ -12691,7 +12694,7 @@ begin
                         tmGerar, tmGerarLote, tmRecepcionarSincrono, tmSubstituirNFSe,
                         tmAbrirSessao, tmFecharSessao, tmTeste, tmTodos,
                         tmGerarToken, tmEnviarEvento, tmConsultarEvento,
-                        tmConsultarDFe, tmConsultarParam]);
+                        tmConsultarDFe, tmConsultarParam, tmConsultarSeqRps]);
 end;
 
 function ModoEnvioToStr(const t: TmodoEnvio): string;

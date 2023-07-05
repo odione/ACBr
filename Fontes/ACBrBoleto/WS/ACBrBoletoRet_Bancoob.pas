@@ -45,7 +45,8 @@ uses
   Jsons,
   DateUtils,
   pcnConversao,
-  ACBrBoletoWS.Rest;
+  ACBrBoletoWS.Rest,
+  ACBrUtil.Base;
 
 type
 
@@ -127,6 +128,20 @@ begin
         ARetornoWS.JSON := (aJson.Values['resultado'].Stringify);
 
         case HttpResultCode of
+          207:
+          begin
+            aJsonViolacoes := aJson.Values['resultado'].AsArray;
+            for x := 0 to aJsonViolacoes.Count -1 do
+            begin
+              aJsonViolacao        := aJsonViolacoes[x].AsObject;
+              if (aJSonViolacao.Values['status'].AsObject.Values['codigo'].AsString <> '200') then
+              begin
+                ARejeicao            := ARetornoWS.CriarRejeicaoLista;
+                ARejeicao.Codigo     := aJSonViolacao.Values['status'].AsObject.Values['codigo'].AsString;
+                ARejeicao.mensagem   := aJSonViolacao.Values['status'].AsObject.Values['mensagem'].AsString;
+              end;
+            end;
+          end;
           400,406,500 :
             begin
               aJsonViolacoes := aJson.Values['mensagens'].AsArray;
@@ -155,7 +170,7 @@ begin
             ARetornoWS.DadosRet.TituloRet.CodBarras      := ARetornoWS.DadosRet.IDBoleto.CodBarras;
             ARetornoWS.DadosRet.TituloRet.LinhaDig       := ARetornoWS.DadosRet.IDBoleto.LinhaDig;
             ARetornoWS.DadosRet.TituloRet.NossoNumero    := ARetornoWS.DadosRet.IDBoleto.NossoNum;
-            ARetornoWS.DadosRet.TituloRet.TxId           := AJSonObject.Values['qrcode'].AsString;
+            ARetornoWS.DadosRet.TituloRet.EMV            := AJSonObject.Values['qrcode'].AsString;
             ARetornoWS.DadosRet.TituloRet.Vencimento     := DateBancoobToDateTime(AJSonObject.Values['dataVencimento'].AsString);
             ARetornoWS.DadosRet.TituloRet.NossoNumero    := AJSonObject.Values['nossoNumero'].AsString;
             ARetornoWS.DadosRet.TituloRet.SeuNumero      := AJSonObject.Values['seuNumero'].AsString;
@@ -254,7 +269,7 @@ begin
                  ARetornoWS.DadosRet.TituloRet.ValorPago := 0;
 
                  if vpos > 0 then
-                  ARetornoWS.DadosRet.TituloRet.ValorPago := StrToCurrDef(copy(AJsonListaHistoricoObject.Values['descricaoHistorico'].AsString, vPos+2, length(AJsonListaHistoricoObject.Values['descricaoHistorico'].AsString)), 0);
+                  ARetornoWS.DadosRet.TituloRet.ValorPago := StringToFloatDef(copy(AJsonListaHistoricoObject.Values['descricaoHistorico'].AsString, vPos+2, length(AJsonListaHistoricoObject.Values['descricaoHistorico'].AsString)), 0);
                 end;
               end;
             end;

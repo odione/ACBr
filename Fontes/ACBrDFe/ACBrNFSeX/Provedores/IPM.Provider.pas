@@ -128,8 +128,8 @@ type
     function RecepcionarSincrono(ACabecalho, AMSG: String): string; override;
     function GerarNFSe(ACabecalho, AMSG: String): string; override;
     function ConsultarLote(ACabecalho, AMSG: String): string; override;
-//    Não foi implementado no ambiente de homologação
-//    function ConsultarNFSePorRps(ACabecalho, AMSG: String): string; override;
+//    Implementado e testado em produção usando como referencia a cidade de Camaquã
+    function ConsultarNFSePorRps(ACabecalho, AMSG: String): string; override;
     function ConsultarNFSePorFaixa(ACabecalho, AMSG: String): string; override;
     function ConsultarNFSeServicoPrestado(ACabecalho, AMSG: String): string; override;
 //    Não foi implementado no ambiente de homologação
@@ -1063,6 +1063,11 @@ begin
 
       ANode := Document.Root;
 
+      AuxNode := ANode.Childrens.Find('documentos');
+
+      if AuxNode <> nil then
+        ANode := AuxNode;
+
       ProcessarMensagemErros(ANode, Response);
 
       Response.Sucesso := (Response.Erros.Count = 0);
@@ -1070,6 +1075,11 @@ begin
       if NotaCompleta then
       begin
         ANodeArray := ANode.Childrens.FindAllAnyNs('nfse');
+
+        ProcessarMensagemErros(ANodeArray[0], Response);
+
+        Response.Sucesso := (Response.Erros.Count = 0);
+
         if not Assigned(ANodeArray) and (Response.Sucesso) then
         begin
           AErro := Response.Erros.New;
@@ -1092,27 +1102,30 @@ begin
           begin
             AuxNode := ANode.Childrens.FindAnyNs('nf');
 
-            NumeroNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('numero_nfse'), tcStr);
-            SerieNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('serie_nfse'), tcStr);
-            Data := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('data_nfse'), tcDatVcto);
-            Data := Data + ObterConteudoTag(AuxNode.Childrens.FindAnyNs('hora_nfse'), tcHor);
-            Link := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('link_nfse'), tcStr);
-            Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
-            Protocolo := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('cod_verificador_autenticidade'), tcStr);
-            CodigoVerificacao := Protocolo;
-            Situacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('situacao_codigo_nfse'), tcStr);
-            DescSituacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('situacao_descricao_nfse'), tcStr);
-          end;
+            if AuxNode <> nil then
+            begin
+              NumeroNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('numero_nfse'), tcStr);
+              SerieNota := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('serie_nfse'), tcStr);
+              Data := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('data_nfse'), tcDatVcto);
+              Data := Data + ObterConteudoTag(AuxNode.Childrens.FindAnyNs('hora_nfse'), tcHor);
+              Link := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('link_nfse'), tcStr);
+              Link := StringReplace(Link, '&amp;', '&', [rfReplaceAll]);
+              Protocolo := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('cod_verificador_autenticidade'), tcStr);
+              CodigoVerificacao := Protocolo;
+              Situacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('situacao_codigo_nfse'), tcStr);
+              DescSituacao := ObterConteudoTag(AuxNode.Childrens.FindAnyNs('situacao_descricao_nfse'), tcStr);
 
-          AResumo := Response.Resumos.New;
-          AResumo.NumeroNota := Response.NumeroNota;
-          AResumo.SerieNota := Response.SerieNota;
-          AResumo.Data := Response.Data;
-          AResumo.Link := Response.Link;
-          AResumo.Protocolo := Response.Protocolo;
-          AResumo.CodigoVerificacao := Response.CodigoVerificacao;
-          AResumo.Situacao := Response.Situacao;
-          AResumo.DescSituacao := Response.DescSituacao;
+              AResumo := Response.Resumos.New;
+              AResumo.NumeroNota := NumeroNota;
+              AResumo.SerieNota := SerieNota;
+              AResumo.Data := Data;
+              AResumo.Link := Link;
+              AResumo.Protocolo := Protocolo;
+              AResumo.CodigoVerificacao := CodigoVerificacao;
+              AResumo.Situacao := Situacao;
+              AResumo.DescSituacao := DescSituacao;
+            end;
+          end;
 
           if NumRps <> '' then
             ANota := TACBrNFSeX(FAOwner).NotasFiscais.FindByRps(NumRps)
@@ -1263,7 +1276,7 @@ var
 begin
   with TConfiguracoesNFSe(FPConfiguracoes).Geral.Emitente do
     Auth := 'Basic ' + string(EncodeBase64(AnsiString(WSUser + ':' +
-      ParseText(AnsiString(WSSenha), False))));
+      AnsiString(WSSenha))));
 
   aHeaderReq.AddHeader('Authorization', Auth);
 end;
@@ -1402,7 +1415,7 @@ var
 begin
   with TConfiguracoesNFSe(FPConfiguracoes).Geral.Emitente do
     Auth := 'Basic ' + string(EncodeBase64(AnsiString(WSUser + ':' +
-      ParseText(AnsiString(WSSenha), False))));
+      AnsiString(WSSenha))));
 
   aHeaderReq.AddHeader('Authorization', Auth);
 end;
@@ -1473,13 +1486,25 @@ begin
   Result := Executar('net.atende#ConsultarLoteRpsEnvio', Request,
               ['return', 'ConsultarLoteRpsResposta'], ['xmlns:net="net.atende"']);
 end;
-{
+
 function TACBrNFSeXWebserviceIPM204.ConsultarNFSePorRps(ACabecalho,
   AMSG: String): string;
+var
+  Request: string;
 begin
+  FPMsgOrig := AMSG;
+
+  AMSG := SeparaDados(AMSG, 'ConsultarNfseRpsEnvio');
+
+  Request := '<net:ConsultarNfseRpsEnvio>';
+  Request := Request + AMSG;
+  Request := Request + '</net:ConsultarNfseRpsEnvio>';
+
+  Result := Executar('net.atende#ConsultarNfseRpsEnvio', Request,
+              ['return', 'ConsultarNFSePorRpsResposta'], ['xmlns:net="net.atende"']);
 
 end;
-}
+
 function TACBrNFSeXWebserviceIPM204.ConsultarNFSePorFaixa(ACabecalho,
   AMSG: String): string;
 var

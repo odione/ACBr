@@ -47,6 +47,8 @@ uses
    System.Contnrs,
   {$IFEND}
   ACBrBase,
+  ACBrUtil.DateTime,
+  ACBrUtil.Strings,
   ACBrNFSeXConversao;
 
 type
@@ -335,6 +337,7 @@ type
     FValorInss: Double;
     FValorIr: Double;
     FValorCsll: Double;
+    FValorCpp: Double; //Elotech
     FIssRetido: TnfseSituacaoTributaria;
     FValorIss: Double;
     FOutrasRetencoes: Double;
@@ -346,6 +349,7 @@ type
     FAliquotaInss: Double;
     FAliquotaIr: Double;
     FAliquotaCsll: Double;
+    FAliquotaCpp: Double; // Aliquota usada pelo Provedor Elotech
     FOutrosDescontos: Double;
     FValorLiquidoNfse: Double;
     FValorIssRetido: Double;
@@ -364,6 +368,7 @@ type
     FRetidoInss: TnfseSimNao;
     FRetidoIr: TnfseSimNao;
     FRetidoCsll: TnfseSimNao;
+    FRetidoCpp: TnfseSimNao; // Elotech
     FQtdeDiaria: Double;
     FValorTaxaTurismo: Double;
     FValorRecebido: Double;
@@ -386,6 +391,7 @@ type
     property ValorInss: Double read FValorInss write FValorInss;
     property ValorIr: Double read FValorIr write FValorIr;
     property ValorCsll: Double read FValorCsll write FValorCsll;
+    property ValorCpp: Double read FValorCpp write FValorCpp;
     property IssRetido: TnfseSituacaoTributaria read FIssRetido write FIssRetido;
     property ValorIss: Double read FValorIss write FValorIss;
     property OutrasRetencoes: Double read FOutrasRetencoes write FOutrasRetencoes;
@@ -399,6 +405,7 @@ type
     property AliquotaInss: Double read FAliquotaInss write FAliquotaInss;
     property AliquotaIr: Double read FAliquotaIr write FAliquotaIr;
     property AliquotaCsll: Double read FAliquotaCsll write FAliquotaCsll;
+    property AliquotaCpp: Double read FAliquotaCpp write FAliquotaCpp;
     // Usado pelo Provedor EL
     property OutrosDescontos: Double read FOutrosDescontos write FOutrosDescontos;
 
@@ -426,6 +433,7 @@ type
     property RetidoInss: TnfseSimNao read FRetidoInss write FRetidoInss;
     property RetidoIr: TnfseSimNao read FRetidoIr write FRetidoIr;
     property RetidoCsll: TnfseSimNao read FRetidoCsll write FRetidoCsll;
+    property RetidoCpp: TnfseSimNao read FRetidoCpp write FRetidoCpp;
     //Provedor SystemPro
     property QtdeDiaria: Double read FQtdeDiaria write FQtdeDiaria;
     property ValorTaxaTurismo: Double read FValorTaxaTurismo write FValorTaxaTurismo;
@@ -462,6 +470,7 @@ type
     FCodServ: string;
     FCodLCServ: string;
     FItemListaServico: string;
+    FxItemListaServico: string;
     FDescricao: string;
     FUnidade: string;
     FTipoUnidade: TUnidade;
@@ -524,6 +533,7 @@ type
     property CodServ: string read FCodServ write FCodServ;
     property CodLCServ: string read FCodLCServ write FCodLCServ;
     property ItemListaServico: string read FItemListaServico write FItemListaServico;
+    property xItemListaServico: string read FxItemListaServico write FxItemListaServico;
     property Descricao: string read FDescricao write FDescricao;
     property Unidade: string read FUnidade write FUnidade;
     property TipoUnidade: TUnidade read FTipoUnidade write FTipoUnidade;
@@ -742,6 +752,7 @@ type
     FxCodigoTributacaoMunicipio: string;
     FDiscriminacao: string;
     FCodigoMunicipio: string;
+    FMunicipioPrestacaoServico: string;
     FCodigoPais: Integer;
     FExigibilidadeISS: TnfseExigibilidadeISS;
     FMunicipioIncidencia: Integer;
@@ -788,6 +799,7 @@ type
     property xCodigoTributacaoMunicipio: string read FxCodigoTributacaoMunicipio write FxCodigoTributacaoMunicipio;
     property Discriminacao: string read FDiscriminacao write FDiscriminacao;
     property CodigoMunicipio: string read FCodigoMunicipio write FCodigoMunicipio;
+    property MunicipioPrestacaoServico: string read FMunicipioPrestacaoServico write FMunicipioPrestacaoServico;
     property CodigoPais: Integer read FCodigoPais write FCodigoPais;
     property ExigibilidadeISS: TnfseExigibilidadeISS read FExigibilidadeISS write FExigibilidadeISS;
     property IdentifNaoExigibilidade: string read FIdentifNaoExigibilidade write FIdentifNaoExigibilidade;
@@ -1201,6 +1213,33 @@ type
     property valores: TValoresNfse read Fvalores write Fvalores;
   end;
 
+  { TLinkNFSeParam }
+
+  TLinkNFSeParam = class(TObject)
+  private
+    FAmbiente: Integer;
+    FProLinkURL: String;
+    FHomLinkURL: String;
+    FNumNFSe: String;
+    FCodVerificacao: String;
+    FChaveAcesso: String;
+    FValorServico: String;
+    FCNPJ: String;
+    FInscMun: String;
+    FxMunicipio: String;
+  public
+    property Ambiente: Integer read FAmbiente write FAmbiente;
+    property ProLinkURL: String read FProLinkURL write FProLinkURL;
+    property HomLinkURL: String read FHomLinkURL write FHomLinkURL;
+    property NumNFSe: String read FNumNFSe write FNumNFSe;
+    property CodVerificacao: String read FCodVerificacao write FCodVerificacao;
+    property ChaveAcesso: String read FChaveAcesso write FChaveAcesso;
+    property ValorServico: String read FValorServico write FValorServico;
+    property CNPJ: String read FCNPJ write FCNPJ;
+    property InscMun: String read FInscMun write FInscMun;
+    property xMunicipio: String read FxMunicipio write FxMunicipio;
+  end;
+
   TNFSe = class(TPersistent)
   private
     // RPS e NFSe
@@ -1311,6 +1350,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+
+    function LinkNFSe(LinkNFSeParam: TLinkNFSeParam): String;
 
     procedure Clear;
   published
@@ -1575,7 +1616,11 @@ begin
   FOptanteMEISimei := snNao;
   FIncentivadorCultural := snNao;
   FStatusRps := srNormal;
+
+  FRpsSubstituido.FNumero := '';
+  FRpsSubstituido.FSerie := '';
   FRpsSubstituido.FTipo := trRPS;
+
   FSituacaoNfse := snNormal;
   FNfseCancelamento.DataHora := 0;
   FNfseSubstituidora := '';
@@ -1591,7 +1636,7 @@ begin
   // Provedor Infisc Versão XML 1.1
   FTipoEmissao := teNormalNFSe;
   FEmpreitadaGlobal := EgOutros;
-  FModeloNFSe := '55';
+  FModeloNFSe := '';
   FCanhoto := tcNenhum;
 
   FLogradouroLocalPrestacaoServico := llpTomador;
@@ -1688,6 +1733,88 @@ end;
 procedure TNFSe.SetDespesa(const Value: TDespesaCollection);
 begin
   FDespesa := Value;
+end;
+
+function TNFSe.LinkNFSe(LinkNFSeParam: TLinkNFSeParam): String;
+var
+  Texto: String;
+
+  procedure PreencherData(NomeTag: string; Valor: TDateTime);
+  var
+    Pos1: Integer;
+    TagReplace: string;
+    Format: string;
+  begin
+    Pos1 := Pos('%' + NomeTag + ':',Texto);
+
+    if Pos1 > 0 then
+    begin
+      TagReplace := Copy(Texto,Pos1+1,Length(Texto));
+      Pos1 := Pos('%',TagReplace);
+
+      if Pos1 > 0 then
+      begin
+        TagReplace := '%' + Copy(TagReplace,1,Pos1);
+
+        Pos1 := Pos(':',TagReplace);
+        Format := Copy(TagReplace,Pos1+1,Length(TagReplace)-Pos1-1);
+
+        Texto := StringReplace(Texto, TagReplace, FormatDateBr(Valor, Format), [rfReplaceAll]);
+      end;
+    end;
+  end;
+begin
+  if not Assigned(LinkNFSeParam) then
+  begin
+    Result := '';
+    exit;
+  end;
+
+  if LinkNFSeParam.CodVerificacao = '' then
+    LinkNFSeParam.CodVerificacao := FCodigoVerificacao;
+
+  if LinkNFSeParam.NumNFSe = '' then
+    LinkNFSeParam.NumNFSe := FNumero;
+
+  if LinkNFSeParam.ChaveAcesso = '' then
+    LinkNFSeParam.ChaveAcesso := FChaveAcesso;
+
+  if LinkNFSeParam.ValorServico = '' then
+    LinkNFSeParam.ValorServico := FloatToStr(Servico.Valores.ValorLiquidoNfse);
+
+  if LinkNFSeParam.CNPJ = '' then
+    LinkNFSeParam.CNPJ := Prestador.IdentificacaoPrestador.CpfCnpj;
+
+  if LinkNFSeParam.InscMun = '' then
+    LinkNFSeParam.InscMun := Prestador.IdentificacaoPrestador.InscricaoMunicipal;
+
+  if LinkNFSeParam.FAmbiente = 0 then
+    Texto := LinkNFSeParam.FProLinkURL
+  else
+    Texto := LinkNFSeParam.FHomLinkURL;
+
+  // %CodVerif%          : Representa o Código de Verificação da NFS-e
+  // %CodVerifSoAlfanum% : Representa o Código de Verificação da NFS-e sem formatação
+  // %NumeroNFSe%        : Representa o Numero da NFS-e
+  // %ChaveAcesso%       : Representa a Chave de Acesso
+  // %ValorServico%      : Representa o Valor do Serviço
+  // %Cnpj%              : Representa o CNPJ do Emitente - Configuração
+  // %InscMunic%         : Representa a Inscrição Municipal do Emitente - Configuração
+  // %xMunicipio%        : Representa o Nome do Município - Configuração
+  // %DataEmissao:X..X%: : Representa a Data de Emissão da NFSe com o formato preenchido após os ":" - Dados da NFSe
+
+  Texto := StringReplace(Texto, '%CodVerif%', LinkNFSeParam.CodVerificacao, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%CodVerifSoAlfanum%',
+             OnlyAlphaNum(LinkNFSeParam.CodVerificacao), [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%NumeroNFSe%', LinkNFSeParam.NumNFSe, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%ChaveAcesso%', LinkNFSeParam.ChaveAcesso, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%ValorServico%', LinkNFSeParam.ValorServico, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%Cnpj%', LinkNFSeParam.CNPJ, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%InscMunic%', LinkNFSeParam.InscMun, [rfReplaceAll]);
+  Texto := StringReplace(Texto, '%xMunicipio%', LowerCase(OnlyAlphaNum(LinkNFSeParam.xMunicipio)), [rfReplaceAll]);
+  PreencherData('DataEmissao',DataEmissao);
+
+  Result := Texto;
 end;
 
 { TPedidoCancelamento }

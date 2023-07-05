@@ -73,7 +73,7 @@ type
     procedure LerIntermediarioServico(const ANode: TACBrXmlNode);
 
     procedure LerOrgaoGerador(const ANode: TACBrXmlNode);
-    procedure LerConstrucaoCivil(const ANode: TACBrXmlNode);
+    procedure LerConstrucaoCivil(const ANode: TACBrXmlNode); virtual;
 
     procedure LerNfseCancelamento(const ANode: TACBrXmlNode);
     procedure LerConfirmacao(const ANode: TACBrXmlNode);
@@ -674,7 +674,7 @@ end;
 procedure TNFSeR_ABRASFv1.LerServico(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
-  CodigoItemServico: string;
+  CodigoItemServico, xUF: string;
 begin
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -700,6 +700,9 @@ begin
 
       if CodigoMunicipio = '' then
         CodigoMunicipio := ObterConteudo(AuxNode.Childrens.FindAnyNs('MunicipioPrestacaoServico'), tcStr);
+
+      MunicipioPrestacaoServico := ObterNomeMunicipio(StrToIntDef(CodigoMunicipio, 0), xUF, '', False);
+      MunicipioPrestacaoServico := MunicipioPrestacaoServico + '/' + xUF;
 
       MunicipioIncidencia := StrToIntDef(CodigoMunicipio, 0);
     end;
@@ -866,6 +869,8 @@ begin
 
   LerNfseCancelamento(AuxNode1);
   LerNfseSubstituicao(AuxNode1);
+
+  LerCampoLink;
 end;
 
 function TNFSeR_ABRASFv1.LerXmlRps(const ANode: TACBrXmlNode): Boolean;

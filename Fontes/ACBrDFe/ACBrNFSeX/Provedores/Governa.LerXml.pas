@@ -242,6 +242,8 @@ begin
       end;
     end;
   end;
+
+  LerCampoLink;
 end;
 
 function TNFSeR_Governa.LerXmlRps(const ANode: TACBrXmlNode): Boolean;
@@ -250,7 +252,12 @@ var
 begin
   Result := True;
 
-  AuxNode := ANode.Childrens.FindAnyNs('tcInfRps');
+  AuxNode := ANode.Childrens.FindAnyNs('tcRps');
+
+  if AuxNode = nil then
+    AuxNode := ANode.Childrens.FindAnyNs('tcInfRps')
+  else
+    AuxNode := AuxNode.Childrens.FindAnyNs('tcInfRps');
 
   if AuxNode = nil then Exit;
 

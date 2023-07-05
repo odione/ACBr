@@ -197,10 +197,8 @@ type
     RLLabel36: TRLLabel;
     RLLabel56: TRLLabel;
     RLLabel40: TRLLabel;
-    RLLabel38: TRLLabel;
     RLLabel106: TRLLabel;
     rllDataHoraImpressao: TRLLabel;
-    rlmDadosAdicionais: TRLMemo;
     rllCNAE: TRLLabel;
     rllIncentivador: TRLLabel;
     rllRecolhimento: TRLLabel;
@@ -253,6 +251,8 @@ type
     RLDraw4: TRLDraw;
     rlmDescricao: TRLMemo;
     rliPrestLogo: TRLImage;
+    RLLabel38: TRLLabel;
+    rlmDadosAdicionais: TRLMemo;
 
     procedure rlbCabecalhoBeforePrint(Sender: TObject; var PrintIt: Boolean);
     procedure rlbItensServicoBeforePrint(Sender: TObject; var PrintIt: Boolean);
@@ -326,7 +326,7 @@ begin
   if fpNFSe.InformacoesComplementares <> '' then
     rlmDadosAdicionais.Lines.Add(StringReplace(fpNFSe.InformacoesComplementares, FQuebradeLinha, #13#10, [rfReplaceAll,rfIgnoreCase]));
 
-  if ((pos('http://', LowerCase(fpNFSe.OutrasInformacoes)) > 0) or (pos('http://', LowerCase(fpNFSe.Link)) > 0) or (pos('https://', LowerCase(fpNFSe.Link)) > 0)) then
+  if fpNFSe.Link <> '' then
   begin
     rlmDadosAdicionais.Width := 643;
 
@@ -338,13 +338,7 @@ begin
     rlImgQrCode.SetBounds(648, 3, 90, 90);
     rlImgQrCode.BringToFront;
 
-    if pos('http://', LowerCase(fpNFSe.Link)) > 0 then
-      QRCodeData := Trim(MidStr(fpNFSe.Link, pos('http://', LowerCase(fpNFSe.Link)), Length(fpNFSe.Link)))
-    else if pos('https://', LowerCase(fpNFSe.Link)) > 0 then
-      QRCodeData := Trim(MidStr(fpNFSe.Link, pos('https://', LowerCase(fpNFSe.Link)), Length(fpNFSe.Link)))
-    else
-      QRCodeData := Trim(MidStr(fpNFSe.OutrasInformacoes, pos('http://', LowerCase(fpNFSe.OutrasInformacoes)), Length(fpNFSe.OutrasInformacoes)));
-
+    QRCodeData   := fpNFSe.Link;
     QRCode       := TDelphiZXingQRCode.Create;
     QRCodeBitmap := TBitmap.Create;
     try
@@ -373,7 +367,7 @@ begin
     end;
   end;
 
-//  rlmDadosAdicionais.Lines.EndUpdate;
+  rlmDadosAdicionais.Lines.EndUpdate;
 //  //rllDataHoraImpressao.Caption := Format(ACBrStr('DATA E HORA DA IMPRESSÃO: %s') , [FormatDateTime('dd/mm/yyyy hh:nn',Now)]);
 //  rllDataHoraImpressao.Caption := FormatDateTime('dd/mm/yyyy hh:nn',Now);
 //

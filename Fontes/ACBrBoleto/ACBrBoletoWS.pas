@@ -229,6 +229,8 @@ uses
   ACBrBoletoRet_PenseBank_API,
   ACBrBoletoW_Santander,
   ACBrBoletoRet_Santander,
+  ACBrBoletoW_Santander_API,
+  ACBrBoletoRet_Santander_API,
   ACBrBoletoW_Inter_API,
   ACBrBoletoRet_Inter_API,
   ACBrBoletoW_Bancoob,
@@ -287,12 +289,7 @@ begin
     FDFeSSL := TDFeSSL(ABoletoWS.FBoleto.Configuracoes.WebService);
 
   FOAuth := TOAuth.Create(FHTTPSend,
-                          FBoletoWS.FBoleto.Configuracoes.WebService.Ambiente,
-                          FBoletoWS.FBoleto.Cedente.CedenteWS.ClientID,
-                          FBoletoWS.FBoleto.Cedente.CedenteWS.ClientSecret,
-                          FBoletoWS.FBoleto.Cedente.CedenteWS.Scope,
-                          FBoletoWS.FBoleto.Configuracoes.WebService.ArquivoCRT,
-                          FBoletoWS.FBoleto.Configuracoes.WebService.ArquivoKEY);
+                          ABoletoWS.FBoleto);
 
 end;
 
@@ -374,8 +371,15 @@ begin
       end;
     cobSantander :
       begin
-        FBoletoWSClass := TBoletoW_Santander.Create(Self);
-        FRetornoBanco  := TRetornoEnvio_Santander.Create(FBoleto);
+        if UpperCase(FBoleto.Configuracoes.WebService.VersaoDF) = 'V1' then
+        begin //API V1
+          FBoletoWSClass := TBoletoW_Santander_API.Create(Self);
+          FRetornoBanco  := TRetornoEnvio_Santander_API.Create(FBoleto);
+        end else
+        begin // WS
+          FBoletoWSClass := TBoletoW_Santander.Create(Self);
+          FRetornoBanco  := TRetornoEnvio_Santander.Create(FBoleto);
+        end;
       end;
     cobBancoInter :
       begin
@@ -386,7 +390,7 @@ begin
       begin
         FBoletoWSClass := TBoletoW_Bancoob.Create(Self);
         FRetornoBanco  := TRetornoEnvio_Bancoob.Create(FBoleto);
-      end
+      end;
   else
     FBoletoWSClass := TBoletoWSClass.Create(Self);
     FRetornoBanco := TRetornoEnvioClass.Create(FBoleto);
@@ -432,7 +436,7 @@ begin
   if Assigned( FBoleto.Configuracoes.Arquivos.OnGravarLog ) then
     FBoleto.Configuracoes.Arquivos.OnGravarLog( AString, Tratado );
 
-  if not Tratado then
+  if Tratado or FBoleto.Configuracoes.Arquivos.LogRegistro then
     GravaLog( AString );
 
 end;

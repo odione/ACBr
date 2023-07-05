@@ -129,6 +129,7 @@ type
     FMontarPathSchema: Boolean;
     FLayout: TLayout;
     FLayoutNFSe: TLayoutNFSe;
+    FAssinaturas: TAssinaturas;
 
     procedure SetCodigoMunicipio(const Value: Integer);
   public
@@ -156,6 +157,7 @@ type
       write FMontarPathSchema default True;
     property Layout: TLayout read FLayout;
     property LayoutNFSe: TLayoutNFSe read FLayoutNFSe write FLayoutNFSe default lnfsProvedor;
+    property Assinaturas: TAssinaturas read FAssinaturas write FAssinaturas default taConfigProvedor;
   end;
 
   { TArquivosConfNFSe }
@@ -330,6 +332,7 @@ begin
   FConsultaAposCancelar := True;
   FMontarPathSchema := True;
   FLayoutNFSe := lnfsProvedor;
+  FAssinaturas := taConfigProvedor;
 end;
 
 destructor TGeralConfNFSe.Destroy;
@@ -350,6 +353,7 @@ begin
   AIni.WriteBool(fpConfiguracoes.SessaoIni, 'ConsultaAposCancelar', ConsultaAposCancelar);
   AIni.WriteBool(fpConfiguracoes.SessaoIni, 'MontarPathSchema', MontarPathSchema);
   AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'LayoutNFSe', Integer(LayoutNFSe));
+  AIni.WriteInteger(fpConfiguracoes.SessaoIni, 'Assinaturas', Integer(Assinaturas));
 
   // Emitente
   with Emitente do
@@ -391,6 +395,7 @@ begin
   ConsultaAposCancelar := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'ConsultaAposCancelar', ConsultaAposCancelar);
   MontarPathSchema := AIni.ReadBool(fpConfiguracoes.SessaoIni, 'MontarPathSchema', MontarPathSchema);
   LayoutNFSe := TLayoutNFSe(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'LayoutNFSe', Integer(LayoutNFSe)));
+  Assinaturas := TAssinaturas(AIni.ReadInteger(fpConfiguracoes.SessaoIni, 'Assinaturas', Integer(Assinaturas)));
 
   // Emitente
   with Emitente do
@@ -438,20 +443,6 @@ begin
   if not (csDesigning in fpConfiguracoes.Owner.ComponentState) then
     ACBrNFSeXLocal.LerCidades;
 
-  if fpConfiguracoes <> ACBrNFSeXLocal.Configuracoes then
-  begin
-    // Necessário para LIB.
-    fpConfiguracoes.WebServices.Params.BeginUpdate;
-    try
-      fpConfiguracoes.WebServices.Params.Clear;
-      fpConfiguracoes.WebServices.Params.AddStrings(ACBrNFSeXLocal.Configuracoes.WebServices.Params);
-    finally
-      fpConfiguracoes.WebServices.Params.EndUpdate;
-    end;
-  end;
-
-
-
   // ===========================================================================
   // Verifica se o código IBGE consta no arquivo: ACBrNFSeXServicos
   // se encontrar carrega os parâmetros definidos.
@@ -496,19 +487,22 @@ begin
   inherited Assign(DeGeralConfNFSe);
 
   //FPIniParams.SetStrings(DeGeralConfNFSe.FPIniParams);
-  CodigoMunicipio        := DeGeralConfNFSe.CodigoMunicipio;
-  FVersao                := DeGeralConfNFSe.Versao;
-  FxProvedor             := DeGeralConfNFSe.xProvedor;
-  FxMunicipio            := DeGeralConfNFSe.xMunicipio;
-  FxUF                   := DeGeralConfNFSe.xUF;
+  FVersao     := DeGeralConfNFSe.Versao;
+  FxProvedor  := DeGeralConfNFSe.xProvedor;
+  FxMunicipio := DeGeralConfNFSe.xMunicipio;
+  FxUF        := DeGeralConfNFSe.xUF;
+
+  CodigoMunicipio := DeGeralConfNFSe.CodigoMunicipio;
+
   FCNPJPrefeitura        := DeGeralConfNFSe.CNPJPrefeitura;
   FConsultaLoteAposEnvio := DeGeralConfNFSe.ConsultaLoteAposEnvio;
   FConsultaAposCancelar  := DeGeralConfNFSe.ConsultaAposCancelar;
   FMontarPathSchema      := DeGeralConfNFSe.MontarPathSchema;
   FLayout                := DeGeralConfNFSe.Layout;
   FLayoutNFSe            := DeGeralConfNFSe.LayoutNFSe;
+  FAssinaturas           := DeGeralConfNFSe.Assinaturas;
+  FProvedor              := DeGeralConfNFSe.Provedor;
 
-  FProvedor := DeGeralConfNFSe.Provedor;
   FEmitente.Assign(DeGeralConfNFSe.Emitente);
 end;
 

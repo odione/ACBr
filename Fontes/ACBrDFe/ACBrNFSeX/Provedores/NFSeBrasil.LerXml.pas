@@ -39,7 +39,7 @@ interface
 uses
   SysUtils, Classes, StrUtils,
   ACBrNFSeXLerXml_ABRASFv1,
-  ACBrXmlDocument;
+  ACBrXmlDocument, ACBrDFeUtil;
 
 type
   { TNFSeR_NFSeBrasil }
@@ -196,7 +196,8 @@ end;
 procedure TNFSeR_NFSeBrasil.LerServico(const ANode: TACBrXmlNode);
 var
   AuxNode: TACBrXmlNode;
-  CodigoItemServico: string;
+  CodigoItemServico, UFMunicipioPrestacao: string;
+  CodMunicipioPrestacao: Integer;
 begin
   if not Assigned(ANode) or (ANode = nil) then Exit;
 
@@ -212,10 +213,18 @@ begin
     begin
       ItemListaServico          := NormatizarItemListaServico(CodigoItemServico);
       xItemListaServico         := ItemListaServicoDescricao(ItemListaServico);
+
+      if xItemListaServico = '' then
+        xItemListaServico := ObterConteudo(AuxNode.Childrens.FindAnyNs('DescricaoItemListaServico'), tcStr);
+
       CodigoCnae                := ObterConteudo(AuxNode.Childrens.FindAnyNs('CodigoCnae'), tcStr);
       CodigoTributacaoMunicipio := ObterConteudo(AuxNode.Childrens.FindAnyNs('CodigoTributacaoMunicipio'), tcStr);
       Discriminacao             := ObterConteudo(AuxNode.Childrens.FindAnyNs('Discriminacao'), tcStr);
       CodigoMunicipio           := ObterConteudo(AuxNode.Childrens.FindAnyNs('CodigoMunicipio'), tcStr);
+
+      CodMunicipioPrestacao := ObterConteudo(AuxNode.Childrens.FindAnyNs('MunicipioPrestacaoServico'), tcInt);
+      if CodMunicipioPrestacao > 0 then
+        MunicipioPrestacaoServico := ObterNomeMunicipio(CodMunicipioPrestacao, UFMunicipioPrestacao, '', False);
     end;
   end;
 end;
@@ -339,6 +348,8 @@ begin
 
   LerNfseCancelamento(AuxNode1);
   LerNfseSubstituicao(AuxNode1);
+
+  LerCampoLink;
 end;
 
 end.
